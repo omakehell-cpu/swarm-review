@@ -788,7 +788,10 @@
       const pos = textarea.selectionStart;
       const range = rangeAt(pos);
       if (!range) { hidePopover(); return; }
-      textarea.setSelectionRange(range.start, range.end);
+      // Deliberately NOT selecting the range here (no setSelectionRange):
+      // the highlight only needs to be visually marked, not selected --
+      // selecting it meant typing right after a click silently deleted
+      // the whole highlighted span instead of just moving the caret.
 
       popover.innerHTML = '';
       const text = document.createElement('div');
