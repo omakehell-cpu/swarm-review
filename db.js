@@ -110,6 +110,24 @@ CREATE TABLE IF NOT EXISTS invite_codes (
   used_at     TEXT,
   used_by     INTEGER REFERENCES users(id)
 );
+
+-- Self-service password reset, without needing email: an admin generates a
+-- single-use link for a specific user (/admin, see models.js
+-- createPasswordResetToken) and shares it with them by whatever channel is
+-- convenient (chat, in person, ...). The user opens it and picks their own
+-- new password themselves -- the admin never sees or sets it, unlike the
+-- direct "set a new password" admin tool. Expires after 24h so an old,
+-- unused link shared over some channel doesn't stay valid indefinitely.
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  token       TEXT NOT NULL UNIQUE,
+  user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  created_by  INTEGER REFERENCES users(id),
+  expires_at  TEXT NOT NULL,
+  used_at     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens(user_id);
 `);
 
 // Guard against a *very* old database file from before "stories" existed:

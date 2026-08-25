@@ -746,6 +746,17 @@
   // stray mouse pass over one mark can't fight with a popover already open
   // for another. Shared by both the editor and the reading view.
   function createHoverTip() {
+    // On a touch device there's no real "hover" -- the closest equivalent
+    // is a finger already down on the screen, at which point showing a
+    // tooltip that then has to be dismissed before the actual tap-to-open
+    // popover registers is just an extra step in the way, not a preview.
+    // (hover: hover) is true only when the primary input can meaningfully
+    // hover (a mouse) -- false for touch, so this stays a no-op there and
+    // callers fall straight through to the tap-triggered popover instead,
+    // exactly like a phone visitor would expect.
+    if (!(window.matchMedia && window.matchMedia('(hover: hover)').matches)) {
+      return { show() {}, hide() {} };
+    }
     const tip = document.createElement('div');
     tip.className = 'wa-hover-tip hidden';
     document.body.appendChild(tip);
@@ -972,11 +983,34 @@
     // Remembers a manually-resized width (the textarea has resize:both) so
     // it's still that width next time -- but only while the preview is
     // off, since with it on the width is governed by the 50/50 flex split.
+    // ResizeObserver alone can't tell "the user dragged the corner handle"
+    // apart from "the textarea's size changed for some other reason" (the
+    // page loading into a narrower/wider viewport, a saved width being
+    // restored, the Fit-to-chapter/Fill-screen buttons, ...) -- it fires
+    // for all of those identically. Without this, loading the editor on a
+    // narrow phone once was enough to "learn" that width and lock the
+    // editor to it forever after, on every device, since every resize
+    // looked like a manual one. So only track real drags: the native
+    // resize:both handle lives in the last ~20px of the bottom-right
+    // corner, and dragging it means a mousedown that starts there.
+    let isDraggingResizeHandle = false;
+    textarea.addEventListener('mousedown', (ev) => {
+      const rect = textarea.getBoundingClientRect();
+      isDraggingResizeHandle = (rect.right - ev.clientX < 20) && (rect.bottom - ev.clientY < 20);
+    });
+    window.addEventListener('mouseup', () => {
+      // Cleared on a short delay, not immediately -- the ResizeObserver
+      // callback for the drag's final size fires asynchronously and can
+      // land just after mouseup.
+      setTimeout(() => { isDraggingResizeHandle = false; }, 50);
+    });
+
     if (typeof ResizeObserver !== 'undefined') {
       let widthTimer = null;
       const ro = new ResizeObserver(() => {
         if (previewOn) return;
         syncOverlayWidth(); // live, not debounced -- keep the overlay matched to the drag as it happens
+        if (!isDraggingResizeHandle) return;
         if (widthTimer) clearTimeout(widthTimer);
         widthTimer = setTimeout(() => {
           try { localStorage.setItem('wa-editor-width', String(Math.round(textarea.getBoundingClientRect().width))); } catch (e) { /* ignore */ }

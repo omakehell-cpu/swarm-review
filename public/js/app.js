@@ -16,6 +16,32 @@
     });
   }
 
+  // ---- "Fill screen": same pattern as the editor's own width controls
+  // (see public/js/writing-analyzer.js) -- widens the whole page past its
+  // usual 1100px cap, for wide screens where the normal column feels
+  // cramped. Available to every reader, not just the chapter's author,
+  // since it's about how comfortably *they* want to read, not a writing
+  // tool. #chapter-text's own max-width:72ch (style.css) still caps the
+  // actual line length either way -- this only gives the layout as a
+  // whole (mainly the comments pane) more room.
+  const fillScreenBtn = document.getElementById('reading-fill-screen');
+  if (fillScreenBtn) {
+    const mainEl = document.querySelector('main.container');
+    const STORAGE_KEY = 'reading-fullwidth';
+    function applyFullWidth(on) {
+      mainEl.classList.toggle('wa-fullwidth', on);
+      fillScreenBtn.textContent = on ? 'Fit to chapter' : 'Fill screen';
+    }
+    let fullWidthOn = false;
+    try { fullWidthOn = localStorage.getItem(STORAGE_KEY) === '1'; } catch (e) { /* ignore */ }
+    applyFullWidth(fullWidthOn);
+    fillScreenBtn.addEventListener('click', () => {
+      fullWidthOn = !fullWidthOn;
+      try { localStorage.setItem(STORAGE_KEY, fullWidthOn ? '1' : '0'); } catch (e) { /* ignore */ }
+      applyFullWidth(fullWidthOn);
+    });
+  }
+
   // True while the writing analyzer's "Comments" toggle has the comments
   // panel hidden (see public/js/writing-analyzer.js) -- while hidden, the
   // inline comment highlights are visually neutralized by CSS, and the

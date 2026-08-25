@@ -262,6 +262,89 @@ function closeRegistration() {
   db.prepare('UPDATE invite_codes SET active = 0 WHERE active = 1 AND username IS NULL').run();
 }
 
+// ---------- password reset tokens (admin-generated, self-service from there) ----------
+// An admin generates a single-use link for one specific user (see
+// server.js's /admin/users/:id/reset-link and this file's
+// db.js/password_reset_tokens); the user opens it and picks their own new
+// password without the admin ever seeing or setting it.
+function createPasswordResetToken(userId, createdBy) {
+  let token;
+  do {
+    token = auth.generateResetToken();
+  } while (db.prepare('SELECT 1 FROM password_reset_tokens WHERE token = ?').get(token));
+
+  db.exec('BEGIN');
+  try {
+    // Replace any earlier pending (unused, unexpired or not) link for this
+    // user instead of leaving multiple live links around for one account.
+    db.prepare(
+      "UPDATE password_reset_tokens SET expires_at = datetime('now') WHERE user_id = ? AND used_at IS NULL"
+    ).run(userId);
+    const expiresAt = new Date(Date.now() + auth.PASSWORD_RESET_TOKEN_MAX_AGE_MS).toISOString().replace('T', ' ').slice(0, 19);
+    const info = db.prepare(
+      'INSERT INTO password_reset_tokens (token, user_id, created_by, expires_at) VALUES (?, ?, ?, ?)'
+    ).run(token, userId, createdBy, expiresAt);
+    db.exec('COMMIT');
+    return getPasswordResetTokenById(Number(info.lastInsertRowid));
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+const getPasswordResetTokenById = (id) =>
+  db.prepare(`
+    SELECT prt.*, u.display_name AS user_display_name, u.username AS user_username
+    FROM password_reset_tokens prt JOIN users u ON u.id = prt.user_id
+    WHERE prt.id = ?
+  `).get(id);
+
+// Pending = generated, not used yet, not expired -- i.e. a link the admin
+// has sent out that the user hasn't opened and completed yet.
+function listPendingPasswordResetTokens() {
+  return db.prepare(`
+    SELECT prt.*, u.display_name AS user_display_name, u.username AS user_username
+    FROM password_reset_tokens prt JOIN users u ON u.id = prt.user_id
+    WHERE prt.used_at IS NULL AND prt.expires_at > datetime('now')
+    ORDER BY prt.created_at DESC
+  `).all();
+}
+
+// Cancels a pending link before the user opens it. A no-op (not an error)
+// if it was already used or has already expired.
+function revokePasswordResetToken(id) {
+  db.prepare("UPDATE password_reset_tokens SET expires_at = datetime('now') WHERE id = ? AND used_at IS NULL").run(id);
+}
+
+// Valid = exists, not used yet, not expired -- used both to render the
+// "pick a new password" form and to check again on submit (the few minutes
+// in between are enough for it to have expired or been used elsewhere).
+function getValidPasswordResetToken(token) {
+  return db.prepare(`
+    SELECT prt.*, u.display_name AS user_display_name, u.username AS user_username
+    FROM password_reset_tokens prt JOIN users u ON u.id = prt.user_id
+    WHERE prt.token = ? AND prt.used_at IS NULL AND prt.expires_at > datetime('now')
+  `).get(token);
+}
+
+// Sets the user's new password (same session-invalidating effect as
+// setOwnPassword/adminSetPassword) and marks the token used, atomically --
+// a token must not be usable twice even if two requests race.
+function consumePasswordResetToken(tokenId, userId, passwordHash) {
+  db.exec('BEGIN');
+  try {
+    const info = db.prepare(
+      "UPDATE password_reset_tokens SET used_at = datetime('now') WHERE id = ? AND used_at IS NULL"
+    ).run(tokenId);
+    if (info.changes === 0) throw new Error('This reset link has already been used.');
+    db.prepare('UPDATE users SET password_hash = ?, session_version = session_version + 1 WHERE id = ?').run(passwordHash, userId);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
 // ---------- stories ----------
 // `since`: optional SQLite timestamp string -- when given, each story gets
 // a `has_new_chapters` flag for chapters published after it. `onlyArchived`
@@ -665,6 +748,11 @@ module.exports = {
   getInviteCodeById,
   listPendingNamedInvites,
   revokeNamedInvite,
+  createPasswordResetToken,
+  listPendingPasswordResetTokens,
+  revokePasswordResetToken,
+  getValidPasswordResetToken,
+  consumePasswordResetToken,
   listUsersForAdmin,
   getPlaceholderUserId,
   adminSetPassword,

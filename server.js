@@ -128,7 +128,8 @@ function login(res, user) {
 
 async function handleLoginPage(req, res, query) {
   const error = query.get('locked') ? 'This account is locked. Ask an admin to reactivate it.' : null;
-  sendHtml(res, 200, views.loginPage({ error }));
+  const notice = query.get('notice') || null;
+  sendHtml(res, 200, views.loginPage({ error, notice }));
 }
 
 async function handleLoginSubmit(req, res) {
@@ -257,9 +258,10 @@ async function handleAdminPage(req, res, user, query) {
   const activeInviteCode = models.getActiveInviteCode();
   const inviteCodeHistory = models.listInviteCodes();
   const pendingNamedInvites = models.listPendingNamedInvites();
+  const pendingResetLinks = models.listPendingPasswordResetTokens();
   const notice = query.get('notice') || null;
   sendHtml(res, 200, views.adminPage({
-    user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, notice,
+    user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, notice,
   }));
 }
 
@@ -337,6 +339,50 @@ async function handleAdminRevokeNamedInvite(req, res, user, inviteId) {
   if (!invite || !invite.username) return sendHtml(res, 404, 'Invite not found');
   models.revokeNamedInvite(inviteId);
   redirect(res, `/admin?notice=Invite for "${encodeURIComponent(invite.username)}" revoked.`);
+}
+
+async function handleAdminGenerateResetLink(req, res, user, targetUserId) {
+  const target = models.getUserById(targetUserId);
+  if (!target || target.username === models.DELETED_USER_USERNAME) return sendHtml(res, 404, 'User not found');
+  const resetToken = models.createPasswordResetToken(targetUserId, user.id);
+  const proto = SECURE_COOKIES ? 'https' : 'http';
+  const link = `${proto}://${req.headers.host}/reset-password/${resetToken.token}`;
+  redirect(res, `/admin?notice=Reset link for ${encodeURIComponent(target.display_name)} (valid 24h, share it only with them): ${encodeURIComponent(link)}`);
+}
+
+async function handleAdminRevokeResetLink(req, res, user, tokenId) {
+  models.revokePasswordResetToken(tokenId);
+  redirect(res, '/admin?notice=Reset link revoked.');
+}
+
+async function handleResetPasswordPage(req, res, token) {
+  const resetToken = models.getValidPasswordResetToken(token);
+  if (!resetToken) {
+    return sendHtml(res, 400, views.resetPasswordExpiredPage());
+  }
+  sendHtml(res, 200, views.resetPasswordPage({ token, displayName: resetToken.user_display_name }));
+}
+
+async function handleResetPasswordSubmit(req, res, token) {
+  const resetToken = models.getValidPasswordResetToken(token);
+  if (!resetToken) {
+    return sendHtml(res, 400, views.resetPasswordExpiredPage());
+  }
+  const body = await parseBody(req);
+  const password = body.password || '';
+  const confirm = body.confirm || '';
+  if (password.length < 8) {
+    return sendHtml(res, 400, views.resetPasswordPage({
+      token, displayName: resetToken.user_display_name, error: 'Password must be at least 8 characters long.',
+    }));
+  }
+  if (password !== confirm) {
+    return sendHtml(res, 400, views.resetPasswordPage({
+      token, displayName: resetToken.user_display_name, error: 'Passwords do not match.',
+    }));
+  }
+  models.consumePasswordResetToken(resetToken.id, resetToken.user_id, auth.hashPassword(password));
+  redirect(res, '/login?notice=Password changed. Log in with your new password.');
 }
 
 async function handleAdminBackup(req, res, user) {
@@ -802,6 +848,11 @@ async function router(req, res) {
 
   let user = getCurrentUser(req);
   const PUBLIC_ROUTES = new Set(['/login', '/register']);
+  // Reachable with or without a session (an admin-generated link, not tied
+  // to whoever's currently logged in on this browser -- see
+  // handleResetPasswordPage/Submit) -- unlike PUBLIC_ROUTES above, being
+  // logged in doesn't redirect away from it either.
+  const isResetPasswordRoute = pathname.startsWith('/reset-password/');
 
   // An admin can lock an account that already has a valid, unexpired
   // session cookie open somewhere -- re-checking the DB's locked_at on
@@ -810,10 +861,10 @@ async function router(req, res) {
   if (user && user.locked_at) {
     clearCookie(res, SESSION_COOKIE);
     user = null;
-    if (!PUBLIC_ROUTES.has(pathname)) return redirect(res, '/login?locked=1');
+    if (!PUBLIC_ROUTES.has(pathname) && !isResetPasswordRoute) return redirect(res, '/login?locked=1');
   }
 
-  if (!user && !PUBLIC_ROUTES.has(pathname)) {
+  if (!user && !PUBLIC_ROUTES.has(pathname) && !isResetPasswordRoute) {
     return redirect(res, '/login');
   }
   if (user && PUBLIC_ROUTES.has(pathname)) {
@@ -829,6 +880,12 @@ async function router(req, res) {
     if (pathname === '/login' && req.method === 'POST') return handleLoginSubmit(req, res);
     if (pathname === '/register' && req.method === 'GET') return handleRegisterPage(req, res);
     if (pathname === '/register' && req.method === 'POST') return handleRegisterSubmit(req, res);
+    if ((m = pathname.match(/^\/reset-password\/([^/]+)$/)) && req.method === 'GET') {
+      return handleResetPasswordPage(req, res, m[1]);
+    }
+    if ((m = pathname.match(/^\/reset-password\/([^/]+)$/)) && req.method === 'POST') {
+      return handleResetPasswordSubmit(req, res, m[1]);
+    }
     if (pathname === '/logout' && req.method === 'POST') return handleLogout(req, res);
     if (pathname === '/account' && req.method === 'GET') return handleAccountPage(req, res, user, url.searchParams);
     if (pathname === '/account/password' && req.method === 'POST') return handleAccountPasswordSubmit(req, res, user);
@@ -854,6 +911,12 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/admin\/invite-code\/named\/(\d+)\/revoke$/)) && req.method === 'POST') {
       return handleAdminRevokeNamedInvite(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/admin\/users\/(\d+)\/reset-link$/)) && req.method === 'POST') {
+      return handleAdminGenerateResetLink(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/admin\/reset-link\/(\d+)\/revoke$/)) && req.method === 'POST') {
+      return handleAdminRevokeResetLink(req, res, user, Number(m[1]));
     }
     if (pathname === '/admin/backup' && req.method === 'GET') return handleAdminBackup(req, res, user);
 

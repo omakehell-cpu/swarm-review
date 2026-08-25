@@ -88,6 +88,13 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
+  /* A safety net, not the fix -- see .topbar nav's flex-wrap below for the
+     actual cause this was covering for: one non-wrapping row overflowing
+     the viewport made the whole document's scrollable width wider than
+     the visible viewport, which then made every unrelated width:100%
+     element on the page (not just the topbar) size itself against that
+     wider-than-visible box instead of what was actually on screen. */
+  overflow-x: hidden;
 }
 
 a { color: var(--accent-strong); text-decoration: none; }
@@ -95,14 +102,16 @@ a:hover { text-decoration: underline; }
 
 .topbar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 8px 16px;
   padding: 14px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-elevated);
 }
 .topbar .brand { font-weight: 700; font-size: 1.1rem; color: var(--text); }
-.topbar nav { display: flex; align-items: center; gap: 18px; }
+.topbar nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
 .topbar .whoami { color: var(--text-muted); }
 
 .theme-toggle {
@@ -120,8 +129,14 @@ a:hover { text-decoration: underline; }
 .linklike:hover { text-decoration: underline; }
 .inline-form { display: inline; }
 
-.container { max-width: 1100px; margin: 0 auto; padding: 28px 24px 80px; }
+.container { max-width: 1100px; margin: 0 auto; padding: 28px 24px 80px; transition: max-width 0.2s ease; }
 .container-wide { max-width: 1500px; }
+/* "Fill screen" on the chapter reading page (see public/js/app.js) -- same
+   pattern as the editor's own Fill-screen button (.writer-card.wa-
+   fullwidth below). #chapter-text's own max-width:72ch still caps actual
+   line length either way, so this only ever gives the comments pane (and
+   the 2.1fr/1fr split generally) more breathing room, not longer lines. */
+.container.wa-fullwidth { max-width: none; }
 
 .flash { padding: 10px 24px; text-align: center; }
 .flash.error { background: rgba(var(--rejected-rgb), 0.15); color: var(--rejected); }
@@ -301,8 +316,15 @@ input[type="file"] { padding: 6px 4px; }
 .selection-toast.hidden { display: none; }
 
 @media (max-width: 860px) {
-  .chapter-body-grid { grid-template-columns: 1fr; }
-  .comments-pane { position: static; max-height: none; }
+  /* display:block instead of a single 1fr grid track -- even
+     minmax(0, 1fr) still resolved wider than the grid's own container
+     whenever a descendant (the editor's textarea, min-width:260px) had a
+     wide intrinsic minimum, because a flexible track's growth step can
+     still expand it past the container to fit content, 0 minimum or not.
+     Plain block layout has none of that: children just take 100% of
+     whatever's actually available, full stop. */
+  .chapter-body-grid { display: block; }
+  .comments-pane { position: static; max-height: none; margin-top: 28px; }
 }
 
 /* --- admin panel --- */
@@ -438,6 +460,13 @@ input:focus, textarea:focus, select:focus {
 }
 .wa-textarea {
   position: relative; z-index: 1; display: block; width: 100%; min-width: 260px; min-height: 260px;
+  /* A manually-resized width is remembered in pixels (see writing-
+     analyzer.js) and re-applied inline on every future visit -- max-width
+     is the backstop for when that remembered width came from a wider
+     screen than whatever's viewing it now: the inline width can't push
+     the textarea past its container regardless of what pixel value it
+     actually holds. */
+  max-width: 100%;
   border: none !important; border-radius: 0 !important; resize: both;
   background: transparent !important; color: transparent !important; caret-color: var(--text);
 }
@@ -520,3 +549,17 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
   border: 1px solid var(--border); border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 0.85rem;
 }
 .story-dictionary-list .btn.tiny { padding: 0 6px; line-height: 1.6; border-radius: 999px; }
+
+/* --- narrow-phone tweaks -- kept at the very end of the file so these
+   deliberately win the cascade over same-specificity rules earlier on
+   (.writer-card, .container, .wa-textarea) without needing !important --- */
+@media (max-width: 480px) {
+  /* Roomy padding that reads fine as generous whitespace on a desktop
+     card starts eating into a phone's already-narrow width -- e.g. a
+     375px-wide phone left barely 260px inside .writer-card's original
+     32px/36px padding, right at the textarea's own min-width, so almost
+     any other content pushed it into overflowing. */
+  .writer-card { padding: 20px 16px; }
+  .container { padding: 20px 12px 60px; }
+  .wa-textarea { min-width: 0; }
+}

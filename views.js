@@ -16,10 +16,11 @@ function fileUploadField() {
 
 // ---------- auth pages ----------
 
-function loginPage({ error } = {}) {
+function loginPage({ error, notice } = {}) {
   return layout({
     title: 'Log in',
     user: null,
+    flash: notice ? { type: 'info', message: notice } : null,
     body: `
       <div class="auth-card">
         <h1>Log in</h1>
@@ -30,6 +31,7 @@ function loginPage({ error } = {}) {
           <button class="btn" type="submit">Log in</button>
         </form>
         <p class="muted">No account yet? <a href="/register">Register</a></p>
+        <p class="muted">Forgot your password? Ask an admin for a reset link.</p>
       </div>`,
   });
 }
@@ -50,6 +52,38 @@ function registerPage({ error, values = {} } = {}) {
           <button class="btn" type="submit">Create account</button>
         </form>
         <p class="muted">Already have an account? <a href="/login">Log in</a></p>
+      </div>`,
+  });
+}
+
+// ---------- password reset (from an admin-generated link, see /admin) ----------
+function resetPasswordPage({ token, displayName, error } = {}) {
+  return layout({
+    title: 'Reset password',
+    user: null,
+    body: `
+      <div class="auth-card">
+        <h1>Reset your password</h1>
+        <p class="muted">Setting a new password for ${escapeHtml(displayName)}.</p>
+        ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+        <form method="post" action="/reset-password/${escapeHtml(token)}">
+          <label>New password<input type="password" name="password" required minlength="8" autofocus></label>
+          <label>Confirm new password<input type="password" name="confirm" required minlength="8"></label>
+          <button class="btn" type="submit">Set new password</button>
+        </form>
+      </div>`,
+  });
+}
+
+function resetPasswordExpiredPage() {
+  return layout({
+    title: 'Reset link expired',
+    user: null,
+    body: `
+      <div class="auth-card">
+        <h1>This reset link no longer works</h1>
+        <p class="muted">It may have already been used, or it's older than 24 hours. Ask an admin to generate a new one.</p>
+        <p class="muted"><a href="/login">Back to login</a></p>
       </div>`,
   });
 }
@@ -100,7 +134,7 @@ function archivedStoriesPage({ user, stories }) {
           <form method="post" action="/stories/${s.id}/unarchive" class="inline-form">
             <button class="btn small ghost" type="submit">Unarchive</button>
           </form>
-          <form method="post" action="/stories/${s.id}/delete" class="inline-form" onsubmit="return confirm('Delete this story and everything in it forever? This cannot be undone.');">
+          <form method="post" action="/stories/${s.id}/delete" class="inline-form" data-confirm="Delete this story and everything in it forever? This cannot be undone.">
             <button class="btn small danger" type="submit">Delete forever</button>
           </form>` : ''}
       </div>
@@ -369,7 +403,7 @@ function archivedChaptersPage({ user, story, chapters }) {
           <form method="post" action="/chapters/${c.id}/unarchive" class="inline-form">
             <button class="btn small ghost" type="submit">Unarchive</button>
           </form>
-          <form method="post" action="/chapters/${c.id}/delete" class="inline-form" onsubmit="return confirm('Delete this chapter and all its versions and comments forever? This cannot be undone.');">
+          <form method="post" action="/chapters/${c.id}/delete" class="inline-form" data-confirm="Delete this chapter and all its versions and comments forever? This cannot be undone.">
             <button class="btn small danger" type="submit">Delete forever</button>
           </form>` : ''}
       </div>
@@ -401,7 +435,7 @@ function renderReply(r, { currentUserId }) {
       <span>${escapeHtml(r.body)}</span>
       ${timeHtml(r.created_at)}
       ${isReplyAuthor ? `
-        <form method="post" action="/comments/${r.id}/retract" class="inline-form" onsubmit="return confirm('Retract this reply?');">
+        <form method="post" action="/comments/${r.id}/retract" class="inline-form" data-confirm="Retract this reply?">
           <button class="btn tiny ghost" type="submit">Retract</button>
         </form>` : ''}
     </div>`;
@@ -447,7 +481,7 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies }) {
             <button class="btn small ghost" type="submit">Reopen</button>
           </form>` : ''}
         ${isCommentAuthor ? `
-          <form method="post" action="/comments/${c.id}/retract" class="inline-form" onsubmit="return confirm('Retract this comment?');">
+          <form method="post" action="/comments/${c.id}/retract" class="inline-form" data-confirm="Retract this comment?">
             <button class="btn small ghost" type="submit">Retract</button>
           </form>` : ''}
       </div>
@@ -545,6 +579,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
           <a href="/chapters/${chapter.id}/download.txt?v=${currentVersion.version_number}">.txt</a>
           <a href="/chapters/${chapter.id}/download.docx?v=${currentVersion.version_number}">.docx</a>
         </span>
+        <button id="reading-fill-screen" class="btn ghost small" type="button">Fill screen</button>
       </div>
     </div>
     <div class="chapter-body-grid">
@@ -634,7 +669,7 @@ function inviteCodeCard(activeInviteCode) {
         <form method="post" action="/admin/invite-code/generate" class="inline-form">
           <button class="btn small" type="submit">Generate a new code</button>
         </form>
-        <form method="post" action="/admin/invite-code/close" class="inline-form" onsubmit="return confirm('Close registration? Nobody will be able to register until you generate a new code.');">
+        <form method="post" action="/admin/invite-code/close" class="inline-form" data-confirm="Close registration? Nobody will be able to register until you generate a new code.">
           <button class="btn small ghost" type="submit">Close registration</button>
         </form>
       </div>
@@ -674,7 +709,7 @@ function namedInviteRow(inv) {
         <p class="muted small-meta">Code: <span class="invite-code-inline">${escapeHtml(inv.code)}</span> &middot; created ${timeHtml(inv.created_at)}${inv.created_by_name ? ` by ${escapeHtml(inv.created_by_name)}` : ''}</p>
       </div>
       <div class="admin-user-actions">
-        <form method="post" action="/admin/invite-code/named/${inv.id}/revoke" class="inline-form" onsubmit="return confirm('Revoke this invite? The code will stop working.');">
+        <form method="post" action="/admin/invite-code/named/${inv.id}/revoke" class="inline-form" data-confirm="Revoke this invite? The code will stop working.">
           <button class="btn small ghost" type="submit">Revoke</button>
         </form>
       </div>
@@ -719,6 +754,9 @@ function adminUserRow(u, { currentUserId }) {
             <button class="btn small" type="submit">Set password</button>
           </form>
         </details>
+        <form method="post" action="/admin/users/${u.id}/reset-link" class="inline-form">
+          <button class="btn small ghost" type="submit">Send reset link</button>
+        </form>
         ${locked
           ? `<form method="post" action="/admin/users/${u.id}/unlock" class="inline-form">
                <button class="btn small ghost" type="submit">Reactivate</button>
@@ -728,14 +766,14 @@ function adminUserRow(u, { currentUserId }) {
              </form>`)
         }
         ${isSelf ? '' : `
-          <form method="post" action="/admin/users/${u.id}/delete" class="inline-form" onsubmit="return confirm('Delete this account? Their stories/chapters/comments stay, credited to Deleted user. This cannot be undone.');">
+          <form method="post" action="/admin/users/${u.id}/delete" class="inline-form" data-confirm="Delete this account? Their stories/chapters/comments stay, credited to Deleted user. This cannot be undone.">
             <button class="btn small danger" type="submit">Delete account</button>
           </form>`}
       </div>
     </div>`;
 }
 
-function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, notice }) {
+function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, notice }) {
   const userRows = users.map((u) => adminUserRow(u, { currentUserId: user.id })).join('');
   return layout({
     title: 'Admin',
@@ -758,6 +796,8 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
 
       ${namedInviteSection(pendingNamedInvites)}
 
+      ${resetLinksSection(pendingResetLinks)}
+
       <section class="admin-section">
         <h2>Users</h2>
         <div class="admin-user-list">${userRows}</div>
@@ -765,9 +805,33 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
   });
 }
 
+function resetLinksSection(pendingResetLinks) {
+  if (!pendingResetLinks.length) return '';
+  const rows = pendingResetLinks.map((t) => `
+    <div class="admin-user-row">
+      <div class="admin-user-main">
+        <strong>${escapeHtml(t.user_display_name)}</strong> <span class="muted">@${escapeHtml(t.user_username)}</span>
+        <p class="muted small-meta">Requested ${timeHtml(t.created_at)} &middot; expires ${timeHtml(t.expires_at)}</p>
+      </div>
+      <div class="admin-user-actions">
+        <form method="post" action="/admin/reset-link/${t.id}/revoke" class="inline-form">
+          <button class="btn small ghost" type="submit">Revoke</button>
+        </form>
+      </div>
+    </div>`).join('');
+  return `
+    <section class="admin-section">
+      <h2>Pending password reset links</h2>
+      <p class="muted">Generated from a user's "Send reset link" button below. Each link is single-use and expires after 24 hours.</p>
+      <div class="admin-user-list">${rows}</div>
+    </section>`;
+}
+
 module.exports = {
   loginPage,
   registerPage,
+  resetPasswordPage,
+  resetPasswordExpiredPage,
   accountPage,
   adminPage,
   storiesPage,

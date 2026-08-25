@@ -82,6 +82,16 @@ function generateInviteCode() {
 
 const ACCOUNT_LOCKOUT_THRESHOLD = 3;
 
+// Password reset tokens go in a URL (see server.js's /reset-password/:token
+// and models.js's createPasswordResetToken) rather than being typed in by
+// hand like an invite code, so this is long and base64url rather than a
+// short human-friendly alphabet -- 32 random bytes, unguessable.
+function generateResetToken() {
+  return crypto.randomBytes(32).toString('base64url');
+}
+
+const PASSWORD_RESET_TOKEN_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24h
+
 module.exports = {
   hashPassword,
   verifyPassword,
@@ -90,4 +100,6 @@ module.exports = {
   SESSION_MAX_AGE_MS,
   generateInviteCode,
   ACCOUNT_LOCKOUT_THRESHOLD,
+  generateResetToken,
+  PASSWORD_RESET_TOKEN_MAX_AGE_MS,
 };
