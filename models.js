@@ -41,8 +41,18 @@ function getPlaceholderUserId() {
   return row ? row.id : null;
 }
 
+// Bumping session_version alongside the password is what actually signs
+// out every other open session for this account -- see db.js's comment on
+// that column and server.js's getCurrentUser().
 function adminSetPassword(userId, passwordHash) {
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, userId);
+  db.prepare('UPDATE users SET password_hash = ?, session_version = session_version + 1 WHERE id = ?').run(passwordHash, userId);
+}
+
+// Same operation as adminSetPassword, kept as a separate name so call sites
+// read clearly (a user changing their own password vs. an admin resetting
+// someone else's).
+function setOwnPassword(userId, passwordHash) {
+  db.prepare('UPDATE users SET password_hash = ?, session_version = session_version + 1 WHERE id = ?').run(passwordHash, userId);
 }
 
 // Permanent. The account itself is removed, but anything the user
@@ -626,6 +636,7 @@ module.exports = {
   listUsersForAdmin,
   getPlaceholderUserId,
   adminSetPassword,
+  setOwnPassword,
   adminDeleteUser,
   DELETED_USER_USERNAME,
   listStories,

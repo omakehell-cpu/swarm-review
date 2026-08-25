@@ -96,11 +96,18 @@ function getCurrentUser(req) {
   const cookies = parseCookies(req);
   const payload = auth.verifySession(cookies[SESSION_COOKIE]);
   if (!payload || !payload.uid) return null;
-  return models.getUserById(payload.uid) || null;
+  const user = models.getUserById(payload.uid);
+  if (!user) return null;
+  // The password changed (see models.js setOwnPassword/adminSetPassword)
+  // since this particular token was issued -- treat it the same as an
+  // expired session rather than trusting a token some other, now-stale
+  // login handed out.
+  if (payload.sv !== user.session_version) return null;
+  return user;
 }
 
 function login(res, user) {
-  const token = auth.signSession({ uid: user.id, exp: Date.now() + auth.SESSION_MAX_AGE_MS });
+  const token = auth.signSession({ uid: user.id, sv: user.session_version, exp: Date.now() + auth.SESSION_MAX_AGE_MS });
   setCookie(res, SESSION_COOKIE, token, { maxAgeMs: auth.SESSION_MAX_AGE_MS, secure: SECURE_COOKIES });
 }
 
@@ -198,6 +205,36 @@ async function handleRegisterSubmit(req, res) {
 async function handleLogout(req, res) {
   clearCookie(res, SESSION_COOKIE);
   redirect(res, '/login');
+}
+
+async function handleAccountPage(req, res, user, query) {
+  const notice = query.get('notice') || null;
+  sendHtml(res, 200, views.accountPage({ user, notice }));
+}
+
+async function handleAccountPasswordSubmit(req, res, user) {
+  const body = await parseBody(req);
+  const currentPassword = body.currentPassword || '';
+  const newPassword = body.newPassword || '';
+  const confirmPassword = body.confirmPassword || '';
+
+  if (!auth.verifyPassword(currentPassword, user.password_hash)) {
+    return sendHtml(res, 401, views.accountPage({ user, error: 'Current password is incorrect.' }));
+  }
+  if (newPassword.length < 8) {
+    return sendHtml(res, 400, views.accountPage({ user, error: 'New password must be at least 8 characters long.' }));
+  }
+  if (newPassword !== confirmPassword) {
+    return sendHtml(res, 400, views.accountPage({ user, error: 'New password and confirmation do not match.' }));
+  }
+
+  models.setOwnPassword(user.id, auth.hashPassword(newPassword));
+  // Changing the password bumps session_version (see models.js), which
+  // invalidates every session for this account -- including the one making
+  // this very request. Issue a fresh cookie right away so the user lands on
+  // a working, logged-in page instead of being bounced to /login mid-action.
+  login(res, models.getUserById(user.id));
+  redirect(res, '/account?notice=Password changed. You have been kept logged in here, but signed out everywhere else.');
 }
 
 // ---------------------------------------------------------------------
@@ -700,6 +737,8 @@ async function router(req, res) {
     if (pathname === '/register' && req.method === 'GET') return handleRegisterPage(req, res);
     if (pathname === '/register' && req.method === 'POST') return handleRegisterSubmit(req, res);
     if (pathname === '/logout' && req.method === 'POST') return handleLogout(req, res);
+    if (pathname === '/account' && req.method === 'GET') return handleAccountPage(req, res, user, url.searchParams);
+    if (pathname === '/account/password' && req.method === 'POST') return handleAccountPasswordSubmit(req, res, user);
 
     if (pathname === '/admin' && req.method === 'GET') return handleAdminPage(req, res, user, url.searchParams);
     if (pathname === '/admin/invite-code/generate' && req.method === 'POST') return handleAdminGenerateInviteCode(req, res, user);

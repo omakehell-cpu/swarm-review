@@ -458,6 +458,29 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
   return layout({ title: chapter.title, user, body });
 }
 
+// ---------- account settings ----------
+
+function accountPage({ user, error, notice }) {
+  return layout({
+    title: 'Account',
+    user,
+    flash: notice ? { type: 'info', message: notice } : null,
+    body: `
+      <h1>Account</h1>
+      <div class="auth-card">
+        <h2>Change password</h2>
+        ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+        <form method="post" action="/account/password">
+          <label>Current password<input type="password" name="currentPassword" required></label>
+          <label>New password<input type="password" name="newPassword" required minlength="8"></label>
+          <label>Confirm new password<input type="password" name="confirmPassword" required minlength="8"></label>
+          <button class="btn" type="submit">Change password</button>
+        </form>
+        <p class="muted">Changing your password signs you out of any other device or browser where you're currently logged in.</p>
+      </div>`,
+  });
+}
+
 // ---------- admin panel ----------
 
 function inviteCodeCard(activeInviteCode) {
@@ -613,6 +636,7 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
 module.exports = {
   loginPage,
   registerPage,
+  accountPage,
   adminPage,
   storiesPage,
   archivedStoriesPage,

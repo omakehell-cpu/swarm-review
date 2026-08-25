@@ -158,6 +158,15 @@ ensureColumn('users', 'locked_reason', 'TEXT'); // 'failed_attempts' | 'admin'
 // NULL here means exactly that: valid for any username.
 ensureColumn('invite_codes', 'username', 'TEXT');
 
+// Bumped every time a password changes (self-service or admin-set, see
+// models.js setOwnPassword/adminSetPassword). A session token records the
+// session_version it was issued under (see server.js login()); if it no
+// longer matches the user's current value, the token is treated as
+// logged-out -- this is what makes changing a password actually sign out
+// any other open session, instead of leaving old tokens valid until they
+// expire on their own up to 30 days later.
+ensureColumn('users', 'session_version', 'INTEGER NOT NULL DEFAULT 0');
+
 // One-time migration: older versions of this app gated registration with a
 // single static code stored in data/invite-code.txt (valid forever, for
 // anyone). If that file exists and the new invite_codes table is still
