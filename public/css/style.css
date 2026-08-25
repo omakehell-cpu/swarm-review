@@ -250,3 +250,6 @@ input[type="file"] { padding: 6px 4px; }
 .admin-inline-form summary { cursor: pointer; color: var(--text-muted); font-size: 0.85rem; padding: 5px 0; }
 .admin-inline-form form { display: flex; gap: 6px; margin-top: 6px; }
 .admin-inline-form input { padding: 6px 8px; font-size: 0.85rem; }
+.named-invite-form { display: flex; gap: 8px; margin-bottom: 14px; max-width: 420px; }
+.named-invite-form input { flex: 1; padding: 6px 8px; font-size: 0.9rem; }
+.invite-code-inline { font-family: monospace; }

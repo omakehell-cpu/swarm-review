@@ -464,6 +464,7 @@ function inviteCodeHistoryTable(history) {
     return `
       <tr>
         <td>${escapeHtml(c.code)}</td>
+        <td>${c.username ? `@${escapeHtml(c.username)}` : 'Anyone'}</td>
         <td>${timeHtml(c.created_at)}</td>
         <td>${statusText}</td>
       </tr>`;
@@ -472,10 +473,41 @@ function inviteCodeHistoryTable(history) {
     <details class="invite-history">
       <summary>Invite code history (${history.length})</summary>
       <table class="admin-table">
-        <thead><tr><th>Code</th><th>Created</th><th>Status</th></tr></thead>
+        <thead><tr><th>Code</th><th>For</th><th>Created</th><th>Status</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </details>`;
+}
+
+function namedInviteRow(inv) {
+  return `
+    <div class="admin-user-row">
+      <div class="admin-user-main">
+        <strong>@${escapeHtml(inv.username)}</strong>
+        <p class="muted small-meta">Code: <span class="invite-code-inline">${escapeHtml(inv.code)}</span> &middot; created ${timeHtml(inv.created_at)}${inv.created_by_name ? ` by ${escapeHtml(inv.created_by_name)}` : ''}</p>
+      </div>
+      <div class="admin-user-actions">
+        <form method="post" action="/admin/invite-code/named/${inv.id}/revoke" class="inline-form" onsubmit="return confirm('Revoke this invite? The code will stop working.');">
+          <button class="btn small ghost" type="submit">Revoke</button>
+        </form>
+      </div>
+    </div>`;
+}
+
+function namedInviteSection(pendingNamedInvites) {
+  const rows = pendingNamedInvites.length
+    ? pendingNamedInvites.map(namedInviteRow).join('')
+    : '<p class="muted">No pending invites.</p>';
+  return `
+    <section class="admin-section">
+      <h2>Invite a specific person</h2>
+      <p class="muted">Generates a code that only works to register with that exact username -- unlike the general code above, this doesn't affect the open code or anyone else's pending invite. Adding the same username again replaces their old code with a new one.</p>
+      <form method="post" action="/admin/invite-code/named" class="named-invite-form">
+        <input type="text" name="username" placeholder="username" required pattern="[a-zA-Z0-9_\\-]{3,30}">
+        <button class="btn small" type="submit">Generate invite</button>
+      </form>
+      <div class="admin-user-list">${rows}</div>
+    </section>`;
 }
 
 function adminUserRow(u, { currentUserId }) {
@@ -516,7 +548,7 @@ function adminUserRow(u, { currentUserId }) {
     </div>`;
 }
 
-function adminPage({ user, users, activeInviteCode, inviteCodeHistory, notice }) {
+function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, notice }) {
   const userRows = users.map((u) => adminUserRow(u, { currentUserId: user.id })).join('');
   return layout({
     title: 'Admin',
@@ -530,6 +562,8 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, notice })
         ${inviteCodeCard(activeInviteCode)}
         ${inviteCodeHistoryTable(inviteCodeHistory)}
       </section>
+
+      ${namedInviteSection(pendingNamedInvites)}
 
       <section class="admin-section">
         <h2>Users</h2>

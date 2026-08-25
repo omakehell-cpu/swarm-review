@@ -126,10 +126,21 @@ function adminUnlockAccount(userId) {
 // separately, after the new user is actually created, so a code isn't
 // burned on a registration attempt that fails for some other reason
 // (username taken, weak password, etc).
-function validateInviteCode(code) {
-  const normalized = String(code || '').trim().toUpperCase();
-  if (!normalized) return null;
-  return db.prepare('SELECT * FROM invite_codes WHERE code = ? AND active = 1 AND used_at IS NULL').get(normalized) || null;
+function validateInviteCode(code, username) {
+  const normalizedCode = String(code || '').trim().toUpperCase();
+  if (!normalizedCode) return null;
+  const row = db.prepare(
+    'SELECT * FROM invite_codes WHERE code = ? AND active = 1 AND used_at IS NULL'
+  ).get(normalizedCode);
+  if (!row) return null;
+  // A named invite (see createNamedInviteCode) only works for the exact
+  // username it was created for; a generic invite (username IS NULL, the
+  // original behaviour) works for whoever registers with it first.
+  if (row.username) {
+    const normalizedUsername = String(username || '').trim().toLowerCase();
+    if (row.username !== normalizedUsername) return null;
+  }
+  return row;
 }
 
 function markInviteCodeUsed(codeId, usedByUserId) {
@@ -140,7 +151,7 @@ function getActiveInviteCode() {
   return db.prepare(`
     SELECT ic.*, u.display_name AS created_by_name
     FROM invite_codes ic LEFT JOIN users u ON u.id = ic.created_by
-    WHERE ic.active = 1 ORDER BY ic.id DESC LIMIT 1
+    WHERE ic.active = 1 AND ic.username IS NULL ORDER BY ic.id DESC LIMIT 1
   `).get() || null;
 }
 
@@ -154,6 +165,61 @@ function listInviteCodes() {
   `).all();
 }
 
+// ---------- named (per-person) invite codes ----------
+// Unlike the generic invite code above (one at a time, open to whoever
+// registers first), a named invite is scoped to one specific username: an
+// admin picks a username, gets a code back, and only that exact username
+// can register with that code. Any number of named invites can be pending
+// at once, independently of the generic code and of each other.
+function createNamedInviteCode(username, createdBy) {
+  const normalized = String(username || '').trim().toLowerCase();
+  let code;
+  do {
+    code = auth.generateInviteCode();
+  } while (db.prepare('SELECT 1 FROM invite_codes WHERE code = ?').get(code));
+
+  db.exec('BEGIN');
+  try {
+    // Replace any earlier pending invite for the same username instead of
+    // stacking up multiple live codes for one person.
+    db.prepare(
+      'UPDATE invite_codes SET active = 0 WHERE active = 1 AND used_at IS NULL AND username = ?'
+    ).run(normalized);
+    const info = db.prepare(
+      'INSERT INTO invite_codes (code, active, created_by, username) VALUES (?, 1, ?, ?)'
+    ).run(code, createdBy, normalized);
+    db.exec('COMMIT');
+    return getInviteCodeById(Number(info.lastInsertRowid));
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+const getInviteCodeById = (id) =>
+  db.prepare(`
+    SELECT ic.*, u.display_name AS created_by_name
+    FROM invite_codes ic LEFT JOIN users u ON u.id = ic.created_by
+    WHERE ic.id = ?
+  `).get(id);
+
+// Pending = scoped to a username, still active, not used yet -- i.e. an
+// invite the admin has sent out that nobody has registered with.
+function listPendingNamedInvites() {
+  return db.prepare(`
+    SELECT ic.*, u.display_name AS created_by_name
+    FROM invite_codes ic LEFT JOIN users u ON u.id = ic.created_by
+    WHERE ic.username IS NOT NULL AND ic.active = 1 AND ic.used_at IS NULL
+    ORDER BY ic.created_at DESC
+  `).all();
+}
+
+// Cancels a pending named invite before anyone used it. A no-op (not an
+// error) if it was already used or already revoked.
+function revokeNamedInvite(id) {
+  db.prepare('UPDATE invite_codes SET active = 0 WHERE id = ? AND used_at IS NULL').run(id);
+}
+
 // Deactivates whatever code was active and creates a fresh one -- the old
 // one stops working immediately, even if nobody had used it yet.
 function generateNewInviteCode(createdBy) {
@@ -164,7 +230,10 @@ function generateNewInviteCode(createdBy) {
 
   db.exec('BEGIN');
   try {
-    db.prepare('UPDATE invite_codes SET active = 0 WHERE active = 1').run();
+    // Only the previous generic code is deactivated -- pending named
+    // invites (see createNamedInviteCode) are managed independently and
+    // are untouched by generating a new open code.
+    db.prepare('UPDATE invite_codes SET active = 0 WHERE active = 1 AND username IS NULL').run();
     db.prepare('INSERT INTO invite_codes (code, active, created_by) VALUES (?, 1, ?)').run(code, createdBy);
     db.exec('COMMIT');
     return getActiveInviteCode();
@@ -177,7 +246,10 @@ function generateNewInviteCode(createdBy) {
 // Deactivates whatever code was active without creating a new one --
 // nobody can register until the admin generates a fresh code again.
 function closeRegistration() {
-  db.prepare('UPDATE invite_codes SET active = 0 WHERE active = 1').run();
+  // Only closes the generic open code; pending named invites keep working,
+  // since they were never covered by "open, whoever-registers-first"
+  // registration in the first place.
+  db.prepare('UPDATE invite_codes SET active = 0 WHERE active = 1 AND username IS NULL').run();
 }
 
 // ---------- stories ----------
@@ -469,6 +541,10 @@ module.exports = {
   listInviteCodes,
   generateNewInviteCode,
   closeRegistration,
+  createNamedInviteCode,
+  getInviteCodeById,
+  listPendingNamedInvites,
+  revokeNamedInvite,
   listUsersForAdmin,
   getPlaceholderUserId,
   adminSetPassword,

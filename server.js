@@ -114,9 +114,10 @@ async function handleLoginPage(req, res, query) {
 
 async function handleLoginSubmit(req, res) {
   const body = await parseBody(req);
-  // El registro guarda el username en minusculas (ver handleRegisterSubmit),
-  // asi que aqui hay que normalizar igual -- si no, alguien que escriba su
-  // usuario con mayusculas nunca encontraria su cuenta al iniciar sesion.
+  // Registration stores the username lowercased (see handleRegisterSubmit),
+  // so it has to be normalized the same way here -- otherwise someone who
+  // types their username with uppercase letters would never find their
+  // account when logging in.
   const username = (body.username || '').trim().toLowerCase();
   const user = models.getUserByUsername(username);
 
@@ -158,7 +159,7 @@ async function handleRegisterSubmit(req, res) {
   const inviteCode = (body.inviteCode || '').trim();
   const values = { username, displayName };
 
-  const codeRow = models.validateInviteCode(inviteCode);
+  const codeRow = models.validateInviteCode(inviteCode, username);
   if (!codeRow) {
     return sendHtml(res, 403, views.registerPage({
       error: 'That invite code is incorrect, already used, or registration is currently closed. Ask an admin for a new one.',
@@ -206,9 +207,10 @@ async function handleAdminPage(req, res, user, query) {
   const users = models.listUsersForAdmin();
   const activeInviteCode = models.getActiveInviteCode();
   const inviteCodeHistory = models.listInviteCodes();
+  const pendingNamedInvites = models.listPendingNamedInvites();
   const notice = query.get('notice') || null;
   sendHtml(res, 200, views.adminPage({
-    user, users, activeInviteCode, inviteCodeHistory, notice,
+    user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, notice,
   }));
 }
 
@@ -261,6 +263,31 @@ async function handleAdminDeleteUser(req, res, user, targetUserId) {
   }
   models.adminDeleteUser(targetUserId);
   redirect(res, `/admin?notice=${encodeURIComponent(target.display_name)}'s account was deleted. Their stories, chapters, and comments were kept, credited to "Deleted user".`);
+}
+
+async function handleAdminCreateNamedInvite(req, res, user) {
+  const body = await parseBody(req);
+  const username = (body.username || '').trim().toLowerCase();
+
+  if (!/^[a-zA-Z0-9_-]{3,30}$/.test(username)) {
+    return redirect(res, '/admin?notice=Invalid username for the invite (3-30 characters, letters/numbers/_/-).');
+  }
+  if (username === models.DELETED_USER_USERNAME) {
+    return redirect(res, '/admin?notice=That username is reserved.');
+  }
+  if (models.getUserByUsername(username)) {
+    return redirect(res, `/admin?notice="${encodeURIComponent(username)}" already has an account.`);
+  }
+
+  const invite = models.createNamedInviteCode(username, user.id);
+  redirect(res, `/admin?notice=Invite code for "${encodeURIComponent(invite.username)}": ${encodeURIComponent(invite.code)} -- share it only with that person.`);
+}
+
+async function handleAdminRevokeNamedInvite(req, res, user, inviteId) {
+  const invite = models.getInviteCodeById(inviteId);
+  if (!invite || !invite.username) return sendHtml(res, 404, 'Invite not found');
+  models.revokeNamedInvite(inviteId);
+  redirect(res, `/admin?notice=Invite for "${encodeURIComponent(invite.username)}" revoked.`);
 }
 
 async function handleStories(req, res, user) {
@@ -650,6 +677,12 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/admin\/users\/(\d+)\/delete$/)) && req.method === 'POST') {
       return handleAdminDeleteUser(req, res, user, Number(m[1]));
+    }
+    if (pathname === '/admin/invite-code/named' && req.method === 'POST') {
+      return handleAdminCreateNamedInvite(req, res, user);
+    }
+    if ((m = pathname.match(/^\/admin\/invite-code\/named\/(\d+)\/revoke$/)) && req.method === 'POST') {
+      return handleAdminRevokeNamedInvite(req, res, user, Number(m[1]));
     }
 
     if (pathname === '/' && req.method === 'GET') return handleStories(req, res, user);

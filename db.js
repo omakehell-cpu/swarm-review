@@ -152,6 +152,12 @@ ensureColumn('users', 'failed_login_attempts', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'locked_at', 'TEXT');
 ensureColumn('users', 'locked_reason', 'TEXT'); // 'failed_attempts' | 'admin'
 
+// Named invites: an invite code scoped to one specific username instead of
+// being open to whoever registers first (see models.js createNamedInviteCode).
+// Nullable with no default -- every existing row is a generic code, and
+// NULL here means exactly that: valid for any username.
+ensureColumn('invite_codes', 'username', 'TEXT');
+
 // One-time migration: older versions of this app gated registration with a
 // single static code stored in data/invite-code.txt (valid forever, for
 // anyone). If that file exists and the new invite_codes table is still
