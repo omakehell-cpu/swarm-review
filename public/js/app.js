@@ -42,6 +42,33 @@
     });
   }
 
+  // ---- wiki-link hover preview: character/place/ship names the server
+  // auto-links from the shared wiki's index (lib/wiki.js) carry their
+  // summary in data-wiki-summary; show it on hover, same reasoning as the
+  // writing analyzer's own hover tooltip (see createHoverTip in writing-
+  // analyzer.js -- not reused directly since it's private to that
+  // module's closure, but this is the same small pattern). Skipped on
+  // touch (hover: hover false) -- there's no real hover there, and a tap
+  // should just follow the link like any other, not show a tooltip first.
+  if (window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+    const wikiTip = document.createElement('div');
+    wikiTip.className = 'wa-hover-tip hidden';
+    document.body.appendChild(wikiTip);
+    textEl.addEventListener('mouseover', (ev) => {
+      const link = ev.target.closest('a.wiki-link');
+      if (!link) return;
+      wikiTip.textContent = link.dataset.wikiSummary || '';
+      const rect = link.getBoundingClientRect();
+      wikiTip.style.top = `${window.scrollY + rect.top - 8}px`;
+      wikiTip.style.left = `${window.scrollX + rect.left}px`;
+      wikiTip.classList.remove('hidden');
+    });
+    textEl.addEventListener('mouseout', (ev) => {
+      const link = ev.target.closest('a.wiki-link');
+      if (link && !link.contains(ev.relatedTarget)) wikiTip.classList.add('hidden');
+    });
+  }
+
   // True while the writing analyzer's "Comments" toggle has the comments
   // panel hidden (see public/js/writing-analyzer.js) -- while hidden, the
   // inline comment highlights are visually neutralized by CSS, and the

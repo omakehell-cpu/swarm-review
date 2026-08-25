@@ -4,6 +4,7 @@ const { layout } = require('./lib/layout');
 const { escapeHtml, toScriptJson } = require('./lib/util');
 const { parseMarkdown, renderHighlighted } = require('./lib/markdown');
 const { timeHtml } = require('./lib/time');
+const wiki = require('./lib/wiki');
 
 const MARKDOWN_HINT = `Markdown is supported: **bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - list items. Line breaks are kept as you type them.`;
 
@@ -555,7 +556,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     : '<p class="muted">No comments yet on this version.</p>';
 
   const ast = parseMarkdown(currentVersion.content);
-  const highlighted = renderHighlighted(ast, comments);
+  const highlighted = renderHighlighted(ast, comments, wiki.findWikiMatches);
 
   const body = `
     <p class="breadcrumb"><a href="/stories/${chapter.story_id}">&larr; ${escapeHtml(chapter.story_title)}</a></p>
@@ -773,7 +774,7 @@ function adminUserRow(u, { currentUserId }) {
     </div>`;
 }
 
-function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, notice }) {
+function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice }) {
   const userRows = users.map((u) => adminUserRow(u, { currentUserId: user.id })).join('');
   return layout({
     title: 'Admin',
@@ -798,11 +799,30 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
 
       ${resetLinksSection(pendingResetLinks)}
 
+      ${wikiSyncSection(wikiSyncState)}
+
       <section class="admin-section">
         <h2>Users</h2>
         <div class="admin-user-list">${userRows}</div>
       </section>`,
   });
+}
+
+function wikiSyncSection(state) {
+  const statusLine = !state || !state.last_synced_at
+    ? '<p class="muted">Never synced yet.</p>'
+    : `<p class="muted">Last synced ${timeHtml(state.last_synced_at)} &middot; ${state.page_count} pages${
+        state.last_status === 'error' ? ` &middot; <span class="error">failed: ${escapeHtml(state.last_error || 'unknown error')}</span>` : ''
+      }</p>`;
+  return `
+    <section class="admin-section">
+      <h2>Wiki linking</h2>
+      <p class="muted">Character/place/ship names recognized from <a href="${escapeHtml(wiki.WIKI_BASE_URL)}" target="_blank" rel="noopener noreferrer">the shared-universe wiki</a> get auto-linked in chapter text, with a hover preview of the wiki page's summary -- readers can turn this off from the "Wiki links" toggle on the chapter page. This index is a local cache (see below), refreshed automatically once a day.</p>
+      ${statusLine}
+      <form method="post" action="/admin/wiki/sync" class="inline-form">
+        <button class="btn ghost small" type="submit">Sync wiki now</button>
+      </form>
+    </section>`;
 }
 
 function resetLinksSection(pendingResetLinks) {

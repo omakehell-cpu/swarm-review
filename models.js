@@ -727,6 +727,43 @@ function removeStoryDictionaryWord(storyId, id) {
   db.prepare('DELETE FROM story_dictionary_words WHERE story_id = ? AND id = ?').run(storyId, id);
 }
 
+// ---------- wiki index (see lib/wiki.js for the sync/fetch logic) ----------
+function listWikiPages() {
+  return db.prepare('SELECT title, title_lower, summary FROM wiki_pages').all();
+}
+
+// Replaces the whole table in one transaction -- simpler and safer than
+// diffing against the previous set (a renamed/deleted wiki page just
+// disappears cleanly, rather than needing its own cleanup pass).
+function replaceWikiPages(pages) {
+  db.exec('BEGIN');
+  try {
+    db.exec('DELETE FROM wiki_pages');
+    const insert = db.prepare(
+      'INSERT INTO wiki_pages (title, title_lower, summary) VALUES (?, ?, ?)'
+    );
+    for (const p of pages) insert.run(p.title, p.title.toLowerCase(), p.summary || '');
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+function getWikiSyncState() {
+  return db.prepare('SELECT * FROM wiki_sync_state WHERE id = 1').get() || null;
+}
+
+function setWikiSyncState({ status, pageCount, error }) {
+  db.prepare(`
+    INSERT INTO wiki_sync_state (id, last_synced_at, last_status, page_count, last_error)
+    VALUES (1, datetime('now'), ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      last_synced_at = datetime('now'), last_status = excluded.last_status,
+      page_count = excluded.page_count, last_error = excluded.last_error
+  `).run(status, pageCount || 0, error || null);
+}
+
 module.exports = {
   userCount,
   getUserByUsername,
@@ -793,4 +830,8 @@ module.exports = {
   removeStoryDictionaryWord,
   insertChapterAt,
   moveChapter,
+  listWikiPages,
+  replaceWikiPages,
+  getWikiSyncState,
+  setWikiSyncState,
 };

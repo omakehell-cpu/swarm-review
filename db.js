@@ -128,6 +128,32 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   used_at     TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_password_reset_user ON password_reset_tokens(user_id);
+
+-- A cached, local copy of the shared-universe wiki's page titles + a short
+-- plain-text summary of each (see lib/wiki.js), refreshed periodically
+-- rather than queried live -- chapter text is scanned against this table
+-- (not the wiki itself) to auto-link character/place/ship names, so
+-- rendering a chapter never depends on the external wiki being up.
+CREATE TABLE IF NOT EXISTS wiki_pages (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  title       TEXT NOT NULL UNIQUE,
+  title_lower TEXT NOT NULL,
+  summary     TEXT NOT NULL DEFAULT '',
+  fetched_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_wiki_pages_title_lower ON wiki_pages(title_lower);
+
+-- Single row (id is always 1) tracking the last sync attempt, shown on the
+-- admin page -- whether it's ever run, when, how many pages, and whether
+-- it succeeded, so a failed background sync (e.g. the wiki being
+-- unreachable) is visible instead of silently going stale.
+CREATE TABLE IF NOT EXISTS wiki_sync_state (
+  id              INTEGER PRIMARY KEY CHECK (id = 1),
+  last_synced_at  TEXT,
+  last_status     TEXT,
+  page_count      INTEGER NOT NULL DEFAULT 0,
+  last_error      TEXT
+);
 `);
 
 // Guard against a *very* old database file from before "stories" existed:

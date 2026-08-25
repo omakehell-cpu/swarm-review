@@ -27,6 +27,7 @@ const models = require('./models');
 const views = require('./views');
 const { parseMarkdown, flattenLength, renderPlainText, renderHighlighted } = require('./lib/markdown');
 const { markdownToDocxBuffer, docxBufferToMarkdown } = require('./lib/docx');
+const wiki = require('./lib/wiki');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
 } = require('./lib/util');
@@ -259,9 +260,10 @@ async function handleAdminPage(req, res, user, query) {
   const inviteCodeHistory = models.listInviteCodes();
   const pendingNamedInvites = models.listPendingNamedInvites();
   const pendingResetLinks = models.listPendingPasswordResetTokens();
+  const wikiSyncState = models.getWikiSyncState();
   const notice = query.get('notice') || null;
   sendHtml(res, 200, views.adminPage({
-    user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, notice,
+    user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice,
   }));
 }
 
@@ -353,6 +355,15 @@ async function handleAdminGenerateResetLink(req, res, user, targetUserId) {
 async function handleAdminRevokeResetLink(req, res, user, tokenId) {
   models.revokePasswordResetToken(tokenId);
   redirect(res, '/admin?notice=Reset link revoked.');
+}
+
+async function handleAdminSyncWiki(req, res, user) {
+  try {
+    const { pageCount } = await wiki.syncWikiIndex();
+    redirect(res, `/admin?notice=Wiki index synced: ${pageCount} pages.`);
+  } catch (err) {
+    redirect(res, `/admin?notice=Wiki sync failed: ${encodeURIComponent(err.message)}`);
+  }
 }
 
 async function handleResetPasswordPage(req, res, token) {
@@ -813,7 +824,7 @@ async function handleCommentReopen(req, res, user, commentId) {
 async function handleMarkdownPreview(req, res, user) {
   const body = await parseBody(req);
   const text = typeof body.text === 'string' ? body.text : '';
-  const html = renderHighlighted(parseMarkdown(text), []);
+  const html = renderHighlighted(parseMarkdown(text), [], wiki.findWikiMatches);
   sendJson(res, 200, { html });
 }
 
@@ -918,6 +929,7 @@ async function router(req, res) {
     if ((m = pathname.match(/^\/admin\/reset-link\/(\d+)\/revoke$/)) && req.method === 'POST') {
       return handleAdminRevokeResetLink(req, res, user, Number(m[1]));
     }
+    if (pathname === '/admin/wiki/sync' && req.method === 'POST') return handleAdminSyncWiki(req, res, user);
     if (pathname === '/admin/backup' && req.method === 'GET') return handleAdminBackup(req, res, user);
 
     if (pathname === '/' && req.method === 'GET') return handleStories(req, res, user);
@@ -1026,3 +1038,26 @@ server.listen(PORT, () => {
     ? `Invite code for new account registration: ${activeCode.code}`
     : 'Registration is currently closed -- log in as an admin and generate a new invite code from /admin.');
 });
+
+// Keeps the local wiki index (see lib/wiki.js) roughly in sync with the
+// shared-universe wiki without anyone having to remember to click "Sync
+// now" -- syncs immediately if it's never run or is more than a day
+// stale (covers a fresh install and a server that was down past the last
+// scheduled sync), then every 24h after that. Runs in the background;
+// never blocks startup, and a failure (e.g. the wiki being unreachable)
+// just logs and tries again next time rather than crashing the server.
+const WIKI_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+function runWikiSync() {
+  wiki.syncWikiIndex()
+    .then(({ pageCount }) => console.log(`Wiki index synced: ${pageCount} pages.`))
+    .catch((err) => console.error('Wiki sync failed:', err.message));
+}
+(function scheduleWikiSync() {
+  const state = models.getWikiSyncState();
+  const lastSyncedMs = state && state.last_synced_at
+    ? new Date(`${state.last_synced_at.replace(' ', 'T')}Z`).getTime()
+    : 0;
+  const isStale = !lastSyncedMs || Date.now() - lastSyncedMs > WIKI_SYNC_INTERVAL_MS;
+  if (isStale) runWikiSync();
+  setInterval(runWikiSync, WIKI_SYNC_INTERVAL_MS);
+})();

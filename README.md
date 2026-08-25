@@ -109,6 +109,14 @@ file up and you have the whole site.
   rest of the app's zero-dependency approach; it covers the Markdown
   subset this app supports well, but isn't a general-purpose Word
   converter -- see the limitations below.
+- **Wiki linking** — character/place/ship names recognized from the
+  shared-universe wiki (`WIKI_BASE_URL`, default `https://tampaad.net`)
+  get auto-linked in chapter text, with a hover preview of that page's
+  summary. Backed by a local cache (`lib/wiki.js`) refreshed once a day
+  automatically, or on demand from `/admin` -- rendering a chapter never
+  makes a live request to the wiki itself. Readers can turn it off with
+  the "Wiki links" toggle on the chapter page if it's more noise than
+  help for a given story.
 
 ## Admin & account security
 
@@ -185,6 +193,7 @@ lib/docx.js      hand-written .docx (Word) reader/writer, built on lib/zip.js
 lib/zip.js       minimal dependency-free ZIP reader/writer
 lib/multipart.js parser for file-upload (multipart/form-data) requests
 lib/time.js      renders SQLite timestamps as <time> elements (UTC fallback)
+lib/wiki.js      syncs + matches names against the shared-universe wiki
 lib/             other small shared helpers (HTML escaping, cookies, layout)
 public/          client-side CSS/JS (text-selection + highlighting logic)
 data/            created at runtime: the SQLite database + secrets

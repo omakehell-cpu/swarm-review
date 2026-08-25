@@ -107,6 +107,22 @@
     try { localStorage.setItem(COMMENTS_VISIBLE_KEY, visible ? '1' : '0'); } catch (e) { /* ignore */ }
   }
 
+  // Same pattern as comments visibility above, for the character/place/
+  // ship name links the server auto-inserts from the shared wiki's index
+  // (see lib/wiki.js) -- on by default, but some readers may find them
+  // distracting or too eager to match short/common titles.
+  const WIKI_LINKS_VISIBLE_KEY = 'wa-wikilinks-visible';
+  function loadWikiLinksVisible() {
+    try {
+      const raw = localStorage.getItem(WIKI_LINKS_VISIBLE_KEY);
+      if (raw === '0') return false;
+    } catch (e) { /* ignore */ }
+    return true;
+  }
+  function saveWikiLinksVisible(visible) {
+    try { localStorage.setItem(WIKI_LINKS_VISIBLE_KEY, visible ? '1' : '0'); } catch (e) { /* ignore */ }
+  }
+
   function hexToRgba(hex, alpha) {
     const n = parseInt(hex.slice(1), 16);
     const r = (n >> 16) & 255; const g = (n >> 8) & 255; const b = n & 255;
@@ -1307,9 +1323,25 @@
       applyCommentsVisibility();
     }
 
+    // Wiki-link visibility is its own toggle (not tied to isAuthor the way
+    // the writing-quality checks are) -- every reader gets it, since it's
+    // about how *they* want to read, same reasoning as "Fill screen".
+    let wikiLinksVisible = loadWikiLinksVisible();
+    function applyWikiLinksVisibility() {
+      container.classList.toggle('wikilinks-hidden', !wikiLinksVisible);
+    }
+    applyWikiLinksVisibility();
+    function wikiLinksToggleChanged(checked) {
+      wikiLinksVisible = checked;
+      saveWikiLinksVisible(checked);
+      applyWikiLinksVisibility();
+    }
+
     if (!isAuthor) {
-      const row = buildCheckRow('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged);
-      const card = buildMinimalCard(row);
+      const commentsRow = buildCheckRow('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged);
+      const wikiRow = buildCheckRow('#5a8cd8', 'Wiki links', wikiLinksVisible, wikiLinksToggleChanged);
+      const card = buildMinimalCard(commentsRow);
+      card.querySelector('.wa-sections').appendChild(buildSection('Wiki', [wikiRow]));
       container.parentNode.insertBefore(card, container);
       return;
     }
@@ -1324,6 +1356,8 @@
     });
     const commentsRow = buildCheckRow('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged);
     sections.appendChild(buildSection('Comments', [commentsRow]));
+    const wikiRow = buildCheckRow('#5a8cd8', 'Wiki links', wikiLinksVisible, wikiLinksToggleChanged);
+    sections.appendChild(buildSection('Wiki', [wikiRow]));
     card.classList.add('wa-card-reading');
     container.parentNode.insertBefore(card, container);
 
