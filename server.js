@@ -772,7 +772,25 @@ async function handleMarkdownPreview(req, res, user) {
 // ---------------------------------------------------------------------
 // router
 // ---------------------------------------------------------------------
+// Set on every response, before any route-specific writeHead() runs --
+// res.writeHead() merges in whatever was set here via setHeader(), so this
+// applies uniformly to pages, static files, JSON, downloads, and 404s alike.
+// The app never frames itself or anyone else, never loads scripts/styles/
+// fonts/images from another origin, and has no external CDN, so these are
+// tight without needing an allowlist.
+function setSecurityHeaders(res) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  );
+}
+
 async function router(req, res) {
+  setSecurityHeaders(res);
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = decodeURIComponent(url.pathname);
 
