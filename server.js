@@ -25,7 +25,7 @@ const { URL } = require('url');
 const auth = require('./auth');
 const models = require('./models');
 const views = require('./views');
-const { parseMarkdown, flattenLength, renderPlainText } = require('./lib/markdown');
+const { parseMarkdown, flattenLength, renderPlainText, renderHighlighted } = require('./lib/markdown');
 const { markdownToDocxBuffer, docxBufferToMarkdown } = require('./lib/docx');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
@@ -746,6 +746,22 @@ async function handleCommentReopen(req, res, user, commentId) {
 }
 
 // ---------------------------------------------------------------------
+// live markdown preview (writing analyzer's optional split view)
+// ---------------------------------------------------------------------
+
+// Renders arbitrary pasted/typed markdown to HTML using the exact same
+// code that renders the real chapter page (renderHighlighted with an empty
+// comment list), so the preview the writer sees while editing always
+// matches what readers will actually see once it's published. Stateless --
+// doesn't touch any story/chapter, so any logged-in user can call it.
+async function handleMarkdownPreview(req, res, user) {
+  const body = await parseBody(req);
+  const text = typeof body.text === 'string' ? body.text : '';
+  const html = renderHighlighted(parseMarkdown(text), []);
+  sendJson(res, 200, { html });
+}
+
+// ---------------------------------------------------------------------
 // router
 // ---------------------------------------------------------------------
 async function router(req, res) {
@@ -788,6 +804,7 @@ async function router(req, res) {
     if (pathname === '/logout' && req.method === 'POST') return handleLogout(req, res);
     if (pathname === '/account' && req.method === 'GET') return handleAccountPage(req, res, user, url.searchParams);
     if (pathname === '/account/password' && req.method === 'POST') return handleAccountPasswordSubmit(req, res, user);
+    if (pathname === '/markdown/preview' && req.method === 'POST') return handleMarkdownPreview(req, res, user);
 
     if (pathname === '/admin' && req.method === 'GET') return handleAdminPage(req, res, user, url.searchParams);
     if (pathname === '/admin/invite-code/generate' && req.method === 'POST') return handleAdminGenerateInviteCode(req, res, user);

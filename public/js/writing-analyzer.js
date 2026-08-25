@@ -1,37 +1,106 @@
 // public/js/writing-analyzer.js -- Hemingway-style writing analysis for the
-// chapter text editor. No build step, no dependencies. No AI/LLM of any
-// kind is used anywhere in this file, and it never talks to anything but
-// this same app's own server (two plain GET requests for word lists, plus
-// a GET/POST pair for the story's own spelling exceptions) -- no external
+// chapter text editor AND the chapter reading page. No build step, no
+// dependencies. No AI/LLM of any kind is used anywhere in this file, and it
+// never talks to anything but this same app's own server (plain GET
+// requests for word lists, a GET/POST pair for the story's own spelling
+// exceptions, and a POST for rendering a markdown preview) -- no external
 // service, API, or third party is ever contacted.
 //
 // What it does:
-//   - Splits the text into sentences and scores each one with the standard
-//     Flesch-Kincaid grade-level formula (a public, well known readability
-//     formula -- not something proprietary to any product). Sentences that
-//     score as "hard to read" are shaded yellow, "very hard to read" are
-//     shaded red.
-//   - Flags common weakening language -- adverbs ending in "-ly", passive
-//     voice ("was written", "is being told"), and filler/hedge words and
-//     phrases ("very", "sort of", "due to the fact that") -- in blue.
-//   - Flags a curated list of unnecessarily complex/formal words in purple,
-//     each with a plainer suggested alternative.
-//   - Checks every word against a real (~370,000-word) English dictionary
-//     (served as a static file by this app -- see server.js/tryServeStatic
-//     and public/dictionary/words-en.txt) and underlines anything it
-//     doesn't recognize in teal, since that's usually either a typo or an
-//     invented character/place name. Because this app is for a shared
-//     fiction universe full of made-up names, each story keeps its own
-//     list of approved words (the "Story dictionary" on the story page);
-//     clicking a teal highlight offers to add that word to it, and once
-//     added it's never flagged again for that story. Because this
-//     replaces the browser's own spellcheck with a more useful one, the
-//     textarea's native spellcheck is turned off to avoid double
-//     underlines.
-//   - Lets you click any highlighted span to see why it was flagged and
-//     (for complex words) swap in the suggested word with one click.
+//   - Several independent checks, each with its own color, each one
+//     individually switchable on/off (the choice is remembered across
+//     pages and devices sharing this browser's storage):
+//       - Spelling: every word is checked against a real (~370,000-word)
+//         English dictionary (served as a static file -- see
+//         server.js/tryServeStatic and public/dictionary/words-en.txt) and
+//         underlined in teal if it isn't recognized. Because this is a
+//         shared fiction universe full of invented names, each story keeps
+//         its own approved-word list (the "Story dictionary" on the story
+//         page); clicking a teal highlight offers to add that word to it.
+//         On by default.
+//       - Passive voice, adverbs, filler/hedge words, and complex/formal
+//         words -- each its own check, its own color.
+//       - Long/dense sentences (Flesch-Kincaid grade level), shaded yellow
+//         or red depending on severity.
+//   - All of this runs identically on the chapter editor (over the raw
+//     textarea text) and on the chapter reading page (over the already
+//     rendered HTML, by walking its text nodes -- bold/italic/links and
+//     comment highlights are left completely alone).
+//   - A visual control card sits above the text in both places, showing
+//     live counts and a colored, clickable pill for every check.
+//   - The editor also offers an optional markdown preview: turn it on to
+//     split the editor 50/50 with a live-rendered preview (rendered by
+//     this same server, from the same markdown code that renders the real
+//     chapter page -- see the /markdown/preview route in server.js).
+//   - Click any highlighted span to see why it was flagged and (for
+//     complex words, in the editor) swap in the suggested word.
+//   - Because this app's own dictionary now does spelling, the textarea's
+//     native browser spellcheck is turned off to avoid double underlines.
 (function () {
   'use strict';
+
+  // ---------------------------------------------------------------------
+  // check registry -- one source of truth for label, color, and toggle
+  // state, shared by both the highlight rendering and the control card.
+  // ---------------------------------------------------------------------
+  const CHECK_META = {
+    spell: { label: 'Spelling', color: '#3fb8a8' },
+    passive: { label: 'Passive voice', color: '#5a8cd8' },
+    adverb: { label: 'Adverbs', color: '#d8954b' },
+    filler: { label: 'Filler words', color: '#d85a9e' },
+    complex: { label: 'Complex words', color: '#a865d8' },
+    sentence: { label: 'Long sentences', color: '#d8a44b' },
+  };
+  const CHECK_ORDER = ['spell', 'passive', 'adverb', 'filler', 'complex', 'sentence'];
+  const SEVERITY_COLOR = { yellow: '#d8a44b', red: '#d8654b' };
+
+  const DEFAULT_SETTINGS = { spell: true, passive: true, adverb: true, filler: true, complex: true, sentence: true };
+  const SETTINGS_KEY = 'wa-settings-v2';
+  const LEGACY_ENABLED_KEY = 'wa-enabled'; // the old single on/off switch
+
+  function loadSettings() {
+    const settings = Object.assign({}, DEFAULT_SETTINGS);
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        CHECK_ORDER.forEach((id) => { if (typeof parsed[id] === 'boolean') settings[id] = parsed[id]; });
+        return settings;
+      }
+      // First time this browser sees the new per-check settings: honor the
+      // old master on/off switch, if it was ever turned off, instead of
+      // silently re-enabling everything.
+      if (localStorage.getItem(LEGACY_ENABLED_KEY) === '0') {
+        CHECK_ORDER.forEach((id) => { settings[id] = false; });
+      }
+    } catch (e) { /* ignore, defaults stand */ }
+    return settings;
+  }
+
+  function saveSettings(settings) {
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* ignore */ }
+  }
+
+  function hexToRgba(hex, alpha) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = (n >> 16) & 255; const g = (n >> 8) & 255; const b = n & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  // Inline style for a word-level <mark>, so every color lives in this one
+  // place instead of being duplicated across CSS classes.
+  function wordMarkStyle(kind) {
+    if (kind === 'spell') {
+      return `text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:${CHECK_META.spell.color};text-underline-offset:3px;`;
+    }
+    const meta = CHECK_META[kind];
+    return meta ? `background:${hexToRgba(meta.color, 0.38)};` : '';
+  }
+
+  function sentenceMarkStyle(severity) {
+    const color = SEVERITY_COLOR[severity];
+    return color ? `background:${hexToRgba(color, severity === 'red' ? 0.35 : 0.28)};` : '';
+  }
 
   // ---------------------------------------------------------------------
   // word lists (all hand-curated; see comments above each one)
@@ -95,7 +164,8 @@
   ].sort((a, b) => b.length - a.length);
 
   // Complex/formal words with a plainer suggested alternative. Click a
-  // purple highlight to swap the word for the suggestion shown here.
+  // purple highlight (in the editor) to swap the word for the suggestion
+  // shown here.
   const COMPLEX_WORDS = {
     utilize: 'use', utilise: 'use', utilizes: 'uses', utilized: 'used',
     endeavor: 'try', endeavour: 'try', commence: 'begin', commenced: 'began',
@@ -232,11 +302,14 @@
 
   // Each detector returns a list of {start, end, kind, label, suggestion}
   // with offsets relative to the start of the sentence chunk it was run
-  // against (the caller adds the chunk's own offset back in).
-  function findWordHighlights(sentenceText, storyWords) {
+  // against (the caller adds the chunk's own offset back in). `settings`
+  // controls which checks actually run -- a disabled check is simply
+  // never matched, rather than matched-then-hidden, so it costs nothing.
+  function findWordHighlights(sentenceText, storyWords, settings) {
     const found = [];
 
     function addAll(re, kind, labelFn, suggestionFn) {
+      if (settings && settings[kind] === false) return;
       re.lastIndex = 0;
       let m;
       while ((m = re.exec(sentenceText))) {
@@ -251,13 +324,16 @@
       }
     }
 
-    // Priority order: passive voice, then adverbs, then filler phrases/words,
-    // then complex words. Earlier matches "win" any overlap (see below).
-    addAll(PASSIVE_RE, 'blue', () => 'Passive voice -- consider naming who did this and using an active verb.');
-    addAll(ADVERB_RE, 'blue', (m) => (LY_EXCLUDE.has(m[0].toLowerCase()) ? null : 'Adverb -- a stronger verb might say this more directly.'));
-    addAll(WEAK_PHRASE_RE, 'blue', () => 'This phrase can usually be cut or shortened.');
-    addAll(WEAK_WORD_RE, 'blue', () => 'Filler word -- try cutting it and see if the sentence still works.');
-    addAll(COMPLEX_WORD_RE, 'purple', (m) => `Simpler alternative: "${COMPLEX_WORDS[m[0].toLowerCase()]}"`, (m) => COMPLEX_WORDS[m[0].toLowerCase()]);
+    // Priority order: passive voice, then adverbs, then filler phrases/
+    // words, then complex words. Earlier matches "win" any overlap (see
+    // below) -- this only matters when two DIFFERENT checks would
+    // otherwise both claim the same span, e.g. a filler word that's also
+    // technically part of a passive-voice match.
+    addAll(PASSIVE_RE, 'passive', () => 'Passive voice -- consider naming who did this and using an active verb.');
+    addAll(ADVERB_RE, 'adverb', (m) => (LY_EXCLUDE.has(m[0].toLowerCase()) ? null : 'Adverb -- a stronger verb might say this more directly.'));
+    addAll(WEAK_PHRASE_RE, 'filler', () => 'This phrase can usually be cut or shortened.');
+    addAll(WEAK_WORD_RE, 'filler', () => 'Filler word -- try cutting it and see if the sentence still works.');
+    addAll(COMPLEX_WORD_RE, 'complex', (m) => `Simpler alternative: "${COMPLEX_WORDS[m[0].toLowerCase()]}"`, (m) => COMPLEX_WORDS[m[0].toLowerCase()]);
 
     // Drop the adverb matches we deliberately nulled out above (excluded
     // words), then keep matches sorted by start position.
@@ -279,9 +355,11 @@
     // by definition a real English word, so in practice this never
     // collides -- but skip anything that overlaps anyway, defensively, so
     // a single token can never end up wrapped in two <mark> elements.
-    for (const s of findSpellingHighlights(sentenceText, storyWords)) {
-      if (result.some((r) => s.start < r.end && s.end > r.start)) continue;
-      result.push(s);
+    if (!settings || settings.spell !== false) {
+      for (const s of findSpellingHighlights(sentenceText, storyWords)) {
+        if (result.some((r) => s.start < r.end && s.end > r.start)) continue;
+        result.push(s);
+      }
     }
     result.sort((a, b) => a.start - b.start);
     return result;
@@ -329,8 +407,8 @@
   // Each story keeps its own list of approved words (invented character/
   // place names and the like) -- see the "Story dictionary" section on the
   // story page and server.js's /stories/:id/dictionary routes. Cached per
-  // story id so multiple textareas for the same story (shouldn't normally
-  // happen, but just in case) don't each fetch it separately.
+  // story id so multiple textareas/pages for the same story (shouldn't
+  // normally happen, but just in case) don't each fetch it separately.
   const storyWordsCache = new Map();
   function loadStoryWords(storyId) {
     if (!storyId) return Promise.resolve(new Set());
@@ -387,29 +465,32 @@
   // ---------------------------------------------------------------------
 
   // Returns { html, ranges, stats } where `html` is what should go inside
-  // the overlay, `ranges` is a flat list of {start, end, kind, label,
-  // suggestion} in whole-text offsets (for click handling), and `stats` is
-  // counts used by the summary bar. `storyWords` is the Set of this
-  // story's approved words (see loadStoryWords below) -- pass an empty
-  // Set (or leave it undefined) if there's no story yet, e.g. the "new
-  // story" page, or while it's still loading.
-  function analyze(text, storyWords) {
+  // the editor's overlay (unused by the read-only view -- it applies
+  // `ranges` directly onto the existing DOM instead, see applyRangesToDom
+  // below), `ranges` is a flat list of {start, end, kind, label,
+  // suggestion} in whole-text offsets, and `stats` is counts used by the
+  // summary bar. `storyWords` is the Set of this story's approved words
+  // (see loadStoryWords above) -- pass an empty Set (or leave it
+  // undefined) if there's no story yet, e.g. the "new story" page, or
+  // while it's still loading. `settings` controls which checks run.
+  function analyze(text, storyWords, settings) {
     const chunks = splitSentences(text);
     const ranges = [];
-    const stats = { yellow: 0, red: 0, blue: 0, purple: 0, spell: 0, maxGrade: 0 };
+    const stats = {
+      yellow: 0, red: 0, passive: 0, adverb: 0, filler: 0, complex: 0, spell: 0, maxGrade: 0,
+    };
     let html = '';
+    const sentenceChecksOn = !settings || settings.sentence !== false;
 
     for (const chunk of chunks) {
-      const score = scoreSentence(chunk);
+      const score = sentenceChecksOn ? scoreSentence(chunk) : { words: 0, grade: 0, severity: null };
       if (score.severity === 'yellow') stats.yellow += 1;
       if (score.severity === 'red') stats.red += 1;
       if (score.grade > stats.maxGrade) stats.maxGrade = score.grade;
 
-      const wordHighlights = findWordHighlights(chunk.text, storyWords);
+      const wordHighlights = findWordHighlights(chunk.text, storyWords, settings);
       for (const w of wordHighlights) {
-        if (w.kind === 'blue') stats.blue += 1;
-        if (w.kind === 'purple') stats.purple += 1;
-        if (w.kind === 'spell') stats.spell += 1;
+        if (stats[w.kind] !== undefined) stats[w.kind] += 1;
       }
 
       if (score.severity) {
@@ -434,18 +515,20 @@
 
       // Render this chunk's inner HTML, nesting word-level marks inside the
       // sentence-level mark (if any). Word ranges never overlap each other
-      // (guaranteed by findWordHighlights), so this is a simple walk.
+      // (guaranteed by findWordHighlights), so this is a simple walk. Only
+      // the editor's overlay actually uses this string -- see the comment
+      // above `html` in the return value.
       let inner = '';
       let cursor = 0;
       for (const w of wordHighlights) {
         if (w.start > cursor) inner += escapeHtml(chunk.text.slice(cursor, w.start));
-        inner += `<mark class="wa-word wa-${w.kind}">${escapeHtml(chunk.text.slice(w.start, w.end))}</mark>`;
+        inner += `<mark class="wa-word wa-${w.kind}" style="${wordMarkStyle(w.kind)}">${escapeHtml(chunk.text.slice(w.start, w.end))}</mark>`;
         cursor = w.end;
       }
       if (cursor < chunk.text.length) inner += escapeHtml(chunk.text.slice(cursor));
 
       if (score.severity) {
-        html += `<mark class="wa-sentence wa-${score.severity}">${inner}</mark>`;
+        html += `<mark class="wa-sentence wa-${score.severity}" style="${sentenceMarkStyle(score.severity)}">${inner}</mark>`;
       } else {
         html += inner;
       }
@@ -455,8 +538,83 @@
     return { html, ranges, stats };
   }
 
+  // Builds one "● N label" chip; returns '' when the count is zero so
+  // empty categories don't clutter the bar. `colorId` looks up its color
+  // in CHECK_META/SEVERITY_COLOR so the dot always matches its check/mark.
+  function statChip(color, count, singular, plural) {
+    if (!count) return '';
+    return `<span class="wa-chip"><span class="wa-dot" style="background:${color}"></span>${count} ${count === 1 ? singular : plural}</span>`;
+  }
+
+  function summaryHtml(stats) {
+    const total = stats.yellow + stats.red + stats.passive + stats.adverb + stats.filler + stats.complex + stats.spell;
+    if (total === 0) return 'No issues spotted.';
+    return [
+      statChip(SEVERITY_COLOR.red, stats.red, 'very dense sentence', 'very dense sentences'),
+      statChip(SEVERITY_COLOR.yellow, stats.yellow, 'long sentence', 'long sentences'),
+      statChip(CHECK_META.passive.color, stats.passive, 'passive-voice phrase', 'passive-voice phrases'),
+      statChip(CHECK_META.adverb.color, stats.adverb, 'adverb', 'adverbs'),
+      statChip(CHECK_META.filler.color, stats.filler, 'filler word/phrase', 'filler words/phrases'),
+      statChip(CHECK_META.complex.color, stats.complex, 'complex word', 'complex words'),
+      statChip(CHECK_META.spell.color, stats.spell, 'possible misspelling', 'possible misspellings'),
+    ].filter(Boolean).join('');
+  }
+
   // ---------------------------------------------------------------------
-  // DOM wiring -- one instance per chapter-text textarea on the page
+  // shared control card (colored, clickable check toggles + live counts)
+  // ---------------------------------------------------------------------
+
+  // Builds the visual card that sits above the text in both the editor and
+  // the reading page. `onToggle(checkId, enabled)` fires when a pill is
+  // clicked. Returns the card element plus a `summary` element to update
+  // and a `checksRow` element callers can append extra pills to (the
+  // editor adds a "Markdown preview" pill after this).
+  function buildControlsCard(settings, onToggle) {
+    const card = document.createElement('div');
+    card.className = 'wa-card';
+
+    const head = document.createElement('div');
+    head.className = 'wa-card-head';
+    const title = document.createElement('span');
+    title.className = 'wa-card-title';
+    title.textContent = 'Writing checks';
+    const summary = document.createElement('span');
+    summary.className = 'wa-summary';
+    summary.innerHTML = 'Checking...';
+    head.appendChild(title);
+    head.appendChild(summary);
+    card.appendChild(head);
+
+    const checksRow = document.createElement('div');
+    checksRow.className = 'wa-checks';
+    CHECK_ORDER.forEach((id) => {
+      const meta = CHECK_META[id];
+      const pill = document.createElement('label');
+      pill.className = 'wa-check-pill';
+      pill.style.setProperty('--wa-color', meta.color);
+      pill.style.setProperty('--wa-bg-active', hexToRgba(meta.color, 0.16));
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.checked = settings[id] !== false;
+      input.addEventListener('change', () => {
+        pill.classList.toggle('active', input.checked);
+        onToggle(id, input.checked);
+      });
+      const dot = document.createElement('span');
+      dot.className = 'wa-check-dot';
+      pill.appendChild(input);
+      pill.appendChild(dot);
+      pill.appendChild(document.createTextNode(meta.label));
+      pill.classList.toggle('active', input.checked);
+      checksRow.appendChild(pill);
+    });
+    card.appendChild(checksRow);
+
+    return { card, summary, checksRow };
+  }
+
+  // ---------------------------------------------------------------------
+  // DOM wiring -- the chapter-text EDITOR (one instance per textarea)
   // ---------------------------------------------------------------------
 
   function setup(textarea) {
@@ -465,33 +623,44 @@
     // own (differently styled) red underline -- turn it off here.
     textarea.spellcheck = false;
     const storyId = textarea.dataset.storyId || null;
+    let settings = loadSettings();
 
     const wrap = document.createElement('div');
     wrap.className = 'wa-wrap';
     textarea.parentNode.insertBefore(wrap, textarea);
 
-    const bar = document.createElement('div');
-    bar.className = 'wa-bar';
-    wrap.appendChild(bar);
+    const { card, summary, checksRow } = buildControlsCard(settings, (id, checked) => {
+      settings = Object.assign({}, settings, { [id]: checked });
+      saveSettings(settings);
+      render();
+    });
+    wrap.appendChild(card);
 
-    const summary = document.createElement('span');
-    summary.className = 'wa-summary';
-    bar.appendChild(summary);
+    // --- markdown preview toggle (editor only) ---
+    const previewPill = document.createElement('label');
+    previewPill.className = 'wa-check-pill wa-preview-pill';
+    previewPill.style.setProperty('--wa-color', '#8b7bd8');
+    previewPill.style.setProperty('--wa-bg-active', hexToRgba('#8b7bd8', 0.16));
+    const previewInput = document.createElement('input');
+    previewInput.type = 'checkbox';
+    let previewOn = false;
+    try { previewOn = localStorage.getItem('wa-preview-on') === '1'; } catch (e) { /* ignore */ }
+    previewInput.checked = previewOn;
+    const previewDot = document.createElement('span');
+    previewDot.className = 'wa-check-dot';
+    previewPill.appendChild(previewInput);
+    previewPill.appendChild(previewDot);
+    previewPill.appendChild(document.createTextNode('Markdown preview'));
+    previewPill.classList.toggle('active', previewOn);
+    checksRow.appendChild(previewPill);
 
-    const toggleLabel = document.createElement('label');
-    toggleLabel.className = 'wa-toggle';
-    const toggle = document.createElement('input');
-    toggle.type = 'checkbox';
-    let enabled = true;
-    try { enabled = localStorage.getItem('wa-enabled') !== '0'; } catch (e) { /* ignore */ }
-    toggle.checked = enabled;
-    toggleLabel.appendChild(toggle);
-    toggleLabel.appendChild(document.createTextNode(' Highlights'));
-    bar.appendChild(toggleLabel);
+    const splitWrap = document.createElement('div');
+    splitWrap.className = 'wa-split';
+    wrap.appendChild(splitWrap);
 
     const editorWrap = document.createElement('div');
     editorWrap.className = 'wa-editor-wrap';
-    wrap.appendChild(editorWrap);
+    splitWrap.appendChild(editorWrap);
 
     const overlay = document.createElement('div');
     overlay.className = 'wa-overlay';
@@ -499,6 +668,67 @@
     editorWrap.appendChild(overlay);
     editorWrap.appendChild(textarea);
     textarea.classList.add('wa-textarea');
+
+    const previewPane = document.createElement('div');
+    previewPane.className = 'md-preview';
+    previewPane.innerHTML = '<p class="muted">The preview will appear here.</p>';
+    splitWrap.appendChild(previewPane);
+
+    function applyPreviewState() {
+      splitWrap.classList.toggle('wa-split-active', previewOn);
+      if (previewOn) {
+        textarea.style.width = ''; // let the 50/50 flex layout govern width
+        schedulePreview();
+      } else {
+        try {
+          const savedWidth = localStorage.getItem('wa-editor-width');
+          if (savedWidth) textarea.style.width = `${savedWidth}px`;
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    previewInput.addEventListener('change', () => {
+      previewOn = previewInput.checked;
+      previewPill.classList.toggle('active', previewOn);
+      try { localStorage.setItem('wa-preview-on', previewOn ? '1' : '0'); } catch (e) { /* ignore */ }
+      applyPreviewState();
+    });
+
+    let previewTimer = null;
+    function schedulePreview() {
+      if (!previewOn) return;
+      if (previewTimer) clearTimeout(previewTimer);
+      previewTimer = setTimeout(renderPreview, 400);
+    }
+    function renderPreview() {
+      fetch('/markdown/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textarea.value }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data && typeof data.html === 'string') {
+            previewPane.innerHTML = data.html || '<p class="muted">Nothing to preview yet.</p>';
+          }
+        })
+        .catch(() => { /* keep whatever preview is already showing */ });
+    }
+
+    // Remembers a manually-resized width (the textarea has resize:both) so
+    // it's still that width next time -- but only while the preview is
+    // off, since with it on the width is governed by the 50/50 flex split.
+    if (typeof ResizeObserver !== 'undefined') {
+      let widthTimer = null;
+      const ro = new ResizeObserver(() => {
+        if (previewOn) return;
+        if (widthTimer) clearTimeout(widthTimer);
+        widthTimer = setTimeout(() => {
+          try { localStorage.setItem('wa-editor-width', String(Math.round(textarea.getBoundingClientRect().width))); } catch (e) { /* ignore */ }
+        }, 300);
+      });
+      ro.observe(textarea);
+    }
 
     const popover = document.createElement('div');
     popover.className = 'wa-popover hidden';
@@ -514,30 +744,14 @@
     // looking clean until the next keystroke.
     Promise.all([loadDictionary(), loadStoryWords(storyId)]).then(([, words]) => {
       if (words) storyWords = words;
-      if (enabled) render();
+      render();
     });
 
-    // Builds one "● N label" chip for the summary bar; returns '' when the
-    // count is zero so empty categories don't clutter the bar.
-    function statChip(colorClass, count, singular, plural) {
-      if (!count) return '';
-      return `<span class="wa-chip"><span class="wa-dot wa-${colorClass}"></span>${count} ${count === 1 ? singular : plural}</span>`;
-    }
-
     function render() {
-      const { html, ranges, stats } = analyze(textarea.value, storyWords);
+      const { html, ranges, stats } = analyze(textarea.value, storyWords, settings);
       overlay.innerHTML = html + (textarea.value.endsWith('\n') ? '&nbsp;' : '');
       currentRanges = ranges;
-      const total = stats.yellow + stats.red + stats.blue + stats.purple + stats.spell;
-      summary.innerHTML = total === 0
-        ? 'No issues spotted.'
-        : [
-            statChip('red', stats.red, 'very dense sentence', 'very dense sentences'),
-            statChip('yellow', stats.yellow, 'long sentence', 'long sentences'),
-            statChip('blue', stats.blue, 'weak phrase', 'weak phrases'),
-            statChip('purple', stats.purple, 'complex word', 'complex words'),
-            statChip('spell', stats.spell, 'possible misspelling', 'possible misspellings'),
-          ].filter(Boolean).join('');
+      summary.innerHTML = summaryHtml(stats);
       syncScroll();
     }
 
@@ -547,22 +761,11 @@
     }
 
     function scheduleRender() {
-      if (!enabled) return;
       if (timer) clearTimeout(timer);
       timer = setTimeout(render, 250);
     }
 
-    function setEnabled(next) {
-      enabled = next;
-      try { localStorage.setItem('wa-enabled', enabled ? '1' : '0'); } catch (e) { /* ignore */ }
-      wrap.classList.toggle('wa-disabled', !enabled);
-      if (enabled) render();
-      else { overlay.innerHTML = ''; hidePopover(); }
-    }
-
-    toggle.addEventListener('change', () => setEnabled(toggle.checked));
-
-    textarea.addEventListener('input', scheduleRender);
+    textarea.addEventListener('input', () => { scheduleRender(); schedulePreview(); });
     textarea.addEventListener('scroll', syncScroll);
     window.addEventListener('resize', syncScroll);
 
@@ -582,7 +785,6 @@
     }
 
     textarea.addEventListener('click', () => {
-      if (!enabled) return;
       const pos = textarea.selectionStart;
       const range = rangeAt(pos);
       if (!range) { hidePopover(); return; }
@@ -655,9 +857,180 @@
       return suggestion;
     }
 
-    if (enabled) render();
-    else wrap.classList.add('wa-disabled');
+    applyPreviewState();
+    render();
   }
+
+  // ---------------------------------------------------------------------
+  // DOM wiring -- the READ-ONLY chapter page
+  // ---------------------------------------------------------------------
+
+  // Walks every text node under `root`, in document order, without
+  // touching anything (bold/italic/links/existing comment highlights are
+  // left completely alone -- this only reads).
+  function textNodesInOrder(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const nodes = [];
+    let n = walker.nextNode();
+    while (n) { nodes.push(n); n = walker.nextNode(); }
+    return nodes;
+  }
+
+  function flattenText(root) {
+    return textNodesInOrder(root).map((n) => n.nodeValue).join('');
+  }
+
+  // Converts a flattened-text offset back into a (node, offset) DOM point
+  // by re-walking the LIVE tree every time. This is intentionally not
+  // cached: wrapping one range can split a text node the walk previously
+  // saw, and re-walking is the simplest way to always get correct, live
+  // node references afterward (a chapter's text is small enough that this
+  // costs nothing noticeable).
+  function pointAt(root, pos) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    let total = 0;
+    let node = walker.nextNode();
+    let last = null;
+    while (node) {
+      const len = node.nodeValue.length;
+      if (pos <= total + len) return { node, offset: pos - total };
+      total += len;
+      last = node;
+      node = walker.nextNode();
+    }
+    return last ? { node: last, offset: last.nodeValue.length } : null;
+  }
+
+  // Wraps every range in its own <mark>, directly in the existing DOM,
+  // without disturbing bold/italic/links or the comment-highlight <span>s
+  // already there. Sentence-level ranges are applied first (they're always
+  // supersets of the word-level ranges inside them, by construction), so
+  // word marks end up nested inside their sentence mark, matching the
+  // editor's overlay. A range that can't be wrapped cleanly (very rare --
+  // e.g. it would partially straddle a bold/italic boundary) is simply
+  // skipped rather than risking a broken page.
+  function applyRangesToDom(root, ranges) {
+    const ordered = ranges.slice().sort((a, b) => (b.end - b.start) - (a.end - a.start));
+    for (const r of ordered) {
+      if (r.end <= r.start) continue;
+      const startPt = pointAt(root, r.start);
+      const endPt = pointAt(root, r.end);
+      if (!startPt || !endPt) continue;
+      try {
+        const range = document.createRange();
+        range.setStart(startPt.node, startPt.offset);
+        range.setEnd(endPt.node, endPt.offset);
+        if (range.collapsed) continue;
+        const isSentence = r.kind.indexOf('sentence-') === 0;
+        const mark = document.createElement('mark');
+        if (isSentence) {
+          const severity = r.kind.slice('sentence-'.length);
+          mark.className = `wa-sentence wa-${severity}`;
+          mark.style.cssText = sentenceMarkStyle(severity);
+        } else {
+          mark.className = `wa-word wa-${r.kind}`;
+          mark.style.cssText = wordMarkStyle(r.kind);
+        }
+        mark.dataset.waLabel = r.label;
+        mark.dataset.waKind = r.kind;
+        range.surroundContents(mark);
+      } catch (e) {
+        // Skip this one highlight; never let it break the reading page.
+      }
+    }
+  }
+
+  function setupReadView(container) {
+    const storyId = container.dataset.storyId || null;
+    const canEditDictionary = container.dataset.canEditDictionary === '1';
+    let settings = loadSettings();
+    let storyWords = new Set();
+
+    const { card, summary } = buildControlsCard(settings, (id, checked) => {
+      settings = Object.assign({}, settings, { [id]: checked });
+      saveSettings(settings);
+      render();
+    });
+    card.classList.add('wa-card-reading');
+    container.parentNode.insertBefore(card, container);
+
+    const popover = document.createElement('div');
+    popover.className = 'wa-popover hidden';
+    document.body.appendChild(popover);
+    function hidePopover() { popover.classList.add('hidden'); }
+
+    function clearMarks() {
+      container.querySelectorAll('mark.wa-word, mark.wa-sentence').forEach((mark) => {
+        mark.replaceWith(...mark.childNodes);
+      });
+      container.normalize();
+    }
+
+    function render() {
+      clearMarks();
+      hidePopover();
+      const text = flattenText(container);
+      const { ranges, stats } = analyze(text, storyWords, settings);
+      applyRangesToDom(container, ranges);
+      summary.innerHTML = summaryHtml(stats);
+    }
+
+    Promise.all([loadDictionary(), loadStoryWords(storyId)]).then(([, words]) => {
+      if (words) storyWords = words;
+      render();
+    });
+
+    container.addEventListener('click', (ev) => {
+      const mark = ev.target.closest('mark.wa-word, mark.wa-sentence');
+      if (!mark) { hidePopover(); return; }
+
+      popover.innerHTML = '';
+      const text = document.createElement('div');
+      text.className = 'wa-popover-text';
+      text.textContent = mark.dataset.waLabel || '';
+      popover.appendChild(text);
+
+      if (mark.dataset.waKind === 'spell' && storyId && canEditDictionary) {
+        const word = mark.textContent;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn tiny';
+        btn.textContent = `Add "${word}" to this story's dictionary`;
+        btn.addEventListener('click', (ev2) => {
+          ev2.preventDefault();
+          btn.disabled = true;
+          fetch(`/stories/${storyId}/dictionary`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ word }),
+          })
+            .then((r) => (r.ok ? r.json() : Promise.reject(new Error('request failed'))))
+            .then((data) => {
+              storyWords = new Set((data.words || []).map((w) => w.toLowerCase()));
+              hidePopover();
+              render();
+            })
+            .catch(() => { btn.disabled = false; btn.textContent = 'Could not save -- try again'; });
+        });
+        popover.appendChild(btn);
+      }
+
+      const rect = mark.getBoundingClientRect();
+      popover.style.top = `${window.scrollY + rect.top - 8}px`;
+      popover.style.left = `${window.scrollX + rect.left}px`;
+      popover.classList.remove('hidden');
+    });
+
+    document.addEventListener('click', (ev) => {
+      if (container.contains(ev.target)) return;
+      if (popover.contains(ev.target)) return;
+      hidePopover();
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // boot
+  // ---------------------------------------------------------------------
 
   function init() {
     document.querySelectorAll('form.chapter-form textarea[name="content"]').forEach((textarea) => {
@@ -667,9 +1040,21 @@
         // Never let this optional enhancement break the actual chapter
         // form -- the plain textarea keeps working either way.
         // eslint-disable-next-line no-console
-        console.error('writing-analyzer failed to initialize:', err);
+        console.error('writing-analyzer failed to initialize (editor):', err);
       }
     });
+
+    const readContainer = document.getElementById('chapter-text');
+    if (readContainer) {
+      try {
+        setupReadView(readContainer);
+      } catch (err) {
+        // Same guarantee for the reading page: comments and everything
+        // else on the page must keep working even if this fails.
+        // eslint-disable-next-line no-console
+        console.error('writing-analyzer failed to initialize (reading view):', err);
+      }
+    }
   }
 
   if (document.readyState === 'loading') {

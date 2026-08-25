@@ -123,6 +123,7 @@ function newStoryPage({ user, error, values = {} }) {
   return layout({
     title: 'New story',
     user,
+    wide: true,
     body: `
       <div class="writer-card">
         <h1>Start a new story</h1>
@@ -172,6 +173,7 @@ function newChapterPage({ user, story, chapters = [], error, values = {} }) {
   return layout({
     title: `New chapter - ${story.title}`,
     user,
+    wide: true,
     body: `
       <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
       <div class="writer-card">
@@ -204,6 +206,7 @@ function editChapterPage({ user, chapter, latestContent, error, values = {} }) {
   return layout({
     title: `Edit - ${chapter.title}`,
     user,
+    wide: true,
     body: `
       <p class="breadcrumb"><a href="/chapters/${chapter.id}">&larr; Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</a></p>
       <div class="writer-card">
@@ -471,7 +474,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     </div>
     <div class="chapter-body-grid">
       <div class="reading-pane">
-        <div id="chapter-text" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}">${highlighted}</div>
+        <div id="chapter-text" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}" data-story-id="${chapter.story_id}" data-can-edit-dictionary="${isChapterAuthor ? '1' : '0'}">${highlighted}</div>
       </div>
       <aside class="comments-pane">
         <h2>Comments</h2>
