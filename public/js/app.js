@@ -1,0 +1,104 @@
+// public/js/app.js -- text-selection commenting + small UI niceties.
+// No build step, no dependencies: plain browser JS.
+(function () {
+  'use strict';
+
+  const textEl = document.getElementById('chapter-text');
+  if (!textEl) return; // not a chapter page
+
+  const metaEl = document.getElementById('chapter-meta');
+  const meta = metaEl ? JSON.parse(metaEl.textContent) : {};
+
+  const versionSelect = document.getElementById('version-select');
+  if (versionSelect) {
+    versionSelect.addEventListener('change', () => {
+      window.location.href = `/chapters/${meta.chapterId}?v=${encodeURIComponent(versionSelect.value)}`;
+    });
+  }
+
+  // ---- clicking a highlighted span jumps to the comment in the sidebar ----
+  textEl.addEventListener('click', (ev) => {
+    const span = ev.target.closest('.hl');
+    if (!span) return;
+    const ids = (span.dataset.commentIds || '').split(',').filter(Boolean);
+    if (!ids.length) return;
+    const target = document.getElementById(`comment-${ids[0]}`);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('flash-highlight');
+      setTimeout(() => target.classList.remove('flash-highlight'), 1500);
+    }
+  });
+
+  // ---- text selection -> "add comment" toast -> inline form ----
+  const toast = document.getElementById('selection-toast');
+  const box = document.getElementById('new-comment-box');
+  const previewEl = document.getElementById('nc-preview');
+  const startInput = document.getElementById('nc-start');
+  const endInput = document.getElementById('nc-end');
+  const quotedInput = document.getElementById('nc-quoted');
+  const bodyInput = document.getElementById('nc-body');
+  const cancelBtn = document.getElementById('nc-cancel');
+
+  let pendingSelection = null;
+
+  function computeOffset(container, node, offsetInNode) {
+    let total = 0;
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+    let current = walker.nextNode();
+    while (current) {
+      if (current === node) return total + offsetInNode;
+      total += current.textContent.length;
+      current = walker.nextNode();
+    }
+    return total;
+  }
+
+  function getSelectionOffsets() {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+    const range = sel.getRangeAt(0);
+    if (range.collapsed) return null;
+    if (!textEl.contains(range.startContainer) || !textEl.contains(range.endContainer)) return null;
+    const start = computeOffset(textEl, range.startContainer, range.startOffset);
+    const end = computeOffset(textEl, range.endContainer, range.endOffset);
+    const text = sel.toString();
+    if (!text.trim() || end <= start) return null;
+    return { start, end, text, rect: range.getBoundingClientRect() };
+  }
+
+  document.addEventListener('mouseup', (ev) => {
+    if (box && box.contains(ev.target)) return;
+    const result = getSelectionOffsets();
+    if (!result) {
+      toast.classList.add('hidden');
+      return;
+    }
+    pendingSelection = result;
+    const top = window.scrollY + result.rect.top - 40;
+    const left = window.scrollX + result.rect.left;
+    toast.style.top = `${Math.max(top, window.scrollY + 8)}px`;
+    toast.style.left = `${left}px`;
+    toast.classList.remove('hidden');
+  });
+
+  toast.addEventListener('click', () => {
+    if (!pendingSelection) return;
+    startInput.value = String(pendingSelection.start);
+    endInput.value = String(pendingSelection.end);
+    quotedInput.value = pendingSelection.text;
+    previewEl.textContent = `"${pendingSelection.text.length > 200 ? pendingSelection.text.slice(0, 200) + '...' : pendingSelection.text}"`;
+    box.classList.remove('hidden');
+    toast.classList.add('hidden');
+    bodyInput.focus();
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      box.classList.add('hidden');
+      bodyInput.value = '';
+    });
+  }
+
+})();

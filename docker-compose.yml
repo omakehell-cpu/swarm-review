@@ -1,0 +1,13 @@
+services:
+  swarm-review:
+    build: .
+    container_name: swarm-review
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=3000
+      # - SESSION_SECRET=una-cadena-larga-aleatoria  # opcional, si no se genera solo
+      # - SECURE_COOKIES=1  # solo si esto va detras de https:// de verdad -- ver SETUP-DOMAIN.md
+    restart: unless-stopped
