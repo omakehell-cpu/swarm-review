@@ -138,7 +138,8 @@ function newStoryPage({ user, error, values = {} }) {
         </label>
         ${fileUploadField()}
         <button class="btn" type="submit">Publish story</button>
-      </form>`,
+      </form>
+      <script src="/js/writing-analyzer.js" defer></script>`,
   });
 }
 
@@ -177,7 +178,8 @@ function newChapterPage({ user, story, chapters = [], error, values = {} }) {
         ${fileUploadField()}
         ${positionField(chapters, values.position)}
         <button class="btn" type="submit">Publish chapter</button>
-      </form>`,
+      </form>
+      <script src="/js/writing-analyzer.js" defer></script>`,
   });
 }
 
@@ -201,7 +203,8 @@ function editChapterPage({ user, chapter, latestContent, error, values = {} }) {
         ${fileUploadField()}
         <label>What changed? (optional, shown in the version history)<input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Fixed a couple of typos"></label>
         <button class="btn" type="submit">Save changes</button>
-      </form>`,
+      </form>
+      <script src="/js/writing-analyzer.js" defer></script>`,
   });
 }
 
