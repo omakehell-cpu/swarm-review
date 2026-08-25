@@ -76,6 +76,8 @@ const MIME = {
   '.png': 'image/png',
   '.ico': 'image/x-icon',
   '.txt': 'text/plain; charset=utf-8',
+  '.aff': 'text/plain; charset=utf-8',
+  '.dic': 'text/plain; charset=utf-8',
 };
 
 function tryServeStatic(req, res, pathname) {
@@ -86,9 +88,9 @@ function tryServeStatic(req, res, pathname) {
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false;
   const ext = path.extname(filePath);
   const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-store' };
-  // The spellchecker word list is a large (multi-MB) file that never
-  // changes once downloaded -- worth letting the browser cache it for a
-  // while instead of refetching it on every visit to a writing page.
+  // The spellchecker's dictionary files (public/dictionary/en.aff, en.dic)
+  // never change once downloaded -- worth letting the browser cache them
+  // for a while instead of refetching on every visit to a writing page.
   // Everything else under public/ (css/js/html) is served with
   // Cache-Control: no-store, so neither the browser nor Cloudflare ever
   // hold on to a stale copy of this dynamic app.

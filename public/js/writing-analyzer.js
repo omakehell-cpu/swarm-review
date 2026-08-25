@@ -1,8 +1,9 @@
 // public/js/writing-analyzer.js -- Hemingway-style writing analysis for the
 // chapter text editor AND the chapter reading page. No build step, no
-// dependencies. No AI/LLM of any kind is used anywhere in this file, and it
-// never talks to anything but this same app's own server (plain GET
-// requests for word lists, a GET/POST pair for the story's own spelling
+// runtime dependencies -- this file itself is still hand-written, plain
+// JS. No AI/LLM of any kind is used anywhere in this file, and it never
+// talks to anything but this same app's own server (plain GET requests for
+// the dictionary files, a GET/POST pair for the story's own spelling
 // exceptions, and a POST for rendering a markdown preview) -- no external
 // service, API, or third party is ever contacted.
 //
@@ -10,14 +11,21 @@
 //   - Several independent checks, each with its own color, each one
 //     individually switchable on/off (the choice is remembered across
 //     pages and devices sharing this browser's storage):
-//       - Spelling: every word is checked against a real (~370,000-word)
-//         English dictionary (served as a static file -- see
-//         server.js/tryServeStatic and public/dictionary/words-en.txt) and
-//         underlined in teal if it isn't recognized. Because this is a
-//         shared fiction universe full of invented names, each story keeps
-//         its own approved-word list (the "Story dictionary" on the story
-//         page); clicking a teal highlight offers to add that word to it.
-//         On by default.
+//       - Spelling: every word is checked with a real, affix-aware
+//         spellchecker (nspell, an Hunspell-like engine -- vendored as a
+//         static bundle at public/js/nspell.bundle.js, built once from the
+//         npm package with esbuild; that's a build-time tool only, nothing
+//         the running server needs) against the en_US dictionary from the
+//         "dictionary-en" npm package (public/dictionary/en.aff, en.dic),
+//         served as static files the same way words-en.txt used to be.
+//         Being affix-aware means it recognizes inflections ("running",
+//         "friendlier") and possessives ("dog's") on its own, instead of
+//         needing every form spelled out in a flat list. Unrecognized
+//         words are underlined in teal. Because this is a shared fiction
+//         universe full of invented names, each story keeps its own
+//         approved-word list (the "Story dictionary" on the story page);
+//         clicking a teal highlight offers to add that word to it. On by
+//         default.
 //       - Passive voice, adverbs, filler/hedge words, and complex/formal
 //         words -- each its own check, its own color.
 //       - Long/dense sentences (Flesch-Kincaid grade level), shaded yellow
@@ -405,20 +413,28 @@
 
   const WORD_TOKEN_RE = /[A-Za-z][A-Za-z']*/g;
 
-  // The full word list (~370,000 English words, one per line) is fetched
-  // once per page load from this same server -- see server.js and
-  // public/dictionary/words-en.txt -- and kept as a Set for fast lookups.
-  // Stays null (spelling checks simply don't run yet) until it's loaded.
-  let DICTIONARY = null;
+  // Real spellchecking (affix-aware, not a flat word list) via nspell -- a
+  // plain-JS Hunspell-like engine, vendored as a static bundle (see
+  // public/js/nspell.bundle.js, built from the "nspell" npm package with
+  // esbuild -- it's a build-time-only dependency, the app still needs no
+  // npm install to run). The en_US affix/dictionary documents come from the
+  // "dictionary-en" npm package, served as static files the same way
+  // words-en.txt used to be. Being affix-aware means it understands
+  // inflections ("running", "friendlier") and possessives ("dog's")
+  // without needing every form spelled out, unlike a flat list. Stays null
+  // (spelling checks simply don't run yet) until both files are loaded.
+  let SPELL = null;
   let dictionaryPromise = null;
   function loadDictionary() {
     if (dictionaryPromise) return dictionaryPromise;
-    dictionaryPromise = fetch('/dictionary/words-en.txt')
-      .then((r) => (r.ok ? r.text() : ''))
-      .then((text) => {
-        DICTIONARY = new Set(text.split(/\r?\n/).map((w) => w.trim()).filter(Boolean));
+    dictionaryPromise = Promise.all([
+      fetch('/dictionary/en.aff').then((r) => (r.ok ? r.text() : '')),
+      fetch('/dictionary/en.dic').then((r) => (r.ok ? r.text() : '')),
+    ])
+      .then(([aff, dic]) => {
+        if (aff && dic && window.NSpell) SPELL = window.NSpell({ aff, dic });
       })
-      .catch(() => { DICTIONARY = null; });
+      .catch(() => { SPELL = null; });
     return dictionaryPromise;
   }
 
@@ -439,19 +455,24 @@
     return storyWordsCache.get(storyId);
   }
 
-  function knownWord(lower, storyWords) {
+  // `raw` keeps its original casing -- nspell's dictionary is case-aware
+  // (e.g. "HTML" is known but "html" isn't; "The" is fine anywhere, but a
+  // name like "Sarah" is only recognized capitalized), so lowercasing
+  // before checking, like the old flat-list version did, would throw that
+  // signal away. `lower` is still what the story's own word list and the
+  // contraction list are matched against, since those are stored lowercase.
+  function knownWord(raw, storyWords) {
+    const lower = raw.toLowerCase();
     if (CONTRACTIONS.has(lower)) return true;
-    if (DICTIONARY.has(lower)) return true;
     if (storyWords && storyWords.has(lower)) return true;
-    // Strip a trailing possessive ("Aetherius's" -> "aetherius", "the
-    // Joneses'" -> "joneses") and check the stem too, so possessives of
-    // otherwise-known words don't get flagged just for the apostrophe.
-    if (lower.endsWith("'s")) return knownWordStem(lower.slice(0, -2), storyWords);
-    if (lower.endsWith("s'")) return knownWordStem(lower.slice(0, -1), storyWords);
+    if (SPELL.correct(raw) || SPELL.correct(lower)) return true;
+    // Possessive of a word that's only known via this story's own
+    // dictionary (nspell already handles possessives of words in its own
+    // dictionary through affix rules, e.g. "dog's") -- e.g. the story
+    // dictionary has "Aetherius" but the text says "Aetherius's".
+    if (lower.endsWith("'s")) return Boolean(storyWords && storyWords.has(lower.slice(0, -2)));
+    if (lower.endsWith("s'")) return Boolean(storyWords && storyWords.has(lower.slice(0, -1)));
     return false;
-  }
-  function knownWordStem(stem, storyWords) {
-    return DICTIONARY.has(stem) || Boolean(storyWords && storyWords.has(stem));
   }
 
   // Returns {start, end, kind: 'spell', label} for every word-like token in
@@ -459,15 +480,14 @@
   // story's approved-word list. Returns [] while the dictionary hasn't
   // loaded yet, rather than guessing.
   function findSpellingHighlights(sentenceText, storyWords) {
-    if (!DICTIONARY) return [];
+    if (!SPELL) return [];
     const found = [];
     WORD_TOKEN_RE.lastIndex = 0;
     let m;
     while ((m = WORD_TOKEN_RE.exec(sentenceText))) {
       const raw = m[0];
       if (raw.length < 2) continue;
-      const lower = raw.toLowerCase();
-      if (knownWord(lower, storyWords)) continue;
+      if (knownWord(raw, storyWords)) continue;
       found.push({
         start: m.index,
         end: m.index + raw.length,

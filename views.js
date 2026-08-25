@@ -147,6 +147,7 @@ function newStoryPage({ user, error, values = {} }) {
           </div>
         </form>
       </div>
+      <script src="/js/nspell.bundle.js"></script>
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
 }
@@ -196,6 +197,7 @@ function newChapterPage({ user, story, chapters = [], error, values = {} }) {
           </div>
         </form>
       </div>
+      <script src="/js/nspell.bundle.js"></script>
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
 }
@@ -265,6 +267,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, v
     body: `
       <p class="breadcrumb"><a href="/chapters/${chapter.id}">&larr; Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</a></p>
       ${mainHtml}
+      <script src="/js/nspell.bundle.js"></script>
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
 }
