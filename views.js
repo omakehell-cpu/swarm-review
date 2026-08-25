@@ -124,21 +124,28 @@ function newStoryPage({ user, error, values = {} }) {
     title: 'New story',
     user,
     body: `
-      <h1>Start a new story</h1>
-      <p class="muted">A story groups together all the chapters that belong to it. You're writing the first chapter now; you can add more later from the story page.</p>
-      ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
-      <form method="post" action="/stories/new" class="chapter-form" enctype="multipart/form-data">
-        <label>Story title<input type="text" name="storyTitle" value="${escapeHtml(values.storyTitle || '')}" required></label>
-        <label>Story description (optional)<textarea name="storyDescription" rows="2">${escapeHtml(values.storyDescription || '')}</textarea></label>
-        <hr class="form-divider">
-        <label>Chapter 1 title<input type="text" name="chapterTitle" value="${escapeHtml(values.chapterTitle || '')}" required></label>
-        <label>Chapter summary (optional)<textarea name="chapterSummary" rows="2">${escapeHtml(values.chapterSummary || '')}</textarea></label>
-        <label>Chapter text<textarea name="content" rows="24" placeholder="Paste or write the chapter here...">${escapeHtml(values.content || '')}</textarea>
-          <span class="hint">${MARKDOWN_HINT}</span>
-        </label>
-        ${fileUploadField()}
-        <button class="btn" type="submit">Publish story</button>
-      </form>
+      <div class="writer-card">
+        <h1>Start a new story</h1>
+        <p class="muted writer-intro">A story groups together all the chapters that belong to it. You're writing the first chapter now; you can add more later from the story page.</p>
+        ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+        <form method="post" action="/stories/new" class="chapter-form" enctype="multipart/form-data">
+          <label>Story title<input type="text" name="storyTitle" value="${escapeHtml(values.storyTitle || '')}" required></label>
+          <label>Chapter 1 title<input type="text" name="chapterTitle" value="${escapeHtml(values.chapterTitle || '')}" required></label>
+          <label class="main-field">Chapter 1 text<textarea name="content" rows="24" placeholder="Paste or write the chapter here...">${escapeHtml(values.content || '')}</textarea>
+            <span class="hint">${MARKDOWN_HINT}</span>
+          </label>
+          <div class="writer-section">
+            <p class="writer-section-label">Optional details</p>
+            <label>Story description<textarea name="storyDescription" rows="2">${escapeHtml(values.storyDescription || '')}</textarea></label>
+            <label>Chapter summary<textarea name="chapterSummary" rows="2">${escapeHtml(values.chapterSummary || '')}</textarea></label>
+            ${fileUploadField()}
+          </div>
+          <div class="writer-actions">
+            <a class="btn ghost" href="/">Cancel</a>
+            <button class="btn" type="submit">Publish story</button>
+          </div>
+        </form>
+      </div>
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
 }
@@ -167,18 +174,26 @@ function newChapterPage({ user, story, chapters = [], error, values = {} }) {
     user,
     body: `
       <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
-      <h1>Add a chapter to "${escapeHtml(story.title)}"</h1>
-      ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
-      <form method="post" action="/stories/${story.id}/chapters/new" class="chapter-form" enctype="multipart/form-data">
-        <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title || '')}" required></label>
-        <label>Chapter summary (optional)<textarea name="summary" rows="2">${escapeHtml(values.summary || '')}</textarea></label>
-        <label>Chapter text<textarea name="content" rows="24" placeholder="Paste or write the chapter here...">${escapeHtml(values.content || '')}</textarea>
-          <span class="hint">${MARKDOWN_HINT}</span>
-        </label>
-        ${fileUploadField()}
-        ${positionField(chapters, values.position)}
-        <button class="btn" type="submit">Publish chapter</button>
-      </form>
+      <div class="writer-card">
+        <h1>Add a chapter to "${escapeHtml(story.title)}"</h1>
+        ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+        <form method="post" action="/stories/${story.id}/chapters/new" class="chapter-form" enctype="multipart/form-data">
+          <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title || '')}" required></label>
+          <label class="main-field">Chapter text<textarea name="content" rows="24" placeholder="Paste or write the chapter here...">${escapeHtml(values.content || '')}</textarea>
+            <span class="hint">${MARKDOWN_HINT}</span>
+          </label>
+          <div class="writer-section">
+            <p class="writer-section-label">Optional details</p>
+            <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary || '')}</textarea></label>
+            ${fileUploadField()}
+            ${positionField(chapters, values.position)}
+          </div>
+          <div class="writer-actions">
+            <a class="btn ghost" href="/stories/${story.id}">Cancel</a>
+            <button class="btn" type="submit">Publish chapter</button>
+          </div>
+        </form>
+      </div>
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
 }
@@ -191,19 +206,27 @@ function editChapterPage({ user, chapter, latestContent, error, values = {} }) {
     user,
     body: `
       <p class="breadcrumb"><a href="/chapters/${chapter.id}">&larr; Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</a></p>
-      <h1>Edit chapter</h1>
-      <p class="muted">Saving publishes a new version automatically if you changed the text, so any existing comments stay anchored to the passage they were originally made about. The version history is still available from the "Version" dropdown on the chapter page.</p>
-      ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
-      <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" enctype="multipart/form-data">
-        <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
-        <label>Chapter summary (optional)<textarea name="summary" rows="2">${escapeHtml(values.summary ?? chapter.summary ?? '')}</textarea></label>
-        <label>Chapter text<textarea name="content" rows="24">${escapeHtml(values.content ?? latestContent)}</textarea>
-          <span class="hint">${MARKDOWN_HINT}</span>
-        </label>
-        ${fileUploadField()}
-        <label>What changed? (optional, shown in the version history)<input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Fixed a couple of typos"></label>
-        <button class="btn" type="submit">Save changes</button>
-      </form>
+      <div class="writer-card">
+        <h1>Edit chapter</h1>
+        <p class="muted writer-intro">Saving publishes a new version automatically if you changed the text, so any existing comments stay anchored to the passage they were originally made about. The version history is still available from the "Version" dropdown on the chapter page.</p>
+        ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+        <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" enctype="multipart/form-data">
+          <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
+          <label class="main-field">Chapter text<textarea name="content" rows="24">${escapeHtml(values.content ?? latestContent)}</textarea>
+            <span class="hint">${MARKDOWN_HINT}</span>
+          </label>
+          <div class="writer-section">
+            <p class="writer-section-label">Optional details</p>
+            <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary ?? chapter.summary ?? '')}</textarea></label>
+            ${fileUploadField()}
+            <label>What changed? (shown in the version history)<input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Fixed a couple of typos"></label>
+          </div>
+          <div class="writer-actions">
+            <a class="btn ghost" href="/chapters/${chapter.id}">Cancel</a>
+            <button class="btn" type="submit">Save changes</button>
+          </div>
+        </form>
+      </div>
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
 }

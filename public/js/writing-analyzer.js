@@ -368,7 +368,7 @@
     try { enabled = localStorage.getItem('wa-enabled') !== '0'; } catch (e) { /* ignore */ }
     toggle.checked = enabled;
     toggleLabel.appendChild(toggle);
-    toggleLabel.appendChild(document.createTextNode(' Show writing highlights'));
+    toggleLabel.appendChild(document.createTextNode(' Highlights'));
     bar.appendChild(toggleLabel);
 
     const editorWrap = document.createElement('div');
@@ -389,14 +389,26 @@
     let currentRanges = [];
     let timer = null;
 
+    // Builds one "● N label" chip for the summary bar; returns '' when the
+    // count is zero so empty categories don't clutter the bar.
+    function statChip(colorClass, count, singular, plural) {
+      if (!count) return '';
+      return `<span class="wa-chip"><span class="wa-dot wa-${colorClass}"></span>${count} ${count === 1 ? singular : plural}</span>`;
+    }
+
     function render() {
       const { html, ranges, stats } = analyze(textarea.value);
       overlay.innerHTML = html + (textarea.value.endsWith('\n') ? '&nbsp;' : '');
       currentRanges = ranges;
       const total = stats.yellow + stats.red + stats.blue + stats.purple;
-      summary.textContent = total === 0
+      summary.innerHTML = total === 0
         ? 'No style issues spotted.'
-        : `${stats.red} very dense, ${stats.yellow} long sentence${stats.yellow === 1 ? '' : 's'}, ${stats.blue} weak phrase${stats.blue === 1 ? '' : 's'}, ${stats.purple} complex word${stats.purple === 1 ? '' : 's'}`;
+        : [
+            statChip('red', stats.red, 'very dense sentence', 'very dense sentences'),
+            statChip('yellow', stats.yellow, 'long sentence', 'long sentences'),
+            statChip('blue', stats.blue, 'weak phrase', 'weak phrases'),
+            statChip('purple', stats.purple, 'complex word', 'complex words'),
+          ].filter(Boolean).join('');
       syncScroll();
     }
 
