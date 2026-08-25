@@ -365,6 +365,36 @@ function createChapter({ storyId, title, summary, authorId, content, changelog }
   }
 }
 
+// Inserts a brand-new chapter at a specific position instead of always
+// appending at the end. `position` is the chapter_number the new chapter
+// should take; every chapter at or after it -- archived ones included,
+// since they still hold a slot under UNIQUE(story_id, chapter_number) --
+// is shifted up by one, highest number first so no single UPDATE ever
+// collides with another chapter's current number.
+function insertChapterAt({ storyId, position, title, summary, authorId, content, changelog }) {
+  db.exec('BEGIN');
+  try {
+    const toShift = db.prepare(
+      'SELECT id FROM chapters WHERE story_id = ? AND chapter_number >= ? ORDER BY chapter_number DESC'
+    ).all(storyId, position);
+    const bump = db.prepare('UPDATE chapters SET chapter_number = chapter_number + 1 WHERE id = ?');
+    for (const row of toShift) bump.run(row.id);
+
+    const info = db.prepare(
+      'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id) VALUES (?, ?, ?, ?, ?)'
+    ).run(storyId, position, title, summary || '', authorId);
+    const chapterId = Number(info.lastInsertRowid);
+    db.prepare(
+      'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog) VALUES (?, 1, ?, ?)'
+    ).run(chapterId, content, changelog || 'Initial version');
+    db.exec('COMMIT');
+    return getChapterById(chapterId);
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
 function updateChapter({ chapterId, title, summary }) {
   db.prepare('UPDATE chapters SET title = ?, summary = ? WHERE id = ?')
     .run(title, summary || '', chapterId);
@@ -432,6 +462,41 @@ function archiveChapter(chapterId) {
 
 function unarchiveChapter(chapterId) {
   db.prepare('UPDATE chapters SET archived_at = NULL WHERE id = ?').run(chapterId);
+}
+
+// Swaps a chapter with its nearest visible (non-archived) neighbor in the
+// story's reading order -- a no-op if it's already first/last among visible
+// chapters, or if the chapter itself is archived (nothing to reorder it
+// against). Uses a temporary negative chapter_number -- guaranteed unique,
+// since no real chapter_number is ever negative -- so the swap never trips
+// the UNIQUE(story_id, chapter_number) constraint mid-transaction.
+function moveChapter(chapterId, direction) {
+  const chapter = getChapterById(chapterId);
+  if (!chapter) return null;
+
+  const siblings = db.prepare(
+    'SELECT id, chapter_number FROM chapters WHERE story_id = ? AND archived_at IS NULL ORDER BY chapter_number ASC'
+  ).all(chapter.story_id);
+  const index = siblings.findIndex((c) => c.id === chapterId);
+  if (index === -1) return chapter; // archived chapter -- nothing to reorder
+
+  const targetIndex = direction === 'up' ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= siblings.length) return chapter; // already first/last
+
+  const other = siblings[targetIndex];
+  const thisNumber = siblings[index].chapter_number;
+
+  db.exec('BEGIN');
+  try {
+    db.prepare('UPDATE chapters SET chapter_number = ? WHERE id = ?').run(-chapterId, chapterId);
+    db.prepare('UPDATE chapters SET chapter_number = ? WHERE id = ?').run(thisNumber, other.id);
+    db.prepare('UPDATE chapters SET chapter_number = ? WHERE id = ?').run(other.chapter_number, chapterId);
+    db.exec('COMMIT');
+    return getChapterById(chapterId);
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
 }
 
 // Permanent, irreversible. Cascades to the chapter's versions and comments.
@@ -591,4 +656,6 @@ module.exports = {
   retractComment,
   reopenComment,
   backupDatabaseTo,
+  insertChapterAt,
+  moveChapter,
 };

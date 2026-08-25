@@ -421,7 +421,8 @@ async function handleNewChapterPage(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
   if (!story) return sendHtml(res, 404, 'Story not found');
   if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can add chapters.');
-  sendHtml(res, 200, views.newChapterPage({ user, story, values: {} }));
+  const chapters = models.listChaptersForStory(storyId);
+  sendHtml(res, 200, views.newChapterPage({ user, story, chapters, values: {} }));
 }
 
 async function handleNewChapterSubmit(req, res, user, storyId) {
@@ -429,23 +430,34 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   if (!story) return sendHtml(res, 404, 'Story not found');
   if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can add chapters.');
 
+  const existingChapters = models.listChaptersForStory(storyId);
   const { fields: body, files } = await parseMultipartBody(req, UPLOAD_LIMIT_BYTES);
   const title = (body.title || '').trim();
   const summary = (body.summary || '').trim();
   let content = (body.content || '').replace(/\r\n/g, '\n');
-  const values = { title, summary, content };
+  const values = { title, summary, content, position: body.position };
 
   try {
     const uploaded = extractUploadedText(files.file);
     if (uploaded !== null) { content = uploaded; values.content = content; }
   } catch (err) {
-    return sendHtml(res, 400, views.newChapterPage({ user, story, error: err.message, values }));
+    return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: err.message, values }));
   }
 
-  if (!title) return sendHtml(res, 400, views.newChapterPage({ user, story, error: 'Missing title.', values }));
-  if (!content.trim()) return sendHtml(res, 400, views.newChapterPage({ user, story, error: 'The chapter is empty. Paste some text or upload a .md/.txt/.docx file.', values }));
+  if (!title) return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: 'Missing title.', values }));
+  if (!content.trim()) return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: 'The chapter is empty. Paste some text or upload a .md/.txt/.docx file.', values }));
 
-  const chapter = models.createChapter({ storyId, title, summary, authorId: user.id, content });
+  // "position" picks an existing chapter to insert *before*; anything else
+  // (including the default "end" option, or a tampered/stale value that no
+  // longer matches a real chapter) falls back to appending at the end,
+  // exactly like before this feature existed.
+  const insertBeforeNumber = existingChapters.some((c) => String(c.chapter_number) === body.position)
+    ? Number(body.position)
+    : null;
+
+  const chapter = insertBeforeNumber !== null
+    ? models.insertChapterAt({ storyId, position: insertBeforeNumber, title, summary, authorId: user.id, content })
+    : models.createChapter({ storyId, title, summary, authorId: user.id, content });
   redirect(res, `/chapters/${chapter.id}`);
 }
 
@@ -508,6 +520,14 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
 
   const { version } = models.editChapter({ chapterId, title, summary, content, changelog });
   redirect(res, version ? `/chapters/${chapterId}?v=${version.version_number}` : `/chapters/${chapterId}`);
+}
+
+async function handleMoveChapter(req, res, user, chapterId, direction) {
+  const chapter = models.getChapterById(chapterId);
+  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
+  if (chapter.story_author_id !== user.id) return sendHtml(res, 403, 'Only the story author can reorder chapters.');
+  models.moveChapter(chapterId, direction);
+  redirect(res, `/stories/${chapter.story_id}`);
 }
 
 function slugForFilename(title) {
@@ -742,6 +762,12 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/chapters\/(\d+)\/edit$/)) && req.method === 'POST') {
       return handleEditChapterSubmit(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/chapters\/(\d+)\/move-up$/)) && req.method === 'POST') {
+      return handleMoveChapter(req, res, user, Number(m[1]), 'up');
+    }
+    if ((m = pathname.match(/^\/chapters\/(\d+)\/move-down$/)) && req.method === 'POST') {
+      return handleMoveChapter(req, res, user, Number(m[1]), 'down');
     }
     if ((m = pathname.match(/^\/chapters\/(\d+)\/archive$/)) && req.method === 'POST') {
       return handleArchiveChapter(req, res, user, Number(m[1]));

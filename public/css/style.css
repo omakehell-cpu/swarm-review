@@ -107,6 +107,10 @@ textarea { resize: vertical; font-family: Georgia, 'Times New Roman', serif; fon
 .archive-link { margin-top: 18px; }
 .archived-row { opacity: 0.85; }
 .archived-row .chapter-row-meta { gap: 6px; }
+.chapter-row-outer { display: flex; gap: 8px; align-items: stretch; }
+.chapter-row-outer .chapter-row { flex: 1; min-width: 0; }
+.chapter-row-reorder { display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+.chapter-row-reorder .btn[disabled] { opacity: 0.3; cursor: default; }
 .page-head-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 .ts { white-space: nowrap; }
 

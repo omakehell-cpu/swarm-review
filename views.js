@@ -144,7 +144,23 @@ function newStoryPage({ user, error, values = {} }) {
 
 // ---------- add another chapter to an existing story ----------
 
-function newChapterPage({ user, story, error, values = {} }) {
+function positionField(chapters, selectedValue) {
+  if (!chapters.length) return '';
+  const selected = selectedValue || 'end';
+  const options = chapters.map((c) =>
+    `<option value="${c.chapter_number}" ${String(c.chapter_number) === selected ? 'selected' : ''}>Before Chapter ${c.chapter_number}: ${escapeHtml(c.title)}</option>`
+  ).join('');
+  return `
+    <label>Position
+      <select name="position">
+        ${options}
+        <option value="end" ${selected === 'end' ? 'selected' : ''}>At the end</option>
+      </select>
+      <span class="hint">Inserting before an existing chapter renumbers it and everything after it.</span>
+    </label>`;
+}
+
+function newChapterPage({ user, story, chapters = [], error, values = {} }) {
   return layout({
     title: `New chapter - ${story.title}`,
     user,
@@ -159,6 +175,7 @@ function newChapterPage({ user, story, error, values = {} }) {
           <span class="hint">${MARKDOWN_HINT}</span>
         </label>
         ${fileUploadField()}
+        ${positionField(chapters, values.position)}
         <button class="btn" type="submit">Publish chapter</button>
       </form>`,
   });
@@ -190,21 +207,36 @@ function editChapterPage({ user, chapter, latestContent, error, values = {} }) {
 
 // ---------- story detail (chapter list) ----------
 
+function chapterReorderButtons(chapter, index, total) {
+  return `
+    <div class="chapter-row-reorder">
+      <form method="post" action="/chapters/${chapter.id}/move-up" class="inline-form">
+        <button class="btn tiny ghost" type="submit" title="Move up" ${index === 0 ? 'disabled' : ''}>&uarr;</button>
+      </form>
+      <form method="post" action="/chapters/${chapter.id}/move-down" class="inline-form">
+        <button class="btn tiny ghost" type="submit" title="Move down" ${index === total - 1 ? 'disabled' : ''}>&darr;</button>
+      </form>
+    </div>`;
+}
+
 function storyPage({ user, story, chapters, isStoryAuthor }) {
-  const rows = chapters.length ? chapters.map((c) => `
-    <a class="chapter-row" href="/chapters/${c.id}">
-      <div class="chapter-row-main">
-        <h3>Chapter ${c.chapter_number}: ${escapeHtml(c.title)}
-          ${c.is_new ? '<span class="badge new">New</span>' : (c.has_new_comments ? '<span class="badge new-comments">New comments</span>' : '')}
-        </h3>
-        <p class="muted">${escapeHtml(c.summary || '')}</p>
-      </div>
-      <div class="chapter-row-meta">
-        <span>v${c.latest_version}</span>
-        ${timeHtml(c.created_at)}
-        ${c.pending_comments > 0 ? `<span class="badge pending">${c.pending_comments} pending</span>` : ''}
-      </div>
-    </a>
+  const rows = chapters.length ? chapters.map((c, i) => `
+    <div class="chapter-row-outer">
+      <a class="chapter-row" href="/chapters/${c.id}">
+        <div class="chapter-row-main">
+          <h3>Chapter ${c.chapter_number}: ${escapeHtml(c.title)}
+            ${c.is_new ? '<span class="badge new">New</span>' : (c.has_new_comments ? '<span class="badge new-comments">New comments</span>' : '')}
+          </h3>
+          <p class="muted">${escapeHtml(c.summary || '')}</p>
+        </div>
+        <div class="chapter-row-meta">
+          <span>v${c.latest_version}</span>
+          ${timeHtml(c.created_at)}
+          ${c.pending_comments > 0 ? `<span class="badge pending">${c.pending_comments} pending</span>` : ''}
+        </div>
+      </a>
+      ${isStoryAuthor ? chapterReorderButtons(c, i, chapters.length) : ''}
+    </div>
   `).join('') : '<p class="muted">No chapters yet.</p>';
 
   return layout({
