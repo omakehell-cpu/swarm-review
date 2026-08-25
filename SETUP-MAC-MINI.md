@@ -1,18 +1,26 @@
-# Setting up Swarm Review on your Mac mini
+# Setting up Swarm Review on the Mac mini
 
-This guide gets the app running locally on your Mac mini first (so you can
-open it in a browser and try it yourself), and then outlines your options
-for making it reachable by the rest of the group later on.
+This is where the app actually lives now -- it runs on the Mac mini,
+kept up automatically by `launchd`, and is reachable from anywhere at
+**https://swarmarchive.com** (see `SETUP-DOMAIN.md` for how that tunnel
+is wired up). The project folder is `~/Documents/swarmEditor/swarm-review`.
 
-## Part 1 — Run it locally on the Mac mini
+Part 1 below is how it was first set up (and how you'd redo it if this
+ever needs to move to a different Mac); Part 2 is the actual `launchd`
+setup that's running right now -- what to run if you need to check on it,
+restart it, or see its logs.
 
-### 1. Get the project files onto the Mac mini
+## Part 1 — Getting it running manually
 
-You already have `swarm-review.zip` (I sent it earlier and saved a copy in
-your `review-project` folder on this PC). Get that zip onto the Mac mini
-however is easiest for you — AirDrop, a USB stick, iCloud Drive/Dropbox,
-or emailing it to yourself. Once it's there, double-click it in Finder to
-unzip it (or unzip it into wherever you keep projects, e.g. `~/Projects/`).
+You shouldn't normally need this (the live copy starts itself on boot,
+see Part 2), but it's how to run a copy by hand -- for testing something
+without touching the live service, or setting this up on a new machine.
+
+### 1. Get the project files onto the Mac
+
+Copy the `swarm-review` folder over however is easiest -- AirDrop, a USB
+stick, iCloud Drive/Dropbox, or `git clone` from the project's GitHub
+repo if it's already been pushed there.
 
 ### 2. Check whether Node.js is installed
 
@@ -22,7 +30,7 @@ Open **Terminal** (Cmd+Space, type "Terminal", Enter) and run:
 node -v
 ```
 
-- If you see a version number **22.5.0 or higher**, you're set — skip to
+- If you see a version number **22.5.0 or higher**, you're set -- skip to
   step 4.
 - If you see "command not found" or a lower version, install/update Node
   (step 3).
@@ -37,7 +45,7 @@ it yet:
 ```
 
 Follow the on-screen instructions (it may ask you to run one or two more
-commands to add Homebrew to your PATH — it will tell you exactly what to
+commands to add Homebrew to your PATH -- it will tell you exactly what to
 paste). Then install Node.js:
 
 ```bash
@@ -55,11 +63,10 @@ version).
 
 ### 4. Start the server
 
-In Terminal, go to the folder where you unzipped the project — for
-example, if it's on your Desktop:
+In Terminal, go to the project folder and run it:
 
 ```bash
-cd ~/Desktop/swarm-review
+cd ~/Documents/swarmEditor/swarm-review
 node server.js
 ```
 
@@ -67,62 +74,163 @@ You should see something like:
 
 ```
 Swarm Review listening on http://localhost:3000
-Invite code for new account registration: XXXXXXXX
+Registration is currently closed -- log in as an admin and generate a new invite code from /admin.
 ```
 
-**Write down that invite code** — everyone who registers an account needs
-to type it in once. Leave this Terminal window open; the site stops
-working if you close it or press Ctrl+C.
+("Registration is closed" just means there's no active invite code right
+now -- generate one from `/admin` if you need to let someone new in. On a
+brand new `data/` folder you'd see a freshly generated invite code printed
+instead, since there'd be no admin account yet to generate one from.)
+
+Leave this Terminal window open; a manually-started copy like this stops
+working if you close it or press Ctrl+C. (The live copy doesn't have this
+problem -- see Part 2.)
 
 ### 5. Open it in your browser
 
-Go to **http://localhost:3000** in Safari or Chrome on the Mac mini.
-Register the first account (it automatically becomes the admin account),
-then explore: start a story with its first chapter, select some text to leave a comment,
-accept/reject it from another account, upload a new version, etc.
-
-At this point it only works from the Mac mini itself — that's expected,
-this is the "local" stage. Part 2 below covers letting your friends reach
-it too.
+Go to **http://localhost:3000**. If this is a fresh `data/` folder,
+register the first account (it automatically becomes the admin account),
+then explore: start a story with its first chapter, select some text to
+leave a comment, accept/reject it from another account, upload a new
+version, etc.
 
 ### Stopping / restarting
 
-- To stop the server: click into that Terminal window and press `Ctrl+C`.
-- To start it again later: `cd ~/Desktop/swarm-review && node server.js`
-  (or wherever you put the folder).
-- Your data (accounts, stories, chapters, comments) lives in a `data/` folder next
-  to `server.js` and persists between restarts — you won't lose anything
-  by stopping and restarting the server.
+- To stop: click into that Terminal window and press `Ctrl+C`.
+- To start it again later: `cd ~/Documents/swarmEditor/swarm-review &&
+  node server.js`.
+- Data (accounts, stories, chapters, comments) lives in a `data/` folder
+  next to `server.js` and persists between restarts -- you won't lose
+  anything by stopping and restarting the server this way. It's the same
+  `data/` folder the live, `launchd`-managed copy uses, so a manual run
+  like this sees (and can affect) the real, live data -- there's no
+  separate "test" database.
 
-## Part 2 — Making it reachable by the group (later)
+## Part 2 — How the live copy actually stays running
 
-Once you're happy with how it works locally, there are a few ways to let
-your friends reach it too. Roughly in order of how much hassle they are:
+Two `launchd` services, both set to start at login and restart
+automatically if the process ever dies (`KeepAlive`):
 
-**Tailscale (recommended starting point)** — a free private network app.
-You install it on the Mac mini and each friend installs it on their own
-device; then they can open the site using a private address that only
-your group can reach, with no need to touch your router or expose
-anything to the public internet. Simplest and most secure option for a
-trusted friend group.
+- **`com.swarmreview.server`** -- runs `node server.js` in the project
+  folder.
+- **`com.swarmreview.tunnel`** -- runs `cloudflared tunnel run
+  swarm-review`, the Cloudflare Tunnel that makes
+  `https://swarmarchive.com` reach this machine (see `SETUP-DOMAIN.md`
+  for how that tunnel itself was created).
 
-**Port forwarding + a domain name** — makes the site reachable by anyone
-on the public internet, the way a normal website works. Requires
-configuring your home router to forward a port to the Mac mini, ideally a
-dynamic DNS service (since home internet IPs usually change) or a real
-domain, and a reverse proxy like Caddy in front of the app to get free
-HTTPS. More setup, but means people don't need to install anything.
+Both plist files live in `~/Library/LaunchAgents/`:
 
-**Keeping the server always running** — whichever option you pick,
-you'll also want the app to start automatically and restart itself if it
-crashes or the Mac mini reboots, rather than relying on a Terminal window
-staying open. On macOS this is normally done with a small `launchd`
-config, or a process manager like `pm2`. I can set this up for you when
-we get to this step.
+**`~/Library/LaunchAgents/com.swarmreview.server.plist`**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.swarmreview.server</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/node</string>
+        <string>/Users/iagozasdeuna/Documents/swarmEditor/swarm-review/server.js</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/iagozasdeuna/Documents/swarmEditor/swarm-review</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/iagozasdeuna/Documents/swarmEditor/swarm-review/server.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/iagozasdeuna/Documents/swarmEditor/swarm-review/server.log</string>
+</dict>
+</plist>
+```
 
-When you're ready to tackle this part, tell me which of these fits how
-you want the group to access it (or if you're unsure, tell me a bit about
-your setup — e.g. is the Mac mini always on, do you already use
-Tailscale/a VPN for anything, do you have a domain name — and I'll
-recommend one) and I'll walk you through it step by step, the same way as
-this guide.
+**`~/Library/LaunchAgents/com.swarmreview.tunnel.plist`**
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.swarmreview.tunnel</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/cloudflared</string>
+        <string>tunnel</string>
+        <string>run</string>
+        <string>swarm-review</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/swarm-review-tunnel.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/swarm-review-tunnel.log</string>
+</dict>
+</plist>
+```
+
+### Useful commands
+
+Check both are actually running (a PID next to the label means yes; a `-`
+means it's not currently running):
+
+```bash
+launchctl list | grep swarmreview
+```
+
+Restart one cleanly after pulling in code changes (kills and relaunches
+it in one step, no separate stop-then-start needed):
+
+```bash
+launchctl kickstart -k gui/$(id -u)/com.swarmreview.server
+launchctl kickstart -k gui/$(id -u)/com.swarmreview.tunnel
+```
+
+Watch the logs (Ctrl+C to stop watching, doesn't stop the service):
+
+```bash
+tail -f ~/Documents/swarmEditor/swarm-review/server.log
+tail -f /tmp/swarm-review-tunnel.log
+```
+
+Stop a service until the next login/reboot (or until you `load` it
+again):
+
+```bash
+launchctl unload ~/Library/LaunchAgents/com.swarmreview.server.plist
+```
+
+Start it again:
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.swarmreview.server.plist
+```
+
+Note: killing the `node` or `cloudflared` process directly (e.g. via
+Activity Monitor, or `kill <pid>`) doesn't actually stop it -- `KeepAlive`
+means `launchd` just restarts it right away. Use `unload` (above) or
+`kickstart -k` if you actually want it to stop, or need to force a clean
+restart after an update.
+
+### Things worth knowing
+
+- The Mac mini needs to actually be **on and awake** for the site to be
+  reachable -- check Energy Saver / Battery settings if it seems to go
+  down on its own (System Settings → Energy → uncheck anything that lets
+  it sleep automatically while plugged in).
+- `data/swarm-review.sqlite` is the entire site's data -- back that file
+  up somewhere else occasionally (there's also a one-click backup button
+  on `/admin` that downloads a WAL-safe snapshot without needing to stop
+  the server).
+- If this ever needs to move to a different machine: copy the project
+  folder (including `data/` if you want to keep existing
+  accounts/stories) and `.env`, install Node the same way (Part 1), then
+  redo the two plists above with that machine's actual `node`/`cloudflared`
+  paths (`which node`, `which cloudflared`) and `iagozasdeuna` swapped for
+  the new machine's username -- `SETUP-DOMAIN.md` covers moving the tunnel
+  itself the same way.

@@ -147,39 +147,31 @@ file up and you have the whole site.
   away. An admin can't lock or delete their own account (to avoid locking
   themselves out), and can't delete the only remaining admin account.
 
-## Deploying it on your Mac mini later
+## Deployment
 
-When you're ready to move this off your own machine and onto the Mac
-mini so the rest of the group can reach it, you have two straightforward
-options:
+This is live: it runs on a Mac mini, kept running by two `launchd`
+services (`com.swarmreview.server` for the app itself,
+`com.swarmreview.tunnel` for the tunnel below) that start automatically on
+boot and restart the process if it ever crashes -- see
+**`SETUP-MAC-MINI.md`** for the plist files and the `launchctl` commands
+to check on/restart/stop either one.
 
-**Option A — just run it with Node** (simplest, no Docker needed):
+It's reachable from anywhere at **https://swarmarchive.com**, via a
+Cloudflare Tunnel (no router configuration or open ports) -- see
+**`SETUP-DOMAIN.md`** for exactly how that's wired up, in case it ever
+needs to move to a different machine or the tunnel needs recreating.
 
-1. Install Node.js 22+ on the Mac mini (e.g. `brew install node`, or an
-   LTS installer from nodejs.org).
-2. Copy this folder onto the Mac mini.
-3. Run `node server.js` (consider a tool like `pm2`, or a `launchd`
-   agent, so it restarts automatically and survives reboots).
-4. Point your router / Tailscale / whatever you use for remote access at
-   that machine's port 3000.
-
-**Option B — Docker Compose** (if you'd rather have it in a container
-that restarts itself automatically):
-
-```bash
-docker compose up -d --build
-```
-
-The included `Dockerfile` and `docker-compose.yml` already handle this —
-the SQLite database is stored in a mounted `./data` folder next to the
-compose file, so `docker compose down` / `up` again doesn't lose data.
-
-Either way, if you want the site reachable from outside your home network
-(rather than just your local Wi-Fi) with a real domain and HTTPS, see
-**`SETUP-DOMAIN.md`** — it walks through doing that with Cloudflare Tunnel
-(no router/port-forwarding needed), currently written for the Windows PC
-but the same steps apply once this moves to the Mac mini.
-
+If you're setting this up fresh somewhere else (a different machine, or
+just running it locally to try it out): install Node.js 22+
+(`brew install node` on macOS, or an LTS installer from nodejs.org
+elsewhere), copy this folder over, and run `node server.js` -- see
+**`SETUP-MAC-MINI.md`** (Part 1) or **`SETUP-WINDOWS.md`** for a more
+step-by-step walkthrough of that part. A Docker option
+(`docker compose up -d --build`, using the included `Dockerfile` and
+`docker-compose.yml`) is also there if you'd rather have it in a
+container instead of a plain `launchd`/Node setup -- the SQLite database
+lives in a mounted `./data` folder next to the compose file either way, so
+`docker compose down` / `up` again doesn't lose data.
 ## Project layout
 
 ```

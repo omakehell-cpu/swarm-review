@@ -1,5 +1,12 @@
 # Setting up Swarm Review on this Windows PC (for review, before the Mac mini)
 
+> **Note:** this describes the very first, Windows-based trial run of the
+> app. That "move to the Mac mini" step mentioned below has since
+> happened -- the site now runs there full-time and is live at
+> **https://swarmarchive.com** (see `SETUP-MAC-MINI.md` and
+> `SETUP-DOMAIN.md`). This file is kept as-is since it's still accurate
+> for what it describes: trying the app out locally on a Windows PC.
+
 Good news: the app has zero external dependencies (including no native
 modules to compile), so it runs the same way on Windows as it will later
 on the Mac mini. This lets you try it out here first.
@@ -97,6 +104,8 @@ code.
 
 ## Got a domain and want it live now?
 
-If you'd rather put this PC on the internet with a real domain right away
-instead of waiting for the Mac mini, see **`SETUP-DOMAIN.md`** — it covers
-exactly that, using Cloudflare Tunnel (no router configuration needed).
+This is exactly what happened next: `SETUP-DOMAIN.md` covers putting the
+app on the internet with a real domain, using Cloudflare Tunnel (no
+router configuration needed) -- it now documents the actual, live setup
+on the Mac mini rather than this Windows PC, since that's where the site
+ended up running.
