@@ -1,16 +1,83 @@
-/* Swarm Review -- minimal, readable, no framework. */
+/* Swarm Review -- minimal, readable, no framework.
+
+   Theming: light is the default (bare :root) so the page still looks
+   right with CSS half-loaded or JS disabled. The dark palette applies
+   under prefers-color-scheme, unless the user has explicitly picked
+   light (data-theme="light" on <html>, set by theme-toggle.js) -- and
+   applies unconditionally under data-theme="dark", for someone whose OS
+   is set to light but who prefers dark here regardless. See
+   public/js/theme-init.js for how data-theme gets set before first paint
+   (no flash of the wrong theme) and public/js/theme-toggle.js for the
+   toggle button in the top bar.
+
+   Colors are deliberately not full-contrast: near-black-on-white or
+   near-white-on-black is tiring over the long stretches of prose this
+   app is for, so text sits a bit short of either extreme, and the light
+   theme's background is a warm off-white (paper, not a bright white).
+   The "-rgb" triplets exist so rgba() overlays (badges, focus rings,
+   status backgrounds) can follow the same token instead of a hardcoded
+   color that would silently go wrong in the other theme. */
 :root {
-  --bg: #16181d;
-  --bg-elevated: #1e2129;
-  --border: #2c303a;
-  --text: #e7e8ea;
-  --text-muted: #9aa0ac;
+  --bg: #f1efe9;
+  --bg-elevated: #fbfaf6;
+  --border: #ddd8cb;
+  --text: #2c2a26;
+  --text-muted: #6f6a5f;
+  --accent: #6d5cc4;
+  --accent-strong: #55439e;
+  --accent-rgb: 109, 92, 196;
+  --pending: #a5701d;
+  --pending-rgb: 165, 112, 29;
+  --accepted: #1f7a4d;
+  --accepted-rgb: 31, 122, 77;
+  --rejected: #b34d34;
+  --rejected-rgb: 179, 77, 52;
+  --btn-text: #fdfcfa;
+  --code-bg: rgba(0, 0, 0, 0.055);
+  --shadow: rgba(30, 25, 15, 0.16);
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17191e;
+    --bg-elevated: #1e212a;
+    --border: #2c313c;
+    --text: #dbdce1;
+    --text-muted: #949aa6;
+    --accent: #8b7bd8;
+    --accent-strong: #a493f0;
+    --accent-rgb: 139, 123, 216;
+    --pending: #d8a44b;
+    --pending-rgb: 216, 164, 75;
+    --accepted: #4bbf7e;
+    --accepted-rgb: 75, 191, 126;
+    --rejected: #d8654b;
+    --rejected-rgb: 216, 101, 75;
+    --btn-text: #101114;
+    --code-bg: rgba(255, 255, 255, 0.06);
+    --shadow: rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #17191e;
+  --bg-elevated: #1e212a;
+  --border: #2c313c;
+  --text: #dbdce1;
+  --text-muted: #949aa6;
   --accent: #8b7bd8;
   --accent-strong: #a493f0;
+  --accent-rgb: 139, 123, 216;
   --pending: #d8a44b;
+  --pending-rgb: 216, 164, 75;
   --accepted: #4bbf7e;
+  --accepted-rgb: 75, 191, 126;
   --rejected: #d8654b;
-  --radius: 10px;
+  --rejected-rgb: 216, 101, 75;
+  --btn-text: #101114;
+  --code-bg: rgba(255, 255, 255, 0.06);
+  --shadow: rgba(0, 0, 0, 0.4);
 }
 
 * { box-sizing: border-box; }
@@ -38,6 +105,14 @@ a:hover { text-decoration: underline; }
 .topbar nav { display: flex; align-items: center; gap: 18px; }
 .topbar .whoami { color: var(--text-muted); }
 
+.theme-toggle {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0; margin: 0;
+  background: transparent; border: 1px solid var(--border); border-radius: 999px;
+  color: var(--text-muted); font-size: 0.95rem; line-height: 1; cursor: pointer;
+}
+.theme-toggle:hover { color: var(--text); border-color: var(--accent); }
+
 .linklike {
   background: none; border: none; color: var(--accent-strong); cursor: pointer;
   font: inherit; padding: 0; text-decoration: none;
@@ -49,8 +124,8 @@ a:hover { text-decoration: underline; }
 .container-wide { max-width: 1500px; }
 
 .flash { padding: 10px 24px; text-align: center; }
-.flash.error { background: rgba(216, 101, 75, 0.15); color: var(--rejected); }
-.flash.info { background: rgba(139, 123, 216, 0.15); color: var(--accent-strong); }
+.flash.error { background: rgba(var(--rejected-rgb), 0.15); color: var(--rejected); }
+.flash.info { background: rgba(var(--accent-rgb), 0.15); color: var(--accent-strong); }
 
 h1 { margin-top: 0; }
 .muted { color: var(--text-muted); }
@@ -59,7 +134,7 @@ h1 { margin-top: 0; }
 .btn {
   display: inline-block;
   background: var(--accent);
-  color: #101114;
+  color: var(--btn-text);
   border: none;
   padding: 9px 16px;
   border-radius: var(--radius);
@@ -70,9 +145,9 @@ h1 { margin-top: 0; }
 .btn:hover { background: var(--accent-strong); text-decoration: none; }
 .btn.ghost { background: transparent; color: var(--accent-strong); border: 1px solid var(--border); }
 .btn.small { padding: 5px 10px; font-size: 0.85rem; }
-.btn.accept { background: var(--accepted); color: #0e1a12; }
-.btn.reject { background: var(--rejected); color: #1a0e0e; }
-.btn.danger { background: var(--rejected); color: #1a0e0e; }
+.btn.accept { background: var(--accepted); color: var(--btn-text); }
+.btn.reject { background: var(--rejected); color: var(--btn-text); }
+.btn.danger { background: var(--rejected); color: var(--btn-text); }
 .btn.tiny { padding: 2px 8px; font-size: 0.75rem; }
 
 /* --- auth --- */
@@ -102,9 +177,9 @@ textarea { resize: vertical; font-family: Georgia, 'Times New Roman', serif; fon
 .chapter-row h3 { margin: 0 0 4px; }
 .chapter-row-meta { display: flex; gap: 10px; align-items: center; white-space: nowrap; color: var(--text-muted); font-size: 0.85rem; }
 .badge { padding: 3px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
-.badge.pending { background: rgba(216, 164, 75, 0.18); color: var(--pending); }
-.badge.new { background: rgba(139, 123, 216, 0.22); color: var(--accent-strong); }
-.badge.new-comments { background: rgba(75, 191, 126, 0.18); color: var(--accepted); }
+.badge.pending { background: rgba(var(--pending-rgb), 0.18); color: var(--pending); }
+.badge.new { background: rgba(var(--accent-rgb), 0.22); color: var(--accent-strong); }
+.badge.new-comments { background: rgba(var(--accepted-rgb), 0.18); color: var(--accepted); }
 .archive-link { margin-top: 18px; }
 .archived-row { opacity: 0.85; }
 .archived-row .chapter-row-meta { gap: 6px; }
@@ -141,6 +216,11 @@ input[type="file"] { padding: 6px 4px; }
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.08rem;
   line-height: 1.75;
+  /* Caps line length for comfortable reading regardless of how wide the
+     grid column ends up (it's fluid, minmax(0, 2.1fr)) -- around 70-75
+     characters per line is the usual typographic sweet spot; much wider
+     and the eye has to work to track back to the start of the next line. */
+  max-width: 72ch;
 }
 #chapter-text p { margin: 0 0 1.1em; }
 #chapter-text p:last-child { margin-bottom: 0; }
@@ -164,13 +244,13 @@ input[type="file"] { padding: 6px 4px; }
 #chapter-text hr::before { content: "\2022 \2022 \2022"; letter-spacing: 0.4em; }
 #chapter-text code {
   font-family: "SF Mono", Consolas, Monaco, monospace; font-size: 0.92em;
-  background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
 }
 #chapter-text a { color: var(--accent-strong); }
 .hl { border-radius: 3px; cursor: pointer; padding: 1px 0; }
-.hl-pending { background: rgba(216, 164, 75, 0.28); box-shadow: inset 0 -2px 0 var(--pending); }
-.hl-accepted { background: rgba(75, 191, 126, 0.2); box-shadow: inset 0 -2px 0 var(--accepted); }
-.hl-rejected { background: rgba(216, 101, 75, 0.15); box-shadow: inset 0 -2px 0 var(--rejected); opacity: 0.75; }
+.hl-pending { background: rgba(var(--pending-rgb), 0.28); box-shadow: inset 0 -2px 0 var(--pending); }
+.hl-accepted { background: rgba(var(--accepted-rgb), 0.2); box-shadow: inset 0 -2px 0 var(--accepted); }
+.hl-rejected { background: rgba(var(--rejected-rgb), 0.15); box-shadow: inset 0 -2px 0 var(--rejected); opacity: 0.75; }
 
 .comments-pane { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 14px; max-height: calc(100vh - 40px); overflow-y: auto; }
 .comments-pane h2 { margin: 0; font-size: 1.05rem; }
@@ -184,9 +264,9 @@ input[type="file"] { padding: 6px 4px; }
 .comment.flash-highlight { box-shadow: 0 0 0 2px var(--accent-strong); }
 .comment-meta { display: flex; justify-content: flex-start; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
 .status-badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
-.status-badge.status-pending { background: rgba(216, 164, 75, 0.18); color: var(--pending); }
-.status-badge.status-accepted { background: rgba(75, 191, 126, 0.18); color: var(--accepted); }
-.status-badge.status-rejected { background: rgba(216, 101, 75, 0.18); color: var(--rejected); }
+.status-badge.status-pending { background: rgba(var(--pending-rgb), 0.18); color: var(--pending); }
+.status-badge.status-accepted { background: rgba(var(--accepted-rgb), 0.18); color: var(--accepted); }
+.status-badge.status-rejected { background: rgba(var(--rejected-rgb), 0.18); color: var(--rejected); }
 .edited-tag { font-size: 0.78rem; }
 .quoted { margin: 0 0 8px; padding: 6px 10px; border-left: 3px solid var(--border); color: var(--text-muted); font-size: 0.88rem; font-style: italic; }
 .comment-body { margin: 0 0 8px; white-space: pre-wrap; }
@@ -214,9 +294,9 @@ input[type="file"] { padding: 6px 4px; }
 .general-comment form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 
 .selection-toast {
-  position: absolute; z-index: 50; background: var(--accent); color: #101114;
+  position: absolute; z-index: 50; background: var(--accent); color: var(--btn-text);
   border: none; border-radius: 999px; padding: 6px 14px; font-weight: 600; cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 14px var(--shadow);
 }
 .selection-toast.hidden { display: none; }
 
@@ -249,8 +329,8 @@ input[type="file"] { padding: 6px 4px; }
 }
 .admin-user-row.locked { border-color: var(--rejected); }
 .admin-user-main .small-meta { margin: 4px 0 0; font-size: 0.82rem; }
-.badge.admin-badge { background: rgba(139, 123, 216, 0.22); color: var(--accent-strong); margin-left: 6px; }
-.badge.locked-badge { background: rgba(216, 101, 75, 0.18); color: var(--rejected); margin-left: 6px; }
+.badge.admin-badge { background: rgba(var(--accent-rgb), 0.22); color: var(--accent-strong); margin-left: 6px; }
+.badge.locked-badge { background: rgba(var(--rejected-rgb), 0.18); color: var(--rejected); margin-left: 6px; }
 .admin-user-actions { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
 .admin-inline-form summary { cursor: pointer; color: var(--text-muted); font-size: 0.85rem; padding: 5px 0; }
 .admin-inline-form form { display: flex; gap: 6px; margin-top: 6px; }
@@ -264,7 +344,13 @@ input[type="file"] { padding: 6px 4px; }
 .writer-card {
   max-width: 1300px; margin: 0 auto; background: var(--bg-elevated);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 36px;
+  transition: max-width 0.2s ease;
 }
+/* "Fill screen" editor-width button (see writing-analyzer.js) -- widens
+   the whole card past its usual 1300px cap, up to .container-wide's own
+   1500px, rather than just the textarea, since a wider textarea alone
+   inside an unchanged, narrower card would just overflow it. */
+.writer-card.wa-fullwidth { max-width: none; }
 .writer-card h1 { font-size: 1.5rem; margin-bottom: 6px; }
 .writer-card .writer-intro { margin-top: 0; }
 .writer-card .chapter-form { max-width: none; gap: 22px; }
@@ -278,36 +364,56 @@ input[type="file"] { padding: 6px 4px; }
 .writer-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 4px; }
 .writer-actions .btn { padding: 10px 22px; font-size: 0.95rem; }
 input:focus, textarea:focus, select:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139, 123, 216, 0.25);
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.25);
+}
+/* Buttons/links had no visible focus state at all -- fine with a mouse,
+   but keyboard-only navigation had no way to tell which one was about to
+   activate on Enter/Space. :focus-visible (not plain :focus) so a mouse
+   click doesn't leave a ring sitting on the button afterward -- only
+   keyboard/programmatic focus does. */
+.btn:focus-visible, .linklike:focus-visible, .theme-toggle:focus-visible,
+.wa-check-row:focus-within, .chapter-row:focus-visible {
+  outline: none; box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.4);
 }
 
 /* --- writing analyzer (Hemingway-style highlights + markdown preview) --- */
 .wa-wrap { display: block; }
 .wa-card {
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elevated);
-  padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px;
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;
 }
 .wa-card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.wa-card-title { font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
-.wa-summary { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); }
-.wa-chip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.wa-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.wa-checks { display: flex; flex-wrap: wrap; gap: 8px; }
-.wa-check-pill {
-  position: relative; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; user-select: none;
-  border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px 6px 10px;
-  font-size: 0.85rem; color: var(--text-muted); background: var(--bg);
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+.wa-card-title { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.wa-summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-muted); }
+.wa-chip { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.wa-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* A row of labeled sections (Spelling / Style / Markdown preview /
+   Comments), sitting side by side when there's room. Each section's own
+   checkbox rows wrap horizontally too (.wa-section-rows), rather than
+   stacking one per line -- Style has five checks and would otherwise set
+   the height for the whole card even though Spelling/Comments only ever
+   need one line, wasting a lot of vertical space next to them. */
+.wa-sections { display: flex; flex-wrap: wrap; gap: 4px 32px; }
+.wa-section { display: flex; flex-direction: column; gap: 0; }
+.wa-section-title {
+  font-weight: 700; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted); margin: 0 0 1px;
 }
-.wa-check-pill input { position: absolute; opacity: 0; width: 0; height: 0; }
-.wa-check-pill .wa-check-dot {
-  width: 10px; height: 10px; border-radius: 50%; background: var(--wa-color); opacity: 0.35; flex-shrink: 0;
-  transition: opacity 0.15s ease;
+.wa-section-rows { display: flex; flex-flow: row wrap; gap: 0 14px; }
+.wa-check-row {
+  /* flex-direction: row overrides the generic `label { flex-direction:
+     column }` form-field rule above -- this label isn't a field caption
+     over an input, it's a checkbox-and-text row. */
+  display: flex; flex-direction: row; align-items: center; gap: 6px; padding: 2px 4px; margin: 0 -4px;
+  border-radius: 5px; cursor: pointer; user-select: none; font-size: 0.84rem; color: var(--text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
 }
-.wa-check-pill.active { background: var(--wa-bg-active); border-color: var(--wa-color); color: var(--text); }
-.wa-check-pill.active .wa-check-dot { opacity: 1; }
-.wa-check-pill.wa-preview-pill { border-style: dashed; }
-.wa-check-divider { align-self: stretch; width: 1px; background: var(--border); margin: 2px 2px; }
+.wa-check-row:hover { background: var(--bg); }
+.wa-check-row input[type="checkbox"] {
+  width: 14px; height: 14px; margin: 0; accent-color: var(--wa-color); cursor: pointer; flex-shrink: 0;
+}
+.wa-check-row.active { color: var(--text); }
 
 /* --- comments visibility toggle (shared by the reading and edit pages) --- */
 .chapter-body-grid.comments-hidden { grid-template-columns: 1fr; }
@@ -316,6 +422,8 @@ input:focus, textarea:focus, select:focus {
   background: none; box-shadow: none; cursor: text; padding: 0; border-radius: 0;
 }
 
+.wa-width-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.wa-width-label { font-size: 0.8rem; color: var(--text-muted); }
 .wa-split { display: block; }
 .wa-split.wa-split-active { display: flex; gap: 18px; align-items: stretch; }
 .wa-split.wa-split-active > .wa-editor-wrap { flex: 1 1 50%; min-width: 0; }
@@ -334,7 +442,7 @@ input:focus, textarea:focus, select:focus {
   background: transparent !important; color: transparent !important; caret-color: var(--text);
 }
 .wa-textarea:focus { box-shadow: none; }
-.wa-textarea::selection { background: rgba(139, 123, 216, 0.4); color: transparent; }
+.wa-textarea::selection { background: rgba(var(--accent-rgb), 0.4); color: transparent; }
 
 .md-preview {
   display: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elevated);
@@ -356,22 +464,44 @@ input:focus, textarea:focus, select:focus {
 .md-preview hr::before { content: "\2022 \2022 \2022"; letter-spacing: 0.4em; }
 .md-preview code {
   font-family: "SF Mono", Consolas, Monaco, monospace; font-size: 0.9em;
-  background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px;
+  background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
 }
 .md-preview a { color: var(--accent-strong); }
 
 .wa-card-reading { margin-bottom: 20px; }
-mark.wa-sentence { border-radius: 2px; }
-mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; }
+/* Reset the browser's own <mark> defaults (background: yellow; color: black)
+   -- without this, a check that only sets text-decoration (spelling's wavy
+   underline) still shows the UA's yellow box behind it, which doesn't match
+   that check's actual color in the legend above. Checks that DO set their
+   own background (passive voice, adverbs, ...) simply override this. */
+mark.wa-sentence { border-radius: 2px; background: transparent; color: inherit; }
+mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: transparent; color: inherit; }
+/* The overlay itself stays pointer-events:none (clicks/typing must reach the
+   real, invisible textarea beneath it) but the highlighted words/sentences
+   inside it opt back in -- that's what lets hover and click be detected
+   against the actual rendered word, the same reliable way the read-only
+   chapter page already works, instead of guessing from a click coordinate. */
+.wa-overlay .wa-word, .wa-overlay .wa-sentence { pointer-events: auto; }
 
 .wa-popover {
   position: absolute; transform: translateY(-100%); max-width: 280px;
   background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 10px 12px; font-size: 0.85rem; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); z-index: 50;
+  padding: 10px 12px; font-size: 0.85rem; box-shadow: 0 6px 18px var(--shadow); z-index: 50;
   display: flex; flex-direction: column; gap: 8px;
 }
 .wa-popover.hidden { display: none; }
 .wa-popover-text { color: var(--text); }
+
+/* Lighter, non-interactive preview shown on hover -- click still opens the
+   full .wa-popover above (which carries the action buttons and stays open
+   until you click elsewhere). */
+.wa-hover-tip {
+  position: absolute; transform: translateY(-100%); max-width: 280px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 10px; font-size: 0.8rem; color: var(--text);
+  box-shadow: 0 4px 14px var(--shadow); z-index: 45; pointer-events: none;
+}
+.wa-hover-tip.hidden { display: none; }
 
 
 /* --- story dictionary (spelling exceptions, see the story page) --- */

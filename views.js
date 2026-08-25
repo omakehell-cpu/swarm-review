@@ -582,6 +582,8 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     </div>
     <button id="selection-toast" class="selection-toast hidden" type="button">+ Comment on selection</button>
     <script type="application/json" id="chapter-meta">${toScriptJson({ chapterId: chapter.id })}</script>
+    <script src="/js/nspell.bundle.js"></script>
+    <script src="/js/writing-analyzer.js" defer></script>
     <script src="/js/app.js"></script>
   `;
 
@@ -745,7 +747,7 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
       <section class="admin-section">
         <h2>Backup</h2>
         <p class="muted">A complete, self-contained snapshot of the database -- every user, story, chapter, version, comment, and invite code -- as a single .sqlite file, safe to download even while the server is running. This is the only copy of everyone's writing outside this machine, so keep one somewhere else.</p>
-        <a class="btn" href="/admin/backup">Download backup (.sqlite)</a>
+        <a class="btn ghost" href="/admin/backup">Download backup (.sqlite)</a>
       </section>
 
       <section class="admin-section">

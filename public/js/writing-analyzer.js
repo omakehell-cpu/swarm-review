@@ -529,13 +529,15 @@
 
       const wordRange = waRanges.find((r) => r.kind.indexOf('sentence-') !== 0 && r.start <= segStart && r.end >= segEnd);
       if (wordRange) {
-        inner = `<mark class="wa-word wa-${wordRange.kind}" style="${wordMarkStyle(wordRange.kind)}">${inner}</mark>`;
+        inner = `<mark class="wa-word wa-${wordRange.kind}" style="${wordMarkStyle(wordRange.kind)}" `
+          + `data-wa-start="${wordRange.start}" data-wa-end="${wordRange.end}" data-wa-label="${escapeHtml(wordRange.label)}">${inner}</mark>`;
       }
 
       const sentenceRange = waRanges.find((r) => r.kind.indexOf('sentence-') === 0 && r.start <= segStart && r.end >= segEnd);
       if (sentenceRange) {
         const severity = sentenceRange.kind.slice('sentence-'.length);
-        inner = `<mark class="wa-sentence wa-${severity}" style="${sentenceMarkStyle(severity)}">${inner}</mark>`;
+        inner = `<mark class="wa-sentence wa-${severity}" style="${sentenceMarkStyle(severity)}" `
+          + `data-wa-start="${sentenceRange.start}" data-wa-end="${sentenceRange.end}" data-wa-label="${escapeHtml(sentenceRange.label)}">${inner}</mark>`;
       }
 
       const activeComments = comments.filter((r) => r.start <= segStart && r.end >= segEnd);
@@ -632,60 +634,76 @@
   }
 
   // ---------------------------------------------------------------------
-  // shared control card (colored, clickable check toggles + live counts)
+  // shared control card -- a list of toggle rows grouped into labeled
+  // sections (Spelling / Style / Markdown preview / Comments), rather than
+  // one flat row of colored pills -- easier to scan, and grouping the five
+  // Hemingway-style checks under one "Style" heading reads as one related
+  // group instead of five unrelated buttons.
   // ---------------------------------------------------------------------
 
-  // One colored, clickable pill -- a checkbox styled/labeled as a toggle.
-  // Used for every check pill, the markdown-preview pill, and the
-  // comments-visibility pill, so they all look and behave identically.
-  function buildPill(color, label, checked, onChange) {
-    const pill = document.createElement('label');
-    pill.className = 'wa-check-pill';
-    pill.style.setProperty('--wa-color', color);
-    pill.style.setProperty('--wa-bg-active', hexToRgba(color, 0.16));
+  // One checkbox-and-label row inside a section. The checkbox itself
+  // carries the check's color (via accent-color, tied to --wa-color) --
+  // that's the only color cue a row needs, so unlike the old pill this
+  // doesn't need a separate dot element.
+  function buildCheckRow(color, label, checked, onChange) {
+    const row = document.createElement('label');
+    row.className = 'wa-check-row';
+    row.style.setProperty('--wa-color', color);
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.checked = checked;
     input.addEventListener('change', () => {
-      pill.classList.toggle('active', input.checked);
+      row.classList.toggle('active', input.checked);
       onChange(input.checked);
     });
-    const dot = document.createElement('span');
-    dot.className = 'wa-check-dot';
-    pill.appendChild(input);
-    pill.appendChild(dot);
-    pill.appendChild(document.createTextNode(label));
-    pill.classList.toggle('active', checked);
-    return pill;
+    const text = document.createElement('span');
+    text.textContent = label;
+    row.appendChild(input);
+    row.appendChild(text);
+    row.classList.toggle('active', checked);
+    return row;
   }
 
-  // A thin vertical rule to visually separate the writing-quality checks
-  // from unrelated pills appended after them (markdown preview, comments).
-  function buildDivider() {
-    const divider = document.createElement('span');
-    divider.className = 'wa-check-divider';
-    return divider;
+  // A titled group of rows -- one of the four sections.
+  function buildSection(title, rows) {
+    const section = document.createElement('div');
+    section.className = 'wa-section';
+    const heading = document.createElement('div');
+    heading.className = 'wa-section-title';
+    heading.textContent = title;
+    section.appendChild(heading);
+    // Rows wrap horizontally instead of stacking one per line -- Style
+    // has five of them, and stacked they made the whole card as tall as
+    // its longest section even though Spelling/Comments only ever need
+    // one line each.
+    const list = document.createElement('div');
+    list.className = 'wa-section-rows';
+    rows.forEach((row) => list.appendChild(row));
+    section.appendChild(list);
+    return section;
   }
 
-  // A bare-bones card with a single pill and no title/summary -- used for
-  // readers who aren't the story's author: they only ever get the
-  // comments toggle, never the writing-quality checks (see setupReadView).
-  function buildMinimalCard(pill) {
+  // A bare-bones card with a single "Comments" section and no title/
+  // summary -- used for readers who aren't the story's author: they only
+  // ever get the comments toggle, never the writing-quality checks (see
+  // setupReadView).
+  function buildMinimalCard(row) {
     const card = document.createElement('div');
     card.className = 'wa-card wa-card-reading';
-    const row = document.createElement('div');
-    row.className = 'wa-checks';
-    row.appendChild(pill);
-    card.appendChild(row);
+    const sections = document.createElement('div');
+    sections.className = 'wa-sections';
+    sections.appendChild(buildSection('Comments', [row]));
+    card.appendChild(sections);
     return card;
   }
 
   // Builds the visual card that sits above the text in both the editor and
-  // the reading page. `onToggle(checkId, enabled)` fires when a pill is
-  // clicked. Returns the card element plus a `summary` element to update
-  // and a `checksRow` element callers can append extra pills to (the
-  // editor adds a "Markdown preview" pill, and both the editor and the
-  // reading page add a "Comments" pill, after this).
+  // the reading page, with two built-in sections (Spelling, Style).
+  // `onToggle(checkId, enabled)` fires when a row is toggled. Returns the
+  // card element, a `summary` element to update, and a `sections` element
+  // callers append their own extra sections to (the editor adds a
+  // "Markdown preview" section, and both the editor and the reading page
+  // add a "Comments" section, after this).
   function buildControlsCard(settings, onToggle) {
     const card = document.createElement('div');
     card.className = 'wa-card';
@@ -702,16 +720,44 @@
     head.appendChild(summary);
     card.appendChild(head);
 
-    const checksRow = document.createElement('div');
-    checksRow.className = 'wa-checks';
-    CHECK_ORDER.forEach((id) => {
-      const meta = CHECK_META[id];
-      const pill = buildPill(meta.color, meta.label, settings[id] !== false, (checked) => onToggle(id, checked));
-      checksRow.appendChild(pill);
-    });
-    card.appendChild(checksRow);
+    const sections = document.createElement('div');
+    sections.className = 'wa-sections';
 
-    return { card, summary, checksRow };
+    const spellRow = buildCheckRow(
+      CHECK_META.spell.color, CHECK_META.spell.label, settings.spell !== false,
+      (checked) => onToggle('spell', checked),
+    );
+    sections.appendChild(buildSection('Spelling', [spellRow]));
+
+    const styleRows = CHECK_ORDER.filter((id) => id !== 'spell').map((id) => {
+      const meta = CHECK_META[id];
+      return buildCheckRow(meta.color, meta.label, settings[id] !== false, (checked) => onToggle(id, checked));
+    });
+    sections.appendChild(buildSection('Style', styleRows));
+
+    card.appendChild(sections);
+
+    return { card, summary, sections };
+  }
+
+  // A small, non-interactive preview shown on hover over a highlighted word
+  // or sentence -- separate from the click-triggered `.wa-popover` (which
+  // carries action buttons and stays open until you click elsewhere), so a
+  // stray mouse pass over one mark can't fight with a popover already open
+  // for another. Shared by both the editor and the reading view.
+  function createHoverTip() {
+    const tip = document.createElement('div');
+    tip.className = 'wa-hover-tip hidden';
+    document.body.appendChild(tip);
+    function show(mark) {
+      tip.textContent = mark.dataset.waLabel || '';
+      const rect = mark.getBoundingClientRect();
+      tip.style.top = `${window.scrollY + rect.top - 8}px`;
+      tip.style.left = `${window.scrollX + rect.left}px`;
+      tip.classList.remove('hidden');
+    }
+    function hide() { tip.classList.add('hidden'); }
+    return { show, hide };
   }
 
   // ---------------------------------------------------------------------
@@ -730,7 +776,7 @@
     wrap.className = 'wa-wrap';
     textarea.parentNode.insertBefore(wrap, textarea);
 
-    const { card, summary, checksRow } = buildControlsCard(settings, (id, checked) => {
+    const { card, summary, sections } = buildControlsCard(settings, (id, checked) => {
       settings = Object.assign({}, settings, { [id]: checked });
       saveSettings(settings);
       render();
@@ -740,13 +786,12 @@
     // --- markdown preview toggle (editor only) ---
     let previewOn = false;
     try { previewOn = localStorage.getItem('wa-preview-on') === '1'; } catch (e) { /* ignore */ }
-    const previewPill = buildPill('#8b7bd8', 'Markdown preview', previewOn, (checked) => {
+    const previewRow = buildCheckRow('#8b7bd8', 'Markdown preview', previewOn, (checked) => {
       previewOn = checked;
       try { localStorage.setItem('wa-preview-on', previewOn ? '1' : '0'); } catch (e2) { /* ignore */ }
       applyPreviewState();
     });
-    previewPill.classList.add('wa-preview-pill');
-    checksRow.appendChild(previewPill);
+    sections.appendChild(buildSection('Markdown preview', [previewRow]));
 
     // --- existing comments: reference list + optional inline highlight ---
     // Only present on the edit-chapter page (see views.js's editChapterPage
@@ -766,13 +811,13 @@
       if (editorGridEl) editorGridEl.classList.toggle('comments-hidden', !commentsVisible);
     }
     if (commentsDataEl && editorGridEl && commentsPayload.length) {
-      checksRow.appendChild(buildDivider());
-      checksRow.appendChild(buildPill('#4bbf7e', 'Comments', commentsVisible, (checked) => {
+      const commentsRow = buildCheckRow('#4bbf7e', 'Comments', commentsVisible, (checked) => {
         commentsVisible = checked;
         saveCommentsVisible(checked);
         applyCommentsVisibility();
         scheduleRender();
-      }));
+      });
+      sections.appendChild(buildSection('Comments', [commentsRow]));
     }
     applyCommentsVisibility();
 
@@ -799,6 +844,56 @@
       return found;
     }
 
+    // --- editor width controls ---
+    // The textarea (and its overlay, kept matched via syncOverlayWidth)
+    // fills the available space by default (.wa-textarea's width:100%),
+    // same as any other block element -- until the user drags its
+    // resize:both handle, at which point that pixel width is remembered
+    // (see the ResizeObserver below) and wins from then on, on every
+    // future visit, per the "unless manually overridden" rule. These two
+    // buttons are the way back: one clears that override (returns to
+    // filling the normal chapter-form column), the other both clears it
+    // and additionally widens the whole writer-card past its usual cap so
+    // the editor can use the full page width -- for wide-screen setups
+    // where the normal column feels cramped for long-form writing.
+    const writerCardEl = textarea.closest('.writer-card');
+    const widthBar = document.createElement('div');
+    widthBar.className = 'wa-width-bar';
+    const widthLabel = document.createElement('span');
+    widthLabel.className = 'wa-width-label';
+    widthLabel.textContent = 'Editor width:';
+    const fitChapterBtn = document.createElement('button');
+    fitChapterBtn.type = 'button';
+    fitChapterBtn.className = 'btn ghost tiny';
+    fitChapterBtn.textContent = 'Fit to chapter';
+    const fitScreenBtn = document.createElement('button');
+    fitScreenBtn.type = 'button';
+    fitScreenBtn.className = 'btn ghost tiny';
+    fitScreenBtn.textContent = 'Fill screen';
+    widthBar.appendChild(widthLabel);
+    widthBar.appendChild(fitChapterBtn);
+    widthBar.appendChild(fitScreenBtn);
+    wrap.appendChild(widthBar);
+
+    function setFullWidth(on) {
+      try { localStorage.setItem('wa-editor-fullwidth', on ? '1' : '0'); } catch (e) { /* ignore */ }
+      if (writerCardEl) writerCardEl.classList.toggle('wa-fullwidth', on);
+    }
+    let fullWidthOn = false;
+    try { fullWidthOn = localStorage.getItem('wa-editor-fullwidth') === '1'; } catch (e) { /* ignore */ }
+    setFullWidth(fullWidthOn);
+
+    fitChapterBtn.addEventListener('click', () => {
+      setFullWidth(false);
+      try { localStorage.removeItem('wa-editor-width'); } catch (e) { /* ignore */ }
+      applyPreviewState();
+    });
+    fitScreenBtn.addEventListener('click', () => {
+      setFullWidth(true);
+      try { localStorage.removeItem('wa-editor-width'); } catch (e) { /* ignore */ }
+      applyPreviewState();
+    });
+
     const splitWrap = document.createElement('div');
     splitWrap.className = 'wa-split';
     wrap.appendChild(splitWrap);
@@ -819,17 +914,38 @@
     previewPane.innerHTML = '<p class="muted">The preview will appear here.</p>';
     splitWrap.appendChild(previewPane);
 
+    // The overlay is a separate element from the textarea (absolutely
+    // positioned on top of it -- see .wa-overlay/.wa-textarea in
+    // style.css), stretched to fill their shared wrapper by default. That
+    // only matches the textarea's own box as long as the textarea is also
+    // filling the wrapper; the moment the textarea gets an explicit
+    // narrower width (restored below, or live while dragging its
+    // resize:both handle), the overlay would stay full-width, wrapping its
+    // (identical) text later than the narrower textarea actually does --
+    // the two visibly drift apart, and the textarea's own scrollbar ends
+    // up cutting through the middle of the wider overlay's text instead of
+    // sitting at its right edge. Keeping the overlay's width locked to the
+    // textarea's actual rendered width is what keeps them wrapping (and
+    // scrolling) identically.
+    function syncOverlayWidth() {
+      overlay.style.width = previewOn ? '' : `${textarea.getBoundingClientRect().width}px`;
+    }
+
     function applyPreviewState() {
       splitWrap.classList.toggle('wa-split-active', previewOn);
       if (previewOn) {
         textarea.style.width = ''; // let the 50/50 flex layout govern width
         schedulePreview();
       } else {
-        try {
-          const savedWidth = localStorage.getItem('wa-editor-width');
-          if (savedWidth) textarea.style.width = `${savedWidth}px`;
-        } catch (e) { /* ignore */ }
+        let savedWidth = null;
+        try { savedWidth = localStorage.getItem('wa-editor-width'); } catch (e) { /* ignore */ }
+        // No saved width (never manually resized, or reset via one of the
+        // "Fit to..." buttons below) -- fall back to .wa-textarea's own
+        // width:100%, so it tracks the available space same as any other
+        // block element, rather than staying stuck at a stale pixel value.
+        textarea.style.width = savedWidth ? `${savedWidth}px` : '';
       }
+      syncOverlayWidth();
     }
 
     let previewTimer = null;
@@ -860,6 +976,7 @@
       let widthTimer = null;
       const ro = new ResizeObserver(() => {
         if (previewOn) return;
+        syncOverlayWidth(); // live, not debounced -- keep the overlay matched to the drag as it happens
         if (widthTimer) clearTimeout(widthTimer);
         widthTimer = setTimeout(() => {
           try { localStorage.setItem('wa-editor-width', String(Math.round(textarea.getBoundingClientRect().width))); } catch (e) { /* ignore */ }
@@ -907,6 +1024,8 @@
     textarea.addEventListener('scroll', syncScroll);
     window.addEventListener('resize', syncScroll);
 
+    const hoverTip = createHoverTip();
+
     function hidePopover() {
       popover.classList.add('hidden');
     }
@@ -922,14 +1041,66 @@
       return best;
     }
 
-    textarea.addEventListener('click', () => {
-      const pos = textarea.selectionStart;
-      const range = rangeAt(pos);
+    // The overlay is what's actually visible (the real textarea's text is
+    // transparent -- see .wa-textarea), and its highlighted words/sentences
+    // opt back into pointer events (see .wa-overlay .wa-word/.wa-sentence in
+    // style.css), so a click or hover is matched against the actual
+    // rendered mark instead of guessed from a click coordinate translated
+    // into a character offset -- that guess used to miss near a word's
+    // edges, since the caret position textarea clicks report is exclusive
+    // on one side, which is what made this feel "flaky".
+    function markAt(ev) {
+      return ev.target.closest('.wa-word, .wa-sentence');
+    }
+
+    overlay.addEventListener('mouseover', (ev) => {
+      const mark = markAt(ev);
+      if (mark) hoverTip.show(mark);
+    });
+    overlay.addEventListener('mouseout', (ev) => {
+      const mark = markAt(ev);
+      if (mark && !mark.contains(ev.relatedTarget)) hoverTip.hide();
+    });
+
+    // A click that reaches the textarea directly (i.e. not on a mark, which
+    // would have intercepted it first -- see the overlay listener below)
+    // just means "close whatever's open" the same as clicking anywhere else
+    // that isn't a mark or the popover itself.
+    textarea.addEventListener('click', () => { hidePopover(); });
+
+    overlay.addEventListener('click', (ev) => {
+      const mark = markAt(ev);
+      if (!mark) return;
+      // The chapter-text field is a <label class="main-field"> wrapping
+      // both the textarea AND (since wa-wrap is inserted right before it)
+      // this overlay -- so a click on any mark would otherwise bubble up
+      // into that label, whose native behavior (a *default action*, so
+      // stopPropagation() alone doesn't stop it -- preventDefault() does)
+      // is to forward an unhandled click to the first labelable control it
+      // contains. A click on the textarea itself never triggered this (a
+      // label skips forwarding when the click's target is already a form
+      // control), but a mark is just a plain element, and the first
+      // labelable control in DOM order turns out to be the "Spelling"
+      // checkbox -- so a click on any mark was silently toggling it off.
+      ev.preventDefault();
+      ev.stopPropagation();
+      hoverTip.hide();
+      // mark's own start/end always satisfy rangeAt's containment check
+      // (it's literally where that range came from), so this recovers the
+      // exact original range object -- suggestion included -- rather than
+      // reconstructing one from the mark's (more limited) dataset.
+      const range = rangeAt(Number(mark.dataset.waStart));
       if (!range) { hidePopover(); return; }
-      // Deliberately NOT selecting the range here (no setSelectionRange):
-      // the highlight only needs to be visually marked, not selected --
-      // selecting it meant typing right after a click silently deleted
-      // the whole highlighted span instead of just moving the caret.
+      // The click landed on the overlay (pointer-events:auto on the mark),
+      // not the real textarea underneath, so nothing moved the caret the
+      // way a normal click would -- do that by hand, at the end of the
+      // word/sentence clicked, so typing right after still behaves
+      // naturally. Deliberately not *selecting* the range (no
+      // setSelectionRange(start, end)): that used to make typing right
+      // after a click silently delete the whole highlighted span instead
+      // of just moving the caret.
+      textarea.focus();
+      textarea.setSelectionRange(range.end, range.end);
 
       popover.innerHTML = '';
       const text = document.createElement('div');
@@ -976,18 +1147,19 @@
         popover.appendChild(btn);
       }
 
-      // Position the popover near the textarea's own box rather than trying
-      // to compute the exact on-screen coordinates of a character inside a
-      // <textarea> (which has no reliable cross-browser API) -- simple and
-      // always visible.
-      const rect = textarea.getBoundingClientRect();
+      // Position right above the actual mark that was clicked -- reliable
+      // now that the click comes from a real element in the overlay
+      // (previously this had to fall back to the textarea's own box, since
+      // there's no cross-browser way to get the on-screen position of a
+      // character inside a plain <textarea>).
+      const rect = mark.getBoundingClientRect();
       popover.style.top = `${window.scrollY + rect.top - 8}px`;
       popover.style.left = `${window.scrollX + rect.left}px`;
       popover.classList.remove('hidden');
     });
 
     document.addEventListener('click', (ev) => {
-      if (ev.target === textarea) return;
+      if (ev.target === textarea || overlay.contains(ev.target)) return;
       if (popover.contains(ev.target)) return;
       hidePopover();
     });
@@ -1104,8 +1276,8 @@
     }
 
     if (!isAuthor) {
-      const pill = buildPill('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged);
-      const card = buildMinimalCard(pill);
+      const row = buildCheckRow('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged);
+      const card = buildMinimalCard(row);
       container.parentNode.insertBefore(card, container);
       return;
     }
@@ -1113,13 +1285,13 @@
     let settings = loadSettings();
     let storyWords = new Set();
 
-    const { card, summary, checksRow } = buildControlsCard(settings, (id, checked) => {
+    const { card, summary, sections } = buildControlsCard(settings, (id, checked) => {
       settings = Object.assign({}, settings, { [id]: checked });
       saveSettings(settings);
       render();
     });
-    checksRow.appendChild(buildDivider());
-    checksRow.appendChild(buildPill('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged));
+    const commentsRow = buildCheckRow('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged);
+    sections.appendChild(buildSection('Comments', [commentsRow]));
     card.classList.add('wa-card-reading');
     container.parentNode.insertBefore(card, container);
 
@@ -1127,6 +1299,7 @@
     popover.className = 'wa-popover hidden';
     document.body.appendChild(popover);
     function hidePopover() { popover.classList.add('hidden'); }
+    const hoverTip = createHoverTip();
 
     function clearMarks() {
       container.querySelectorAll('mark.wa-word, mark.wa-sentence').forEach((mark) => {
@@ -1149,9 +1322,19 @@
       render();
     });
 
+    container.addEventListener('mouseover', (ev) => {
+      const mark = ev.target.closest('mark.wa-word, mark.wa-sentence');
+      if (mark) hoverTip.show(mark);
+    });
+    container.addEventListener('mouseout', (ev) => {
+      const mark = ev.target.closest('mark.wa-word, mark.wa-sentence');
+      if (mark && !mark.contains(ev.relatedTarget)) hoverTip.hide();
+    });
+
     container.addEventListener('click', (ev) => {
       const mark = ev.target.closest('mark.wa-word, mark.wa-sentence');
       if (!mark) { hidePopover(); return; }
+      hoverTip.hide();
 
       popover.innerHTML = '';
       const text = document.createElement('div');
