@@ -612,6 +612,38 @@ function backupDatabaseTo(destPath) {
   db.prepare('VACUUM INTO ?').run(destPath);
 }
 
+// ---------- per-story spelling exceptions ----------
+// See db.js's story_dictionary_words table comment for what this is for.
+
+function getStoryDictionary(storyId) {
+  return db.prepare(
+    'SELECT word FROM story_dictionary_words WHERE story_id = ? ORDER BY word COLLATE NOCASE'
+  ).all(storyId).map((row) => row.word);
+}
+
+function listStoryDictionaryEntries(storyId) {
+  return db.prepare(`
+    SELECT sdw.*, u.display_name AS added_by_name
+    FROM story_dictionary_words sdw LEFT JOIN users u ON u.id = sdw.added_by
+    WHERE sdw.story_id = ?
+    ORDER BY sdw.word COLLATE NOCASE
+  `).all(storyId);
+}
+
+// Case-insensitive add: stored lowercased, and re-adding the same word
+// (in any case) is a silent no-op rather than an error.
+function addStoryDictionaryWord(storyId, word, addedBy) {
+  const normalized = word.trim().toLowerCase();
+  if (!normalized) return;
+  db.prepare(
+    'INSERT OR IGNORE INTO story_dictionary_words (story_id, word, added_by) VALUES (?, ?, ?)'
+  ).run(storyId, normalized, addedBy);
+}
+
+function removeStoryDictionaryWord(storyId, id) {
+  db.prepare('DELETE FROM story_dictionary_words WHERE story_id = ? AND id = ?').run(storyId, id);
+}
+
 module.exports = {
   userCount,
   getUserByUsername,
@@ -667,6 +699,10 @@ module.exports = {
   retractComment,
   reopenComment,
   backupDatabaseTo,
+  getStoryDictionary,
+  listStoryDictionaryEntries,
+  addStoryDictionaryWord,
+  removeStoryDictionaryWord,
   insertChapterAt,
   moveChapter,
 };

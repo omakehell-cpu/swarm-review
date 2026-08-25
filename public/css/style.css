@@ -326,6 +326,11 @@ mark.wa-sentence.wa-red { background: rgba(216, 101, 75, 0.35); }
 mark.wa-word { background: none; color: inherit; border-radius: 2px; padding: 0 1px; }
 mark.wa-word.wa-blue { background: rgba(90, 140, 216, 0.38); }
 mark.wa-word.wa-purple { background: rgba(168, 101, 216, 0.4); }
+mark.wa-word.wa-spell {
+  background: none; text-decoration-line: underline; text-decoration-style: wavy;
+  text-decoration-color: #3fb8a8; text-underline-offset: 3px;
+}
+.wa-dot.wa-spell { background: #3fb8a8; }
 .wa-popover {
   position: absolute; transform: translateY(-100%); max-width: 280px;
   background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
@@ -334,3 +339,14 @@ mark.wa-word.wa-purple { background: rgba(168, 101, 216, 0.4); }
 }
 .wa-popover.hidden { display: none; }
 .wa-popover-text { color: var(--text); }
+
+
+/* --- story dictionary (spelling exceptions, see the story page) --- */
+.story-dictionary { margin-top: 24px; }
+.story-dictionary summary { cursor: pointer; color: var(--text-muted); font-size: 0.9rem; padding: 5px 0; }
+.story-dictionary-list { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 10px 0 0; padding: 0; }
+.story-dictionary-list li {
+  display: inline-flex; align-items: center; gap: 4px; background: var(--bg-elevated);
+  border: 1px solid var(--border); border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 0.85rem;
+}
+.story-dictionary-list .btn.tiny { padding: 0 6px; line-height: 1.6; border-radius: 999px; }

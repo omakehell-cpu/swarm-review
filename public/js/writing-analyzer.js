@@ -1,8 +1,9 @@
 // public/js/writing-analyzer.js -- Hemingway-style writing analysis for the
-// chapter text editor. No build step, no dependencies, no network calls of
-// any kind (in particular: no AI/LLM of any kind is used anywhere in this
-// file -- every highlight below comes from a fixed, hand-written rule or
-// word list that runs entirely in the browser).
+// chapter text editor. No build step, no dependencies. No AI/LLM of any
+// kind is used anywhere in this file, and it never talks to anything but
+// this same app's own server (two plain GET requests for word lists, plus
+// a GET/POST pair for the story's own spelling exceptions) -- no external
+// service, API, or third party is ever contacted.
 //
 // What it does:
 //   - Splits the text into sentences and scores each one with the standard
@@ -15,19 +16,20 @@
 //     phrases ("very", "sort of", "due to the fact that") -- in blue.
 //   - Flags a curated list of unnecessarily complex/formal words in purple,
 //     each with a plainer suggested alternative.
+//   - Checks every word against a real (~370,000-word) English dictionary
+//     (served as a static file by this app -- see server.js/tryServeStatic
+//     and public/dictionary/words-en.txt) and underlines anything it
+//     doesn't recognize in teal, since that's usually either a typo or an
+//     invented character/place name. Because this app is for a shared
+//     fiction universe full of made-up names, each story keeps its own
+//     list of approved words (the "Story dictionary" on the story page);
+//     clicking a teal highlight offers to add that word to it, and once
+//     added it's never flagged again for that story. Because this
+//     replaces the browser's own spellcheck with a more useful one, the
+//     textarea's native spellcheck is turned off to avoid double
+//     underlines.
 //   - Lets you click any highlighted span to see why it was flagged and
 //     (for complex words) swap in the suggested word with one click.
-//
-// What it deliberately does NOT do:
-//   - It does not check spelling. There is no bundled dictionary here --
-//     building or maintaining a real one is a much bigger job than this
-//     file, and your browser already ships a real, comprehensive,
-//     well-maintained spelling dictionary for free (the wavy red underline
-//     you already see while typing in the textarea). This script only adds
-//     the style/readability layer on top of that.
-//   - It never calls out to any server, API, or AI model. All of the
-//     analysis below runs synchronously, offline, on whatever is currently
-//     in the textarea.
 (function () {
   'use strict';
 
@@ -231,7 +233,7 @@
   // Each detector returns a list of {start, end, kind, label, suggestion}
   // with offsets relative to the start of the sentence chunk it was run
   // against (the caller adds the chunk's own offset back in).
-  function findWordHighlights(sentenceText) {
+  function findWordHighlights(sentenceText, storyWords) {
     const found = [];
 
     function addAll(re, kind, labelFn, suggestionFn) {
@@ -271,7 +273,113 @@
       result.push(f);
       lastEnd = f.end;
     }
+
+    // Spelling runs as a separate, lower-priority pass over the same text:
+    // a word already flagged above (adverb, filler, complex word, ...) is
+    // by definition a real English word, so in practice this never
+    // collides -- but skip anything that overlaps anyway, defensively, so
+    // a single token can never end up wrapped in two <mark> elements.
+    for (const s of findSpellingHighlights(sentenceText, storyWords)) {
+      if (result.some((r) => s.start < r.end && s.end > r.start)) continue;
+      result.push(s);
+    }
+    result.sort((a, b) => a.start - b.start);
     return result;
+  }
+
+  // ---------------------------------------------------------------------
+  // spelling (real dictionary lookup + per-story exceptions)
+  // ---------------------------------------------------------------------
+
+  // Common contractions: the dictionary file is plain alphabetic words with
+  // no apostrophes, so "don't"/"it's"/etc. would otherwise always come up
+  // as "unknown". This list is intentionally short -- it only needs to
+  // cover contractions, not every word in the language.
+  const CONTRACTIONS = new Set([
+    "don't", "can't", "won't", "isn't", "aren't", "wasn't", "weren't",
+    "hasn't", "haven't", "hadn't", "doesn't", "didn't", "couldn't",
+    "shouldn't", "wouldn't", "mustn't", "mightn't", "needn't", "shan't",
+    "i'm", "i've", "i'll", "i'd", "you're", "you've", "you'll", "you'd",
+    "he's", "he'll", "he'd", "she's", "she'll", "she'd", "it's", "it'll",
+    "we're", "we've", "we'll", "we'd", "they're", "they've", "they'll",
+    "they'd", "that's", "that'll", "there's", "there'll", "here's",
+    "what's", "what're", "who's", "who'll", "let's", "ain't", "y'all",
+    "o'clock",
+  ]);
+
+  const WORD_TOKEN_RE = /[A-Za-z][A-Za-z']*/g;
+
+  // The full word list (~370,000 English words, one per line) is fetched
+  // once per page load from this same server -- see server.js and
+  // public/dictionary/words-en.txt -- and kept as a Set for fast lookups.
+  // Stays null (spelling checks simply don't run yet) until it's loaded.
+  let DICTIONARY = null;
+  let dictionaryPromise = null;
+  function loadDictionary() {
+    if (dictionaryPromise) return dictionaryPromise;
+    dictionaryPromise = fetch('/dictionary/words-en.txt')
+      .then((r) => (r.ok ? r.text() : ''))
+      .then((text) => {
+        DICTIONARY = new Set(text.split(/\r?\n/).map((w) => w.trim()).filter(Boolean));
+      })
+      .catch(() => { DICTIONARY = null; });
+    return dictionaryPromise;
+  }
+
+  // Each story keeps its own list of approved words (invented character/
+  // place names and the like) -- see the "Story dictionary" section on the
+  // story page and server.js's /stories/:id/dictionary routes. Cached per
+  // story id so multiple textareas for the same story (shouldn't normally
+  // happen, but just in case) don't each fetch it separately.
+  const storyWordsCache = new Map();
+  function loadStoryWords(storyId) {
+    if (!storyId) return Promise.resolve(new Set());
+    if (!storyWordsCache.has(storyId)) {
+      storyWordsCache.set(storyId, fetch(`/stories/${storyId}/dictionary`, { headers: { Accept: 'application/json' } })
+        .then((r) => (r.ok ? r.json() : { words: [] }))
+        .then((data) => new Set((data.words || []).map((w) => w.toLowerCase())))
+        .catch(() => new Set()));
+    }
+    return storyWordsCache.get(storyId);
+  }
+
+  function knownWord(lower, storyWords) {
+    if (CONTRACTIONS.has(lower)) return true;
+    if (DICTIONARY.has(lower)) return true;
+    if (storyWords && storyWords.has(lower)) return true;
+    // Strip a trailing possessive ("Aetherius's" -> "aetherius", "the
+    // Joneses'" -> "joneses") and check the stem too, so possessives of
+    // otherwise-known words don't get flagged just for the apostrophe.
+    if (lower.endsWith("'s")) return knownWordStem(lower.slice(0, -2), storyWords);
+    if (lower.endsWith("s'")) return knownWordStem(lower.slice(0, -1), storyWords);
+    return false;
+  }
+  function knownWordStem(stem, storyWords) {
+    return DICTIONARY.has(stem) || Boolean(storyWords && storyWords.has(stem));
+  }
+
+  // Returns {start, end, kind: 'spell', label} for every word-like token in
+  // `sentenceText` that isn't in the dictionary, a contraction, or this
+  // story's approved-word list. Returns [] while the dictionary hasn't
+  // loaded yet, rather than guessing.
+  function findSpellingHighlights(sentenceText, storyWords) {
+    if (!DICTIONARY) return [];
+    const found = [];
+    WORD_TOKEN_RE.lastIndex = 0;
+    let m;
+    while ((m = WORD_TOKEN_RE.exec(sentenceText))) {
+      const raw = m[0];
+      if (raw.length < 2) continue;
+      const lower = raw.toLowerCase();
+      if (knownWord(lower, storyWords)) continue;
+      found.push({
+        start: m.index,
+        end: m.index + raw.length,
+        kind: 'spell',
+        label: 'Not in the dictionary -- could be a typo, or a name/word specific to your story.',
+      });
+    }
+    return found;
   }
 
   // ---------------------------------------------------------------------
@@ -281,11 +389,14 @@
   // Returns { html, ranges, stats } where `html` is what should go inside
   // the overlay, `ranges` is a flat list of {start, end, kind, label,
   // suggestion} in whole-text offsets (for click handling), and `stats` is
-  // counts used by the summary bar.
-  function analyze(text) {
+  // counts used by the summary bar. `storyWords` is the Set of this
+  // story's approved words (see loadStoryWords below) -- pass an empty
+  // Set (or leave it undefined) if there's no story yet, e.g. the "new
+  // story" page, or while it's still loading.
+  function analyze(text, storyWords) {
     const chunks = splitSentences(text);
     const ranges = [];
-    const stats = { yellow: 0, red: 0, blue: 0, purple: 0, maxGrade: 0 };
+    const stats = { yellow: 0, red: 0, blue: 0, purple: 0, spell: 0, maxGrade: 0 };
     let html = '';
 
     for (const chunk of chunks) {
@@ -294,10 +405,11 @@
       if (score.severity === 'red') stats.red += 1;
       if (score.grade > stats.maxGrade) stats.maxGrade = score.grade;
 
-      const wordHighlights = findWordHighlights(chunk.text);
+      const wordHighlights = findWordHighlights(chunk.text, storyWords);
       for (const w of wordHighlights) {
         if (w.kind === 'blue') stats.blue += 1;
         if (w.kind === 'purple') stats.purple += 1;
+        if (w.kind === 'spell') stats.spell += 1;
       }
 
       if (score.severity) {
@@ -348,6 +460,12 @@
   // ---------------------------------------------------------------------
 
   function setup(textarea) {
+    // This app's own real dictionary now does spelling, so the browser's
+    // native spellcheck would just double up on the same words with its
+    // own (differently styled) red underline -- turn it off here.
+    textarea.spellcheck = false;
+    const storyId = textarea.dataset.storyId || null;
+
     const wrap = document.createElement('div');
     wrap.className = 'wa-wrap';
     textarea.parentNode.insertBefore(wrap, textarea);
@@ -388,6 +506,16 @@
 
     let currentRanges = [];
     let timer = null;
+    let storyWords = new Set();
+
+    // Kick off both fetches in the background. Whichever finishes last
+    // triggers a re-render, so anything already typed before they resolve
+    // gets its spelling checked retroactively instead of being stuck
+    // looking clean until the next keystroke.
+    Promise.all([loadDictionary(), loadStoryWords(storyId)]).then(([, words]) => {
+      if (words) storyWords = words;
+      if (enabled) render();
+    });
 
     // Builds one "● N label" chip for the summary bar; returns '' when the
     // count is zero so empty categories don't clutter the bar.
@@ -397,17 +525,18 @@
     }
 
     function render() {
-      const { html, ranges, stats } = analyze(textarea.value);
+      const { html, ranges, stats } = analyze(textarea.value, storyWords);
       overlay.innerHTML = html + (textarea.value.endsWith('\n') ? '&nbsp;' : '');
       currentRanges = ranges;
-      const total = stats.yellow + stats.red + stats.blue + stats.purple;
+      const total = stats.yellow + stats.red + stats.blue + stats.purple + stats.spell;
       summary.innerHTML = total === 0
-        ? 'No style issues spotted.'
+        ? 'No issues spotted.'
         : [
             statChip('red', stats.red, 'very dense sentence', 'very dense sentences'),
             statChip('yellow', stats.yellow, 'long sentence', 'long sentences'),
             statChip('blue', stats.blue, 'weak phrase', 'weak phrases'),
             statChip('purple', stats.purple, 'complex word', 'complex words'),
+            statChip('spell', stats.spell, 'possible misspelling', 'possible misspellings'),
           ].filter(Boolean).join('');
       syncScroll();
     }
@@ -477,6 +606,29 @@
           hidePopover();
           textarea.focus();
           scheduleRender();
+        });
+        popover.appendChild(btn);
+      } else if (range.kind === 'spell' && storyId) {
+        const word = textarea.value.slice(range.start, range.end);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn tiny';
+        btn.textContent = `Add "${word}" to this story's dictionary`;
+        btn.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          btn.disabled = true;
+          fetch(`/stories/${storyId}/dictionary`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ word }),
+          })
+            .then((r) => (r.ok ? r.json() : Promise.reject(new Error('request failed'))))
+            .then((data) => {
+              storyWords = new Set((data.words || []).map((w) => w.toLowerCase()));
+              hidePopover();
+              scheduleRender();
+            })
+            .catch(() => { btn.disabled = false; btn.textContent = 'Could not save -- try again'; });
         });
         popover.appendChild(btn);
       }

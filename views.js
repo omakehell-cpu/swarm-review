@@ -179,7 +179,7 @@ function newChapterPage({ user, story, chapters = [], error, values = {} }) {
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
         <form method="post" action="/stories/${story.id}/chapters/new" class="chapter-form" enctype="multipart/form-data">
           <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title || '')}" required></label>
-          <label class="main-field">Chapter text<textarea name="content" rows="24" placeholder="Paste or write the chapter here...">${escapeHtml(values.content || '')}</textarea>
+          <label class="main-field">Chapter text<textarea name="content" rows="24" placeholder="Paste or write the chapter here..." data-story-id="${story.id}">${escapeHtml(values.content || '')}</textarea>
             <span class="hint">${MARKDOWN_HINT}</span>
           </label>
           <div class="writer-section">
@@ -212,7 +212,7 @@ function editChapterPage({ user, chapter, latestContent, error, values = {} }) {
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
         <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" enctype="multipart/form-data">
           <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
-          <label class="main-field">Chapter text<textarea name="content" rows="24">${escapeHtml(values.content ?? latestContent)}</textarea>
+          <label class="main-field">Chapter text<textarea name="content" rows="24" data-story-id="${chapter.story_id}">${escapeHtml(values.content ?? latestContent)}</textarea>
             <span class="hint">${MARKDOWN_HINT}</span>
           </label>
           <div class="writer-section">
@@ -245,7 +245,32 @@ function chapterReorderButtons(chapter, index, total) {
     </div>`;
 }
 
-function storyPage({ user, story, chapters, isStoryAuthor }) {
+function storyDictionarySection(story, dictionary) {
+  const words = dictionary.length ? `
+    <ul class="story-dictionary-list">
+      ${dictionary.map((entry) => `
+        <li>
+          <span class="invite-code-inline">${escapeHtml(entry.word)}</span>
+          <form method="post" action="/stories/${story.id}/dictionary/${entry.id}/delete" class="inline-form">
+            <button class="btn tiny ghost" type="submit" title="Remove">&times;</button>
+          </form>
+        </li>
+      `).join('')}
+    </ul>` : '<p class="muted">No words added yet.</p>';
+
+  return `
+    <details class="story-dictionary" id="dictionary">
+      <summary>Story dictionary${dictionary.length ? ` (${dictionary.length})` : ''}</summary>
+      <p class="hint">Words the writing analyzer should stop flagging as possible misspellings while you write this story -- handy for invented character or place names.</p>
+      <form method="post" action="/stories/${story.id}/dictionary" class="named-invite-form">
+        <input type="text" name="word" placeholder="e.g. Aetherius" required>
+        <button class="btn small" type="submit">Add word</button>
+      </form>
+      ${words}
+    </details>`;
+}
+
+function storyPage({ user, story, chapters, isStoryAuthor, dictionary = [] }) {
   const rows = chapters.length ? chapters.map((c, i) => `
     <div class="chapter-row-outer">
       <a class="chapter-row" href="/chapters/${c.id}">
@@ -284,7 +309,8 @@ function storyPage({ user, story, chapters, isStoryAuthor }) {
         </div>
       </div>
       <div class="chapter-list">${rows}</div>
-      <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>`,
+      <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>
+      ${isStoryAuthor ? storyDictionarySection(story, dictionary) : ''}`,
   });
 }
 

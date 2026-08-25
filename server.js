@@ -28,7 +28,7 @@ const views = require('./views');
 const { parseMarkdown, flattenLength, renderPlainText } = require('./lib/markdown');
 const { markdownToDocxBuffer, docxBufferToMarkdown } = require('./lib/docx');
 const {
-  parseCookies, parseBody, parseMultipartBody, sendHtml, redirect, setCookie, clearCookie,
+  parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
 } = require('./lib/util');
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -75,6 +75,7 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.ico': 'image/x-icon',
+  '.txt': 'text/plain; charset=utf-8',
 };
 
 function tryServeStatic(req, res, pathname) {
@@ -84,7 +85,14 @@ function tryServeStatic(req, res, pathname) {
   if (!filePath.startsWith(PUBLIC_DIR)) return false;
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false;
   const ext = path.extname(filePath);
-  res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+  const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
+  // The spellchecker word list is a large (multi-MB) file that never
+  // changes once downloaded -- worth letting the browser cache it for a
+  // while instead of refetching it on every visit to a writing page.
+  // Everything else under public/ (css/js) stays uncached so edits show
+  // up on a normal refresh while the app is being developed.
+  if (pathname.startsWith('/dictionary/')) headers['Cache-Control'] = 'public, max-age=86400';
+  res.writeHead(200, headers);
   fs.createReadStream(filePath).pipe(res);
   return true;
 }
@@ -418,7 +426,48 @@ async function handleStoryPage(req, res, user, storyId, query) {
   const since = query.get('since') || null;
   const chapters = models.listChaptersForStory(storyId, { since });
   const isStoryAuthor = user.id === story.author_id;
-  sendHtml(res, 200, views.storyPage({ user, story, chapters, isStoryAuthor }));
+  const dictionary = isStoryAuthor ? models.listStoryDictionaryEntries(storyId) : [];
+  sendHtml(res, 200, views.storyPage({ user, story, chapters, isStoryAuthor, dictionary }));
+}
+
+// ---------- per-story spelling exceptions (used by the writing analyzer) ----------
+
+// JSON, fetched once by public/js/writing-analyzer.js when a writing page
+// loads, so it knows which "unknown" words to treat as already-approved
+// for this particular story.
+async function handleGetStoryDictionary(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendJson(res, 404, { error: 'Story not found' });
+  if (story.author_id !== user.id) return sendJson(res, 403, { error: 'Only the story author can see this.' });
+  sendJson(res, 200, { words: models.getStoryDictionary(storyId) });
+}
+
+// Two ways in: the "Story dictionary" form on the story page (a normal
+// HTML form submit, expects a redirect back) and the analyzer's "Add to
+// dictionary" button on a spelling highlight (a fetch() call that expects
+// a small JSON response instead) -- tell them apart by the Accept header
+// the browser/script actually sent, rather than adding a second route.
+async function handleAddStoryDictionaryWord(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  const wantsJson = (req.headers.accept || '').includes('application/json');
+  if (!story) return wantsJson ? sendJson(res, 404, { error: 'Story not found' }) : sendHtml(res, 404, 'Story not found');
+  if (story.author_id !== user.id) {
+    const message = 'Only the story author can manage this.';
+    return wantsJson ? sendJson(res, 403, { error: message }) : sendHtml(res, 403, message);
+  }
+  const body = await parseBody(req);
+  const word = (body.word || '').trim();
+  if (word) models.addStoryDictionaryWord(storyId, word, user.id);
+  if (wantsJson) return sendJson(res, 200, { words: models.getStoryDictionary(storyId) });
+  redirect(res, `/stories/${storyId}#dictionary`);
+}
+
+async function handleRemoveStoryDictionaryWord(req, res, user, storyId, entryId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendHtml(res, 404, 'Story not found');
+  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can manage this.');
+  models.removeStoryDictionaryWord(storyId, entryId);
+  redirect(res, `/stories/${storyId}#dictionary`);
 }
 
 async function handleArchivedChaptersForStory(req, res, user, storyId) {
@@ -703,7 +752,7 @@ async function router(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = decodeURIComponent(url.pathname);
 
-  if (pathname.startsWith('/css/') || pathname.startsWith('/js/')) {
+  if (pathname.startsWith('/css/') || pathname.startsWith('/js/') || pathname.startsWith('/dictionary/')) {
     if (tryServeStatic(req, res, pathname)) return;
   }
 
@@ -782,6 +831,15 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/archived-chapters$/)) && req.method === 'GET') {
       return handleArchivedChaptersForStory(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/dictionary$/)) && req.method === 'GET') {
+      return handleGetStoryDictionary(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/dictionary$/)) && req.method === 'POST') {
+      return handleAddStoryDictionaryWord(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/dictionary\/(\d+)\/delete$/)) && req.method === 'POST') {
+      return handleRemoveStoryDictionaryWord(req, res, user, Number(m[1]), Number(m[2]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/chapters\/new$/)) && req.method === 'GET') {
       return handleNewChapterPage(req, res, user, Number(m[1]));

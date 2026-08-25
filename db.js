@@ -81,6 +81,22 @@ CREATE INDEX IF NOT EXISTS idx_versions_chapter ON chapter_versions(chapter_id);
 CREATE INDEX IF NOT EXISTS idx_comments_version ON comments(version_id);
 CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);
 
+-- Per-story spelling exceptions: invented character/place names (or any
+-- other word) the story's author has told the writing analyzer to stop
+-- flagging as a possible misspelling (see models.js get/addStoryDictionaryWord
+-- and the "Story dictionary" section on the story page). Scoped to one
+-- story rather than the whole app, since a name that's normal in one
+-- story is still worth flagging if it shows up as a likely typo elsewhere.
+CREATE TABLE IF NOT EXISTS story_dictionary_words (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  story_id    INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  word        TEXT NOT NULL,
+  added_by    INTEGER REFERENCES users(id),
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(story_id, word)
+);
+CREATE INDEX IF NOT EXISTS idx_story_dictionary_story ON story_dictionary_words(story_id);
+
 -- Invite codes are single-use: at most one row is "active" at a time (the
 -- one currently valid for registration). Generating a new one, or closing
 -- registration entirely, deactivates whatever was active before. A used
