@@ -1,7 +1,7 @@
 {
   "name": "swarm-review",
   "version": "1.0.0",
-  "description": "Plataforma de revision de capitulos para el universo compartido The Swarm",
+  "description": "A chapter-review platform for the shared-universe project The Swarm",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
