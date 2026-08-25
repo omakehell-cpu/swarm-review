@@ -81,6 +81,24 @@
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* ignore */ }
   }
 
+  // The "show comments" toggle is shared by the editor and the reading
+  // page, and by every story -- once someone picks a value in this
+  // browser it sticks everywhere, the same way the check settings above
+  // do. `defaultOn` (the story-author-vs-everyone-else rule) only applies
+  // the very first time, before anyone has chosen anything yet.
+  const COMMENTS_VISIBLE_KEY = 'wa-comments-visible';
+  function loadCommentsVisible(defaultOn) {
+    try {
+      const raw = localStorage.getItem(COMMENTS_VISIBLE_KEY);
+      if (raw === '1') return true;
+      if (raw === '0') return false;
+    } catch (e) { /* ignore */ }
+    return defaultOn;
+  }
+  function saveCommentsVisible(visible) {
+    try { localStorage.setItem(COMMENTS_VISIBLE_KEY, visible ? '1' : '0'); } catch (e) { /* ignore */ }
+  }
+
   function hexToRgba(hex, alpha) {
     const n = parseInt(hex.slice(1), 16);
     const r = (n >> 16) & 255; const g = (n >> 8) & 255; const b = n & 255;
@@ -464,6 +482,57 @@
   // full-text analysis
   // ---------------------------------------------------------------------
 
+  // Builds the editor overlay's HTML from plain (escaped) text plus two
+  // independent, freely-overlapping sets of ranges: the writing-quality
+  // ranges from analyze() below (sentence-level ranges always contain the
+  // word-level ranges inside them, by construction) and, in the editor
+  // only, the story's existing comments (resolved to raw-text positions
+  // by resolveCommentRanges in setup() -- see the comment there for why
+  // that's a best-effort match rather than an exact offset mapping).
+  // Works by cutting the text into atomic segments at every range
+  // boundary (the same technique lib/markdown.js's renderHighlighted uses
+  // server-side) and wrapping each segment in whichever marks apply to
+  // it, comments outermost.
+  function buildOverlayHtml(text, waRanges, commentRanges) {
+    const comments = commentRanges || [];
+    const points = new Set([0, text.length]);
+    waRanges.forEach((r) => { points.add(r.start); points.add(r.end); });
+    comments.forEach((r) => { points.add(r.start); points.add(r.end); });
+    const sorted = Array.from(points).filter((p) => p >= 0 && p <= text.length).sort((a, b) => a - b);
+
+    let html = '';
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const segStart = sorted[i];
+      const segEnd = sorted[i + 1];
+      if (segStart >= segEnd) continue;
+      let inner = escapeHtml(text.slice(segStart, segEnd));
+
+      const wordRange = waRanges.find((r) => r.kind.indexOf('sentence-') !== 0 && r.start <= segStart && r.end >= segEnd);
+      if (wordRange) {
+        inner = `<mark class="wa-word wa-${wordRange.kind}" style="${wordMarkStyle(wordRange.kind)}">${inner}</mark>`;
+      }
+
+      const sentenceRange = waRanges.find((r) => r.kind.indexOf('sentence-') === 0 && r.start <= segStart && r.end >= segEnd);
+      if (sentenceRange) {
+        const severity = sentenceRange.kind.slice('sentence-'.length);
+        inner = `<mark class="wa-sentence wa-${severity}" style="${sentenceMarkStyle(severity)}">${inner}</mark>`;
+      }
+
+      const activeComments = comments.filter((r) => r.start <= segStart && r.end >= segEnd);
+      if (activeComments.length) {
+        const statuses = new Set(activeComments.map((c) => c.status));
+        let cls = 'hl';
+        if (statuses.has('pending')) cls += ' hl-pending';
+        else if (statuses.has('rejected') && !statuses.has('accepted')) cls += ' hl-rejected';
+        else cls += ' hl-accepted';
+        inner = `<span class="${cls}">${inner}</span>`;
+      }
+
+      html += inner;
+    }
+    return html;
+  }
+
   // Returns { html, ranges, stats } where `html` is what should go inside
   // the editor's overlay (unused by the read-only view -- it applies
   // `ranges` directly onto the existing DOM instead, see applyRangesToDom
@@ -473,13 +542,14 @@
   // (see loadStoryWords above) -- pass an empty Set (or leave it
   // undefined) if there's no story yet, e.g. the "new story" page, or
   // while it's still loading. `settings` controls which checks run.
-  function analyze(text, storyWords, settings) {
+  // `commentRanges` (editor only -- see resolveCommentRanges in setup())
+  // additionally shades existing comments into the returned `html`.
+  function analyze(text, storyWords, settings, commentRanges) {
     const chunks = splitSentences(text);
     const ranges = [];
     const stats = {
       yellow: 0, red: 0, passive: 0, adverb: 0, filler: 0, complex: 0, spell: 0, maxGrade: 0,
     };
-    let html = '';
     const sentenceChecksOn = !settings || settings.sentence !== false;
 
     for (const chunk of chunks) {
@@ -512,29 +582,10 @@
           suggestion: w.suggestion,
         });
       }
-
-      // Render this chunk's inner HTML, nesting word-level marks inside the
-      // sentence-level mark (if any). Word ranges never overlap each other
-      // (guaranteed by findWordHighlights), so this is a simple walk. Only
-      // the editor's overlay actually uses this string -- see the comment
-      // above `html` in the return value.
-      let inner = '';
-      let cursor = 0;
-      for (const w of wordHighlights) {
-        if (w.start > cursor) inner += escapeHtml(chunk.text.slice(cursor, w.start));
-        inner += `<mark class="wa-word wa-${w.kind}" style="${wordMarkStyle(w.kind)}">${escapeHtml(chunk.text.slice(w.start, w.end))}</mark>`;
-        cursor = w.end;
-      }
-      if (cursor < chunk.text.length) inner += escapeHtml(chunk.text.slice(cursor));
-
-      if (score.severity) {
-        html += `<mark class="wa-sentence wa-${score.severity}" style="${sentenceMarkStyle(score.severity)}">${inner}</mark>`;
-      } else {
-        html += inner;
-      }
     }
 
     ranges.sort((a, b) => a.start - b.start);
+    const html = buildOverlayHtml(text, ranges, commentRanges);
     return { html, ranges, stats };
   }
 
@@ -564,11 +615,57 @@
   // shared control card (colored, clickable check toggles + live counts)
   // ---------------------------------------------------------------------
 
+  // One colored, clickable pill -- a checkbox styled/labeled as a toggle.
+  // Used for every check pill, the markdown-preview pill, and the
+  // comments-visibility pill, so they all look and behave identically.
+  function buildPill(color, label, checked, onChange) {
+    const pill = document.createElement('label');
+    pill.className = 'wa-check-pill';
+    pill.style.setProperty('--wa-color', color);
+    pill.style.setProperty('--wa-bg-active', hexToRgba(color, 0.16));
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = checked;
+    input.addEventListener('change', () => {
+      pill.classList.toggle('active', input.checked);
+      onChange(input.checked);
+    });
+    const dot = document.createElement('span');
+    dot.className = 'wa-check-dot';
+    pill.appendChild(input);
+    pill.appendChild(dot);
+    pill.appendChild(document.createTextNode(label));
+    pill.classList.toggle('active', checked);
+    return pill;
+  }
+
+  // A thin vertical rule to visually separate the writing-quality checks
+  // from unrelated pills appended after them (markdown preview, comments).
+  function buildDivider() {
+    const divider = document.createElement('span');
+    divider.className = 'wa-check-divider';
+    return divider;
+  }
+
+  // A bare-bones card with a single pill and no title/summary -- used for
+  // readers who aren't the story's author: they only ever get the
+  // comments toggle, never the writing-quality checks (see setupReadView).
+  function buildMinimalCard(pill) {
+    const card = document.createElement('div');
+    card.className = 'wa-card wa-card-reading';
+    const row = document.createElement('div');
+    row.className = 'wa-checks';
+    row.appendChild(pill);
+    card.appendChild(row);
+    return card;
+  }
+
   // Builds the visual card that sits above the text in both the editor and
   // the reading page. `onToggle(checkId, enabled)` fires when a pill is
   // clicked. Returns the card element plus a `summary` element to update
   // and a `checksRow` element callers can append extra pills to (the
-  // editor adds a "Markdown preview" pill after this).
+  // editor adds a "Markdown preview" pill, and both the editor and the
+  // reading page add a "Comments" pill, after this).
   function buildControlsCard(settings, onToggle) {
     const card = document.createElement('div');
     card.className = 'wa-card';
@@ -589,23 +686,7 @@
     checksRow.className = 'wa-checks';
     CHECK_ORDER.forEach((id) => {
       const meta = CHECK_META[id];
-      const pill = document.createElement('label');
-      pill.className = 'wa-check-pill';
-      pill.style.setProperty('--wa-color', meta.color);
-      pill.style.setProperty('--wa-bg-active', hexToRgba(meta.color, 0.16));
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.checked = settings[id] !== false;
-      input.addEventListener('change', () => {
-        pill.classList.toggle('active', input.checked);
-        onToggle(id, input.checked);
-      });
-      const dot = document.createElement('span');
-      dot.className = 'wa-check-dot';
-      pill.appendChild(input);
-      pill.appendChild(dot);
-      pill.appendChild(document.createTextNode(meta.label));
-      pill.classList.toggle('active', input.checked);
+      const pill = buildPill(meta.color, meta.label, settings[id] !== false, (checked) => onToggle(id, checked));
       checksRow.appendChild(pill);
     });
     card.appendChild(checksRow);
@@ -637,22 +718,66 @@
     wrap.appendChild(card);
 
     // --- markdown preview toggle (editor only) ---
-    const previewPill = document.createElement('label');
-    previewPill.className = 'wa-check-pill wa-preview-pill';
-    previewPill.style.setProperty('--wa-color', '#8b7bd8');
-    previewPill.style.setProperty('--wa-bg-active', hexToRgba('#8b7bd8', 0.16));
-    const previewInput = document.createElement('input');
-    previewInput.type = 'checkbox';
     let previewOn = false;
     try { previewOn = localStorage.getItem('wa-preview-on') === '1'; } catch (e) { /* ignore */ }
-    previewInput.checked = previewOn;
-    const previewDot = document.createElement('span');
-    previewDot.className = 'wa-check-dot';
-    previewPill.appendChild(previewInput);
-    previewPill.appendChild(previewDot);
-    previewPill.appendChild(document.createTextNode('Markdown preview'));
-    previewPill.classList.toggle('active', previewOn);
+    const previewPill = buildPill('#8b7bd8', 'Markdown preview', previewOn, (checked) => {
+      previewOn = checked;
+      try { localStorage.setItem('wa-preview-on', previewOn ? '1' : '0'); } catch (e2) { /* ignore */ }
+      applyPreviewState();
+    });
+    previewPill.classList.add('wa-preview-pill');
     checksRow.appendChild(previewPill);
+
+    // --- existing comments: reference list + optional inline highlight ---
+    // Only present on the edit-chapter page (see views.js's editChapterPage
+    // and its #chapter-comments-data script) -- the new-story/new-chapter
+    // pages have no chapter yet, so there's nothing to reference and this
+    // whole block simply does nothing there.
+    const commentsDataEl = document.getElementById('chapter-comments-data');
+    let commentsPayload = [];
+    if (commentsDataEl) {
+      try { commentsPayload = JSON.parse(commentsDataEl.textContent) || []; } catch (e) { commentsPayload = []; }
+    }
+    const editorGridEl = document.querySelector('.chapter-body-grid');
+    // The editor only ever runs for the chapter's own author (see the
+    // route guards in server.js), so "show comments" defaults to on here.
+    let commentsVisible = loadCommentsVisible(true);
+    function applyCommentsVisibility() {
+      if (editorGridEl) editorGridEl.classList.toggle('comments-hidden', !commentsVisible);
+    }
+    if (commentsDataEl && editorGridEl && commentsPayload.length) {
+      checksRow.appendChild(buildDivider());
+      checksRow.appendChild(buildPill('#4bbf7e', 'Comments', commentsVisible, (checked) => {
+        commentsVisible = checked;
+        saveCommentsVisible(checked);
+        applyCommentsVisibility();
+        scheduleRender();
+      }));
+    }
+    applyCommentsVisibility();
+
+    // Finds each existing comment's quoted passage in the CURRENT raw
+    // textarea text with a plain substring search, re-run on every render
+    // so edits that shift positions self-correct on the next pass. This is
+    // a best-effort visual aid, not the source of truth for anchoring (that
+    // stays server-side, exact, tied to the version the comment was made
+    // on) -- a quote that no longer appears verbatim (already edited away)
+    // or that only exists inside bold/italic text (the quote was captured
+    // from the rendered, syntax-stripped text, so it won't literally match
+    // raw markdown source in that case) is simply skipped rather than
+    // guessed at.
+    function resolveCommentRanges() {
+      if (!commentsVisible || !commentsPayload.length) return [];
+      const text = textarea.value;
+      const found = [];
+      for (const c of commentsPayload) {
+        if (!c.quoted) continue;
+        const idx = text.indexOf(c.quoted);
+        if (idx === -1) continue;
+        found.push({ start: idx, end: idx + c.quoted.length, status: c.status });
+      }
+      return found;
+    }
 
     const splitWrap = document.createElement('div');
     splitWrap.className = 'wa-split';
@@ -686,13 +811,6 @@
         } catch (e) { /* ignore */ }
       }
     }
-
-    previewInput.addEventListener('change', () => {
-      previewOn = previewInput.checked;
-      previewPill.classList.toggle('active', previewOn);
-      try { localStorage.setItem('wa-preview-on', previewOn ? '1' : '0'); } catch (e) { /* ignore */ }
-      applyPreviewState();
-    });
 
     let previewTimer = null;
     function schedulePreview() {
@@ -748,7 +866,7 @@
     });
 
     function render() {
-      const { html, ranges, stats } = analyze(textarea.value, storyWords, settings);
+      const { html, ranges, stats } = analyze(textarea.value, storyWords, settings, resolveCommentRanges());
       overlay.innerHTML = html + (textarea.value.endsWith('\n') ? '&nbsp;' : '');
       currentRanges = ranges;
       summary.innerHTML = summaryHtml(stats);
@@ -946,14 +1064,42 @@
   function setupReadView(container) {
     const storyId = container.dataset.storyId || null;
     const canEditDictionary = container.dataset.canEditDictionary === '1';
+    const isAuthor = container.dataset.isAuthor === '1';
+    const gridEl = container.closest('.chapter-body-grid');
+
+    // "Show comments" is available to everyone; the writing-quality checks
+    // below are only ever built for the story's own author -- a reviewer
+    // reading someone else's chapter never even fetches the (multi-MB)
+    // dictionary or runs the analysis, since it's not their tool to use.
+    let commentsVisible = loadCommentsVisible(isAuthor);
+    function applyCommentsVisibility() {
+      if (gridEl) gridEl.classList.toggle('comments-hidden', !commentsVisible);
+    }
+    applyCommentsVisibility(); // apply immediately, before any async work, to avoid a flash of the other state
+
+    function commentsToggleChanged(checked) {
+      commentsVisible = checked;
+      saveCommentsVisible(checked);
+      applyCommentsVisibility();
+    }
+
+    if (!isAuthor) {
+      const pill = buildPill('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged);
+      const card = buildMinimalCard(pill);
+      container.parentNode.insertBefore(card, container);
+      return;
+    }
+
     let settings = loadSettings();
     let storyWords = new Set();
 
-    const { card, summary } = buildControlsCard(settings, (id, checked) => {
+    const { card, summary, checksRow } = buildControlsCard(settings, (id, checked) => {
       settings = Object.assign({}, settings, { [id]: checked });
       saveSettings(settings);
       render();
     });
+    checksRow.appendChild(buildDivider());
+    checksRow.appendChild(buildPill('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged));
     card.classList.add('wa-card-reading');
     container.parentNode.insertBefore(card, container);
 

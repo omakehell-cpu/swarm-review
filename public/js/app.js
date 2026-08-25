@@ -16,8 +16,19 @@
     });
   }
 
+  // True while the writing analyzer's "Comments" toggle has the comments
+  // panel hidden (see public/js/writing-analyzer.js) -- while hidden, the
+  // inline comment highlights are visually neutralized by CSS, and the
+  // interactions below should likewise do nothing rather than jump to or
+  // pop open a panel the reader can't currently see.
+  function commentsCurrentlyHidden() {
+    const grid = textEl.closest('.chapter-body-grid');
+    return Boolean(grid && grid.classList.contains('comments-hidden'));
+  }
+
   // ---- clicking a highlighted span jumps to the comment in the sidebar ----
   textEl.addEventListener('click', (ev) => {
+    if (commentsCurrentlyHidden()) return;
     const span = ev.target.closest('.hl');
     if (!span) return;
     const ids = (span.dataset.commentIds || '').split(',').filter(Boolean);
@@ -68,6 +79,7 @@
   }
 
   document.addEventListener('mouseup', (ev) => {
+    if (commentsCurrentlyHidden()) return;
     if (box && box.contains(ev.target)) return;
     const result = getSelectionOffsets();
     if (!result) {

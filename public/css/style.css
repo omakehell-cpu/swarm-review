@@ -307,6 +307,14 @@ input:focus, textarea:focus, select:focus {
 .wa-check-pill.active { background: var(--wa-bg-active); border-color: var(--wa-color); color: var(--text); }
 .wa-check-pill.active .wa-check-dot { opacity: 1; }
 .wa-check-pill.wa-preview-pill { border-style: dashed; }
+.wa-check-divider { align-self: stretch; width: 1px; background: var(--border); margin: 2px 2px; }
+
+/* --- comments visibility toggle (shared by the reading and edit pages) --- */
+.chapter-body-grid.comments-hidden { grid-template-columns: 1fr; }
+.chapter-body-grid.comments-hidden .comments-pane { display: none; }
+.chapter-body-grid.comments-hidden .hl {
+  background: none; box-shadow: none; cursor: text; padding: 0; border-radius: 0;
+}
 
 .wa-split { display: block; }
 .wa-split.wa-split-active { display: flex; gap: 18px; align-items: stretch; }

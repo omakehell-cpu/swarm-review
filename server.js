@@ -574,7 +574,14 @@ async function handleEditChapterPage(req, res, user, chapterId) {
   if (!chapter) return sendHtml(res, 404, 'Chapter not found');
   if (chapter.author_id !== user.id) return sendHtml(res, 403, 'Only the chapter author can edit it.');
   const latest = models.getLatestVersion(chapterId);
-  sendHtml(res, 200, views.editChapterPage({ user, chapter, latestContent: latest ? latest.content : '', values: {} }));
+  // Existing comments are shown alongside the edit form purely as
+  // reference while writing (see views.js's editChapterPage) -- they stay
+  // anchored to this current latest version regardless of what happens to
+  // the text from here.
+  const comments = latest ? models.listCommentsForVersion(latest.id) : [];
+  sendHtml(res, 200, views.editChapterPage({
+    user, chapter, latestContent: latest ? latest.content : '', comments, values: {},
+  }));
 }
 
 async function handleEditChapterSubmit(req, res, user, chapterId) {

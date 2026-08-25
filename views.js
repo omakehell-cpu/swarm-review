@@ -202,34 +202,69 @@ function newChapterPage({ user, story, chapters = [], error, values = {} }) {
 
 // ---------- edit chapter (title, summary, and the text itself) ----------
 
-function editChapterPage({ user, chapter, latestContent, error, values = {} }) {
+function editChapterPage({ user, chapter, latestContent, comments = [], error, values = {} }) {
+  const topLevelComments = comments.filter((c) => c.parent_id == null);
+  const repliesByParent = {};
+  comments.filter((c) => c.parent_id != null).forEach((c) => {
+    (repliesByParent[c.parent_id] = repliesByParent[c.parent_id] || []).push(c);
+  });
+  const hasComments = topLevelComments.length > 0;
+  const commentsHtml = topLevelComments
+    .map((c) => renderCommentReadOnly(c, { replies: repliesByParent[c.id] || [] }))
+    .join('');
+  // Data for the editor's best-effort inline highlight -- see
+  // resolveCommentRanges in writing-analyzer.js for why this is a plain
+  // substring search rather than an exact offset mapping.
+  const commentsData = topLevelComments
+    .filter((c) => !c.deleted_at && c.quoted_text)
+    .map((c) => ({ id: c.id, quoted: c.quoted_text, status: c.status }));
+
+  const writerCard = `
+    <div class="writer-card">
+      <h1>Edit chapter</h1>
+      <p class="muted writer-intro">Saving publishes a new version automatically if you changed the text, so any existing comments stay anchored to the passage they were originally made about. The version history is still available from the "Version" dropdown on the chapter page.</p>
+      ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+      <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" enctype="multipart/form-data">
+        <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
+        <label class="main-field">Chapter text<textarea name="content" rows="24" data-story-id="${chapter.story_id}">${escapeHtml(values.content ?? latestContent)}</textarea>
+          <span class="hint">${MARKDOWN_HINT}</span>
+        </label>
+        <div class="writer-section">
+          <p class="writer-section-label">Optional details</p>
+          <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary ?? chapter.summary ?? '')}</textarea></label>
+          ${fileUploadField()}
+          <label>What changed? (shown in the version history)<input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Fixed a couple of typos"></label>
+        </div>
+        <div class="writer-actions">
+          <a class="btn ghost" href="/chapters/${chapter.id}">Cancel</a>
+          <button class="btn" type="submit">Save changes</button>
+        </div>
+      </form>
+    </div>`;
+
+  // The comments sidebar (and its "Comments" toggle, added client-side by
+  // writing-analyzer.js) only ever shows up once there's actually
+  // something to reference -- a brand new or not-yet-commented chapter
+  // just gets the plain, maximally wide editor, same as before this
+  // feature existed.
+  const mainHtml = hasComments ? `
+    <div class="chapter-body-grid">
+      ${writerCard}
+      <aside class="comments-pane">
+        <h2>Comments</h2>
+        <p class="hint">For reference while you edit -- to reply to a comment or accept/reject it, do that from the chapter page instead.</p>
+        <div id="comment-list">${commentsHtml}</div>
+      </aside>
+    </div>
+    <script type="application/json" id="chapter-comments-data">${toScriptJson(commentsData)}</script>` : writerCard;
+
   return layout({
     title: `Edit - ${chapter.title}`,
     user,
     wide: true,
     body: `
       <p class="breadcrumb"><a href="/chapters/${chapter.id}">&larr; Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</a></p>
-      <div class="writer-card">
-        <h1>Edit chapter</h1>
-        <p class="muted writer-intro">Saving publishes a new version automatically if you changed the text, so any existing comments stay anchored to the passage they were originally made about. The version history is still available from the "Version" dropdown on the chapter page.</p>
-        ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
-        <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" enctype="multipart/form-data">
-          <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
-          <label class="main-field">Chapter text<textarea name="content" rows="24" data-story-id="${chapter.story_id}">${escapeHtml(values.content ?? latestContent)}</textarea>
-            <span class="hint">${MARKDOWN_HINT}</span>
-          </label>
-          <div class="writer-section">
-            <p class="writer-section-label">Optional details</p>
-            <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary ?? chapter.summary ?? '')}</textarea></label>
-            ${fileUploadField()}
-            <label>What changed? (shown in the version history)<input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Fixed a couple of typos"></label>
-          </div>
-          <div class="writer-actions">
-            <a class="btn ghost" href="/chapters/${chapter.id}">Cancel</a>
-            <button class="btn" type="submit">Save changes</button>
-          </div>
-        </form>
-      </div>
+      ${mainHtml}
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
 }
@@ -429,6 +464,43 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies }) {
     </div>`;
 }
 
+// A read-only rendering of a comment for reference contexts (the edit
+// page) where clicking an action button would navigate away and lose
+// whatever's currently unsaved in the editor -- no reply/accept/reject/
+// retract/edit controls here, just what was said and by whom.
+function renderCommentReadOnly(c, { replies }) {
+  const statusLabel = STATUS_LABEL[c.status] || c.status;
+  if (c.deleted_at) {
+    return `
+      <div class="comment status-${c.status} retracted">
+        <div class="comment-meta">
+          <strong>${escapeHtml(c.author_name)}</strong>
+          <span class="status-badge status-${c.status}">${statusLabel}</span>
+          ${timeHtml(c.created_at)}
+        </div>
+        <p class="comment-body muted"><em>[comment retracted]</em></p>
+      </div>`;
+  }
+  const repliesHtml = replies.filter((r) => !r.deleted_at).map((r) => `
+    <div class="reply">
+      <strong>${escapeHtml(r.author_name)}</strong>
+      <span>${escapeHtml(r.body)}</span>
+      ${timeHtml(r.created_at)}
+    </div>`).join('');
+  return `
+    <div class="comment status-${c.status}">
+      <div class="comment-meta">
+        <strong>${escapeHtml(c.author_name)}</strong>
+        <span class="status-badge status-${c.status}">${statusLabel}</span>
+        ${timeHtml(c.created_at)}
+        ${c.edited_at ? '<span class="muted edited-tag">(edited)</span>' : ''}
+      </div>
+      ${c.quoted_text ? `<blockquote class="quoted">${escapeHtml(c.quoted_text)}</blockquote>` : ''}
+      <p class="comment-body">${escapeHtml(c.body)}</p>
+      ${repliesHtml}
+    </div>`;
+}
+
 function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
@@ -474,7 +546,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     </div>
     <div class="chapter-body-grid">
       <div class="reading-pane">
-        <div id="chapter-text" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}" data-story-id="${chapter.story_id}" data-can-edit-dictionary="${isChapterAuthor ? '1' : '0'}">${highlighted}</div>
+        <div id="chapter-text" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}" data-story-id="${chapter.story_id}" data-can-edit-dictionary="${isChapterAuthor ? '1' : '0'}" data-is-author="${isChapterAuthor ? '1' : '0'}">${highlighted}</div>
       </div>
       <aside class="comments-pane">
         <h2>Comments</h2>
