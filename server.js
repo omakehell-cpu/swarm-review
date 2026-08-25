@@ -85,12 +85,13 @@ function tryServeStatic(req, res, pathname) {
   if (!filePath.startsWith(PUBLIC_DIR)) return false;
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false;
   const ext = path.extname(filePath);
-  const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream' };
+  const headers = { 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': 'no-store' };
   // The spellchecker word list is a large (multi-MB) file that never
   // changes once downloaded -- worth letting the browser cache it for a
   // while instead of refetching it on every visit to a writing page.
-  // Everything else under public/ (css/js) stays uncached so edits show
-  // up on a normal refresh while the app is being developed.
+  // Everything else under public/ (css/js/html) is served with
+  // Cache-Control: no-store, so neither the browser nor Cloudflare ever
+  // hold on to a stale copy of this dynamic app.
   if (pathname.startsWith('/dictionary/')) headers['Cache-Control'] = 'public, max-age=86400';
   res.writeHead(200, headers);
   fs.createReadStream(filePath).pipe(res);
