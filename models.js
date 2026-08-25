@@ -524,6 +524,19 @@ function reopenComment(commentId) {
   return getCommentById(commentId);
 }
 
+// ---------- backup ----------
+// A snapshot of the whole database as a single, self-contained file. The
+// live database runs in WAL mode (see db.js): most recent writes sit in a
+// separate -wal file, so a plain copy of just the .sqlite file can miss
+// most of the data while the server is running. VACUUM INTO instead reads
+// through the live connection (which already merges the base file and the
+// WAL) and writes one complete, consistent file with no WAL/shm sidecars --
+// safe to copy or move anywhere on its own. destPath must not already
+// exist; SQLite refuses to overwrite a file with VACUUM INTO.
+function backupDatabaseTo(destPath) {
+  db.prepare('VACUUM INTO ?').run(destPath);
+}
+
 module.exports = {
   userCount,
   getUserByUsername,
@@ -577,4 +590,5 @@ module.exports = {
   editComment,
   retractComment,
   reopenComment,
+  backupDatabaseTo,
 };

@@ -2,6 +2,7 @@
 
 const http = require('http');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { URL } = require('url');
 
@@ -288,6 +289,23 @@ async function handleAdminRevokeNamedInvite(req, res, user, inviteId) {
   if (!invite || !invite.username) return sendHtml(res, 404, 'Invite not found');
   models.revokeNamedInvite(inviteId);
   redirect(res, `/admin?notice=Invite for "${encodeURIComponent(invite.username)}" revoked.`);
+}
+
+async function handleAdminBackup(req, res, user) {
+  const tmpPath = path.join(os.tmpdir(), `swarm-review-backup-${Date.now()}-${process.pid}.sqlite`);
+  try {
+    models.backupDatabaseTo(tmpPath);
+    const buffer = fs.readFileSync(tmpPath);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    res.writeHead(200, {
+      'Content-Type': 'application/vnd.sqlite3',
+      'Content-Disposition': `attachment; filename="swarm-review-backup-${stamp}.sqlite"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  } finally {
+    fs.rmSync(tmpPath, { force: true });
+  }
 }
 
 async function handleStories(req, res, user) {
@@ -684,6 +702,7 @@ async function router(req, res) {
     if ((m = pathname.match(/^\/admin\/invite-code\/named\/(\d+)\/revoke$/)) && req.method === 'POST') {
       return handleAdminRevokeNamedInvite(req, res, user, Number(m[1]));
     }
+    if (pathname === '/admin/backup' && req.method === 'GET') return handleAdminBackup(req, res, user);
 
     if (pathname === '/' && req.method === 'GET') return handleStories(req, res, user);
     if (pathname === '/archived-stories' && req.method === 'GET') return handleArchivedStories(req, res, user);

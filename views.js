@@ -558,6 +558,12 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
       <h1>Admin</h1>
 
       <section class="admin-section">
+        <h2>Backup</h2>
+        <p class="muted">A complete, self-contained snapshot of the database -- every user, story, chapter, version, comment, and invite code -- as a single .sqlite file, safe to download even while the server is running. This is the only copy of everyone's writing outside this machine, so keep one somewhere else.</p>
+        <a class="btn" href="/admin/backup">Download backup (.sqlite)</a>
+      </section>
+
+      <section class="admin-section">
         <h2>Registration</h2>
         ${inviteCodeCard(activeInviteCode)}
         ${inviteCodeHistoryTable(inviteCodeHistory)}
