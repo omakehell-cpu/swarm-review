@@ -476,11 +476,18 @@ input:focus, textarea:focus, select:focus {
    own background (passive voice, adverbs, ...) simply override this. */
 mark.wa-sentence { border-radius: 2px; background: transparent; color: inherit; }
 mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: transparent; color: inherit; }
-/* The overlay itself stays pointer-events:none (clicks/typing must reach the
-   real, invisible textarea beneath it) but the highlighted words/sentences
-   inside it opt back in -- that's what lets hover and click be detected
-   against the actual rendered word, the same reliable way the read-only
-   chapter page already works, instead of guessing from a click coordinate. */
+/* The overlay marks opt back into pointer-events (the overlay itself
+   stays none) -- not so the browser can hit-test a real mouse event
+   straight to one (the real, typeable textarea sits *on top* of the
+   overlay via z-index, so it's always what a real click/hover actually
+   lands on, regardless of what pointer-events says below it), but so
+   that elementFromPoint() can find one when asked to: it obeys
+   pointer-events exactly like real hit-testing does, so a mark with
+   pointer-events:none is just as invisible to elementFromPoint as it is
+   to the browser's own mouse handling. See markUnderPoint in
+   writing-analyzer.js, which briefly makes the textarea itself
+   pointer-events:none so elementFromPoint can "see through" it down to
+   whichever mark (if any) is actually rendered at that point. */
 .wa-overlay .wa-word, .wa-overlay .wa-sentence { pointer-events: auto; }
 
 .wa-popover {

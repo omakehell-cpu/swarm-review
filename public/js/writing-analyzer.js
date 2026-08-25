@@ -1042,48 +1042,49 @@
     }
 
     // The overlay is what's actually visible (the real textarea's text is
-    // transparent -- see .wa-textarea), and its highlighted words/sentences
-    // opt back into pointer events (see .wa-overlay .wa-word/.wa-sentence in
-    // style.css), so a click or hover is matched against the actual
-    // rendered mark instead of guessed from a click coordinate translated
-    // into a character offset -- that guess used to miss near a word's
-    // edges, since the caret position textarea clicks report is exclusive
-    // on one side, which is what made this feel "flaky".
-    function markAt(ev) {
-      return ev.target.closest('.wa-word, .wa-sentence');
+    // transparent -- see .wa-textarea) but it's *underneath* the textarea
+    // in the stacking order (.wa-textarea has z-index:1, needed so it can
+    // still be typed into/clicked normally) -- so the real hit-test target
+    // of any mouse event in this area is always the textarea, never a
+    // mark, no matter what pointer-events says on the mark itself. (An
+    // earlier version tried pointer-events:auto on the marks directly;
+    // dispatching synthetic events straight at a mark in testing made
+    // that look like it worked, since dispatchEvent() skips hit-testing
+    // entirely, but real clicks/hovers -- which go through the browser's
+    // actual point-based hit test -- always landed on the textarea on
+    // top, so hover never fired and clicks never found a mark.)
+    // markUnderPoint briefly makes the textarea transparent to hit-testing
+    // so elementFromPoint can "see" the overlay mark actually rendered at
+    // that point, then immediately restores it -- synchronous, so there's
+    // no visible or functional gap in the textarea's own interactivity.
+    function markUnderPoint(x, y) {
+      const prevPointerEvents = textarea.style.pointerEvents;
+      textarea.style.pointerEvents = 'none';
+      const el = document.elementFromPoint(x, y);
+      textarea.style.pointerEvents = prevPointerEvents;
+      return el ? el.closest('.wa-word, .wa-sentence') : null;
     }
 
-    overlay.addEventListener('mouseover', (ev) => {
-      const mark = markAt(ev);
-      if (mark) hoverTip.show(mark);
+    let hoveredMark = null;
+    textarea.addEventListener('mousemove', (ev) => {
+      const mark = markUnderPoint(ev.clientX, ev.clientY);
+      if (mark === hoveredMark) return;
+      hoveredMark = mark;
+      if (mark) hoverTip.show(mark); else hoverTip.hide();
+      // mark.wa-word's own cursor:pointer (see style.css) never shows --
+      // the textarea sitting on top has the only cursor the browser ever
+      // actually applies here -- so set it directly on hover/unhover.
+      textarea.style.cursor = mark ? 'pointer' : '';
     });
-    overlay.addEventListener('mouseout', (ev) => {
-      const mark = markAt(ev);
-      if (mark && !mark.contains(ev.relatedTarget)) hoverTip.hide();
+    textarea.addEventListener('mouseleave', () => {
+      hoveredMark = null;
+      hoverTip.hide();
+      textarea.style.cursor = '';
     });
 
-    // A click that reaches the textarea directly (i.e. not on a mark, which
-    // would have intercepted it first -- see the overlay listener below)
-    // just means "close whatever's open" the same as clicking anywhere else
-    // that isn't a mark or the popover itself.
-    textarea.addEventListener('click', () => { hidePopover(); });
-
-    overlay.addEventListener('click', (ev) => {
-      const mark = markAt(ev);
-      if (!mark) return;
-      // The chapter-text field is a <label class="main-field"> wrapping
-      // both the textarea AND (since wa-wrap is inserted right before it)
-      // this overlay -- so a click on any mark would otherwise bubble up
-      // into that label, whose native behavior (a *default action*, so
-      // stopPropagation() alone doesn't stop it -- preventDefault() does)
-      // is to forward an unhandled click to the first labelable control it
-      // contains. A click on the textarea itself never triggered this (a
-      // label skips forwarding when the click's target is already a form
-      // control), but a mark is just a plain element, and the first
-      // labelable control in DOM order turns out to be the "Spelling"
-      // checkbox -- so a click on any mark was silently toggling it off.
-      ev.preventDefault();
-      ev.stopPropagation();
+    textarea.addEventListener('click', (ev) => {
+      const mark = markUnderPoint(ev.clientX, ev.clientY);
+      if (!mark) { hidePopover(); return; }
       hoverTip.hide();
       // mark's own start/end always satisfy rangeAt's containment check
       // (it's literally where that range came from), so this recovers the
@@ -1091,16 +1092,9 @@
       // reconstructing one from the mark's (more limited) dataset.
       const range = rangeAt(Number(mark.dataset.waStart));
       if (!range) { hidePopover(); return; }
-      // The click landed on the overlay (pointer-events:auto on the mark),
-      // not the real textarea underneath, so nothing moved the caret the
-      // way a normal click would -- do that by hand, at the end of the
-      // word/sentence clicked, so typing right after still behaves
-      // naturally. Deliberately not *selecting* the range (no
-      // setSelectionRange(start, end)): that used to make typing right
-      // after a click silently delete the whole highlighted span instead
-      // of just moving the caret.
-      textarea.focus();
-      textarea.setSelectionRange(range.end, range.end);
+      // The click landed on the real textarea (that's the only element
+      // that ever receives real clicks here -- see above), so the caret
+      // already moved to the clicked position on its own; nothing to do.
 
       popover.innerHTML = '';
       const text = document.createElement('div');
@@ -1159,7 +1153,11 @@
     });
 
     document.addEventListener('click', (ev) => {
-      if (ev.target === textarea || overlay.contains(ev.target)) return;
+      // Every click in the editor area lands on the textarea itself (see
+      // markUnderPoint above) -- its own click listener already decided
+      // whether to show or hide the popover, so this is only for clicks
+      // truly outside the editor.
+      if (ev.target === textarea) return;
       if (popover.contains(ev.target)) return;
       hidePopover();
     });
