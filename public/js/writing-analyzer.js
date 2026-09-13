@@ -51,16 +51,22 @@
   // check registry -- one source of truth for label, color, and toggle
   // state, shared by both the highlight rendering and the control card.
   // ---------------------------------------------------------------------
+  // Muted, ink-and-pigment colors rather than saturated highlighter ones:
+  // these sit *under* prose the reader is trying to judge, often several
+  // at once, so they have to be legible as marks without ever becoming
+  // the thing you look at. Each one is chosen to hold up on both the warm
+  // paper and the warm near-black theme (see public/css/style.css), since
+  // they're applied as inline styles and can't vary per theme.
   const CHECK_META = {
-    spell: { label: 'Spelling', color: '#3fb8a8' },
-    passive: { label: 'Passive voice', color: '#5a8cd8' },
-    adverb: { label: 'Adverbs', color: '#d8954b' },
-    filler: { label: 'Filler words', color: '#d85a9e' },
-    complex: { label: 'Complex words', color: '#a865d8' },
-    sentence: { label: 'Long sentences', color: '#d8a44b' },
+    spell: { label: 'Spelling', color: '#3f9e92' },
+    passive: { label: 'Passive voice', color: '#5585b5' },
+    adverb: { label: 'Adverbs', color: '#c08445' },
+    filler: { label: 'Filler words', color: '#b06a8f' },
+    complex: { label: 'Complex words', color: '#8d72b8' },
+    sentence: { label: 'Long sentences', color: '#c2a04e' },
   };
   const CHECK_ORDER = ['spell', 'passive', 'adverb', 'filler', 'complex', 'sentence'];
-  const SEVERITY_COLOR = { yellow: '#d8a44b', red: '#d8654b' };
+  const SEVERITY_COLOR = { yellow: '#c2a04e', red: '#c26a4e' };
 
   const DEFAULT_SETTINGS = { spell: true, passive: true, adverb: true, filler: true, complex: true, sentence: true };
   const SETTINGS_KEY = 'wa-settings-v2';
@@ -131,17 +137,31 @@
 
   // Inline style for a word-level <mark>, so every color lives in this one
   // place instead of being duplicated across CSS classes.
+  //
+  // Word-level checks mark with an underline, not a filled block. Blocks
+  // were unreadable in practice: a word-level highlight almost always sits
+  // *inside* a sentence-level one, and two stacked translucent fills turn
+  // the passage into mud exactly where the writer most needs to read it.
+  // An underline carries the same color coding, stacks cleanly with the
+  // sentence tint underneath, and leaves the letterforms alone. The very
+  // faint wash on top is just enough to find the span at a glance.
   function wordMarkStyle(kind) {
     if (kind === 'spell') {
-      return `text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:${CHECK_META.spell.color};text-underline-offset:3px;`;
+      return `text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:${CHECK_META.spell.color};text-decoration-thickness:1px;text-underline-offset:3px;`;
     }
     const meta = CHECK_META[kind];
-    return meta ? `background:${hexToRgba(meta.color, 0.38)};` : '';
+    if (!meta) return '';
+    return `background:${hexToRgba(meta.color, 0.1)};`
+      + `text-decoration-line:underline;text-decoration-style:solid;text-decoration-color:${hexToRgba(meta.color, 0.85)};`
+      + 'text-decoration-thickness:2px;text-underline-offset:3px;';
   }
 
+  // Sentence-level marks span whole sentences, so they stay a wash rather
+  // than an underline -- a 40-word underline reads as a redaction bar, and
+  // it would collide with the word-level underlines sitting inside it.
   function sentenceMarkStyle(severity) {
     const color = SEVERITY_COLOR[severity];
-    return color ? `background:${hexToRgba(color, severity === 'red' ? 0.35 : 0.28)};` : '';
+    return color ? `background:${hexToRgba(color, severity === 'red' ? 0.16 : 0.11)};` : '';
   }
 
   // ---------------------------------------------------------------------
@@ -1301,6 +1321,19 @@
     }
   }
 
+  // On the reading page the controls belong above the whole two-column
+  // layout, not inside the sheet the chapter is printed on -- dropping the
+  // card in right before #chapter-text (which sits inside .reading-pane)
+  // reads as a box stuck onto the manuscript. It has to go before the grid
+  // itself rather than before .reading-pane, though: .reading-pane is a
+  // grid item, so anything inserted as its sibling becomes a third grid
+  // item and takes a column of its own. Falls back to the old position
+  // anywhere that structure isn't there.
+  function insertControlsCard(card, container) {
+    const anchor = container.closest('.chapter-body-grid') || container.closest('.reading-pane') || container;
+    anchor.parentNode.insertBefore(card, anchor);
+  }
+
   function setupReadView(container) {
     const storyId = container.dataset.storyId || null;
     const canEditDictionary = container.dataset.canEditDictionary === '1';
@@ -1342,7 +1375,7 @@
       const wikiRow = buildCheckRow('#5a8cd8', 'Wiki links', wikiLinksVisible, wikiLinksToggleChanged);
       const card = buildMinimalCard(commentsRow);
       card.querySelector('.wa-sections').appendChild(buildSection('Wiki', [wikiRow]));
-      container.parentNode.insertBefore(card, container);
+      insertControlsCard(card, container);
       return;
     }
 
@@ -1359,7 +1392,7 @@
     const wikiRow = buildCheckRow('#5a8cd8', 'Wiki links', wikiLinksVisible, wikiLinksToggleChanged);
     sections.appendChild(buildSection('Wiki', [wikiRow]));
     card.classList.add('wa-card-reading');
-    container.parentNode.insertBefore(card, container);
+    insertControlsCard(card, container);
 
     const popover = document.createElement('div');
     popover.className = 'wa-popover hidden';
