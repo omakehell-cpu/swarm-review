@@ -805,7 +805,43 @@ function renderCommentReadOnly(c, { replies }) {
     </div>`;
 }
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor }) {
+// Moving between chapters without going back to the story page. Absent
+// entirely for a one-chapter story, where "next" and "previous" are just
+// two dead controls.
+function chapterNav(chapter, neighbours, { compact = false } = {}) {
+  if (!neighbours || neighbours.total < 2) return '';
+  const { prev, next, position, total } = neighbours;
+  const label = (c) => `Chapter ${c.chapter_number}: ${escapeHtml(c.title)}`;
+  const here = position ? `Chapter ${position} of ${total}` : `${total} chapters`;
+
+  if (compact) {
+    return `
+      <nav class="chapter-nav compact" aria-label="Chapters">
+        ${prev ? `<a class="chapter-nav-arrow" href="/chapters/${prev.id}" title="${label(prev)}" rel="prev">&larr; Previous</a>`
+               : '<span class="chapter-nav-arrow disabled">&larr; Previous</span>'}
+        <a class="chapter-nav-here" href="/stories/${chapter.story_id}">${here}</a>
+        ${next ? `<a class="chapter-nav-arrow" href="/chapters/${next.id}" title="${label(next)}" rel="next">Next &rarr;</a>`
+               : '<span class="chapter-nav-arrow disabled">Next &rarr;</span>'}
+      </nav>`;
+  }
+  // The one at the foot of the chapter carries the titles: by the time
+  // you get there you've finished reading and the question is what comes
+  // next, which a bare arrow doesn't answer.
+  return `
+    <nav class="chapter-nav foot" aria-label="Chapters">
+      ${prev ? `<a class="chapter-nav-link prev" href="/chapters/${prev.id}" rel="prev">
+          <span class="chapter-nav-dir">&larr; Previous</span>
+          <span class="chapter-nav-title">${label(prev)}</span>
+        </a>` : '<span></span>'}
+      <a class="chapter-nav-here" href="/stories/${chapter.story_id}">All chapters</a>
+      ${next ? `<a class="chapter-nav-link next" href="/chapters/${next.id}" rel="next">
+          <span class="chapter-nav-dir">Next &rarr;</span>
+          <span class="chapter-nav-title">${label(next)}</span>
+        </a>` : '<span></span>'}
+    </nav>`;
+}
+
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, neighbours = null }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -848,6 +884,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         </span>
         <button id="reading-fill-screen" class="btn ghost small" type="button">Fill screen</button>
       </div>
+      ${chapterNav(chapter, neighbours, { compact: true })}
     </div>
     <div class="chapter-body-grid">
       <div class="reading-pane">
@@ -882,6 +919,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         </details>
       </aside>
     </div>
+    ${chapterNav(chapter, neighbours)}
     <button id="selection-toast" class="selection-toast hidden" type="button">+ Comment on selection</button>
     <script type="application/json" id="chapter-meta">${toScriptJson({ chapterId: chapter.id })}</script>
     <script src="/js/nspell.bundle.js"></script>

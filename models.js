@@ -432,6 +432,25 @@ function listChaptersForStory(storyId, { since, onlyArchived = false } = {}) {
   `).all(since ? { storyId, since } : { storyId });
 }
 
+// Where this chapter sits in its story's reading order, and what's either
+// side of it -- for the prev/next links on the chapter page. Archived
+// chapters are skipped, so the sequence a reader walks is the same one
+// the story page lists. A chapter that is itself archived isn't in that
+// sequence at all: it gets neighbours of null and no position, rather
+// than pretending to be somewhere in the run.
+function getChapterNeighbours(chapter) {
+  const siblings = db.prepare(
+    'SELECT id, chapter_number, title FROM chapters WHERE story_id = ? AND archived_at IS NULL ORDER BY chapter_number ASC'
+  ).all(chapter.story_id);
+  const index = siblings.findIndex((c) => c.id === chapter.id);
+  return {
+    total: siblings.length,
+    position: index === -1 ? null : index + 1,
+    prev: index > 0 ? siblings[index - 1] : null,
+    next: index !== -1 && index < siblings.length - 1 ? siblings[index + 1] : null,
+  };
+}
+
 const getChapterById = (id) =>
   db.prepare(`
     SELECT c.*, u.display_name AS author_name, u.username AS author_username,
@@ -1033,6 +1052,7 @@ module.exports = {
   deleteStoryForever,
   listChaptersForStory,
   getChapterById,
+  getChapterNeighbours,
   createChapter,
   updateChapter,
   editChapter,
