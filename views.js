@@ -155,16 +155,30 @@ function glossaryIndexPage({ user, pages, q }) {
 }
 
 function glossaryPage({ user, page }) {
+  // A page can be in the index (title + summary, from an older sync) with
+  // no body yet, if the sync that stored it predates full-content syncing
+  // or the most recent sync failed. Say so plainly instead of rendering an
+  // empty sheet that reads like a broken page.
+  const body = page.content_html
+    ? `<div class="glossary-content">${page.content_html}</div>`
+    : `<div class="glossary-empty">
+         <p><strong>This entry hasn't been copied across yet.</strong></p>
+         <p class="muted">The glossary knows this page exists and what it's about, but not its full text -- that arrives with the next wiki sync. ${user.is_admin ? 'You can run one now from the <a href="/admin">admin page</a>.' : 'An admin can run one from the admin page.'}</p>
+         ${page.summary ? `<blockquote class="quoted">${escapeHtml(page.summary)}</blockquote>` : ''}
+       </div>`;
   return layout({
     title: page.title,
     user,
     current: 'glossary',
     body: `
       <p class="breadcrumb"><a href="/glossary">&larr; Glossary</a></p>
-      <h1>${escapeHtml(page.title)}</h1>
-      <p class="muted">Mirrored from <a href="${escapeHtml(wiki.pageUrl(page.title))}" target="_blank" rel="noopener noreferrer">the wiki</a>${page.fetched_at ? ` -- last synced ${timeHtml(page.fetched_at)}` : ''}.</p>
+      <div class="page-head">
+        <h1>${escapeHtml(page.title)}</h1>
+        <a class="btn ghost small" href="${escapeHtml(wiki.pageUrl(page.title))}" target="_blank" rel="noopener noreferrer">Open on the wiki &#8599;</a>
+      </div>
+      <p class="muted glossary-meta">A local copy${page.fetched_at ? `, last synced ${timeHtml(page.fetched_at)}` : ''}.</p>
       <div class="reading-pane">
-        <div class="glossary-content">${page.content_html || '<p class="muted">(No content.)</p>'}</div>
+        ${body}
       </div>`,
   });
 }
