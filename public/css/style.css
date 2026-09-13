@@ -479,6 +479,32 @@ input[type="file"] { padding: 6px 4px; }
    arrow marks that distinction at a glance, vs. an ordinary in-app
    glossary link that stays inside this app. */
 .glossary-content a.wiki-external::after { content: " \2197"; font-size: 0.85em; }
+/* Markup the wiki's own authors wrote by hand (see lib/wiki.js's tag
+   allowlist): headings and rules they set as HTML, centred blocks, and
+   tables built either in HTML or in wikitext. */
+.glossary-content hr {
+  border: none; border-top: 1px solid var(--border); margin: 1.8em 0;
+}
+.glossary-content center { display: block; text-align: center; }
+.glossary-content blockquote {
+  margin: 0 0 1.1em; padding: 2px 20px; border-left: 2px solid var(--border-strong);
+  color: var(--text-muted); font-style: italic;
+}
+.glossary-content b, .glossary-content strong { font-weight: 650; }
+.wiki-table-wrap { overflow-x: auto; margin: 0 0 1.4em; }
+.wiki-table {
+  border-collapse: collapse; width: 100%; font-family: var(--font-ui);
+  font-size: 0.88rem; line-height: 1.5;
+}
+.wiki-table caption {
+  caption-side: top; text-align: left; padding-bottom: 8px;
+  color: var(--text-muted); font-size: 0.85rem;
+}
+.wiki-table th, .wiki-table td {
+  border-bottom: 1px solid var(--border); padding: 7px 12px 7px 0; text-align: left; vertical-align: top;
+}
+.wiki-table th { font-weight: 600; color: var(--text); }
+.wiki-table tr:first-child th { border-bottom-color: var(--border-strong); }
 
 .glossary-meta { margin-top: -10px; font-size: 0.86rem; }
 /* A glossary entry the index knows about but hasn't got the text of yet
