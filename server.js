@@ -413,6 +413,24 @@ async function handleAdminBackup(req, res, user) {
   }
 }
 
+// ---------- glossary (a local, offline mirror of the shared-universe
+// wiki -- see lib/wiki.js) ----------
+async function handleGlossaryIndex(req, res, user, query) {
+  const q = (query.get('q') || '').trim();
+  let pages = models.listWikiPagesForGlossary();
+  if (q) {
+    const needle = q.toLowerCase();
+    pages = pages.filter((p) => p.title.toLowerCase().includes(needle) || p.summary.toLowerCase().includes(needle));
+  }
+  sendHtml(res, 200, views.glossaryIndexPage({ user, pages, q }));
+}
+
+async function handleGlossaryPage(req, res, user, title) {
+  const page = models.getWikiPageByTitleLower(title.toLowerCase());
+  if (!page) return sendHtml(res, 404, views.glossaryNotFoundPage({ user, title }));
+  sendHtml(res, 200, views.glossaryPage({ user, page }));
+}
+
 async function handleStories(req, res, user) {
   const since = models.bumpLastSeen(user.id);
   const stories = models.listStories({ since });
@@ -932,6 +950,9 @@ async function router(req, res) {
     if (pathname === '/admin/wiki/sync' && req.method === 'POST') return handleAdminSyncWiki(req, res, user);
     if (pathname === '/admin/backup' && req.method === 'GET') return handleAdminBackup(req, res, user);
 
+    if (pathname === '/glossary' && req.method === 'GET') return handleGlossaryIndex(req, res, user, url.searchParams);
+    if ((m = pathname.match(/^\/glossary\/([^/]+)$/)) && req.method === 'GET') return handleGlossaryPage(req, res, user, m[1]);
+
     if (pathname === '/' && req.method === 'GET') return handleStories(req, res, user);
     if (pathname === '/archived-stories' && req.method === 'GET') return handleArchivedStories(req, res, user);
     if (pathname === '/stories/new' && req.method === 'GET') return handleNewStoryPage(req, res, user);
@@ -1039,25 +1060,10 @@ server.listen(PORT, () => {
     : 'Registration is currently closed -- log in as an admin and generate a new invite code from /admin.');
 });
 
-// Keeps the local wiki index (see lib/wiki.js) roughly in sync with the
-// shared-universe wiki without anyone having to remember to click "Sync
-// now" -- syncs immediately if it's never run or is more than a day
-// stale (covers a fresh install and a server that was down past the last
-// scheduled sync), then every 24h after that. Runs in the background;
-// never blocks startup, and a failure (e.g. the wiki being unreachable)
-// just logs and tries again next time rather than crashing the server.
-const WIKI_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
-function runWikiSync() {
-  wiki.syncWikiIndex()
-    .then(({ pageCount }) => console.log(`Wiki index synced: ${pageCount} pages.`))
-    .catch((err) => console.error('Wiki sync failed:', err.message));
-}
-(function scheduleWikiSync() {
-  const state = models.getWikiSyncState();
-  const lastSyncedMs = state && state.last_synced_at
-    ? new Date(`${state.last_synced_at.replace(' ', 'T')}Z`).getTime()
-    : 0;
-  const isStale = !lastSyncedMs || Date.now() - lastSyncedMs > WIKI_SYNC_INTERVAL_MS;
-  if (isStale) runWikiSync();
-  setInterval(runWikiSync, WIKI_SYNC_INTERVAL_MS);
-})();
+// The wiki index (see lib/wiki.js) is synced ONLY when an admin clicks
+// "Sync now" on /admin (see handleAdminSyncWiki above) -- deliberately no
+// automatic background timer. Each sync now pulls every page's full
+// content (not just a short summary), which is a much heavier set of
+// requests against what is likely a small self-hosted wiki, so this is
+// left entirely in a human's hands rather than risking the app hammering
+// it on its own schedule.

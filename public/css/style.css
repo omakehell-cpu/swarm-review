@@ -273,6 +273,41 @@ input[type="file"] { padding: 6px 4px; }
 #chapter-text.wikilinks-hidden .wiki-link {
   color: inherit; text-decoration: none; cursor: text; pointer-events: none;
 }
+
+/* --- Glossary (a local, offline mirror of the shared-universe wiki --
+   see lib/wiki.js) -- reuses #chapter-text's reading typography above,
+   minus its pre-wrap (glossary content is already proper HTML blocks, not
+   plaintext-with-manual-linebreaks like a chapter draft). */
+.glossary-content {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.08rem;
+  line-height: 1.75;
+  max-width: 72ch;
+}
+.glossary-content p { margin: 0 0 1.1em; }
+.glossary-content p:last-child { margin-bottom: 0; }
+.glossary-content h1, .glossary-content h2, .glossary-content h3,
+.glossary-content h4, .glossary-content h5, .glossary-content h6 {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  margin: 1.3em 0 0.6em; line-height: 1.3; color: var(--text);
+}
+.glossary-content h1 { font-size: 1.5rem; }
+.glossary-content h2 { font-size: 1.3rem; }
+.glossary-content h3 { font-size: 1.15rem; }
+.glossary-content ul, .glossary-content ol { margin: 0 0 1.1em; padding-left: 1.4em; }
+.glossary-content li { margin-bottom: 0.3em; }
+.glossary-content a { color: var(--accent-strong); }
+/* A link this app couldn't resolve to a locally-synced page falls back to
+   the original external wiki (opened in a new tab) -- a small outbound
+   arrow marks that distinction at a glance, vs. an ordinary in-app
+   glossary link that stays inside this app. */
+.glossary-content a.wiki-external::after { content: " \2197"; font-size: 0.85em; }
+
+.glossary-search { display: flex; gap: 8px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
+.glossary-search input[type="search"] {
+  flex: 1; min-width: 180px; padding: 7px 10px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit;
+}
 .hl { border-radius: 3px; cursor: pointer; padding: 1px 0; }
 .hl-pending { background: rgba(var(--pending-rgb), 0.28); box-shadow: inset 0 -2px 0 var(--pending); }
 .hl-accepted { background: rgba(var(--accepted-rgb), 0.2); box-shadow: inset 0 -2px 0 var(--accepted); }
