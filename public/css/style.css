@@ -1,4 +1,6 @@
-/* Swarm Review -- minimal, readable, no framework.
+/* Swarm Review -- an editorial look for a drafting room: warm paper, ink,
+   real book typography for anything that is prose, and a quieter sans for
+   the controls around it. No framework, no webfonts, no build step.
 
    Theming: light is the default (bare :root) so the page still looks
    right with CSS half-loaded or JS disabled. The dark palette applies
@@ -12,79 +14,104 @@
 
    Colors are deliberately not full-contrast: near-black-on-white or
    near-white-on-black is tiring over the long stretches of prose this
-   app is for, so text sits a bit short of either extreme, and the light
-   theme's background is a warm off-white (paper, not a bright white).
-   The "-rgb" triplets exist so rgba() overlays (badges, focus rings,
-   status backgrounds) can follow the same token instead of a hardcoded
-   color that would silently go wrong in the other theme. */
+   app is for, so text sits a bit short of either extreme, the light
+   theme's background is warm paper rather than white, and the dark theme
+   is a warm near-black rather than the usual blue-black -- the two
+   themes should read as day and night in the same room, not as two
+   different apps. The "-rgb" triplets exist so rgba() overlays (badges,
+   focus rings, status backgrounds) can follow the same token instead of
+   a hardcoded color that would silently go wrong in the other theme. */
 :root {
-  --bg: #f1efe9;
-  --bg-elevated: #fbfaf6;
-  --border: #ddd8cb;
-  --text: #2c2a26;
-  --text-muted: #6f6a5f;
-  --accent: #6d5cc4;
-  --accent-strong: #55439e;
-  --accent-rgb: 109, 92, 196;
-  --pending: #a5701d;
-  --pending-rgb: 165, 112, 29;
-  --accepted: #1f7a4d;
-  --accepted-rgb: 31, 122, 77;
-  --rejected: #b34d34;
-  --rejected-rgb: 179, 77, 52;
-  --btn-text: #fdfcfa;
-  --code-bg: rgba(0, 0, 0, 0.055);
-  --shadow: rgba(30, 25, 15, 0.16);
-  --radius: 10px;
+  --bg: #f3f0e7;
+  --bg-elevated: #fbf9f3;
+  /* Recessed surfaces -- inputs, wells, the editor's own paper. Slightly
+     *darker* than the page in light mode and slightly lighter in dark
+     mode, so a field always reads as cut into the surface either way. */
+  --bg-sunken: #eae5d8;
+  --border: #ded7c6;
+  --border-strong: #c7bfa9;
+  --text: #23201b;
+  --text-muted: #6d6658;
+  --accent: #2b4a6b;
+  --accent-strong: #1d3550;
+  --accent-rgb: 43, 74, 107;
+  --pending: #91641a;
+  --pending-rgb: 145, 100, 26;
+  --accepted: #3a6a48;
+  --accepted-rgb: 58, 106, 72;
+  --rejected: #983a32;
+  --rejected-rgb: 152, 58, 50;
+  --btn-text: #fbf9f3;
+  --code-bg: rgba(35, 32, 27, 0.06);
+  --shadow: rgba(60, 50, 30, 0.13);
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  /* Type. --font-prose is shared by the chapter text, the glossary, the
+     markdown preview AND the editor's textarea+overlay pair -- those last
+     two must always resolve to the exact same family, size and line
+     height or the highlight overlay drifts out of register with the text
+     the reader is actually typing, so they both go through these tokens
+     rather than repeating a font stack. */
+  --font-prose: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Charter, Georgia, 'Times New Roman', serif;
+  --font-display: var(--font-prose);
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", SFMono-Regular, Consolas, Monaco, monospace;
+  --editor-line-height: 1.7;
+  --editor-padding: 14px 16px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #17191e;
-    --bg-elevated: #1e212a;
-    --border: #2c313c;
-    --text: #dbdce1;
-    --text-muted: #949aa6;
-    --accent: #8b7bd8;
-    --accent-strong: #a493f0;
-    --accent-rgb: 139, 123, 216;
-    --pending: #d8a44b;
-    --pending-rgb: 216, 164, 75;
-    --accepted: #4bbf7e;
-    --accepted-rgb: 75, 191, 126;
-    --rejected: #d8654b;
-    --rejected-rgb: 216, 101, 75;
-    --btn-text: #101114;
-    --code-bg: rgba(255, 255, 255, 0.06);
-    --shadow: rgba(0, 0, 0, 0.4);
+    --bg: #191713;
+    --bg-elevated: #211e19;
+    --bg-sunken: #131110;
+    --border: #342f26;
+    --border-strong: #4a4336;
+    --text: #e7e1d3;
+    --text-muted: #9b9281;
+    --accent: #8fb3d9;
+    --accent-strong: #abc9e9;
+    --accent-rgb: 143, 179, 217;
+    --pending: #d3a24e;
+    --pending-rgb: 211, 162, 78;
+    --accepted: #7fba82;
+    --accepted-rgb: 127, 186, 130;
+    --rejected: #d97e66;
+    --rejected-rgb: 217, 126, 102;
+    --btn-text: #191713;
+    --code-bg: rgba(231, 225, 211, 0.08);
+    --shadow: rgba(0, 0, 0, 0.45);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #17191e;
-  --bg-elevated: #1e212a;
-  --border: #2c313c;
-  --text: #dbdce1;
-  --text-muted: #949aa6;
-  --accent: #8b7bd8;
-  --accent-strong: #a493f0;
-  --accent-rgb: 139, 123, 216;
-  --pending: #d8a44b;
-  --pending-rgb: 216, 164, 75;
-  --accepted: #4bbf7e;
-  --accepted-rgb: 75, 191, 126;
-  --rejected: #d8654b;
-  --rejected-rgb: 216, 101, 75;
-  --btn-text: #101114;
-  --code-bg: rgba(255, 255, 255, 0.06);
-  --shadow: rgba(0, 0, 0, 0.4);
+  --bg: #191713;
+  --bg-elevated: #211e19;
+  --bg-sunken: #131110;
+  --border: #342f26;
+  --border-strong: #4a4336;
+  --text: #e7e1d3;
+  --text-muted: #9b9281;
+  --accent: #8fb3d9;
+  --accent-strong: #abc9e9;
+  --accent-rgb: 143, 179, 217;
+  --pending: #d3a24e;
+  --pending-rgb: 211, 162, 78;
+  --accepted: #7fba82;
+  --accepted-rgb: 127, 186, 130;
+  --rejected: #d97e66;
+  --rejected-rgb: 217, 126, 102;
+  --btn-text: #191713;
+  --code-bg: rgba(231, 225, 211, 0.08);
+  --shadow: rgba(0, 0, 0, 0.45);
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
@@ -98,29 +125,70 @@ body {
 }
 
 a { color: var(--accent-strong); text-decoration: none; }
-a:hover { text-decoration: underline; }
+a:hover { text-decoration: underline; text-underline-offset: 2px; }
 
+/* Headings are the app's voice: book typography, not UI typography. */
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.01em; }
+h1 { font-size: 2rem; line-height: 1.2; }
+h2 { font-size: 1.35rem; line-height: 1.25; }
+h3 { font-size: 1.1rem; line-height: 1.3; }
+
+/* --- top bar ---
+   Three groups, not one undifferentiated row of links: the masthead, the
+   places you go, and who you are. Only the middle group reads as
+   navigation, so the eye isn't asked to sort seven equal-weight purple
+   links every time the page loads. */
 .topbar {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 8px 16px;
-  padding: 14px 24px;
+  gap: 8px 24px;
+  padding: 0 28px;
+  min-height: 58px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-elevated);
 }
-.topbar .brand { font-weight: 700; font-size: 1.1rem; color: var(--text); }
-.topbar nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
-.topbar .whoami { color: var(--text-muted); }
+.topbar .brand {
+  font-family: var(--font-display);
+  font-weight: 600; font-size: 1.15rem; letter-spacing: 0.01em;
+  color: var(--text);
+}
+.topbar .brand:hover { text-decoration: none; color: var(--accent-strong); }
+.topbar nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+/* The navigation links proper -- everything except the account cluster,
+   which .topbar-user below peels off to the right. */
+.topbar nav > a {
+  color: var(--text-muted); font-size: 0.9rem; font-weight: 500;
+  padding: 6px 10px; border-radius: var(--radius);
+}
+.topbar nav > a:hover { color: var(--text); background: var(--bg-sunken); text-decoration: none; }
+.topbar nav > a.current { color: var(--text); background: var(--bg-sunken); }
+.topbar .brand-mark { color: var(--text-muted); font-weight: 400; }
+/* Who you are and how to leave -- set apart from the navigation proper by
+   a hairline, so "Log out" never sits in the same visual list as the
+   places you might actually want to go. */
+.topbar-account {
+  display: inline-flex; align-items: center; gap: 2px;
+  padding-left: 12px; margin-left: 6px; border-left: 1px solid var(--border);
+}
+.topbar-account > a {
+  color: var(--text-muted); font-size: 0.9rem; font-weight: 500;
+  padding: 6px 10px; border-radius: var(--radius);
+}
+.topbar-account > a:hover { color: var(--text); background: var(--bg-sunken); text-decoration: none; }
+.topbar-account > a.current { color: var(--text); background: var(--bg-sunken); }
+.topbar .whoami { color: var(--text-muted); font-size: 0.88rem; }
+.topbar .inline-form .linklike { color: var(--text-muted); font-size: 0.88rem; padding: 6px 8px; border-radius: var(--radius); }
+.topbar .inline-form .linklike:hover { color: var(--text); background: var(--bg-sunken); text-decoration: none; }
 
 .theme-toggle {
   display: flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px; padding: 0; margin: 0;
-  background: transparent; border: 1px solid var(--border); border-radius: 999px;
+  width: 30px; height: 30px; padding: 0; margin: 0 0 0 2px;
+  background: transparent; border: 1px solid transparent; border-radius: 999px;
   color: var(--text-muted); font-size: 0.95rem; line-height: 1; cursor: pointer;
 }
-.theme-toggle:hover { color: var(--text); border-color: var(--accent); }
+.theme-toggle:hover { color: var(--text); background: var(--bg-sunken); }
 
 .linklike {
   background: none; border: none; color: var(--accent-strong); cursor: pointer;
@@ -129,7 +197,7 @@ a:hover { text-decoration: underline; }
 .linklike:hover { text-decoration: underline; }
 .inline-form { display: inline; }
 
-.container { max-width: 1100px; margin: 0 auto; padding: 28px 24px 80px; transition: max-width 0.2s ease; }
+.container { max-width: 1040px; margin: 0 auto; padding: 40px 28px 96px; transition: max-width 0.2s ease; }
 .container-wide { max-width: 1500px; }
 /* "Fill screen" on the chapter reading page (see public/js/app.js) -- same
    pattern as the editor's own Fill-screen button (.writer-card.wa-
@@ -138,64 +206,135 @@ a:hover { text-decoration: underline; }
    the 2.1fr/1fr split generally) more breathing room, not longer lines. */
 .container.wa-fullwidth { max-width: none; }
 
-.flash { padding: 10px 24px; text-align: center; }
-.flash.error { background: rgba(var(--rejected-rgb), 0.15); color: var(--rejected); }
-.flash.info { background: rgba(var(--accent-rgb), 0.15); color: var(--accent-strong); }
+.flash { padding: 11px 24px; text-align: center; font-size: 0.9rem; }
+.flash.error { background: rgba(var(--rejected-rgb), 0.14); color: var(--rejected); }
+.flash.info { background: rgba(var(--accent-rgb), 0.12); color: var(--accent-strong); }
 
 h1 { margin-top: 0; }
 .muted { color: var(--text-muted); }
 .error { color: var(--rejected); }
 
 .btn {
-  display: inline-block;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   background: var(--accent);
   color: var(--btn-text);
-  border: none;
-  padding: 9px 16px;
+  border: 1px solid transparent;
+  padding: 8px 16px;
   border-radius: var(--radius);
-  font-weight: 600;
+  font-family: var(--font-ui);
+  font-weight: 550;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 .btn:hover { background: var(--accent-strong); text-decoration: none; }
-.btn.ghost { background: transparent; color: var(--accent-strong); border: 1px solid var(--border); }
-.btn.small { padding: 5px 10px; font-size: 0.85rem; }
+.btn.ghost {
+  background: transparent; color: var(--text); border-color: var(--border-strong);
+}
+.btn.ghost:hover { background: var(--bg-sunken); border-color: var(--text-muted); color: var(--text); }
+.btn.small { padding: 5px 11px; font-size: 0.82rem; }
 .btn.accept { background: var(--accepted); color: var(--btn-text); }
 .btn.reject { background: var(--rejected); color: var(--btn-text); }
-.btn.danger { background: var(--rejected); color: var(--btn-text); }
-.btn.tiny { padding: 2px 8px; font-size: 0.75rem; }
+.btn.danger { background: transparent; color: var(--rejected); border-color: rgba(var(--rejected-rgb), 0.45); }
+.btn.danger:hover { background: rgba(var(--rejected-rgb), 0.1); border-color: var(--rejected); }
+.btn.tiny { padding: 2px 9px; font-size: 0.75rem; }
 
 /* --- auth --- */
 .auth-card {
-  max-width: 380px; margin: 40px auto; background: var(--bg-elevated);
-  border: 1px solid var(--border); border-radius: var(--radius); padding: 28px;
+  max-width: 400px; margin: 64px auto; background: var(--bg-elevated);
+  border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 36px 34px;
+  box-shadow: 0 1px 2px var(--shadow);
 }
-.auth-card form { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
-label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--text-muted); }
+.auth-card h1 { font-size: 1.7rem; margin-bottom: 4px; }
+.auth-card form { display: flex; flex-direction: column; gap: 16px; margin-top: 20px; }
+label { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
 input, textarea, select {
-  background: var(--bg); border: 1px solid var(--border); color: var(--text);
-  border-radius: 6px; padding: 9px 10px; font: inherit;
+  background: var(--bg-sunken); border: 1px solid var(--border); color: var(--text);
+  border-radius: var(--radius); padding: 9px 11px; font: inherit; font-size: 0.92rem;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
 }
-textarea { resize: vertical; font-family: Georgia, 'Times New Roman', serif; font-size: 1rem; }
+input:hover, textarea:hover, select:hover { border-color: var(--border-strong); }
+textarea { resize: vertical; font-family: var(--font-prose); font-size: 1rem; line-height: 1.6; }
+::placeholder { color: var(--text-muted); opacity: 0.65; }
+
+/* Native checkboxes and radios are the single loudest "unfinished" tell in
+   a form -- the OS paints them in its own accent color, at its own size,
+   ignoring everything else on the page. These are drawn from scratch so
+   they belong to the same ink-and-paper set as everything else. */
+input[type="checkbox"], input[type="radio"] {
+  appearance: none; -webkit-appearance: none;
+  width: 15px; height: 15px; padding: 0; flex-shrink: 0;
+  border: 1px solid var(--border-strong); background: var(--bg-elevated);
+  border-radius: 4px; cursor: pointer; position: relative;
+}
+input[type="radio"] { border-radius: 50%; }
+input[type="checkbox"]:checked, input[type="radio"]:checked {
+  background: var(--accent); border-color: var(--accent);
+}
+input[type="checkbox"]:checked::after {
+  content: ""; position: absolute; left: 4px; top: 1px;
+  width: 4px; height: 8px; border: solid var(--btn-text);
+  border-width: 0 2px 2px 0; transform: rotate(42deg);
+}
+input[type="radio"]:checked::after {
+  content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--btn-text);
+}
+
+/* Same idea for the file picker: the "Choose File" button is drawn by the
+   OS, so style the part we can (the button) to match .btn.ghost. */
+input[type="file"] { background: transparent; border: 1px dashed var(--border-strong); padding: 10px 12px; font-size: 0.85rem; color: var(--text-muted); }
+input[type="file"]::file-selector-button {
+  font: inherit; font-size: 0.82rem; font-family: var(--font-ui); font-weight: 550;
+  margin-right: 10px; padding: 5px 11px; cursor: pointer;
+  background: transparent; color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
+}
+input[type="file"]::file-selector-button:hover { background: var(--bg-sunken); }
+
+/* A <select> keeps the OS dropdown, but its resting state can at least
+   match the other fields instead of showing a system-chrome bevel. */
+select {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 14px top 52%, right 9px top 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
 
 /* --- dashboard / stories --- */
-.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.page-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 26px; }
+.page-head h1 { margin-bottom: 0; }
 .page-head .btn { flex-shrink: 0; }
-.breadcrumb { margin: 0 0 14px; }
-.chapter-list { display: flex; flex-direction: column; gap: 10px; }
+.breadcrumb { margin: 0 0 18px; font-size: 0.88rem; }
+.breadcrumb a { color: var(--text-muted); }
+.breadcrumb a:hover { color: var(--accent-strong); }
+.chapter-list { display: flex; flex-direction: column; gap: 2px; }
+/* Rows, not floating cards: a stack of works in progress reads better as
+   a contents page -- hairline-separated entries in one column -- than as
+   a scattering of separately-bordered boxes. */
 .chapter-row {
-  display: flex; justify-content: space-between; gap: 16px; align-items: center;
-  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 16px 18px; color: var(--text);
+  display: flex; justify-content: space-between; gap: 24px; align-items: baseline;
+  background: transparent; border: none; border-bottom: 1px solid var(--border); border-radius: 0;
+  padding: 18px 14px; margin: 0 -14px; color: var(--text);
+  transition: background 0.14s ease;
 }
-.chapter-row:hover { border-color: var(--accent); text-decoration: none; }
-.chapter-row h3 { margin: 0 0 4px; }
-.chapter-row-meta { display: flex; gap: 10px; align-items: center; white-space: nowrap; color: var(--text-muted); font-size: 0.85rem; }
-.badge { padding: 3px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 600; }
-.badge.pending { background: rgba(var(--pending-rgb), 0.18); color: var(--pending); }
-.badge.new { background: rgba(var(--accent-rgb), 0.22); color: var(--accent-strong); }
-.badge.new-comments { background: rgba(var(--accepted-rgb), 0.18); color: var(--accepted); }
-.archive-link { margin-top: 18px; }
+.chapter-list > .chapter-row:first-child,
+.chapter-list > .chapter-row-outer:first-child .chapter-row { border-top: 1px solid var(--border); }
+.chapter-row:hover { background: var(--bg-elevated); text-decoration: none; }
+.chapter-row h3 { margin: 0 0 5px; font-size: 1.2rem; }
+.chapter-row-main { min-width: 0; }
+.chapter-row-main p { margin: 0; font-size: 0.92rem; line-height: 1.55; max-width: 62ch; }
+.chapter-row-meta {
+  display: flex; gap: 14px; align-items: baseline; white-space: nowrap;
+  color: var(--text-muted); font-size: 0.82rem; flex-shrink: 0;
+}
+.badge { padding: 2px 9px; border-radius: 999px; font-size: 0.74rem; font-weight: 600; letter-spacing: 0.01em; }
+.badge.pending { background: rgba(var(--pending-rgb), 0.15); color: var(--pending); }
+.badge.new { background: rgba(var(--accent-rgb), 0.14); color: var(--accent-strong); }
+.badge.new-comments { background: rgba(var(--accepted-rgb), 0.15); color: var(--accepted); }
+.archive-link { margin-top: 22px; font-size: 0.88rem; }
 .archived-row { opacity: 0.85; }
 .archived-row .chapter-row-meta { gap: 6px; }
 .chapter-row-outer { display: flex; gap: 8px; align-items: stretch; }
@@ -212,53 +351,69 @@ textarea { resize: vertical; font-family: Georgia, 'Times New Roman', serif; fon
 input[type="file"] { padding: 6px 4px; }
 
 /* --- chapter page --- */
-.chapter-header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 20px; }
-.byline { margin-top: -6px; }
-.summary { font-style: italic; }
-.version-bar { display: flex; align-items: center; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
-.version-bar label { flex-direction: row; align-items: center; gap: 8px; }
+.chapter-header { border-bottom: 1px solid var(--border); padding-bottom: 22px; margin-bottom: 26px; }
+.chapter-header h1 { font-size: 2.15rem; margin-bottom: 8px; }
+.byline { margin-top: 0; font-size: 0.88rem; color: var(--text-muted); }
+.summary { font-style: italic; font-family: var(--font-prose); font-size: 1.05rem; color: var(--text-muted); max-width: 64ch; }
+/* The chapter's controls (version, edit, archive, downloads, width) are
+   secondary to the chapter itself: one quiet strip of small controls,
+   grouped and separated by hairlines, rather than a row of competing
+   buttons sitting directly under the title. */
+.version-bar {
+  display: flex; align-items: center; gap: 8px 14px; margin-top: 18px; flex-wrap: wrap;
+  font-size: 0.84rem; color: var(--text-muted);
+}
+.version-bar label { flex-direction: row; align-items: center; gap: 8px; font-size: 0.84rem; }
+.version-bar select { font-size: 0.84rem; padding: 5px 26px 5px 9px; }
+.version-bar .btn { font-size: 0.82rem; padding: 5px 11px; }
 .changelog { font-style: italic; }
-.download-links a { margin-left: 4px; }
+.download-links { display: inline-flex; align-items: baseline; gap: 8px; }
+.download-links a { margin-left: 0; }
 
-.chapter-body-grid { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr); gap: 28px; align-items: start; }
+.chapter-body-grid { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr); gap: 40px; align-items: start; }
 
+/* The page the draft is printed on. Deliberately the lightest surface on
+   screen and wider-padded than any other card -- everything else in this
+   app exists to serve what is inside it. */
 .reading-pane {
-  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 28px 32px;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 48px 52px;
+  box-shadow: 0 1px 2px var(--shadow);
 }
 #chapter-text {
   white-space: pre-wrap;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 1.08rem;
-  line-height: 1.75;
+  font-family: var(--font-prose);
+  font-size: 1.13rem;
+  line-height: 1.78;
   /* Caps line length for comfortable reading regardless of how wide the
      grid column ends up (it's fluid, minmax(0, 2.1fr)) -- around 70-75
      characters per line is the usual typographic sweet spot; much wider
      and the eye has to work to track back to the start of the next line. */
   max-width: 72ch;
+  margin: 0 auto;
 }
 #chapter-text p { margin: 0 0 1.1em; }
 #chapter-text p:last-child { margin-bottom: 0; }
 #chapter-text h1, #chapter-text h2, #chapter-text h3,
 #chapter-text h4, #chapter-text h5, #chapter-text h6 {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  margin: 1.3em 0 0.6em; line-height: 1.3; color: var(--text);
+  font-family: var(--font-display);
+  margin: 1.5em 0 0.55em; line-height: 1.25; color: var(--text); font-weight: 600;
 }
 #chapter-text h1 { font-size: 1.5rem; }
 #chapter-text h2 { font-size: 1.3rem; }
 #chapter-text h3 { font-size: 1.15rem; }
 #chapter-text blockquote {
-  margin: 0 0 1.1em; padding: 4px 16px; border-left: 3px solid var(--accent);
+  margin: 0 0 1.1em; padding: 2px 20px; border-left: 2px solid var(--border-strong);
   color: var(--text-muted); font-style: italic;
 }
 #chapter-text ul, #chapter-text ol { margin: 0 0 1.1em; padding-left: 1.4em; }
 #chapter-text li { margin-bottom: 0.3em; }
 #chapter-text hr {
-  border: none; text-align: center; margin: 1.6em 0; color: var(--text-muted);
+  border: none; text-align: center; margin: 2.2em 0; color: var(--text-muted);
 }
-#chapter-text hr::before { content: "\2022 \2022 \2022"; letter-spacing: 0.4em; }
+#chapter-text hr::before { content: "* * *"; letter-spacing: 0.5em; font-size: 1.1em; opacity: 0.7; }
 #chapter-text code {
-  font-family: "SF Mono", Consolas, Monaco, monospace; font-size: 0.92em;
+  font-family: var(--font-mono); font-size: 0.92em;
   background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
 }
 #chapter-text a { color: var(--accent-strong); }
@@ -279,17 +434,18 @@ input[type="file"] { padding: 6px 4px; }
    minus its pre-wrap (glossary content is already proper HTML blocks, not
    plaintext-with-manual-linebreaks like a chapter draft). */
 .glossary-content {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 1.08rem;
-  line-height: 1.75;
+  font-family: var(--font-prose);
+  font-size: 1.13rem;
+  line-height: 1.78;
   max-width: 72ch;
+  margin: 0 auto;
 }
 .glossary-content p { margin: 0 0 1.1em; }
 .glossary-content p:last-child { margin-bottom: 0; }
 .glossary-content h1, .glossary-content h2, .glossary-content h3,
 .glossary-content h4, .glossary-content h5, .glossary-content h6 {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  margin: 1.3em 0 0.6em; line-height: 1.3; color: var(--text);
+  font-family: var(--font-display);
+  margin: 1.5em 0 0.55em; line-height: 1.25; color: var(--text); font-weight: 600;
 }
 .glossary-content h1 { font-size: 1.5rem; }
 .glossary-content h2 { font-size: 1.3rem; }
@@ -313,34 +469,56 @@ input[type="file"] { padding: 6px 4px; }
 .hl-accepted { background: rgba(var(--accepted-rgb), 0.2); box-shadow: inset 0 -2px 0 var(--accepted); }
 .hl-rejected { background: rgba(var(--rejected-rgb), 0.15); box-shadow: inset 0 -2px 0 var(--rejected); opacity: 0.75; }
 
-.comments-pane { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 14px; max-height: calc(100vh - 40px); overflow-y: auto; }
-.comments-pane h2 { margin: 0; font-size: 1.05rem; }
+.comments-pane { position: sticky; top: 20px; display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - 40px); overflow-y: auto; }
+.comments-pane h2 {
+  margin: 0 0 2px; font-size: 0.72rem; font-family: var(--font-ui); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);
+}
 
+/* Margin notes, not chat messages: a hairline card with one coloured edge
+   carrying the status, and type a size down from the prose it annotates so
+   it never competes with the draft itself. */
 .comment {
-  background: var(--bg-elevated); border: 1px solid var(--border); border-left: 4px solid var(--pending);
-  border-radius: var(--radius); padding: 12px 14px; transition: box-shadow 0.3s;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-left: 3px solid var(--pending);
+  border-radius: var(--radius); padding: 13px 15px; font-size: 0.9rem;
+  transition: box-shadow 0.3s, border-color 0.14s ease;
 }
 .comment.status-accepted { border-left-color: var(--accepted); }
-.comment.status-rejected { border-left-color: var(--rejected); opacity: 0.8; }
+.comment.status-rejected { border-left-color: var(--rejected); opacity: 0.72; }
 .comment.flash-highlight { box-shadow: 0 0 0 2px var(--accent-strong); }
-.comment-meta { display: flex; justify-content: flex-start; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
-.status-badge { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+.comment-meta { display: flex; justify-content: flex-start; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: 0.88rem; }
+.comment-meta strong { font-weight: 600; }
+.status-badge { font-size: 0.68rem; padding: 2px 8px; border-radius: 999px; font-weight: 600; text-transform: lowercase; }
 .status-badge.status-pending { background: rgba(var(--pending-rgb), 0.18); color: var(--pending); }
 .status-badge.status-accepted { background: rgba(var(--accepted-rgb), 0.18); color: var(--accepted); }
 .status-badge.status-rejected { background: rgba(var(--rejected-rgb), 0.18); color: var(--rejected); }
 .edited-tag { font-size: 0.78rem; }
-.quoted { margin: 0 0 8px; padding: 6px 10px; border-left: 3px solid var(--border); color: var(--text-muted); font-size: 0.88rem; font-style: italic; }
-.comment-body { margin: 0 0 8px; white-space: pre-wrap; }
+/* The passage being commented on, quoted in the draft's own face so it
+   reads as a lift from the page rather than as more UI copy. */
+.quoted {
+  margin: 0 0 9px; padding: 3px 0 3px 11px; border-left: 2px solid var(--border-strong);
+  color: var(--text-muted); font-family: var(--font-prose); font-size: 0.92rem; font-style: italic;
+}
+.comment-body { margin: 0 0 10px; white-space: pre-wrap; line-height: 1.55; }
 .comment.retracted { opacity: 0.7; }
-.comment-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.comment-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+/* Accept/reject are consequential but routine -- outline them instead of
+   painting two saturated blocks into every single note. */
+.comment-actions .btn.accept, .comment-actions .btn.reject {
+  background: transparent; border-width: 1px; border-style: solid; font-weight: 600;
+}
+.comment-actions .btn.accept { color: var(--accepted); border-color: rgba(var(--accepted-rgb), 0.5); }
+.comment-actions .btn.accept:hover { background: rgba(var(--accepted-rgb), 0.12); border-color: var(--accepted); }
+.comment-actions .btn.reject { color: var(--rejected); border-color: rgba(var(--rejected-rgb), 0.5); }
+.comment-actions .btn.reject:hover { background: rgba(var(--rejected-rgb), 0.12); border-color: var(--rejected); }
 .edit-comment { margin: 4px 0 8px; }
 .edit-comment summary { cursor: pointer; color: var(--text-muted); font-size: 0.85rem; }
 .edit-comment form { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .edit-comment textarea { min-height: 60px; font-size: 0.9rem; }
-.reply { margin: 6px 0 0; padding-left: 10px; border-left: 2px solid var(--border); font-size: 0.9rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.reply { margin: 8px 0 0; padding-left: 11px; border-left: 2px solid var(--border); font-size: 0.87rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .reply.retracted { opacity: 0.7; }
-.reply-form { display: flex; gap: 6px; margin-top: 8px; }
-.reply-form input { flex: 1; padding: 6px 8px; font-size: 0.85rem; }
+.reply-form { display: flex; gap: 6px; margin-top: 10px; }
+.reply-form input { flex: 1; min-width: 0; padding: 6px 9px; font-size: 0.85rem; }
 
 .new-comment-box {
   background: var(--bg-elevated); border: 1px solid var(--accent); border-radius: var(--radius);
@@ -360,6 +538,21 @@ input[type="file"] { padding: 6px 4px; }
   box-shadow: 0 4px 14px var(--shadow);
 }
 .selection-toast.hidden { display: none; }
+
+/* A story row is a title-and-blurb column next to a nowrap meta column.
+   That only holds up while there's room for both -- squeezed, the meta
+   column keeps its width and the blurb ends up one word per line, so
+   below this the row becomes two stacked blocks instead. */
+@media (max-width: 720px) {
+  .chapter-row { flex-direction: column; align-items: stretch; gap: 8px; padding: 16px 12px; }
+  .chapter-row-meta { flex-wrap: wrap; white-space: normal; gap: 6px 12px; }
+  .chapter-row-main p { max-width: none; }
+  .page-head { flex-wrap: wrap; }
+  .topbar { padding: 8px 16px; }
+  .topbar-account { padding-left: 8px; margin-left: 2px; }
+  .reading-pane { padding: 28px 20px; }
+  .container { padding: 24px 16px 64px; }
+}
 
 @media (max-width: 860px) {
   /* display:block instead of a single 1fr grid track -- even
@@ -382,7 +575,7 @@ input[type="file"] { padding: 6px 4px; }
 }
 .invite-card.closed { border-color: var(--rejected); }
 .invite-code {
-  font-family: "SF Mono", Consolas, Monaco, monospace; font-size: 1.4rem; font-weight: 700;
+  font-family: var(--font-mono); font-size: 1.4rem; font-weight: 700;
   letter-spacing: 0.08em; margin: 4px 0 10px; color: var(--accent-strong);
 }
 .invite-history { margin-top: 12px; max-width: 480px; }
@@ -411,7 +604,8 @@ input[type="file"] { padding: 6px 4px; }
 /* --- writer card (new story / new chapter / edit chapter) --- */
 .writer-card {
   max-width: 1300px; margin: 0 auto; background: var(--bg-elevated);
-  border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 36px;
+  border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 40px 44px;
+  box-shadow: 0 1px 2px var(--shadow);
   transition: max-width 0.2s ease;
 }
 /* "Fill screen" editor-width button (see writing-analyzer.js) -- widens
@@ -419,20 +613,22 @@ input[type="file"] { padding: 6px 4px; }
    1500px, rather than just the textarea, since a wider textarea alone
    inside an unchanged, narrower card would just overflow it. */
 .writer-card.wa-fullwidth { max-width: none; }
-.writer-card h1 { font-size: 1.5rem; margin-bottom: 6px; }
+.writer-card h1 { font-size: 1.7rem; margin-bottom: 8px; }
 .writer-card .writer-intro { margin-top: 0; }
 .writer-card .chapter-form { max-width: none; gap: 22px; }
 .writer-card .chapter-form > label:not(.main-field) { max-width: 640px; }
 .writer-section { display: flex; flex-direction: column; gap: 16px; padding-top: 20px; border-top: 1px solid var(--border); max-width: 640px; }
 .writer-section-label {
-  text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.72rem;
-  color: var(--text-muted); font-weight: 700; margin: 0;
+  text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.7rem;
+  color: var(--text-muted); font-weight: 600; margin: 0;
 }
 .writer-card .main-field textarea { min-height: 380px; }
 .writer-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 4px; }
-.writer-actions .btn { padding: 10px 22px; font-size: 0.95rem; }
+.writer-actions { padding-top: 6px; }
+.writer-actions .btn { padding: 9px 22px; font-size: 0.9rem; }
 input:focus, textarea:focus, select:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.25);
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
+  background: var(--bg-elevated);
 }
 /* Buttons/links had no visible focus state at all -- fine with a mouse,
    but keyboard-only navigation had no way to tell which one was about to
@@ -447,14 +643,14 @@ input:focus, textarea:focus, select:focus {
 /* --- writing analyzer (Hemingway-style highlights + markdown preview) --- */
 .wa-wrap { display: block; }
 .wa-card {
-  border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elevated);
-  padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;
+  border: 1px solid var(--border); border-radius: var(--radius); background: transparent;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;
 }
-.wa-card-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-.wa-card-title { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
-.wa-summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-muted); }
-.wa-chip { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.wa-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.wa-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.wa-card-title { font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.wa-summary { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 0.8rem; color: var(--text-muted); }
+.wa-chip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.wa-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
 /* A row of labeled sections (Spelling / Style / Markdown preview /
    Comments), sitting side by side when there's room. Each section's own
@@ -462,26 +658,48 @@ input:focus, textarea:focus, select:focus {
    stacking one per line -- Style has five checks and would otherwise set
    the height for the whole card even though Spelling/Comments only ever
    need one line, wasting a lot of vertical space next to them. */
-.wa-sections { display: flex; flex-wrap: wrap; gap: 4px 32px; }
-.wa-section { display: flex; flex-direction: column; gap: 0; }
+/* One flat band of toggles rather than a grid of OS checkboxes: each
+   check is a pill carrying its own highlight color, so the legend and the
+   thing it turns on are the same object. Section titles sit inline as
+   quiet labels in front of their group. */
+.wa-sections { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.wa-section { display: flex; flex-flow: row wrap; align-items: center; gap: 6px; }
 .wa-section-title {
-  font-weight: 700; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em;
-  color: var(--text-muted); margin: 0 0 1px;
+  font-weight: 600; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-muted); margin: 0 2px 0 0; opacity: 0.8;
 }
-.wa-section-rows { display: flex; flex-flow: row wrap; gap: 0 14px; }
+.wa-section-rows { display: flex; flex-flow: row wrap; gap: 6px; }
 .wa-check-row {
   /* flex-direction: row overrides the generic `label { flex-direction:
      column }` form-field rule above -- this label isn't a field caption
-     over an input, it's a checkbox-and-text row. */
-  display: flex; flex-direction: row; align-items: center; gap: 6px; padding: 2px 4px; margin: 0 -4px;
-  border-radius: 5px; cursor: pointer; user-select: none; font-size: 0.84rem; color: var(--text-muted);
-  transition: background 0.15s ease, color 0.15s ease;
+     over an input, it's a toggle pill. */
+  display: inline-flex; flex-direction: row; align-items: center; gap: 7px;
+  padding: 4px 11px 4px 9px; margin: 0;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: transparent; cursor: pointer; user-select: none;
+  font-size: 0.8rem; font-weight: 500; color: var(--text-muted); white-space: nowrap;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
 }
-.wa-check-row:hover { background: var(--bg); }
+.wa-check-row:hover { border-color: var(--border-strong); color: var(--text); }
+/* The checkbox is still a real checkbox (keyboard, labels, form semantics
+   all keep working) -- it's just drawn as the pill's color dot: hollow
+   when the check is off, filled with that check's own highlight color
+   when it's on. */
 .wa-check-row input[type="checkbox"] {
-  width: 14px; height: 14px; margin: 0; accent-color: var(--wa-color); cursor: pointer; flex-shrink: 0;
+  width: 9px; height: 9px; margin: 0; padding: 0; border-radius: 50%;
+  border: 1.5px solid var(--wa-color, var(--border-strong)); background: transparent;
+  cursor: pointer; flex-shrink: 0; opacity: 0.5;
+  transition: background 0.14s ease, opacity 0.14s ease;
 }
-.wa-check-row.active { color: var(--text); }
+.wa-check-row input[type="checkbox"]:checked {
+  background: var(--wa-color, var(--accent)); border-color: var(--wa-color, var(--accent)); opacity: 1;
+}
+.wa-check-row input[type="checkbox"]:checked::after { content: none; }
+.wa-check-row.active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--wa-color, var(--accent)) 45%, var(--border));
+  background: color-mix(in srgb, var(--wa-color, var(--accent)) 9%, transparent);
+}
 
 /* --- comments visibility toggle (shared by the reading and edit pages) --- */
 .chapter-body-grid.comments-hidden { grid-template-columns: 1fr; }
@@ -496,16 +714,28 @@ input:focus, textarea:focus, select:focus {
 .wa-split.wa-split-active { display: flex; gap: 18px; align-items: stretch; }
 .wa-split.wa-split-active > .wa-editor-wrap { flex: 1 1 50%; min-width: 0; }
 .wa-split.wa-split-active > .md-preview { flex: 1 1 50%; min-width: 0; display: block; }
-.wa-editor-wrap { position: relative; }
+.wa-editor-wrap {
+  position: relative;
+  background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius);
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.wa-editor-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16); }
 .wa-overlay {
   position: absolute; top: 0; right: 0; bottom: 0; left: 0;
-  margin: 0; padding: 9px 10px; border: none;
-  font-family: Georgia, 'Times New Roman', serif; font-size: 1rem; line-height: 1.5;
+  margin: 0; padding: var(--editor-padding); border: none;
+  /* Must stay metrically identical to .wa-textarea below -- same family,
+     same size, same line height, same padding -- or every highlight
+     drifts a little further from the word it belongs to down the page.
+     Both sides read the same tokens so they can't be changed apart. */
+  font-family: var(--font-prose); font-size: 1.05rem; line-height: var(--editor-line-height);
   white-space: pre-wrap; word-wrap: break-word; overflow: hidden; pointer-events: none;
   color: var(--text); background: transparent;
 }
 .wa-textarea {
-  position: relative; z-index: 1; display: block; width: 100%; min-width: 260px; min-height: 260px;
+  position: relative; z-index: 1; display: block; width: 100%; min-width: 260px; min-height: 420px;
+  /* The other half of the overlay's metric contract -- see .wa-overlay. */
+  padding: var(--editor-padding); font-family: var(--font-prose);
+  font-size: 1.05rem; line-height: var(--editor-line-height);
   /* A manually-resized width is remembered in pixels (see writing-
      analyzer.js) and re-applied inline on every future visit -- max-width
      is the backstop for when that remembered width came from a wider
@@ -516,19 +746,19 @@ input:focus, textarea:focus, select:focus {
   border: none !important; border-radius: 0 !important; resize: both;
   background: transparent !important; color: transparent !important; caret-color: var(--text);
 }
-.wa-textarea:focus { box-shadow: none; }
+.wa-textarea:focus { box-shadow: none; border-color: transparent; }
 .wa-textarea::selection { background: rgba(var(--accent-rgb), 0.4); color: transparent; }
 
 .md-preview {
   display: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elevated);
-  padding: 20px 24px; overflow: auto; font-family: Georgia, 'Times New Roman', serif; font-size: 1.02rem; line-height: 1.65;
+  padding: 28px 30px; overflow: auto; font-family: var(--font-prose); font-size: 1.05rem; line-height: var(--editor-line-height);
 }
 .md-preview p { margin: 0 0 1.05em; }
 .md-preview p:last-child { margin-bottom: 0; }
 .md-preview h1, .md-preview h2, .md-preview h3,
 .md-preview h4, .md-preview h5, .md-preview h6 {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  margin: 1.2em 0 0.5em; line-height: 1.3; color: var(--text);
+  font-family: var(--font-display);
+  margin: 1.4em 0 0.5em; line-height: 1.25; color: var(--text); font-weight: 600;
 }
 .md-preview blockquote {
   margin: 0 0 1.05em; padding: 4px 16px; border-left: 3px solid var(--accent);
@@ -538,12 +768,15 @@ input:focus, textarea:focus, select:focus {
 .md-preview hr { border: none; text-align: center; margin: 1.5em 0; color: var(--text-muted); }
 .md-preview hr::before { content: "\2022 \2022 \2022"; letter-spacing: 0.4em; }
 .md-preview code {
-  font-family: "SF Mono", Consolas, Monaco, monospace; font-size: 0.9em;
+  font-family: var(--font-mono); font-size: 0.9em;
   background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
 }
 .md-preview a { color: var(--accent-strong); }
 
-.wa-card-reading { margin-bottom: 20px; }
+.wa-card-reading {
+  margin-bottom: 18px; padding: 0 0 14px; border: none;
+  border-bottom: 1px solid var(--border); border-radius: 0;
+}
 /* Reset the browser's own <mark> defaults (background: yellow; color: black)
    -- without this, a check that only sets text-decoration (spelling's wavy
    underline) still shows the UA's yellow box behind it, which doesn't match

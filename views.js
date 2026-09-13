@@ -111,6 +111,7 @@ function storiesPage({ user, stories, since }) {
   return layout({
     title: 'Stories',
     user,
+    current: 'stories',
     body: `
       <div class="page-head">
         <h1>The Swarm stories</h1>
@@ -138,6 +139,7 @@ function glossaryIndexPage({ user, pages, q }) {
   return layout({
     title: 'Glossary',
     user,
+    current: 'glossary',
     body: `
       <div class="page-head">
         <h1>Glossary</h1>
@@ -156,6 +158,7 @@ function glossaryPage({ user, page }) {
   return layout({
     title: page.title,
     user,
+    current: 'glossary',
     body: `
       <p class="breadcrumb"><a href="/glossary">&larr; Glossary</a></p>
       <h1>${escapeHtml(page.title)}</h1>
@@ -214,6 +217,7 @@ function newStoryPage({ user, error, values = {} }) {
   return layout({
     title: 'New story',
     user,
+    current: 'new-story',
     wide: true,
     body: `
       <div class="writer-card">
@@ -688,6 +692,7 @@ function accountPage({ user, error, notice }) {
   return layout({
     title: 'Account',
     user,
+    current: 'account',
     flash: notice ? { type: 'info', message: notice } : null,
     body: `
       <h1>Account</h1>
@@ -835,6 +840,7 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
   return layout({
     title: 'Admin',
     user,
+    current: 'admin',
     flash: notice ? { type: 'info', message: notice } : null,
     body: `
       <h1>Admin</h1>
