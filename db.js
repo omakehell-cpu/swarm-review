@@ -227,6 +227,14 @@ ensureColumn('invite_codes', 'username', 'TEXT');
 // expire on their own up to 30 days later.
 ensureColumn('users', 'session_version', 'INTEGER NOT NULL DEFAULT 0');
 
+// The full rendered content of each wiki page (see lib/wiki.js's
+// wikitextToHtml), for the in-app "Glossary" section -- kept separate from
+// the short `summary` column above, which is all the inline auto-link
+// tooltips need and is still built/used exactly as before. Nullable: an
+// older sync that ran before this column existed simply has no glossary
+// body yet for a given page until the next sync fills it in.
+ensureColumn('wiki_pages', 'content_html', 'TEXT');
+
 // One-time migration: older versions of this app gated registration with a
 // single static code stored in data/invite-code.txt (valid forever, for
 // anyone). If that file exists and the new invite_codes table is still

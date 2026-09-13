@@ -121,6 +121,62 @@ function storiesPage({ user, stories, since }) {
   });
 }
 
+// ---------- glossary (a local, offline mirror of the shared-universe
+// wiki -- see lib/wiki.js for how it's kept in sync) ----------
+function glossaryIndexPage({ user, pages, q }) {
+  const rows = pages.length ? pages.map((p) => `
+    <a class="chapter-row" href="/glossary/${encodeURIComponent(p.title)}">
+      <div class="chapter-row-main">
+        <h3>${escapeHtml(p.title)}</h3>
+        ${p.summary ? `<p class="muted">${escapeHtml(p.summary)}</p>` : ''}
+      </div>
+    </a>
+  `).join('') : `<p class="muted">${q
+    ? 'No glossary entries match your search.'
+    : 'The glossary is empty -- an admin needs to sync the wiki from the admin page first.'}</p>`;
+
+  return layout({
+    title: 'Glossary',
+    user,
+    body: `
+      <div class="page-head">
+        <h1>Glossary</h1>
+      </div>
+      <p class="muted">A local, offline copy of <a href="${escapeHtml(wiki.WIKI_BASE_URL)}" target="_blank" rel="noopener noreferrer">the shared-universe wiki</a> -- ${pages.length} page${pages.length === 1 ? '' : 's'}${q ? ' matching your search' : ''}. Pages link to each other the same way they do on the wiki itself.</p>
+      <form method="get" action="/glossary" class="inline-form glossary-search">
+        <input type="search" name="q" placeholder="Search the glossary..." value="${escapeHtml(q)}">
+        <button class="btn ghost small" type="submit">Search</button>
+        ${q ? '<a class="btn ghost small" href="/glossary">Clear</a>' : ''}
+      </form>
+      <div class="chapter-list">${rows}</div>`,
+  });
+}
+
+function glossaryPage({ user, page }) {
+  return layout({
+    title: page.title,
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/glossary">&larr; Glossary</a></p>
+      <h1>${escapeHtml(page.title)}</h1>
+      <p class="muted">Mirrored from <a href="${escapeHtml(wiki.pageUrl(page.title))}" target="_blank" rel="noopener noreferrer">the wiki</a>${page.fetched_at ? ` -- last synced ${timeHtml(page.fetched_at)}` : ''}.</p>
+      <div class="reading-pane">
+        <div class="glossary-content">${page.content_html || '<p class="muted">(No content.)</p>'}</div>
+      </div>`,
+  });
+}
+
+function glossaryNotFoundPage({ user, title }) {
+  return layout({
+    title: 'Not found',
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/glossary">&larr; Glossary</a></p>
+      <h1>Not in the glossary</h1>
+      <p class="muted">"${escapeHtml(title)}" hasn't been synced from the wiki (or doesn't exist there). Try <a href="${escapeHtml(wiki.pageUrl(title))}" target="_blank" rel="noopener noreferrer">the wiki itself</a>, or ask an admin to sync from the admin page.</p>`,
+  });
+}
+
 // ---------- archived stories ----------
 
 function archivedStoriesPage({ user, stories }) {
@@ -817,7 +873,7 @@ function wikiSyncSection(state) {
   return `
     <section class="admin-section">
       <h2>Wiki linking</h2>
-      <p class="muted">Character/place/ship names recognized from <a href="${escapeHtml(wiki.WIKI_BASE_URL)}" target="_blank" rel="noopener noreferrer">the shared-universe wiki</a> get auto-linked in chapter text, with a hover preview of the wiki page's summary -- readers can turn this off from the "Wiki links" toggle on the chapter page. This index is a local cache (see below), refreshed automatically once a day.</p>
+      <p class="muted">Character/place/ship names recognized from <a href="${escapeHtml(wiki.WIKI_BASE_URL)}" target="_blank" rel="noopener noreferrer">the shared-universe wiki</a> get auto-linked in chapter text, with a hover preview of the wiki page's summary -- readers can turn this off from the "Wiki links" toggle on the chapter page. The same local copy also powers the <a href="/glossary">Glossary</a> section, a full offline mirror of the wiki's pages. Nothing here refreshes automatically -- click "Sync wiki now" below whenever the wiki has changed.</p>
       ${statusLine}
       <form method="post" action="/admin/wiki/sync" class="inline-form">
         <button class="btn ghost small" type="submit">Sync wiki now</button>
@@ -862,4 +918,7 @@ module.exports = {
   storyPage,
   archivedChaptersPage,
   chapterPage,
+  glossaryIndexPage,
+  glossaryPage,
+  glossaryNotFoundPage,
 };

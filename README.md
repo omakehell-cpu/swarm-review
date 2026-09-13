@@ -110,13 +110,23 @@ file up and you have the whole site.
   subset this app supports well, but isn't a general-purpose Word
   converter -- see the limitations below.
 - **Wiki linking** — character/place/ship names recognized from the
-  shared-universe wiki (`WIKI_BASE_URL`, default `https://tampaad.net`)
+  shared-universe wiki (`WIKI_BASE_URL`, default `https://swarmwiki.tampaad.net`)
   get auto-linked in chapter text, with a hover preview of that page's
-  summary. Backed by a local cache (`lib/wiki.js`) refreshed once a day
-  automatically, or on demand from `/admin` -- rendering a chapter never
-  makes a live request to the wiki itself. Readers can turn it off with
-  the "Wiki links" toggle on the chapter page if it's more noise than
-  help for a given story.
+  summary. Readers can turn it off with the "Wiki links" toggle on the
+  chapter page if it's more noise than help for a given story.
+- **Glossary** — a full local, offline mirror of the shared-universe wiki
+  (`/glossary`), built from the same sync as wiki linking above. Every
+  page's full content is rendered from its wikitext (`lib/wiki.js`'s
+  `wikitextToHtml`) and pages link to each other the same way they do on
+  the wiki itself -- a link to a page this app has a local copy of stays
+  inside the app; a link to anything else (a page in another namespace, a
+  red link, or simply a page that hasn't been synced) falls back to the
+  original wiki, opened in a new tab. Both this and the auto-linking above
+  are backed by the same local cache (`lib/wiki.js`, `wiki_pages` table),
+  so neither ever depends on the wiki being reachable at read time --
+  syncing is entirely manual (the "Sync wiki now" button on `/admin`),
+  deliberately with no automatic timer, since a full sync now fetches
+  every page's complete content rather than just a short summary.
 
 ## Admin & account security
 

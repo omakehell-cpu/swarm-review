@@ -740,14 +740,27 @@ function replaceWikiPages(pages) {
   try {
     db.exec('DELETE FROM wiki_pages');
     const insert = db.prepare(
-      'INSERT INTO wiki_pages (title, title_lower, summary) VALUES (?, ?, ?)'
+      'INSERT INTO wiki_pages (title, title_lower, summary, content_html) VALUES (?, ?, ?, ?)'
     );
-    for (const p of pages) insert.run(p.title, p.title.toLowerCase(), p.summary || '');
+    for (const p of pages) insert.run(p.title, p.title.toLowerCase(), p.summary || '', p.contentHtml || null);
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
     throw err;
   }
+}
+
+// ---------- glossary (the in-app read-only mirror of the wiki) ----------
+// Deliberately excludes content_html -- this listing renders every page's
+// title (and, for search, its summary), and some wikis run into the
+// thousands of pages, so pulling every page's full HTML body just to list
+// titles would be wasted work for both SQLite and the response.
+function listWikiPagesForGlossary() {
+  return db.prepare('SELECT title, title_lower, summary FROM wiki_pages ORDER BY title COLLATE NOCASE').all();
+}
+
+function getWikiPageByTitleLower(titleLower) {
+  return db.prepare('SELECT title, title_lower, summary, content_html, fetched_at FROM wiki_pages WHERE title_lower = ?').get(titleLower) || null;
 }
 
 function getWikiSyncState() {
@@ -834,4 +847,6 @@ module.exports = {
   replaceWikiPages,
   getWikiSyncState,
   setWikiSyncState,
+  listWikiPagesForGlossary,
+  getWikiPageByTitleLower,
 };
