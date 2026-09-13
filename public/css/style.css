@@ -1,3 +1,24 @@
+/* --- typefaces ---------------------------------------------------------
+   Self-hosted, subset to Latin, served straight from public/fonts/ (see
+   tryServeStatic in server.js) -- no Google Fonts, no CDN, nothing this
+   app has to reach out to a third party for. Variable fonts, so one file
+   per style covers every weight the interface uses. */
+@font-face {
+  font-family: 'Prose';
+  src: url('/fonts/literata-roman.woff2') format('woff2-variations');
+  font-weight: 300 800; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Prose';
+  src: url('/fonts/literata-italic.woff2') format('woff2-variations');
+  font-weight: 300 800; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'UI Sans';
+  src: url('/fonts/inter.woff2') format('woff2-variations');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+}
+
 /* Swarm Review -- an editorial look for a drafting room: warm paper, ink,
    real book typography for anything that is prose, and a quieter sans for
    the controls around it. No framework, no webfonts, no build step.
@@ -53,9 +74,9 @@
      height or the highlight overlay drifts out of register with the text
      the reader is actually typing, so they both go through these tokens
      rather than repeating a font stack. */
-  --font-prose: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Charter, Georgia, 'Times New Roman', serif;
+  --font-prose: 'Prose', 'Iowan Old Style', 'Palatino Linotype', Charter, Georgia, serif;
   --font-display: var(--font-prose);
-  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-ui: 'UI Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --font-mono: "SF Mono", SFMono-Regular, Consolas, Monaco, monospace;
   --editor-line-height: 1.7;
   --editor-padding: 14px 16px;
@@ -458,6 +479,14 @@ input[type="file"] { padding: 6px 4px; }
    arrow marks that distinction at a glance, vs. an ordinary in-app
    glossary link that stays inside this app. */
 .glossary-content a.wiki-external::after { content: " \2197"; font-size: 0.85em; }
+
+.glossary-meta { margin-top: -10px; font-size: 0.86rem; }
+/* A glossary entry the index knows about but hasn't got the text of yet
+   (see glossaryPage in views.js) -- deliberately looks like a note, not
+   like a page that failed to load. */
+.glossary-empty { max-width: 60ch; margin: 0 auto; }
+.glossary-empty p { margin: 0 0 10px; }
+.glossary-empty .quoted { margin-top: 16px; font-size: 1rem; }
 
 .glossary-search { display: flex; gap: 8px; align-items: center; margin-bottom: 18px; flex-wrap: wrap; }
 .glossary-search input[type="search"] {

@@ -79,6 +79,8 @@ const MIME = {
   '.txt': 'text/plain; charset=utf-8',
   '.aff': 'text/plain; charset=utf-8',
   '.dic': 'text/plain; charset=utf-8',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
 };
 
 function tryServeStatic(req, res, pathname) {
@@ -96,6 +98,11 @@ function tryServeStatic(req, res, pathname) {
   // Cache-Control: no-store, so neither the browser nor Cloudflare ever
   // hold on to a stale copy of this dynamic app.
   if (pathname.startsWith('/dictionary/')) headers['Cache-Control'] = 'public, max-age=86400';
+  // The typefaces (public/fonts/) are immutable: a changed font ships
+  // under a new filename, so this can be cached hard and forever. Without
+  // this they'd be re-downloaded on every single page load, since the
+  // default above is no-store -- several hundred KB each time.
+  if (pathname.startsWith('/fonts/')) headers['Cache-Control'] = 'public, max-age=31536000, immutable';
   res.writeHead(200, headers);
   fs.createReadStream(filePath).pipe(res);
   return true;
@@ -871,7 +878,8 @@ async function router(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = decodeURIComponent(url.pathname);
 
-  if (pathname.startsWith('/css/') || pathname.startsWith('/js/') || pathname.startsWith('/dictionary/')) {
+  if (pathname.startsWith('/css/') || pathname.startsWith('/js/')
+      || pathname.startsWith('/dictionary/') || pathname.startsWith('/fonts/')) {
     if (tryServeStatic(req, res, pathname)) return;
   }
 
