@@ -266,6 +266,15 @@ ensureColumn('invite_codes', 'username', 'TEXT');
 // expire on their own up to 30 days later.
 ensureColumn('users', 'session_version', 'INTEGER NOT NULL DEFAULT 0');
 
+// Tags an author proposed while tagging a story, rather than picking from
+// the curated list (see models.js proposeTag). They work like any other
+// tag immediately -- the author isn't left waiting on an admin to be able
+// to describe their own story -- but they're marked as proposed wherever
+// they appear, and sit in a queue on /admin to be approved, renamed,
+// merged into an existing tag, or thrown out.
+ensureColumn('tags', 'status', "TEXT NOT NULL DEFAULT 'approved'");
+ensureColumn('tags', 'proposed_by', 'INTEGER');
+
 // The full rendered content of each wiki page (see lib/wiki.js's
 // wikitextToHtml), for the in-app "Glossary" section -- kept separate from
 // the short `summary` column above, which is all the inline auto-link

@@ -181,8 +181,12 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, activeTag
 // ---------- story tags ----------
 // One tag, as it appears anywhere it's being displayed rather than picked.
 function tagChip(tag, { muted } = {}) {
-  return `<a class="tag-chip${muted ? ' muted-chip' : ''}" href="/tags/${encodeURIComponent(tag.slug)}"${
-    tag.description ? ` title="${escapeHtml(tag.description)}"` : ''}>${escapeHtml(tag.name)}</a>`;
+  const proposed = tag.status === 'proposed';
+  const title = proposed
+    ? `Proposed${tag.proposed_by_name ? ` by ${tag.proposed_by_name}` : ''} -- waiting for an admin to confirm it`
+    : (tag.description || '');
+  return `<a class="tag-chip${muted ? ' muted-chip' : ''}${proposed ? ' proposed' : ''}" href="/tags/${encodeURIComponent(tag.slug)}"${
+    title ? ` title="${escapeHtml(title)}"` : ''}>${escapeHtml(tag.name)}</a>`;
 }
 
 function tagChips(tags) {
@@ -194,20 +198,29 @@ function tagChips(tags) {
 // in its groups, with the story's own tags ticked. Plain checkboxes, so it
 // works without JavaScript and reads correctly to a screen reader; the
 // styling (see .tag-pick in style.css) is what makes them read as chips.
-function tagPicker(groups, selectedTagIds) {
+function tagPicker(groups, selectedTagIds, { allowPropose = false } = {}) {
   const selected = new Set((selectedTagIds || []).map(Number));
+  // A plain text field rather than its own form: this picker lives inside
+  // the story form, and a <form> can't nest inside another one. The names
+  // are turned into proposed tags when the story is saved.
+  const propose = allowPropose ? `
+    <label class="tag-propose">Can't find the right one? Propose new tags
+      <input type="text" name="proposeTags" placeholder="Separate several with commas">
+      <span class="hint">They go on this story straight away, marked as proposed until an admin confirms them.</span>
+    </label>` : '';
   if (!groups.length) {
-    return `<p class="hint">No tags have been set up yet. An admin can add them from the admin page.</p>`;
+    return `<p class="hint">No tags have been set up yet. An admin can add them from the admin page.</p>${propose}`;
   }
   return `<div class="tag-picker">${groups.map((g) => `
     <fieldset class="tag-group">
       <legend>${escapeHtml(g.group)}</legend>
       <div class="tag-group-options">${g.tags.map((t) => `
-        <label class="tag-pick${selected.has(t.id) ? ' checked' : ''}"${t.description ? ` title="${escapeHtml(t.description)}"` : ''}>
+        <label class="tag-pick${selected.has(t.id) ? ' checked' : ''}${t.status === 'proposed' ? ' proposed' : ''}"${
+          t.description ? ` title="${escapeHtml(t.description)}"` : ''}>
           <input type="checkbox" name="tagIds" value="${t.id}"${selected.has(t.id) ? ' checked' : ''}>
           <span>${escapeHtml(t.name)}</span>
         </label>`).join('')}</div>
-    </fieldset>`).join('')}</div>`;
+    </fieldset>`).join('')}</div>${propose}`;
 }
 
 function tagsIndexPage({ user, groups }) {
@@ -283,7 +296,7 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, values = {}
           </label>
           <div class="writer-section">
             <p class="writer-section-label">Tags</p>
-            ${tagPicker(groups, selectedTagIds)}
+            ${tagPicker(groups, selectedTagIds, { allowPropose: true })}
           </div>
           <div class="writer-actions">
             <a class="btn ghost" href="/stories/${story.id}">Cancel</a>
@@ -425,7 +438,7 @@ function newStoryPage({ user, error, values = {}, groups = [], selectedTagIds = 
           <div class="writer-section">
             <p class="writer-section-label">Tags</p>
             <p class="hint">What readers are walking into. You can change these later from the story page.</p>
-            ${tagPicker(groups, selectedTagIds)}
+            ${tagPicker(groups, selectedTagIds, { allowPropose: true })}
           </div>
           <div class="writer-actions">
             <a class="btn ghost" href="/">Cancel</a>
@@ -1029,7 +1042,7 @@ function adminUserRow(u, { currentUserId }) {
     </div>`;
 }
 
-function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [] }) {
+function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [], proposedTags = [] }) {
   const userRows = users.map((u) => adminUserRow(u, { currentUserId: user.id })).join('');
   return layout({
     title: 'Admin',
@@ -1057,7 +1070,7 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
 
       ${wikiSyncSection(wikiSyncState)}
 
-      ${tagAdminSection(tagGroups)}
+      ${tagAdminSection(tagGroups, proposedTags)}
 
       <section class="admin-section">
         <h2>Users</h2>
@@ -1069,7 +1082,49 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
 // The tag vocabulary, managed in one place: authors only ever pick from
 // this list, so this is where "Sci-Fi" and "Science fiction" get stopped
 // from both existing.
-function tagAdminSection(tagGroups) {
+// Tags authors proposed while writing. Each row offers the three things
+// an admin actually wants to do with a proposal: take it as it stands
+// (possibly renaming and filing it under a real group first), fold it
+// into a tag that already says the same thing, or throw it out.
+function proposedTagsSection(proposedTags, tagGroups) {
+  if (!proposedTags.length) return '';
+  const approved = tagGroups.flatMap((g) => g.tags.filter((t) => t.status !== 'proposed').map((t) => ({ ...t, group: g.group })));
+  const groupNames = Array.from(new Set(tagGroups.map((g) => g.group))).filter((n) => n !== 'Proposed');
+
+  return `
+    <div class="proposed-queue">
+      <h3 class="tag-admin-group">Proposed by authors (${proposedTags.length})</h3>
+      <p class="muted">These are already on the stories they were proposed for and marked as proposed wherever they show. Approving one files it in the vocabulary properly; merging moves its stories onto a tag that already exists and drops the duplicate.</p>
+      ${proposedTags.map((t) => `
+        <div class="proposed-row">
+          <div class="proposed-row-head">
+            <strong>${escapeHtml(t.name)}</strong>
+            <span class="muted">${t.proposed_by_name ? `proposed by ${escapeHtml(t.proposed_by_name)}` : 'proposed'} &middot; ${t.story_count} stor${t.story_count === 1 ? 'y' : 'ies'}</span>
+          </div>
+          <div class="proposed-row-actions">
+            <form method="post" action="/admin/tags/${t.id}/approve" class="proposed-form">
+              <input type="text" name="name" value="${escapeHtml(t.name)}" aria-label="Name to approve it under">
+              <select name="group" aria-label="Group">
+                ${groupNames.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
+              </select>
+              <button class="btn small" type="submit">Approve</button>
+            </form>
+            <form method="post" action="/admin/tags/${t.id}/merge" class="proposed-form">
+              <select name="intoTagId" aria-label="Merge into">
+                ${approved.map((a) => `<option value="${a.id}">${escapeHtml(a.group)}: ${escapeHtml(a.name)}</option>`).join('')}
+              </select>
+              <button class="btn ghost small" type="submit">Merge into</button>
+            </form>
+            <form method="post" action="/admin/tags/${t.id}/delete" class="proposed-form">
+              <button class="btn danger small" type="submit"
+                data-confirm="Throw out the proposed tag &quot;${escapeHtml(t.name)}&quot;?${t.story_count ? ` It will be taken off ${t.story_count} stor${t.story_count === 1 ? 'y' : 'ies'}.` : ''}">Reject</button>
+            </form>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function tagAdminSection(tagGroups, proposedTags = []) {
   const groupNames = Array.from(new Set(tagGroups.map((g) => g.group)));
   const rows = tagGroups.map((g) => `
     <h3 class="tag-admin-group">${escapeHtml(g.group)}</h3>
@@ -1088,6 +1143,7 @@ function tagAdminSection(tagGroups) {
     <section class="admin-section" id="tags">
       <h2>Tags</h2>
       <p class="muted">The vocabulary authors pick from when they tag a story (see the <a href="/tags">tag index</a>). Renaming one updates it everywhere at once; its link keeps working, since a tag is identified by its own row rather than by its name.</p>
+      ${proposedTagsSection(proposedTags, tagGroups)}
       <datalist id="tag-groups">${groupNames.map((n) => `<option value="${escapeHtml(n)}"></option>`).join('')}</datalist>
       <form method="post" action="/admin/tags" class="tag-admin-new">
         <input type="text" name="name" placeholder="New tag" required aria-label="New tag name">
