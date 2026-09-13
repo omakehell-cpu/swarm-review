@@ -229,7 +229,11 @@ async function handleLogout(req, res) {
 
 async function handleAccountPage(req, res, user, query) {
   const notice = query.get('notice') || null;
-  sendHtml(res, 200, views.accountPage({ user, notice }));
+  sendHtml(res, 200, views.accountPage({
+    user, notice,
+    groups: models.listTagsGrouped(),
+    hiddenTagIds: models.listUserHiddenTagIds(user.id),
+  }));
 }
 
 async function handleAccountPasswordSubmit(req, res, user) {
@@ -271,6 +275,7 @@ async function handleAdminPage(req, res, user, query) {
   const notice = query.get('notice') || null;
   sendHtml(res, 200, views.adminPage({
     user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice,
+    tagGroups: models.listTagsGrouped(),
   }));
 }
 
@@ -420,6 +425,86 @@ async function handleAdminBackup(req, res, user) {
   }
 }
 
+// ---------- story tags (vocabulary curated on /admin, see models.js) ----------
+// Tag ids arrive from a form as either one value or many, depending on how
+// many boxes were ticked -- parseBody hands back a string in the first
+// case and an array in the second.
+function tagIdsFromBody(body) {
+  const raw = body.tagIds === undefined ? [] : [].concat(body.tagIds);
+  return raw.map(Number).filter((n) => Number.isInteger(n) && n > 0);
+}
+
+async function handleTagsIndex(req, res, user) {
+  sendHtml(res, 200, views.tagsIndexPage({ user, groups: models.listTagsGrouped() }));
+}
+
+async function handleTagPage(req, res, user, slug) {
+  const tag = models.getTagBySlug(slug);
+  if (!tag) return sendHtml(res, 404, views.tagNotFoundPage({ user, slug }));
+  const stories = models.listStories({ tagIds: [tag.id] });
+  const tagsByStory = models.tagsForStories(stories.map((s) => s.id));
+  sendHtml(res, 200, views.tagPage({ user, tag, stories, tagsByStory }));
+}
+
+async function handleEditStoryPage(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendHtml(res, 404, 'Story not found');
+  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can edit its details.');
+  sendHtml(res, 200, views.editStoryPage({
+    user,
+    story,
+    groups: models.listTagsGrouped(),
+    selectedTagIds: models.getStoryTags(storyId).map((t) => t.id),
+  }));
+}
+
+async function handleEditStorySubmit(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendHtml(res, 404, 'Story not found');
+  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can edit its details.');
+
+  const body = await parseBody(req);
+  const title = (body.title || '').trim();
+  const description = (body.description || '').trim();
+  const tagIds = tagIdsFromBody(body);
+  if (!title) {
+    return sendHtml(res, 400, views.editStoryPage({
+      user, story, groups: models.listTagsGrouped(), selectedTagIds: tagIds,
+      error: 'A story needs a title.',
+      values: { title, description },
+    }));
+  }
+  models.updateStoryDetails(storyId, { title, description });
+  models.setStoryTags(storyId, tagIds);
+  redirect(res, `/stories/${storyId}`);
+}
+
+// ---------- admin: the tag vocabulary ----------
+async function handleAdminCreateTag(req, res, user) {
+  const body = await parseBody(req);
+  models.createTag({ name: body.name, group: body.group, description: body.description });
+  redirect(res, '/admin?notice=Tag added.#tags');
+}
+
+async function handleAdminUpdateTag(req, res, user, tagId) {
+  const body = await parseBody(req);
+  models.updateTag(tagId, { name: body.name, group: body.group, description: body.description });
+  redirect(res, '/admin?notice=Tag updated.#tags');
+}
+
+async function handleAdminDeleteTag(req, res, user, tagId) {
+  const tag = models.getTagById(tagId);
+  models.deleteTag(tagId);
+  redirect(res, `/admin?notice=${encodeURIComponent(`Tag ${tag ? `"${tag.name}" ` : ''}deleted.`)}#tags`);
+}
+
+// ---------- account: tags this reader would rather not see ----------
+async function handleHiddenTagsSubmit(req, res, user) {
+  const body = await parseBody(req);
+  models.setUserHiddenTags(user.id, tagIdsFromBody(body));
+  redirect(res, '/account?notice=Hidden tags saved.');
+}
+
 // ---------- glossary (a local, offline mirror of the shared-universe
 // wiki -- see lib/wiki.js) ----------
 async function handleGlossaryIndex(req, res, user, query) {
@@ -438,10 +523,33 @@ async function handleGlossaryPage(req, res, user, title) {
   sendHtml(res, 200, views.glossaryPage({ user, page }));
 }
 
-async function handleStories(req, res, user) {
+async function handleStories(req, res, user, query) {
   const since = models.bumpLastSeen(user.id);
-  const stories = models.listStories({ since });
-  sendHtml(res, 200, views.storiesPage({ user, stories, since }));
+  // Two spellings on purpose: the filter form posts one `tag` per ticked
+  // box, while a shared/bookmarked link is nicer as ?tags=a,b.
+  const activeSlugs = [
+    ...query.getAll('tag'),
+    ...(query.get('tags') || '').split(','),
+  ].map((s2) => s2.trim()).filter(Boolean);
+  const activeTags = activeSlugs.map((slug) => models.getTagBySlug(slug)).filter(Boolean);
+  const stories = models.listStories({ since, tagIds: activeTags.map((t) => t.id) });
+  const tagsByStory = models.tagsForStories(stories.map((s2) => s2.id));
+  // A reader's hidden tags fold a story away rather than deleting it from
+  // the list: they stay reachable behind a "show anyway" summary, since
+  // hiding something outright makes an app feel broken when you know the
+  // story exists but can't find it.
+  const hiddenTagIds = new Set(models.listUserHiddenTagIds(user.id));
+  const visible = [];
+  const folded = [];
+  for (const story of stories) {
+    const tags = tagsByStory.get(story.id) || [];
+    const hit = tags.filter((t) => hiddenTagIds.has(t.id));
+    (hit.length ? folded : visible).push({ ...story, hiddenBy: hit });
+  }
+  sendHtml(res, 200, views.storiesPage({
+    user, stories: visible, folded, since, tagsByStory,
+    activeTags, allGroups: models.listTagsGrouped(),
+  }));
 }
 
 async function handleArchivedStories(req, res, user) {
@@ -475,7 +583,7 @@ async function handleDeleteStory(req, res, user, storyId) {
 }
 
 async function handleNewStoryPage(req, res, user) {
-  sendHtml(res, 200, views.newStoryPage({ user, values: {} }));
+  sendHtml(res, 200, views.newStoryPage({ user, values: {}, groups: models.listTagsGrouped(), selectedTagIds: [] }));
 }
 
 async function handleNewStorySubmit(req, res, user) {
@@ -486,22 +594,27 @@ async function handleNewStorySubmit(req, res, user) {
   const chapterSummary = (body.chapterSummary || '').trim();
   let content = (body.content || '').replace(/\r\n/g, '\n');
   const values = { storyTitle, storyDescription, chapterTitle, chapterSummary, content };
+  const tagIds = tagIdsFromBody(body);
+  const retry = (error) => sendHtml(res, 400, views.newStoryPage({
+    user, error, values, groups: models.listTagsGrouped(), selectedTagIds: tagIds,
+  }));
 
   try {
     const uploaded = extractUploadedText(files.file);
     if (uploaded !== null) { content = uploaded; values.content = content; }
   } catch (err) {
-    return sendHtml(res, 400, views.newStoryPage({ user, error: err.message, values }));
+    return retry(err.message);
   }
 
-  if (!storyTitle) return sendHtml(res, 400, views.newStoryPage({ user, error: 'Missing story title.', values }));
-  if (!chapterTitle) return sendHtml(res, 400, views.newStoryPage({ user, error: 'Missing chapter title.', values }));
-  if (!content.trim()) return sendHtml(res, 400, views.newStoryPage({ user, error: 'The chapter is empty. Paste some text or upload a .md/.txt/.docx file.', values }));
+  if (!storyTitle) return retry('Missing story title.');
+  if (!chapterTitle) return retry('Missing chapter title.');
+  if (!content.trim()) return retry('The chapter is empty. Paste some text or upload a .md/.txt/.docx file.');
 
-  const { chapter } = models.createStoryWithFirstChapter({
+  const { story, chapter } = models.createStoryWithFirstChapter({
     title: storyTitle, description: storyDescription, authorId: user.id,
     chapterTitle, chapterSummary, content,
   });
+  models.setStoryTags(story.id, tagIds);
   redirect(res, `/chapters/${chapter.id}`);
 }
 
@@ -512,7 +625,9 @@ async function handleStoryPage(req, res, user, storyId, query) {
   const chapters = models.listChaptersForStory(storyId, { since });
   const isStoryAuthor = user.id === story.author_id;
   const dictionary = isStoryAuthor ? models.listStoryDictionaryEntries(storyId) : [];
-  sendHtml(res, 200, views.storyPage({ user, story, chapters, isStoryAuthor, dictionary }));
+  sendHtml(res, 200, views.storyPage({
+    user, story, chapters, isStoryAuthor, dictionary, tags: models.getStoryTags(storyId),
+  }));
 }
 
 // ---------- per-story spelling exceptions (used by the writing analyzer) ----------
@@ -926,6 +1041,7 @@ async function router(req, res) {
     if (pathname === '/logout' && req.method === 'POST') return handleLogout(req, res);
     if (pathname === '/account' && req.method === 'GET') return handleAccountPage(req, res, user, url.searchParams);
     if (pathname === '/account/password' && req.method === 'POST') return handleAccountPasswordSubmit(req, res, user);
+    if (pathname === '/account/hidden-tags' && req.method === 'POST') return handleHiddenTagsSubmit(req, res, user);
     if (pathname === '/markdown/preview' && req.method === 'POST') return handleMarkdownPreview(req, res, user);
 
     if (pathname === '/admin' && req.method === 'GET') return handleAdminPage(req, res, user, url.searchParams);
@@ -955,19 +1071,35 @@ async function router(req, res) {
     if ((m = pathname.match(/^\/admin\/reset-link\/(\d+)\/revoke$/)) && req.method === 'POST') {
       return handleAdminRevokeResetLink(req, res, user, Number(m[1]));
     }
+    if (pathname === '/admin/tags' && req.method === 'POST') return handleAdminCreateTag(req, res, user);
+    if ((m = pathname.match(/^\/admin\/tags\/(\d+)$/)) && req.method === 'POST') {
+      return handleAdminUpdateTag(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/admin\/tags\/(\d+)\/delete$/)) && req.method === 'POST') {
+      return handleAdminDeleteTag(req, res, user, Number(m[1]));
+    }
     if (pathname === '/admin/wiki/sync' && req.method === 'POST') return handleAdminSyncWiki(req, res, user);
     if (pathname === '/admin/backup' && req.method === 'GET') return handleAdminBackup(req, res, user);
+
+    if (pathname === '/tags' && req.method === 'GET') return handleTagsIndex(req, res, user);
+    if ((m = pathname.match(/^\/tags\/([^/]+)$/)) && req.method === 'GET') return handleTagPage(req, res, user, m[1]);
 
     if (pathname === '/glossary' && req.method === 'GET') return handleGlossaryIndex(req, res, user, url.searchParams);
     if ((m = pathname.match(/^\/glossary\/([^/]+)$/)) && req.method === 'GET') return handleGlossaryPage(req, res, user, m[1]);
 
-    if (pathname === '/' && req.method === 'GET') return handleStories(req, res, user);
+    if (pathname === '/' && req.method === 'GET') return handleStories(req, res, user, url.searchParams);
     if (pathname === '/archived-stories' && req.method === 'GET') return handleArchivedStories(req, res, user);
     if (pathname === '/stories/new' && req.method === 'GET') return handleNewStoryPage(req, res, user);
     if (pathname === '/stories/new' && req.method === 'POST') return handleNewStorySubmit(req, res, user);
 
     if ((m = pathname.match(/^\/stories\/(\d+)$/)) && req.method === 'GET') {
       return handleStoryPage(req, res, user, Number(m[1]), url.searchParams);
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/edit$/)) && req.method === 'GET') {
+      return handleEditStoryPage(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/edit$/)) && req.method === 'POST') {
+      return handleEditStorySubmit(req, res, user, Number(m[1]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/archive$/)) && req.method === 'POST') {
       return handleArchiveStory(req, res, user, Number(m[1]));

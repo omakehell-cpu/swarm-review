@@ -143,6 +143,37 @@ CREATE TABLE IF NOT EXISTS wiki_pages (
 );
 CREATE INDEX IF NOT EXISTS idx_wiki_pages_title_lower ON wiki_pages(title_lower);
 
+-- Story tags, in the spirit of StoriesOnline's codes: a closed vocabulary
+-- an admin curates (see the Tags section on /admin), which authors pick
+-- from rather than typing their own, so the same idea doesn't end up
+-- spelled three different ways across three stories. tag_group is only
+-- for presentation -- it's what the picker and the tag index group by.
+CREATE TABLE IF NOT EXISTS tags (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT NOT NULL UNIQUE,
+  slug        TEXT NOT NULL UNIQUE,
+  tag_group   TEXT NOT NULL DEFAULT 'Other',
+  description TEXT NOT NULL DEFAULT '',
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_tags_group ON tags(tag_group);
+
+CREATE TABLE IF NOT EXISTS story_tags (
+  story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  tag_id   INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (story_id, tag_id)
+);
+CREATE INDEX IF NOT EXISTS idx_story_tags_tag ON story_tags(tag_id);
+
+-- Each reader's own "don't show me this" list, the equivalent of SOL's
+-- excluded codes. Set from /account; a story carrying any of these is
+-- folded away in that reader's story list (and only theirs).
+CREATE TABLE IF NOT EXISTS user_hidden_tags (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tag_id  INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, tag_id)
+);
+
 -- Single row (id is always 1) tracking the last sync attempt, shown on the
 -- admin page -- whether it's ever run, when, how many pages, and whether
 -- it succeeded, so a failed background sync (e.g. the wiki being
@@ -250,6 +281,74 @@ if (inviteCodeCount === 0) {
     seedCode = Array.from({ length: 8 }, () => alphabet[crypto.randomInt(alphabet.length)]).join('');
   }
   db.prepare('INSERT INTO invite_codes (code, active) VALUES (?, 1)').run(seedCode);
+}
+
+// Starting vocabulary for story tags, applied only to a database that has
+// never had any (so an admin's later edits, including deletions, are never
+// undone by a restart). It's a starting point to edit from on /admin, not
+// a fixed list: this group writes in one shared universe, so the Swarm and
+// Review groups especially are expected to grow local shorthand.
+const SEED_TAGS = [
+  ['Genre', [
+    ['Science fiction', ''], ['Military', ''], ['Action', ''], ['Adventure', ''],
+    ['Drama', ''], ['Romance', ''], ['Mystery', ''], ['Thriller', ''],
+    ['Horror', ''], ['Humour', ''], ['Slice of life', ''], ['Tragedy', ''],
+  ]],
+  ['Setting', [
+    ['Space', ''], ['Shipboard', ''], ['Planetside', ''], ['Earth', ''],
+    ['Colony', ''], ['Post-apocalyptic', ''], ['Near future', ''], ['Far future', ''],
+    ['Alternate history', ''], ['Time travel', ''], ['First contact', ''],
+  ]],
+  ['Swarm', [
+    ['Confederacy', 'Told from inside the Confederacy.'],
+    ["Sa'arm", 'The Swarm itself features directly.'],
+    ['Volunteer', 'Follows a volunteer.'],
+    ['Extraction', 'Covers an extraction.'],
+    ['Earthbound', 'Stays on Earth.'],
+  ]],
+  ['Cast', [
+    ['Ensemble', ''], ['Single POV', ''], ['Multiple POV', ''],
+    ['Original characters', ''], ['Established characters', 'Uses characters from the shared canon.'],
+  ]],
+  ['Content notes', [
+    ['Explicit sex', 'Adult sexual content, described on the page.'],
+    ['Violence', ''],
+    ['Graphic violence', ''],
+    ['Major character death', ''],
+    ['Dark themes', 'Abuse, trauma, or similarly heavy material.'],
+    ['Strong language', ''],
+    ['No sex', 'Nothing explicit at all.'],
+  ]],
+  ['Length', [
+    ['Flash', 'Under 1,000 words.'], ['Short story', ''], ['Novelette', ''],
+    ['Novella', ''], ['Novel', ''],
+  ]],
+  ['Review status', [
+    ['Rough draft', 'Early, expect mess.'],
+    ['Needs readers', 'Actively wants feedback.'],
+    ['Line edits welcome', 'Past structure; wants sentence-level notes.'],
+    ['Structure only', 'Please comment on the shape, not the prose.'],
+    ['Nearly final', ''],
+    ['Complete', ''],
+    ['On hold', ''],
+  ]],
+];
+
+function slugifyTag(name) {
+  return String(name).toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'tag';
+}
+
+const tagCount = db.prepare('SELECT COUNT(*) AS n FROM tags').get().n;
+const tagsEverExisted = db.prepare("SELECT COUNT(*) AS n FROM story_tags").get().n;
+if (tagCount === 0 && tagsEverExisted === 0) {
+  const insert = db.prepare('INSERT INTO tags (name, slug, tag_group, description) VALUES (?, ?, ?, ?)');
+  for (const [group, entries] of SEED_TAGS) {
+    for (const [name, description] of entries) {
+      insert.run(name, slugifyTag(name), group, description);
+    }
+  }
 }
 
 // A permanent placeholder account that "deleted" users' authored content
