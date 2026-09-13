@@ -759,7 +759,7 @@ function listTags() {
 // it happens, then who's in it, then what to warn people about -- and the
 // tag index reads better the same way. Anything an admin invents later
 // sorts alphabetically after these.
-const TAG_GROUP_ORDER = ['Genre', 'Setting', 'Swarm', 'Cast', 'Content notes', 'Length', 'Review status'];
+const TAG_GROUP_ORDER = ['Genre', 'Setting', 'Swarm', 'Cast', 'Orientation', 'Pairings', 'Content notes', 'Length', 'Review status'];
 
 function listTagsGrouped() {
   const groups = [];
