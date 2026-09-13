@@ -746,12 +746,71 @@ function slugifyTag(name) {
 // makes the admin list honest about what deleting one would affect.
 function listTags() {
   return db.prepare(`
-    SELECT t.*,
+    SELECT t.*, u.display_name AS proposed_by_name,
       (SELECT COUNT(*) FROM story_tags st JOIN stories s ON s.id = st.story_id
         WHERE st.tag_id = t.id AND s.archived_at IS NULL) AS story_count
     FROM tags t
+    LEFT JOIN users u ON u.id = t.proposed_by
     ORDER BY t.tag_group COLLATE NOCASE, t.name COLLATE NOCASE
   `).all();
+}
+
+// The queue an admin works through on /admin.
+function listProposedTags() {
+  return listTags().filter((t) => t.status === 'proposed');
+}
+
+// An author proposing a tag from inside a story form. A name that already
+// exists just resolves to that tag -- proposing "Space" when Space is
+// already in the vocabulary should tag the story with Space, not create a
+// second one, and must never knock an approved tag back into the queue.
+function proposeTag({ name, userId }) {
+  const clean = String(name || '').trim();
+  if (!clean) return null;
+  const existing = db.prepare('SELECT * FROM tags WHERE name = ? COLLATE NOCASE').get(clean);
+  if (existing) return existing;
+  let slug = slugifyTag(clean);
+  if (getTagBySlug(slug)) slug = `${slug}-${Date.now().toString(36)}`;
+  const info = db.prepare(
+    "INSERT INTO tags (name, slug, tag_group, description, status, proposed_by) VALUES (?, ?, 'Proposed', '', 'proposed', ?)"
+  ).run(clean, slug, userId || null);
+  return getTagById(Number(info.lastInsertRowid));
+}
+
+function approveTag(id, { name, group } = {}) {
+  const tag = getTagById(id);
+  if (!tag) return null;
+  const clean = String(name || '').trim() || tag.name;
+  const clash = db.prepare('SELECT id FROM tags WHERE name = ? COLLATE NOCASE AND id <> ?').get(clean, id);
+  db.prepare("UPDATE tags SET name = ?, tag_group = ?, status = 'approved', proposed_by = NULL WHERE id = ?")
+    .run(clash ? tag.name : clean, String(group || '').trim() || 'Other', id);
+  return getTagById(id);
+}
+
+// Folds one tag into another: every story on `fromId` gains `intoId`, and
+// the old tag goes. This is what an admin reaches for when someone
+// proposes "Sci-Fi" and "Science fiction" already exists -- the proposal
+// isn't wrong, it's just already spelled another way, and the stories
+// carrying it shouldn't lose the label.
+function mergeTag(fromId, intoId) {
+  const from = getTagById(fromId);
+  const into = getTagById(intoId);
+  if (!from || !into || from.id === into.id) return null;
+  db.exec('BEGIN');
+  try {
+    db.prepare('INSERT OR IGNORE INTO story_tags (story_id, tag_id) SELECT story_id, ? FROM story_tags WHERE tag_id = ?')
+      .run(into.id, from.id);
+    db.prepare('INSERT OR IGNORE INTO user_hidden_tags (user_id, tag_id) SELECT user_id, ? FROM user_hidden_tags WHERE tag_id = ?')
+      .run(into.id, from.id);
+    db.prepare('DELETE FROM story_tags WHERE tag_id = ?').run(from.id);
+    db.prepare('DELETE FROM user_hidden_tags WHERE tag_id = ?').run(from.id);
+    db.prepare('DELETE FROM tags WHERE id = ?').run(from.id);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  return into;
 }
 
 // Groups come out in a deliberate reading order rather than alphabetically:
@@ -1013,6 +1072,10 @@ module.exports = {
   createTag,
   updateTag,
   deleteTag,
+  listProposedTags,
+  proposeTag,
+  approveTag,
+  mergeTag,
   getStoryTags,
   tagsForStories,
   setStoryTags,

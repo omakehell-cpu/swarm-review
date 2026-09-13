@@ -276,6 +276,7 @@ async function handleAdminPage(req, res, user, query) {
   sendHtml(res, 200, views.adminPage({
     user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice,
     tagGroups: models.listTagsGrouped(),
+    proposedTags: models.listProposedTags(),
   }));
 }
 
@@ -434,6 +435,22 @@ function tagIdsFromBody(body) {
   return raw.map(Number).filter((n) => Number.isInteger(n) && n > 0);
 }
 
+// The "can't find one?" field that rides along inside the story form --
+// a comma-separated list, since a nested <form> isn't legal HTML and a
+// separate page to propose a tag would mean leaving the story half-
+// written. Each name becomes a proposed tag (or resolves to the existing
+// one, if it turns out the vocabulary already had it).
+function proposedTagIdsFromBody(body, user) {
+  return String(body.proposeTags || '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .slice(0, 10)
+    .map((name) => models.proposeTag({ name, userId: user.id }))
+    .filter(Boolean)
+    .map((tag) => tag.id);
+}
+
 async function handleTagsIndex(req, res, user) {
   sendHtml(res, 200, views.tagsIndexPage({ user, groups: models.listTagsGrouped() }));
 }
@@ -466,7 +483,7 @@ async function handleEditStorySubmit(req, res, user, storyId) {
   const body = await parseBody(req);
   const title = (body.title || '').trim();
   const description = (body.description || '').trim();
-  const tagIds = tagIdsFromBody(body);
+  const tagIds = [...tagIdsFromBody(body), ...proposedTagIdsFromBody(body, user)];
   if (!title) {
     return sendHtml(res, 400, views.editStoryPage({
       user, story, groups: models.listTagsGrouped(), selectedTagIds: tagIds,
@@ -490,6 +507,18 @@ async function handleAdminUpdateTag(req, res, user, tagId) {
   const body = await parseBody(req);
   models.updateTag(tagId, { name: body.name, group: body.group, description: body.description });
   redirect(res, '/admin?notice=Tag updated.#tags');
+}
+
+async function handleAdminApproveTag(req, res, user, tagId) {
+  const body = await parseBody(req);
+  models.approveTag(tagId, { name: body.name, group: body.group });
+  redirect(res, '/admin?notice=Tag approved.#tags');
+}
+
+async function handleAdminMergeTag(req, res, user, tagId) {
+  const body = await parseBody(req);
+  const into = models.mergeTag(tagId, Number(body.intoTagId));
+  redirect(res, `/admin?notice=${encodeURIComponent(into ? `Merged into "${into.name}".` : 'Nothing to merge into.')}#tags`);
 }
 
 async function handleAdminDeleteTag(req, res, user, tagId) {
@@ -594,7 +623,7 @@ async function handleNewStorySubmit(req, res, user) {
   const chapterSummary = (body.chapterSummary || '').trim();
   let content = (body.content || '').replace(/\r\n/g, '\n');
   const values = { storyTitle, storyDescription, chapterTitle, chapterSummary, content };
-  const tagIds = tagIdsFromBody(body);
+  const tagIds = [...tagIdsFromBody(body), ...proposedTagIdsFromBody(body, user)];
   const retry = (error) => sendHtml(res, 400, views.newStoryPage({
     user, error, values, groups: models.listTagsGrouped(), selectedTagIds: tagIds,
   }));
@@ -1074,6 +1103,12 @@ async function router(req, res) {
     if (pathname === '/admin/tags' && req.method === 'POST') return handleAdminCreateTag(req, res, user);
     if ((m = pathname.match(/^\/admin\/tags\/(\d+)$/)) && req.method === 'POST') {
       return handleAdminUpdateTag(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/admin\/tags\/(\d+)\/approve$/)) && req.method === 'POST') {
+      return handleAdminApproveTag(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/admin\/tags\/(\d+)\/merge$/)) && req.method === 'POST') {
+      return handleAdminMergeTag(req, res, user, Number(m[1]));
     }
     if ((m = pathname.match(/^\/admin\/tags\/(\d+)\/delete$/)) && req.method === 'POST') {
       return handleAdminDeleteTag(req, res, user, Number(m[1]));
