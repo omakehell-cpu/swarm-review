@@ -174,6 +174,14 @@ CREATE TABLE IF NOT EXISTS user_hidden_tags (
   PRIMARY KEY (user_id, tag_id)
 );
 
+-- Small key/value scratchpad for the app's own bookkeeping -- currently
+-- just which batches of seeded tags have been applied, so a later batch
+-- can be added without re-adding (or resurrecting) the earlier ones.
+CREATE TABLE IF NOT EXISTS app_meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
 -- Single row (id is always 1) tracking the last sync attempt, shown on the
 -- admin page -- whether it's ever run, when, how many pages, and whether
 -- it succeeded, so a failed background sync (e.g. the wiki being
@@ -340,15 +348,64 @@ function slugifyTag(name) {
     .replace(/^-+|-+$/g, '') || 'tag';
 }
 
-const tagCount = db.prepare('SELECT COUNT(*) AS n FROM tags').get().n;
-const tagsEverExisted = db.prepare("SELECT COUNT(*) AS n FROM story_tags").get().n;
-if (tagCount === 0 && tagsEverExisted === 0) {
+// A second batch, added after the first was already in use. The notation
+// is StoriesOnline's: the "a" in Ma/Fa means adult, which is the whole
+// point of it -- these describe grown-ups, and the teen variants of the
+// same notation are deliberately not here.
+const SEED_TAGS_V2 = [
+  ['Orientation', [
+    ['Heterosexual', ''],
+    ['Homosexual', ''],
+    ['Bisexual', ''],
+    ['Transgender', ''],
+  ]],
+  ['Pairings', [
+    ['Ma/Fa', 'One adult man and one adult woman.'],
+    ['Ma/Ma', 'Two adult men.'],
+    ['Fa/Fa', 'Two adult women.'],
+    ['Mult', 'More than two people involved.'],
+    ['Group', 'Group scenes.'],
+    ['Harem', ''],
+    ['Polyamory', 'More than one relationship at once, openly.'],
+    ['Solo', 'No partner.'],
+  ]],
+];
+
+// Seeding is versioned rather than "run once if the table is empty": each
+// batch applies exactly once, so a later one can be shipped without
+// re-adding -- or resurrecting -- tags an admin has since edited or
+// deleted. Within a batch, a name that already exists is left alone.
+function applyTagSeedBatch(batch) {
   const insert = db.prepare('INSERT INTO tags (name, slug, tag_group, description) VALUES (?, ?, ?, ?)');
-  for (const [group, entries] of SEED_TAGS) {
+  const exists = db.prepare('SELECT 1 FROM tags WHERE name = ? COLLATE NOCASE');
+  const slugTaken = db.prepare('SELECT 1 FROM tags WHERE slug = ?');
+  for (const [group, entries] of batch) {
     for (const [name, description] of entries) {
-      insert.run(name, slugifyTag(name), group, description);
+      if (exists.get(name)) continue;
+      let slug = slugifyTag(name);
+      if (slugTaken.get(slug)) slug = `${slug}-${group.toLowerCase().replace(/[^a-z0-9]+/g, '')}`;
+      insert.run(name, slug, group, description);
     }
   }
+}
+
+const getMeta = (key) => (db.prepare('SELECT value FROM app_meta WHERE key = ?').get(key) || {}).value;
+const setMeta = (key, value) => db.prepare(
+  'INSERT INTO app_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+).run(key, String(value));
+
+const tagSeedVersion = Number(getMeta('tag_seed_version') || 0);
+if (tagSeedVersion < 1) {
+  // The first batch is a starting point for a database that has never had
+  // any tags -- one that already has them chose them, and only needs the
+  // marker set so this never runs again.
+  const tagCount = db.prepare('SELECT COUNT(*) AS n FROM tags').get().n;
+  if (tagCount === 0) applyTagSeedBatch(SEED_TAGS);
+  setMeta('tag_seed_version', 1);
+}
+if (tagSeedVersion < 2) {
+  applyTagSeedBatch(SEED_TAGS_V2);
+  setMeta('tag_seed_version', 2);
 }
 
 // A permanent placeholder account that "deleted" users' authored content
