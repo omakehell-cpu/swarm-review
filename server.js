@@ -795,6 +795,7 @@ async function handleChapterPage(req, res, user, chapterId, query) {
 
   sendHtml(res, 200, views.chapterPage({
     user, chapter, versions, currentVersion, comments, isChapterAuthor,
+    neighbours: models.getChapterNeighbours(chapter),
   }));
 }
 
