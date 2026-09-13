@@ -91,13 +91,25 @@ function resetPasswordExpiredPage() {
 
 // ---------- stories list (dashboard) ----------
 
-function storiesPage({ user, stories, since }) {
-  const sinceQs = since ? `?since=${encodeURIComponent(since)}` : '';
-  const rows = stories.length ? stories.map((s) => `
-    <a class="chapter-row" href="/stories/${s.id}${sinceQs}">
+// One story as it appears in any list -- the front page, a tag's page, a
+// search result. `hiddenBy` is the reader's own hidden tags that this
+// story tripped (see handleStories); it only ever arrives set from a list
+// that has already decided to fold the story away.
+function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [] } = {}) {
+  // Not an <a> wrapping the whole row, which is what every other list
+  // here does: the tag chips are links themselves, and an anchor inside
+  // an anchor is invalid -- the parser closes the outer one early and the
+  // row falls apart. The title carries the link and stretches an overlay
+  // across the row instead (see .story-row in style.css), so the row is
+  // still clickable everywhere the chips aren't.
+  return `
+    <div class="chapter-row story-row">
       <div class="chapter-row-main">
-        <h3>${escapeHtml(s.title)} ${s.has_new_chapters ? '<span class="badge new">New</span>' : ''}</h3>
+        <h3><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a> ${s.has_new_chapters ? '<span class="badge new">New</span>' : ''}</h3>
         <p class="muted">${escapeHtml(s.description || '')}</p>
+        ${hiddenBy.length
+          ? `<p class="hidden-by">Hidden by your tag settings: ${hiddenBy.map((t) => escapeHtml(t.name)).join(', ')}</p>`
+          : tagChips(tags)}
       </div>
       <div class="chapter-row-meta">
         <span>by ${escapeHtml(s.author_name)}</span>
@@ -105,8 +117,50 @@ function storiesPage({ user, stories, since }) {
         ${timeHtml(s.last_chapter_at || s.created_at)}
         ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} pending</span>` : ''}
       </div>
-    </a>
-  `).join('') : '<p class="muted">No stories yet. Be the first to start one.</p>';
+    </div>
+  `;
+}
+
+function storiesPage({ user, stories, folded = [], since, tagsByStory, activeTags = [], allGroups = [] }) {
+  const sinceQs = since ? `?since=${encodeURIComponent(since)}` : '';
+  const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
+  const rows = stories.length
+    ? stories.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs })).join('')
+    : `<p class="muted">${activeTags.length ? 'No stories carry every tag you picked.' : 'No stories yet. Be the first to start one.'}</p>`;
+
+  // The filter is a form of checkboxes rather than a list of links, so
+  // picking several tags is one action instead of one page load each.
+  const activeSlugs = new Set(activeTags.map((t) => t.slug));
+  const filter = allGroups.length ? `
+    <details class="tag-filter"${activeTags.length ? ' open' : ''}>
+      <summary>${activeTags.length
+        ? `Filtered by ${activeTags.map((t) => escapeHtml(t.name)).join(', ')}`
+        : 'Filter by tag'}</summary>
+      <form method="get" action="/" class="tag-filter-form">
+        ${allGroups.map((g) => `
+          <fieldset class="tag-group">
+            <legend>${escapeHtml(g.group)}</legend>
+            <div class="tag-group-options">${g.tags.map((t) => `
+              <label class="tag-pick${activeSlugs.has(t.slug) ? ' checked' : ''}">
+                <input type="checkbox" name="tag" value="${escapeHtml(t.slug)}"${activeSlugs.has(t.slug) ? ' checked' : ''}>
+                <span>${escapeHtml(t.name)}</span>
+              </label>`).join('')}</div>
+          </fieldset>`).join('')}
+        <div class="tag-filter-actions">
+          <button class="btn small" type="submit">Apply</button>
+          ${activeTags.length ? '<a class="btn ghost small" href="/">Clear</a>' : ''}
+          <span class="hint">A story has to carry every tag you pick.</span>
+        </div>
+      </form>
+    </details>` : '';
+
+  // Stories folded away by this reader's own hidden tags (see /account) --
+  // out of the way, but never silently gone.
+  const foldedBlock = folded.length ? `
+    <details class="folded-stories">
+      <summary>${folded.length} stor${folded.length === 1 ? 'y' : 'ies'} hidden by your tag settings</summary>
+      <div class="chapter-list">${folded.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, hiddenBy: s.hiddenBy })).join('')}</div>
+    </details>` : '';
 
   return layout({
     title: 'Stories',
@@ -117,8 +171,126 @@ function storiesPage({ user, stories, since }) {
         <h1>The Swarm stories</h1>
         <a class="btn" href="/stories/new">New story</a>
       </div>
+      ${filter}
       <div class="chapter-list">${rows}</div>
+      ${foldedBlock}
       <p class="muted archive-link"><a href="/archived-stories">View archived stories &rarr;</a></p>`,
+  });
+}
+
+// ---------- story tags ----------
+// One tag, as it appears anywhere it's being displayed rather than picked.
+function tagChip(tag, { muted } = {}) {
+  return `<a class="tag-chip${muted ? ' muted-chip' : ''}" href="/tags/${encodeURIComponent(tag.slug)}"${
+    tag.description ? ` title="${escapeHtml(tag.description)}"` : ''}>${escapeHtml(tag.name)}</a>`;
+}
+
+function tagChips(tags) {
+  if (!tags || !tags.length) return '';
+  return `<div class="tag-chips">${tags.map((t) => tagChip(t)).join('')}</div>`;
+}
+
+// The picker used when writing or editing a story: the whole vocabulary,
+// in its groups, with the story's own tags ticked. Plain checkboxes, so it
+// works without JavaScript and reads correctly to a screen reader; the
+// styling (see .tag-pick in style.css) is what makes them read as chips.
+function tagPicker(groups, selectedTagIds) {
+  const selected = new Set((selectedTagIds || []).map(Number));
+  if (!groups.length) {
+    return `<p class="hint">No tags have been set up yet. An admin can add them from the admin page.</p>`;
+  }
+  return `<div class="tag-picker">${groups.map((g) => `
+    <fieldset class="tag-group">
+      <legend>${escapeHtml(g.group)}</legend>
+      <div class="tag-group-options">${g.tags.map((t) => `
+        <label class="tag-pick${selected.has(t.id) ? ' checked' : ''}"${t.description ? ` title="${escapeHtml(t.description)}"` : ''}>
+          <input type="checkbox" name="tagIds" value="${t.id}"${selected.has(t.id) ? ' checked' : ''}>
+          <span>${escapeHtml(t.name)}</span>
+        </label>`).join('')}</div>
+    </fieldset>`).join('')}</div>`;
+}
+
+function tagsIndexPage({ user, groups }) {
+  const total = groups.reduce((n, g) => n + g.tags.length, 0);
+  const body = groups.length ? groups.map((g) => `
+    <section class="tag-index-group">
+      <h2>${escapeHtml(g.group)}</h2>
+      <div class="tag-chips">${g.tags.map((t) => `
+        <a class="tag-chip${t.story_count ? '' : ' unused'}" href="/tags/${encodeURIComponent(t.slug)}"${
+          t.description ? ` title="${escapeHtml(t.description)}"` : ''}>
+          ${escapeHtml(t.name)}<span class="tag-count">${t.story_count}</span>
+        </a>`).join('')}</div>
+    </section>`).join('') : '<p class="muted">No tags yet. An admin can add them from the admin page.</p>';
+
+  return layout({
+    title: 'Tags',
+    user,
+    current: 'tags',
+    body: `
+      <div class="page-head"><h1>Tags</h1></div>
+      <p class="muted">${total} tag${total === 1 ? '' : 's'} in use across the group's stories. The number on each is how many stories carry it.</p>
+      ${body}`,
+  });
+}
+
+function tagPage({ user, tag, stories, tagsByStory }) {
+  const rows = stories.length
+    ? stories.map((s) => storyRow(s, { tags: tagsByStory.get(s.id) || [] })).join('')
+    : '<p class="muted">No stories carry this tag yet.</p>';
+  return layout({
+    title: tag.name,
+    user,
+    current: 'tags',
+    body: `
+      <p class="breadcrumb"><a href="/tags">&larr; All tags</a></p>
+      <div class="page-head"><h1>${escapeHtml(tag.name)}</h1></div>
+      <p class="muted">${tag.description ? `${escapeHtml(tag.description)} ` : ''}${escapeHtml(tag.tag_group)} tag &middot; ${stories.length} stor${stories.length === 1 ? 'y' : 'ies'}.</p>
+      <div class="chapter-list">${rows}</div>`,
+  });
+}
+
+function tagNotFoundPage({ user, slug }) {
+  return layout({
+    title: 'Tag not found',
+    user,
+    current: 'tags',
+    body: `
+      <p class="breadcrumb"><a href="/tags">&larr; All tags</a></p>
+      <h1>No such tag</h1>
+      <p class="muted">Nothing here is tagged "${escapeHtml(slug)}" -- it may have been renamed or removed since that link was made.</p>`,
+  });
+}
+
+function editStoryPage({ user, story, groups, selectedTagIds, error, values = {} }) {
+  const title = values.title !== undefined ? values.title : story.title;
+  const description = values.description !== undefined ? values.description : story.description;
+  return layout({
+    title: `Edit - ${story.title}`,
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      <div class="writer-card">
+        <h1>Story details</h1>
+        <p class="muted writer-intro">The title, the blurb, and the tags that tell everyone what they're walking into. Editing these doesn't touch a single chapter.</p>
+        ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+        <form method="post" action="/stories/${story.id}/edit" class="chapter-form">
+          <label class="main-field">Title
+            <input type="text" name="title" value="${escapeHtml(title)}" required>
+          </label>
+          <label>Description
+            <textarea name="description" rows="3">${escapeHtml(description || '')}</textarea>
+            <span class="hint">A couple of lines on what this story is, shown wherever it's listed.</span>
+          </label>
+          <div class="writer-section">
+            <p class="writer-section-label">Tags</p>
+            ${tagPicker(groups, selectedTagIds)}
+          </div>
+          <div class="writer-actions">
+            <a class="btn ghost" href="/stories/${story.id}">Cancel</a>
+            <button class="btn" type="submit">Save details</button>
+          </div>
+        </form>
+      </div>`,
   });
 }
 
@@ -227,7 +399,7 @@ function archivedStoriesPage({ user, stories }) {
 
 // ---------- new story (+ first chapter) ----------
 
-function newStoryPage({ user, error, values = {} }) {
+function newStoryPage({ user, error, values = {}, groups = [], selectedTagIds = [] }) {
   return layout({
     title: 'New story',
     user,
@@ -249,6 +421,11 @@ function newStoryPage({ user, error, values = {} }) {
             <label>Story description<textarea name="storyDescription" rows="2">${escapeHtml(values.storyDescription || '')}</textarea></label>
             <label>Chapter summary<textarea name="chapterSummary" rows="2">${escapeHtml(values.chapterSummary || '')}</textarea></label>
             ${fileUploadField()}
+          </div>
+          <div class="writer-section">
+            <p class="writer-section-label">Tags</p>
+            <p class="hint">What readers are walking into. You can change these later from the story page.</p>
+            ${tagPicker(groups, selectedTagIds)}
           </div>
           <div class="writer-actions">
             <a class="btn ghost" href="/">Cancel</a>
@@ -420,7 +597,7 @@ function storyDictionarySection(story, dictionary) {
     </details>`;
 }
 
-function storyPage({ user, story, chapters, isStoryAuthor, dictionary = [] }) {
+function storyPage({ user, story, chapters, isStoryAuthor, dictionary = [], tags = [] }) {
   const rows = chapters.length ? chapters.map((c, i) => `
     <div class="chapter-row-outer">
       <a class="chapter-row" href="/chapters/${c.id}">
@@ -449,9 +626,11 @@ function storyPage({ user, story, chapters, isStoryAuthor, dictionary = [] }) {
           <h1>${escapeHtml(story.title)}</h1>
           <p class="muted byline">by ${escapeHtml(story.author_name)} &middot; ${timeHtml(story.created_at)}</p>
           ${story.description ? `<p class="summary">${escapeHtml(story.description)}</p>` : ''}
+          ${tagChips(tags)}
         </div>
         <div class="page-head-actions">
           ${isStoryAuthor ? `<a class="btn" href="/stories/${story.id}/chapters/new">Add chapter</a>` : ''}
+          ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
           ${isStoryAuthor ? `
             <form method="post" action="/stories/${story.id}/archive" class="inline-form">
               <button class="btn ghost small" type="submit">Archive story</button>
@@ -702,7 +881,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
 
 // ---------- account settings ----------
 
-function accountPage({ user, error, notice }) {
+function accountPage({ user, error, notice, groups = [], hiddenTagIds = [] }) {
   return layout({
     title: 'Account',
     user,
@@ -720,7 +899,8 @@ function accountPage({ user, error, notice }) {
           <button class="btn" type="submit">Change password</button>
         </form>
         <p class="muted">Changing your password signs you out of any other device or browser where you're currently logged in.</p>
-      </div>`,
+      </div>
+      ${hiddenTagsSection(groups, hiddenTagIds)}`,
   });
 }
 
@@ -849,7 +1029,7 @@ function adminUserRow(u, { currentUserId }) {
     </div>`;
 }
 
-function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice }) {
+function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [] }) {
   const userRows = users.map((u) => adminUserRow(u, { currentUserId: user.id })).join('');
   return layout({
     title: 'Admin',
@@ -877,11 +1057,64 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
 
       ${wikiSyncSection(wikiSyncState)}
 
+      ${tagAdminSection(tagGroups)}
+
       <section class="admin-section">
         <h2>Users</h2>
         <div class="admin-user-list">${userRows}</div>
       </section>`,
   });
+}
+
+// The tag vocabulary, managed in one place: authors only ever pick from
+// this list, so this is where "Sci-Fi" and "Science fiction" get stopped
+// from both existing.
+function tagAdminSection(tagGroups) {
+  const groupNames = Array.from(new Set(tagGroups.map((g) => g.group)));
+  const rows = tagGroups.map((g) => `
+    <h3 class="tag-admin-group">${escapeHtml(g.group)}</h3>
+    <div class="tag-admin-list">${g.tags.map((t) => `
+      <form method="post" action="/admin/tags/${t.id}" class="tag-admin-row">
+        <input type="text" name="name" value="${escapeHtml(t.name)}" aria-label="Tag name">
+        <input type="text" name="group" value="${escapeHtml(t.tag_group)}" list="tag-groups" aria-label="Group">
+        <input type="text" name="description" value="${escapeHtml(t.description || '')}" placeholder="What it means (optional)" aria-label="Description">
+        <span class="tag-admin-count">${t.story_count} stor${t.story_count === 1 ? 'y' : 'ies'}</span>
+        <button class="btn ghost small" type="submit">Save</button>
+        <button class="btn danger small" type="submit" formaction="/admin/tags/${t.id}/delete"
+          data-confirm="Delete the tag &quot;${escapeHtml(t.name)}&quot;?${t.story_count ? ` It is on ${t.story_count} stor${t.story_count === 1 ? 'y' : 'ies'}, and will be taken off ${t.story_count === 1 ? 'it' : 'them'}.` : ''}">Delete</button>
+      </form>`).join('')}</div>`).join('');
+
+  return `
+    <section class="admin-section" id="tags">
+      <h2>Tags</h2>
+      <p class="muted">The vocabulary authors pick from when they tag a story (see the <a href="/tags">tag index</a>). Renaming one updates it everywhere at once; its link keeps working, since a tag is identified by its own row rather than by its name.</p>
+      <datalist id="tag-groups">${groupNames.map((n) => `<option value="${escapeHtml(n)}"></option>`).join('')}</datalist>
+      <form method="post" action="/admin/tags" class="tag-admin-new">
+        <input type="text" name="name" placeholder="New tag" required aria-label="New tag name">
+        <input type="text" name="group" placeholder="Group" list="tag-groups" aria-label="Group">
+        <input type="text" name="description" placeholder="What it means (optional)" aria-label="Description">
+        <button class="btn small" type="submit">Add tag</button>
+      </form>
+      ${tagGroups.length ? rows : '<p class="muted">No tags yet.</p>'}
+    </section>`;
+}
+
+// A reader's own "not for me" list -- the equivalent of SOL's excluded
+// codes. Stories carrying any of these fold away on their story list
+// instead of vanishing, so nothing ever goes missing without saying so.
+function hiddenTagsSection(groups, hiddenTagIds) {
+  if (!groups.length) return '';
+  return `
+    <section class="admin-section">
+      <h2>Tags you'd rather not see</h2>
+      <p class="muted">Stories carrying any of these get folded away on your story list, behind a line saying how many there are. This only affects what you see.</p>
+      <form method="post" action="/account/hidden-tags">
+        ${tagPicker(groups, hiddenTagIds)}
+        <div class="writer-actions">
+          <button class="btn" type="submit">Save</button>
+        </div>
+      </form>
+    </section>`;
 }
 
 function wikiSyncSection(state) {
@@ -941,4 +1174,8 @@ module.exports = {
   glossaryIndexPage,
   glossaryPage,
   glossaryNotFoundPage,
+  tagsIndexPage,
+  tagPage,
+  tagNotFoundPage,
+  editStoryPage,
 };

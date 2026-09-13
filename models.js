@@ -349,7 +349,14 @@ function consumePasswordResetToken(tokenId, userId, passwordHash) {
 // `since`: optional SQLite timestamp string -- when given, each story gets
 // a `has_new_chapters` flag for chapters published after it. `onlyArchived`
 // switches from the normal "active stories" listing to the archived one.
-function listStories({ since, onlyArchived = false } = {}) {
+// `tagIds` narrows the list to stories carrying ALL of them (a filter
+// that widened as you added terms would be a strange thing to offer).
+function listStories({ since, onlyArchived = false, tagIds = [] } = {}) {
+  const wanted = (tagIds || []).map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  const tagFilter = wanted.length
+    ? `AND (SELECT COUNT(DISTINCT st.tag_id) FROM story_tags st
+            WHERE st.story_id = s.id AND st.tag_id IN (${wanted.join(',')})) = ${wanted.length}`
+    : '';
   return db.prepare(`
     SELECT s.*, u.display_name AS author_name,
       (SELECT COUNT(*) FROM chapters c WHERE c.story_id = s.id AND c.archived_at IS NULL) AS chapter_count,
@@ -365,6 +372,7 @@ function listStories({ since, onlyArchived = false } = {}) {
     FROM stories s
     JOIN users u ON u.id = s.author_id
     WHERE s.archived_at IS ${onlyArchived ? 'NOT NULL' : 'NULL'}
+    ${tagFilter}
     ORDER BY COALESCE(last_chapter_at, s.created_at) DESC
   `).all(since ? { since } : {});
 }
@@ -727,6 +735,155 @@ function removeStoryDictionaryWord(storyId, id) {
   db.prepare('DELETE FROM story_dictionary_words WHERE story_id = ? AND id = ?').run(storyId, id);
 }
 
+// ---------- story tags (vocabulary curated on /admin, see db.js) ----------
+function slugifyTag(name) {
+  return String(name).toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'tag';
+}
+
+// Every tag, with how many live stories carry it -- the count is what
+// makes the admin list honest about what deleting one would affect.
+function listTags() {
+  return db.prepare(`
+    SELECT t.*,
+      (SELECT COUNT(*) FROM story_tags st JOIN stories s ON s.id = st.story_id
+        WHERE st.tag_id = t.id AND s.archived_at IS NULL) AS story_count
+    FROM tags t
+    ORDER BY t.tag_group COLLATE NOCASE, t.name COLLATE NOCASE
+  `).all();
+}
+
+// Groups come out in a deliberate reading order rather than alphabetically:
+// this is the order an author fills the picker in -- what it is, then where
+// it happens, then who's in it, then what to warn people about -- and the
+// tag index reads better the same way. Anything an admin invents later
+// sorts alphabetically after these.
+const TAG_GROUP_ORDER = ['Genre', 'Setting', 'Swarm', 'Cast', 'Content notes', 'Length', 'Review status'];
+
+function listTagsGrouped() {
+  const groups = [];
+  const byGroup = new Map();
+  for (const tag of listTags()) {
+    if (!byGroup.has(tag.tag_group)) {
+      const entry = { group: tag.tag_group, tags: [] };
+      byGroup.set(tag.tag_group, entry);
+      groups.push(entry);
+    }
+    byGroup.get(tag.tag_group).tags.push(tag);
+  }
+  const rank = (name) => {
+    const i = TAG_GROUP_ORDER.indexOf(name);
+    return i === -1 ? TAG_GROUP_ORDER.length : i;
+  };
+  return groups.sort((a, b) => rank(a.group) - rank(b.group) || a.group.localeCompare(b.group));
+}
+
+const getTagBySlug = (slug) => db.prepare('SELECT * FROM tags WHERE slug = ?').get(slug) || null;
+const getTagById = (id) => db.prepare('SELECT * FROM tags WHERE id = ?').get(id) || null;
+
+// Returns the existing tag when the name is already taken rather than
+// throwing -- the admin form's "add" is meant to be idempotent.
+function createTag({ name, group, description }) {
+  const clean = String(name || '').trim();
+  if (!clean) return null;
+  const existing = db.prepare('SELECT * FROM tags WHERE name = ? COLLATE NOCASE').get(clean);
+  if (existing) return existing;
+  let slug = slugifyTag(clean);
+  if (getTagBySlug(slug)) slug = `${slug}-${Date.now().toString(36)}`;
+  const info = db.prepare('INSERT INTO tags (name, slug, tag_group, description) VALUES (?, ?, ?, ?)')
+    .run(clean, slug, String(group || 'Other').trim() || 'Other', String(description || '').trim());
+  return getTagById(Number(info.lastInsertRowid));
+}
+
+// The slug deliberately does NOT follow a rename: it's in links people
+// may already have shared, and a tag's identity is its row, not its name.
+function updateTag(id, { name, group, description }) {
+  const tag = getTagById(id);
+  if (!tag) return null;
+  const clean = String(name || '').trim() || tag.name;
+  const clash = db.prepare('SELECT id FROM tags WHERE name = ? COLLATE NOCASE AND id <> ?').get(clean, id);
+  db.prepare('UPDATE tags SET name = ?, tag_group = ?, description = ? WHERE id = ?')
+    .run(clash ? tag.name : clean, String(group || tag.tag_group).trim() || 'Other', String(description ?? tag.description), id);
+  return getTagById(id);
+}
+
+function deleteTag(id) {
+  db.exec('BEGIN');
+  try {
+    db.prepare('DELETE FROM story_tags WHERE tag_id = ?').run(id);
+    db.prepare('DELETE FROM user_hidden_tags WHERE tag_id = ?').run(id);
+    db.prepare('DELETE FROM tags WHERE id = ?').run(id);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+function getStoryTags(storyId) {
+  return db.prepare(`
+    SELECT t.* FROM tags t JOIN story_tags st ON st.tag_id = t.id
+    WHERE st.story_id = ?
+    ORDER BY t.tag_group COLLATE NOCASE, t.name COLLATE NOCASE
+  `).all(storyId);
+}
+
+// One query for a whole page of stories rather than one per row.
+function tagsForStories(storyIds) {
+  const byStory = new Map(storyIds.map((id) => [id, []]));
+  if (!storyIds.length) return byStory;
+  const placeholders = storyIds.map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT st.story_id, t.* FROM tags t JOIN story_tags st ON st.tag_id = t.id
+    WHERE st.story_id IN (${placeholders})
+    ORDER BY t.tag_group COLLATE NOCASE, t.name COLLATE NOCASE
+  `).all(...storyIds);
+  for (const row of rows) {
+    if (byStory.has(row.story_id)) byStory.get(row.story_id).push(row);
+  }
+  return byStory;
+}
+
+function setStoryTags(storyId, tagIds) {
+  const ids = Array.from(new Set((tagIds || []).map(Number).filter((n) => Number.isInteger(n) && n > 0)));
+  db.exec('BEGIN');
+  try {
+    db.prepare('DELETE FROM story_tags WHERE story_id = ?').run(storyId);
+    const insert = db.prepare('INSERT OR IGNORE INTO story_tags (story_id, tag_id) VALUES (?, ?)');
+    for (const id of ids) if (getTagById(id)) insert.run(storyId, id);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+function updateStoryDetails(storyId, { title, description }) {
+  db.prepare('UPDATE stories SET title = ?, description = ? WHERE id = ?')
+    .run(String(title).trim(), String(description || '').trim(), storyId);
+  return getStoryById(storyId);
+}
+
+// ---------- per-reader hidden tags (SOL's excluded codes) ----------
+function listUserHiddenTagIds(userId) {
+  return db.prepare('SELECT tag_id FROM user_hidden_tags WHERE user_id = ?').all(userId).map((r) => r.tag_id);
+}
+
+function setUserHiddenTags(userId, tagIds) {
+  const ids = Array.from(new Set((tagIds || []).map(Number).filter((n) => Number.isInteger(n) && n > 0)));
+  db.exec('BEGIN');
+  try {
+    db.prepare('DELETE FROM user_hidden_tags WHERE user_id = ?').run(userId);
+    const insert = db.prepare('INSERT OR IGNORE INTO user_hidden_tags (user_id, tag_id) VALUES (?, ?)');
+    for (const id of ids) if (getTagById(id)) insert.run(userId, id);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
 // ---------- wiki index (see lib/wiki.js for the sync/fetch logic) ----------
 function listWikiPages() {
   return db.prepare('SELECT title, title_lower, summary FROM wiki_pages').all();
@@ -849,4 +1006,17 @@ module.exports = {
   setWikiSyncState,
   listWikiPagesForGlossary,
   getWikiPageByTitleLower,
+  listTags,
+  listTagsGrouped,
+  getTagBySlug,
+  getTagById,
+  createTag,
+  updateTag,
+  deleteTag,
+  getStoryTags,
+  tagsForStories,
+  setStoryTags,
+  updateStoryDetails,
+  listUserHiddenTagIds,
+  setUserHiddenTags,
 };

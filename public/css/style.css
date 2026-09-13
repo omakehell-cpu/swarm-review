@@ -897,3 +897,102 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
   .container { padding: 20px 12px 60px; }
   .wa-textarea { min-width: 0; }
 }
+
+
+/* --- story tags (a curated vocabulary, see db.js's SEED_TAGS) ---------
+   Chips where a tag is being *shown*, and the same shape as a checkbox
+   where one is being *picked*, so the two read as the same object in
+   two states rather than as two unrelated controls. */
+.tag-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 10px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--bg-elevated); color: var(--text-muted);
+  font-family: var(--font-ui); font-size: 0.76rem; font-weight: 500; white-space: nowrap;
+}
+.tag-chip:hover { border-color: var(--border-strong); color: var(--text); text-decoration: none; }
+.tag-chip.unused { opacity: 0.55; }
+.tag-count {
+  font-variant-numeric: tabular-nums; font-size: 0.72rem;
+  color: var(--text-muted); padding-left: 6px; border-left: 1px solid var(--border);
+}
+.chapter-row .tag-chips { margin-top: 8px; }
+/* Stretched link: the row's title anchor covers the whole row, so the
+   row stays clickable, while the tag chips sit above that overlay and
+   keep their own links. */
+.story-row { position: relative; }
+.story-row .row-link { color: inherit; }
+.story-row .row-link:hover { text-decoration: none; }
+.story-row .row-link::after { content: ""; position: absolute; inset: 0; }
+.story-row .tag-chips, .story-row .chapter-row-meta { position: relative; }
+.hidden-by { margin: 8px 0 0; font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
+
+.tag-picker { display: flex; flex-direction: column; gap: 14px; }
+.tag-group { border: none; padding: 0; margin: 0; min-width: 0; }
+.tag-group legend {
+  padding: 0; margin-bottom: 6px;
+  font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+  font-weight: 600; color: var(--text-muted);
+}
+.tag-group-options { display: flex; flex-wrap: wrap; gap: 6px; }
+/* The checkbox itself is the chip's dot: same trick as the writing-check
+   pills, so the whole app has one way of saying "this is switched on". */
+.tag-pick {
+  display: inline-flex; flex-direction: row; align-items: center; gap: 7px;
+  padding: 4px 11px 4px 9px; margin: 0;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: transparent; cursor: pointer; user-select: none;
+  font-size: 0.8rem; font-weight: 500; color: var(--text-muted); white-space: nowrap;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.tag-pick:hover { border-color: var(--border-strong); color: var(--text); }
+.tag-pick input[type="checkbox"] {
+  width: 9px; height: 9px; margin: 0; padding: 0; border-radius: 50%;
+  border: 1.5px solid var(--border-strong); background: transparent; opacity: 0.55;
+}
+.tag-pick input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); opacity: 1; }
+.tag-pick input[type="checkbox"]:checked::after { content: none; }
+.tag-pick:has(input:checked) {
+  color: var(--text); border-color: rgba(var(--accent-rgb), 0.5);
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+.tag-filter { margin-bottom: 18px; }
+.tag-filter > summary {
+  cursor: pointer; color: var(--text-muted); font-size: 0.85rem;
+  padding: 6px 0; list-style-position: inside;
+}
+.tag-filter > summary:hover { color: var(--text); }
+.tag-filter-form {
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 16px 18px; margin-top: 6px;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elevated);
+}
+.tag-filter-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.folded-stories { margin-top: 22px; }
+.folded-stories > summary {
+  cursor: pointer; color: var(--text-muted); font-size: 0.85rem; padding: 8px 0;
+}
+.folded-stories > summary:hover { color: var(--text); }
+.folded-stories .chapter-row { opacity: 0.72; }
+
+.tag-index-group { margin-bottom: 26px; }
+.tag-index-group h2 { font-size: 1.05rem; margin-bottom: 10px; }
+.tag-index-group .tag-chips { margin-top: 0; }
+.tag-index-group .tag-chip { font-size: 0.82rem; padding: 4px 12px; }
+
+.tag-admin-group { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin: 18px 0 8px; }
+.tag-admin-list { display: flex; flex-direction: column; gap: 6px; }
+.tag-admin-row, .tag-admin-new { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tag-admin-row input, .tag-admin-new input { padding: 5px 9px; font-size: 0.85rem; }
+.tag-admin-row input[name="name"], .tag-admin-new input[name="name"] { flex: 1 1 160px; min-width: 0; }
+.tag-admin-row input[name="group"], .tag-admin-new input[name="group"] { flex: 0 1 130px; min-width: 0; }
+.tag-admin-row input[name="description"], .tag-admin-new input[name="description"] { flex: 2 1 220px; min-width: 0; }
+.tag-admin-count { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+.tag-admin-new { margin-bottom: 4px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+
+@media (max-width: 720px) {
+  .tag-admin-row, .tag-admin-new { gap: 6px; }
+  .tag-admin-row input, .tag-admin-new input { flex-basis: 100%; }
+}
