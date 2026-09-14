@@ -21,6 +21,7 @@ and writing Word files.
 | --- | --- |
 | `mammoth` | reads an uploaded `.docx`. Word's file format is genuinely complicated — real numbering, styles, footnotes — and the hand-written reader this replaced quietly lost most of it. |
 | `docx` | writes the `.docx` you get from a chapter's download link, as a document Word will edit further rather than a flat approximation of one. |
+| `markdown-it` | parses the Markdown a chapter is written in. It replaced a hand-written parser that made `file_name_here` italic, had no escape syntax, and couldn't see an indented list at all. |
 
 So a fresh copy does need one `npm install` before it will start. The
 development tools under [Checking your work](#checking-your-work) come
@@ -203,7 +204,7 @@ db.js            SQLite schema (via node:sqlite)
 models.js        query helpers (users, stories, chapters, versions, comments)
 auth.js          password hashing, session cookies, invite code generator
 views.js         server-rendered HTML pages
-lib/markdown.js  the Markdown parser + offset-aware comment highlighting
+lib/markdown.js  Markdown (via markdown-it) + offset-aware comment highlighting
 lib/docx.js      .docx (Word) in and out, over mammoth and the docx package
 lib/multipart.js parser for file-upload (multipart/form-data) requests
 lib/time.js      renders SQLite timestamps as <time> elements (UTC fallback)
@@ -277,9 +278,10 @@ installed, and `git commit --no-verify` skips it when you need it to.
   bold/italic/strikethrough, links, inline code, blockquotes and both
   kinds of list survive in both directions. Images are dropped. A table
   keeps its text, one row per line with ` | ` between cells, but stops
-  being a table. Nested lists are flattened. A stray literal `*`/`_`/`~`
-  in an uploaded Word document could still be misread as Markdown
-  formatting, since this app's Markdown has no escape syntax.
+  being a table. A stray literal `*`/`_`/`~` in an uploaded Word document
+  can still be misread as Markdown formatting, since nothing escapes it on
+  the way in — though typing `\*` by hand in the editor now produces a
+  literal asterisk, and `file_name_here` is no longer turned into italics.
 - No email notifications when someone comments on your chapter — just the
   in-app "New" / "New comments" badges since your last visit (see above).
   A real email digest could be added later if the group wants it, but it
