@@ -1876,3 +1876,42 @@ main[data-reading="read"] .reading-pane {
 @media (prefers-reduced-motion: reduce) {
   .mode-switch button, .reading-prefs-options button { transition: none; }
 }
+
+/* ---------------------------------------------------------------------
+   Notes in the margin
+   --------------------------------------------------------------------- */
+/* Applied by public/js/margin-notes.js once it has measured that it can.
+   Everything here is the "it worked" state: with no JavaScript, a narrow
+   window or a chapter whose highlights have all been edited away, none of
+   these rules apply and the plain column is what is left. */
+.chapter-body-grid.margin-notes {
+  position: relative;
+  /* The text column gives up some width: a note needs enough of it to be
+     a note, and the connector needs somewhere to go. */
+  grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr);
+}
+.margin-notes .comments-pane { position: static; max-height: none; overflow: visible; }
+.margin-notes #comment-list { position: relative; }
+.margin-notes #comment-list > .comment { margin: 0; }
+
+.margin-links {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; overflow: visible;
+}
+.margin-links path {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.2;
+  opacity: 0.75;
+}
+
+/* The general notes are about the chapter, not a line of it, so they sit
+   below the margin entirely. */
+.general-notes { margin-top: var(--s-9); }
+.general-notes h3 {
+  margin: 0 0 var(--s-4);
+  font-size: var(--t-2xs); text-transform: uppercase; letter-spacing: 0.09em;
+  font-weight: 600; color: var(--text-muted);
+}
+.margin-notes .general-notes { margin-top: var(--s-8); }
