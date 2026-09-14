@@ -569,6 +569,7 @@ async function handleStories(req, res, user, query) {
   const activeTags = activeSlugs.map((slug) => models.getTagBySlug(slug)).filter(Boolean);
   const stories = models.listStories({ since, tagIds: activeTags.map((t) => t.id) });
   const tagsByStory = models.tagsForStories(stories.map((s2) => s2.id));
+  const coauthorsByStory = models.coauthorsForStories(stories.map((s2) => s2.id));
   // A reader's hidden tags fold a story away rather than deleting it from
   // the list: they stay reachable behind a "show anyway" summary, since
   // hiding something outright makes an app feel broken when you know the
@@ -582,7 +583,7 @@ async function handleStories(req, res, user, query) {
     (hit.length ? folded : visible).push({ ...story, hiddenBy: hit });
   }
   sendHtml(res, 200, views.storiesPage({
-    user, stories: visible, folded, since, tagsByStory,
+    user, stories: visible, folded, since, tagsByStory, coauthorsByStory,
     activeTags, allGroups: models.listTagsGrouped(),
   }));
 }
@@ -659,9 +660,15 @@ async function handleStoryPage(req, res, user, storyId, query) {
   const since = query.get('since') || null;
   const chapters = models.listChaptersForStory(storyId, { since });
   const isStoryAuthor = user.id === story.author_id;
-  const dictionary = isStoryAuthor ? models.listStoryDictionaryEntries(storyId) : [];
+  // A coauthor writes in the story but doesn't own it: they get the "Add
+  // chapter" button and the dictionary, not "Edit details" or "Archive".
+  const canWrite = models.canWriteInStory(story, user);
+  const dictionary = canWrite ? models.listStoryDictionaryEntries(storyId) : [];
   sendHtml(res, 200, views.storyPage({
-    user, story, chapters, isStoryAuthor, dictionary, tags: models.getStoryTags(storyId),
+    user, story, chapters, isStoryAuthor, canWrite, dictionary,
+    tags: models.getStoryTags(storyId),
+    coauthors: models.listStoryCoauthors(storyId),
+    addableCoauthors: isStoryAuthor ? models.listAddableCoauthors(story) : [],
   }));
 }
 
@@ -673,7 +680,7 @@ async function handleStoryPage(req, res, user, storyId, query) {
 async function handleGetStoryDictionary(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
   if (!story) return sendJson(res, 404, { error: 'Story not found' });
-  if (story.author_id !== user.id) return sendJson(res, 403, { error: 'Only the story author can see this.' });
+  if (!models.canWriteInStory(story, user)) return sendJson(res, 403, { error: 'Only the story\'s authors can see this.' });
   sendJson(res, 200, { words: models.getStoryDictionary(storyId) });
 }
 
@@ -686,8 +693,8 @@ async function handleAddStoryDictionaryWord(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
   const wantsJson = (req.headers.accept || '').includes('application/json');
   if (!story) return wantsJson ? sendJson(res, 404, { error: 'Story not found' }) : sendHtml(res, 404, 'Story not found');
-  if (story.author_id !== user.id) {
-    const message = 'Only the story author can manage this.';
+  if (!models.canWriteInStory(story, user)) {
+    const message = "Only the story's authors can manage this.";
     return wantsJson ? sendJson(res, 403, { error: message }) : sendHtml(res, 403, message);
   }
   const body = await parseBody(req);
@@ -700,9 +707,36 @@ async function handleAddStoryDictionaryWord(req, res, user, storyId) {
 async function handleRemoveStoryDictionaryWord(req, res, user, storyId, entryId) {
   const story = models.getStoryById(storyId);
   if (!story) return sendHtml(res, 404, 'Story not found');
-  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can manage this.');
+  if (!models.canWriteInStory(story, user)) return sendHtml(res, 403, "Only the story's authors can manage this.");
   models.removeStoryDictionaryWord(storyId, entryId);
   redirect(res, `/stories/${storyId}#dictionary`);
+}
+
+// ---------- coauthors ----------
+// Only the owner hands out and takes back the right to write in their
+// story. An admin is not exempt: admins run the site, they don't get a
+// key to everyone's drafts.
+
+async function handleAddCoauthor(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendHtml(res, 404, 'Story not found');
+  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can add coauthors.');
+  const body = await parseBody(req);
+  const userId = Number(body.userId);
+  if (Number.isInteger(userId) && userId > 0) models.addStoryCoauthor(storyId, userId, user.id);
+  redirect(res, `/stories/${storyId}#authors`);
+}
+
+async function handleRemoveCoauthor(req, res, user, storyId, coauthorId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendHtml(res, 404, 'Story not found');
+  // Somebody can also step back from a story they were added to, without
+  // having to ask the owner to remove them.
+  if (story.author_id !== user.id && coauthorId !== user.id) {
+    return sendHtml(res, 403, 'Only the story author can remove a coauthor.');
+  }
+  models.removeStoryCoauthor(storyId, coauthorId);
+  redirect(res, story.author_id === user.id ? `/stories/${storyId}#authors` : '/');
 }
 
 async function handleArchivedChaptersForStory(req, res, user, storyId) {
@@ -741,7 +775,7 @@ async function handleDeleteChapter(req, res, user, chapterId) {
 async function handleNewChapterPage(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
   if (!story) return sendHtml(res, 404, 'Story not found');
-  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can add chapters.');
+  if (!models.canWriteInStory(story, user)) return sendHtml(res, 403, "Only the story's authors can add chapters.");
   const chapters = models.listChaptersForStory(storyId);
   sendHtml(res, 200, views.newChapterPage({ user, story, chapters, values: {} }));
 }
@@ -749,7 +783,7 @@ async function handleNewChapterPage(req, res, user, storyId) {
 async function handleNewChapterSubmit(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
   if (!story) return sendHtml(res, 404, 'Story not found');
-  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can add chapters.');
+  if (!models.canWriteInStory(story, user)) return sendHtml(res, 403, "Only the story's authors can add chapters.");
 
   const existingChapters = models.listChaptersForStory(storyId);
   const { fields: body, files } = await parseMultipartBody(req, UPLOAD_LIMIT_BYTES);
@@ -835,6 +869,8 @@ async function handleChapterDiff(req, res, user, chapterId, query) {
 async function handleEditChapterPage(req, res, user, chapterId) {
   const chapter = models.getChapterById(chapterId);
   if (!chapter) return sendHtml(res, 404, 'Chapter not found');
+  // Deliberately the chapter's author, not the story's: being a coauthor
+  // lets you write your own chapters, not rewrite somebody else's.
   if (chapter.author_id !== user.id) return sendHtml(res, 403, 'Only the chapter author can edit it.');
   const latest = models.getLatestVersion(chapterId);
   // Existing comments are shown alongside the edit form purely as
@@ -1182,6 +1218,12 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/archived-chapters$/)) && req.method === 'GET') {
       return handleArchivedChaptersForStory(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/authors$/)) && req.method === 'POST') {
+      return handleAddCoauthor(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/authors\/(\d+)\/remove$/)) && req.method === 'POST') {
+      return handleRemoveCoauthor(req, res, user, Number(m[1]), Number(m[2]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/dictionary$/)) && req.method === 'GET') {
       return handleGetStoryDictionary(req, res, user, Number(m[1]));

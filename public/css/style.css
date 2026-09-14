@@ -1182,3 +1182,26 @@ mark.search-hit {
   .topbar-search { order: 10; width: 100%; }
   .topbar-search input[type="search"], .topbar-search input[type="search"]:focus { width: 100%; }
 }
+
+/* ---- who can write in a story ---- */
+.coauthors {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.coauthors h2 { font-size: 1.05rem; margin: 0 0 4px; }
+.coauthors > p.muted { margin: 0 0 12px; font-size: 0.9rem; max-width: 62ch; }
+.coauthor-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.coauthor-list li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  background: var(--bg-elevated);
+}
+.coauthor-list li.muted { border-style: dashed; background: none; }
+.coauthor-add { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.coauthor-add label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--text-muted); }

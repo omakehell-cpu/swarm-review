@@ -172,6 +172,21 @@ CREATE TABLE IF NOT EXISTS story_tags (
 );
 CREATE INDEX IF NOT EXISTS idx_story_tags_tag ON story_tags(tag_id);
 
+-- Coauthors. The story's own author_id stays what it always was: the
+-- person whose story it is, who alone can edit its details, reorder it,
+-- archive it or delete it. A row here adds someone who can write in it --
+-- add chapters, and edit the chapters they wrote, the same rule the rest
+-- of the app already uses for comments. Editing someone else's chapter is
+-- deliberately not part of it.
+CREATE TABLE IF NOT EXISTS story_authors (
+  story_id INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  added_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  added_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (story_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_story_authors_user ON story_authors(user_id);
+
 -- Each reader's own "don't show me this" list, the equivalent of SOL's
 -- excluded codes. Set from /account; a story carrying any of these is
 -- folded away in that reader's story list (and only theirs).

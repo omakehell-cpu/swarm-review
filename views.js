@@ -95,7 +95,7 @@ function resetPasswordExpiredPage() {
 // search result. `hiddenBy` is the reader's own hidden tags that this
 // story tripped (see handleStories); it only ever arrives set from a list
 // that has already decided to fold the story away.
-function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [] } = {}) {
+function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } = {}) {
   // Not an <a> wrapping the whole row, which is what every other list
   // here does: the tag chips are links themselves, and an anchor inside
   // an anchor is invalid -- the parser closes the outer one early and the
@@ -112,7 +112,7 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [] } = {}) {
           : tagChips(tags)}
       </div>
       <div class="chapter-row-meta">
-        <span>by ${escapeHtml(s.author_name)}</span>
+        <span>${bylineWith(s.author_name, coauthors)}</span>
         <span>${s.chapter_count} chapter${s.chapter_count === 1 ? '' : 's'}</span>
         ${timeHtml(s.last_chapter_at || s.created_at)}
         ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} pending</span>` : ''}
@@ -121,11 +121,11 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [] } = {}) {
   `;
 }
 
-function storiesPage({ user, stories, folded = [], since, tagsByStory, activeTags = [], allGroups = [] }) {
+function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [] }) {
   const sinceQs = since ? `?since=${encodeURIComponent(since)}` : '';
   const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
   const rows = stories.length
-    ? stories.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs })).join('')
+    ? stories.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, coauthors: coauthorsByStory.get(s.id) || [] })).join('')
     : `<p class="muted">${activeTags.length ? 'No stories carry every tag you picked.' : 'No stories yet. Be the first to start one.'}</p>`;
 
   // The filter is a form of checkboxes rather than a list of links, so
@@ -159,7 +159,7 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, activeTag
   const foldedBlock = folded.length ? `
     <details class="folded-stories">
       <summary>${folded.length} stor${folded.length === 1 ? 'y' : 'ies'} hidden by your tag settings</summary>
-      <div class="chapter-list">${folded.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, hiddenBy: s.hiddenBy })).join('')}</div>
+      <div class="chapter-list">${folded.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, hiddenBy: s.hiddenBy, coauthors: coauthorsByStory.get(s.id) || [] })).join('')}</div>
     </details>` : '';
 
   return layout({
@@ -614,7 +614,51 @@ function storyDictionarySection(story, dictionary) {
     </details>`;
 }
 
-function storyPage({ user, story, chapters, isStoryAuthor, dictionary = [], tags = [] }) {
+// Reads "by Ana", "by Ana with Luis", "by Ana with Luis and Marta",
+// "by Ana with Luis, Marta and Sergio" -- a byline, not a field listing.
+function bylineWith(authorName, coauthors) {
+  const names = (coauthors || []).map((c) => escapeHtml(c.display_name));
+  const base = `by ${escapeHtml(authorName)}`;
+  if (!names.length) return base;
+  if (names.length === 1) return `${base} with ${names[0]}`;
+  return `${base} with ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+function coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId }) {
+  const rows = coauthors.length
+    ? coauthors.map((c) => `
+        <li>
+          <span>${escapeHtml(c.display_name)}</span>
+          ${(isStoryAuthor || c.id === currentUserId) ? `
+            <form method="post" action="/stories/${story.id}/authors/${c.id}/remove" class="inline-form"
+                  data-confirm="${isStoryAuthor
+                    ? `Remove ${escapeHtml(c.display_name)} as a coauthor? The chapters they wrote stay theirs.`
+                    : 'Step back from this story? The chapters you wrote stay yours.'}">
+              <button class="linklike" type="submit">${isStoryAuthor ? 'Remove' : 'Step back'}</button>
+            </form>` : ''}
+        </li>`).join('')
+    : '<li class="muted">Nobody yet.</li>';
+
+  const addForm = (isStoryAuthor && addableCoauthors.length) ? `
+    <form method="post" action="/stories/${story.id}/authors" class="coauthor-add">
+      <label>Add a coauthor
+        <select name="userId">
+          ${addableCoauthors.map((u) => `<option value="${u.id}">${escapeHtml(u.display_name)}</option>`).join('')}
+        </select>
+      </label>
+      <button class="btn small" type="submit">Add</button>
+    </form>` : '';
+
+  return `
+    <section class="coauthors" id="authors">
+      <h2>Who can write in this story</h2>
+      <p class="muted">A coauthor can add chapters and edit the ones they wrote, and shares the story's dictionary. Editing someone else's chapter, changing the story's details or archiving it stay with ${escapeHtml(story.author_name)}.</p>
+      <ul class="coauthor-list">${rows}</ul>
+      ${addForm}
+    </section>`;
+}
+
+function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [] }) {
   const rows = chapters.length ? chapters.map((c, i) => `
     <div class="chapter-row-outer">
       <a class="chapter-row" href="/chapters/${c.id}">
@@ -641,12 +685,12 @@ function storyPage({ user, story, chapters, isStoryAuthor, dictionary = [], tags
       <div class="page-head">
         <div>
           <h1>${escapeHtml(story.title)}</h1>
-          <p class="muted byline">by ${escapeHtml(story.author_name)} &middot; ${timeHtml(story.created_at)}</p>
+          <p class="muted byline">${bylineWith(story.author_name, coauthors)} &middot; ${timeHtml(story.created_at)}</p>
           ${story.description ? `<p class="summary">${escapeHtml(story.description)}</p>` : ''}
           ${tagChips(tags)}
         </div>
         <div class="page-head-actions">
-          ${isStoryAuthor ? `<a class="btn" href="/stories/${story.id}/chapters/new">Add chapter</a>` : ''}
+          ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">Add chapter</a>` : ''}
           ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
           ${isStoryAuthor ? `
             <form method="post" action="/stories/${story.id}/archive" class="inline-form">
@@ -656,7 +700,8 @@ function storyPage({ user, story, chapters, isStoryAuthor, dictionary = [], tags
       </div>
       <div class="chapter-list">${rows}</div>
       <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>
-      ${isStoryAuthor ? storyDictionarySection(story, dictionary) : ''}`,
+      ${(isStoryAuthor || coauthors.length) ? coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId: user.id }) : ''}
+      ${canWrite ? storyDictionarySection(story, dictionary) : ''}`,
   });
 }
 

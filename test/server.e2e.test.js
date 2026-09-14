@@ -13,113 +13,23 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const path = require('node:path');
-const { spawn } = require('node:child_process');
-
-const { useTempDatabase } = require('./helpers/tmpdb');
-const tmp = useTempDatabase();
-
-const ROOT = path.join(__dirname, '..');
-const PORT = 3000 + Math.floor(Math.random() * 20000);
-const BASE = `http://127.0.0.1:${PORT}`;
+const { startApp, makeClient, form, multipart, multipartWithFile } = require('./helpers/app');
 
 const USER = { username: 'testwriter', displayName: 'Test Writer', password: 'correct horse battery' };
 
-let child;
+let app;
 /** @type {any} */
 let models;
-let cookie = '';
-
-// A client that behaves like a browser except for following redirects --
-// the redirect itself is usually what's being asserted.
-/**
- * @param {string} pathname
- * @param {{ method?: string, body?: string|Uint8Array, contentType?: string, headers?: Record<string, string> }} [options]
- */
-function request(pathname, { method = 'GET', body, contentType, headers = {} } = {}) {
-  return fetch(BASE + pathname, {
-    method,
-    redirect: 'manual',
-    headers: {
-      ...(cookie ? { cookie } : {}),
-      ...(contentType ? { 'content-type': contentType } : {}),
-      ...headers,
-    },
-    // Node's fetch takes a Buffer at runtime; its published types only
-    // admit the web BodyInit union, which doesn't name ArrayBufferView.
-    body: /** @type {any} */ (body),
-  });
-}
-
-const form = (fields) => {
-  const params = new URLSearchParams();
-  for (const [k, v] of fields) params.append(k, v);
-  return { body: params.toString(), contentType: 'application/x-www-form-urlencoded' };
-};
-
-// The story form is multipart because it carries a file input, so the tag
-// checkboxes travel through the multipart parser rather than the
-// urlencoded one -- which is the path that has to be exercised here.
-// The same, with one binary file part -- what the browser sends when a
-// writer picks a .docx instead of pasting the text.
-function multipartWithFile(fields, file, boundary = 'swarmtest0987') {
-  const head = fields
-    .map(([name, value]) => `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`)
-    .join('');
-  const fileHead =
-    `--${boundary}\r\nContent-Disposition: form-data; name="${file.name}"; filename="${file.filename}"\r\n` +
-    'Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\n';
-  return {
-    body: Buffer.concat([
-      Buffer.from(head + fileHead, 'utf8'),
-      file.body,
-      Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8'),
-    ]),
-    contentType: `multipart/form-data; boundary=${boundary}`,
-  };
-}
-
-function multipart(fields, boundary = 'swarmtest0987') {
-  let out = '';
-  for (const [name, value] of fields) {
-    out += `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`;
-  }
-  out += `--${boundary}--\r\n`;
-  return { body: out, contentType: `multipart/form-data; boundary=${boundary}` };
-}
+let client;
+const request = (...args) => client.request(...args);
 
 test.before(async () => {
-  child = spawn(process.execPath, ['server.js'], {
-    cwd: ROOT,
-    env: { ...process.env, SWARM_DB_PATH: tmp.file, PORT: String(PORT), NODE_ENV: 'test' },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-
-  const stderr = [];
-  child.stderr.on('data', (d) => stderr.push(String(d)));
-
-  await new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error(`server did not start in 15s\n${stderr.join('')}`)),
-      15000
-    );
-    child.stdout.on('data', (d) => {
-      if (String(d).includes('listening')) { clearTimeout(timer); resolve(undefined); }
-    });
-    child.on('exit', (code) => {
-      clearTimeout(timer);
-      reject(new Error(`server exited with ${code}\n${stderr.join('')}`));
-    });
-  });
-
-  // Safe only now the child has created and migrated the file.
-  models = require('../models');
+  app = await startApp();
+  models = app.models;
+  client = makeClient(app.base);
 });
 
-test.after(() => {
-  if (child) child.kill('SIGTERM');
-  tmp.cleanup();
-});
+test.after(() => app.stop());
 
 test('a signed-out visitor is sent to the login page', async () => {
   const res = await request('/');
@@ -168,7 +78,7 @@ test('logging in sets an HttpOnly, SameSite=Lax session cookie', async () => {
   assert.match(setCookie, /SameSite=Lax/);
   assert.match(setCookie, /Path=\//);
 
-  cookie = setCookie.split(';')[0];
+  client.cookie = setCookie.split(';')[0];
 });
 
 test('HTML responses are never cached', async () => {
@@ -336,7 +246,7 @@ test('search finds a chapter by a word in its prose, in its current version only
 test('logging out invalidates the session', async () => {
   const res = await request('/logout', { method: 'POST', ...form([]) });
   assert.strictEqual(res.status, 302);
-  cookie = '';
+  client.cookie = '';
   const after = await request('/');
   assert.strictEqual(after.status, 302);
   assert.strictEqual(after.headers.get('location'), '/login');
