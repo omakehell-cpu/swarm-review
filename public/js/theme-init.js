@@ -9,7 +9,7 @@
 (function () {
   'use strict';
   try {
-    var saved = localStorage.getItem('theme');
+    const saved = localStorage.getItem('theme');
     if (saved === 'dark' || saved === 'light') {
       document.documentElement.setAttribute('data-theme', saved);
     }

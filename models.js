@@ -351,6 +351,7 @@ function consumePasswordResetToken(tokenId, userId, passwordHash) {
 // switches from the normal "active stories" listing to the archived one.
 // `tagIds` narrows the list to stories carrying ALL of them (a filter
 // that widened as you added terms would be a strange thing to offer).
+/** @param {{ since?: string|null, onlyArchived?: boolean, tagIds?: (number|string)[] }} [options] */
 function listStories({ since, onlyArchived = false, tagIds = [] } = {}) {
   const wanted = (tagIds || []).map(Number).filter((n) => Number.isInteger(n) && n > 0);
   const tagFilter = wanted.length
@@ -407,6 +408,10 @@ function deleteStoryForever(storyId) {
 }
 
 // ---------- chapters ----------
+/**
+ * @param {number} storyId
+ * @param {{ since?: string|null, onlyArchived?: boolean }} [options]
+ */
 function listChaptersForStory(storyId, { since, onlyArchived = false } = {}) {
   return db.prepare(`
     SELECT c.*, u.display_name AS author_name,
@@ -461,6 +466,7 @@ const getChapterById = (id) =>
     WHERE c.id = ?
   `).get(id);
 
+/** @param {{ storyId: number, title: string, summary?: string, authorId: number, content: string, changelog?: string }} fields */
 function createChapter({ storyId, title, summary, authorId, content, changelog }) {
   const insertChapter = db.prepare(
     'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id) VALUES (?, ?, ?, ?, ?)'
@@ -491,6 +497,7 @@ function createChapter({ storyId, title, summary, authorId, content, changelog }
 // since they still hold a slot under UNIQUE(story_id, chapter_number) --
 // is shifted up by one, highest number first so no single UPDATE ever
 // collides with another chapter's current number.
+/** @param {{ storyId: number, position: number, title: string, summary?: string, authorId: number, content: string, changelog?: string }} fields */
 function insertChapterAt({ storyId, position, title, summary, authorId, content, changelog }) {
   db.exec('BEGIN');
   try {
@@ -668,6 +675,10 @@ function listCommentsForVersion(versionId) {
   `).all(versionId);
 }
 
+// A comment is either anchored to a stretch of the text (the offsets and
+// the quote) or a reply to another comment (parentId) -- never both, and
+// the fields the other kind doesn't use are simply absent.
+/** @param {{ versionId: number, authorId: number, body: string, startOffset?: number, endOffset?: number, quotedText?: string, parentId?: number|null }} fields */
 function createComment({ versionId, authorId, startOffset, endOffset, quotedText, body, parentId }) {
   const info = db.prepare(`
     INSERT INTO comments (version_id, author_id, parent_id, start_offset, end_offset, quoted_text, body)
@@ -870,6 +881,10 @@ function proposeTag({ name, userId }) {
   return getTagById(Number(info.lastInsertRowid));
 }
 
+/**
+ * @param {number} id
+ * @param {{ name?: string, group?: string }} [edits]
+ */
 function approveTag(id, { name, group } = {}) {
   const tag = getTagById(id);
   if (!tag) return null;
@@ -1076,6 +1091,7 @@ function getWikiSyncState() {
   return db.prepare('SELECT * FROM wiki_sync_state WHERE id = 1').get() || null;
 }
 
+/** @param {{ status: string, pageCount?: number, error?: string|null }} state */
 function setWikiSyncState({ status, pageCount, error }) {
   db.prepare(`
     INSERT INTO wiki_sync_state (id, last_synced_at, last_status, page_count, last_error)

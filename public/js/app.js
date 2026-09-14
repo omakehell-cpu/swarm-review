@@ -9,7 +9,7 @@
   const metaEl = document.getElementById('chapter-meta');
   const meta = metaEl ? JSON.parse(metaEl.textContent) : {};
 
-  const versionSelect = document.getElementById('version-select');
+  const versionSelect = /** @type {HTMLSelectElement|null} */ (document.getElementById('version-select'));
   if (versionSelect) {
     versionSelect.addEventListener('change', () => {
       window.location.href = `/chapters/${meta.chapterId}?v=${encodeURIComponent(versionSelect.value)}`;
@@ -55,7 +55,7 @@
     wikiTip.className = 'wa-hover-tip hidden';
     document.body.appendChild(wikiTip);
     textEl.addEventListener('mouseover', (ev) => {
-      const link = ev.target.closest('a.wiki-link');
+      const link = /** @type {HTMLAnchorElement|null} */ (/** @type {Element} */ (ev.target).closest('a.wiki-link'));
       if (!link) return;
       wikiTip.textContent = link.dataset.wikiSummary || '';
       const rect = link.getBoundingClientRect();
@@ -64,8 +64,8 @@
       wikiTip.classList.remove('hidden');
     });
     textEl.addEventListener('mouseout', (ev) => {
-      const link = ev.target.closest('a.wiki-link');
-      if (link && !link.contains(ev.relatedTarget)) wikiTip.classList.add('hidden');
+      const link = /** @type {Element} */ (ev.target).closest('a.wiki-link');
+      if (link && !link.contains(/** @type {Node} */ (ev.relatedTarget))) wikiTip.classList.add('hidden');
     });
   }
 
@@ -82,11 +82,11 @@
   // ---- clicking a highlighted span jumps to the comment in the sidebar ----
   textEl.addEventListener('click', (ev) => {
     if (commentsCurrentlyHidden()) return;
-    const span = ev.target.closest('.hl');
+    const span = /** @type {HTMLElement|null} */ (/** @type {Element} */ (ev.target).closest('.hl'));
     if (!span) return;
     const ids = (span.dataset.commentIds || '').split(',').filter(Boolean);
     if (!ids.length) return;
-    const target = document.getElementById(`comment-${ids[0]}`);
+    const target = /** @type {HTMLDetailsElement|null} */ (document.getElementById(`comment-${ids[0]}`));
     if (target) {
       // A settled comment is rendered as a collapsed <details> (see
       // renderComment in views.js) -- scrolling to one that's still shut
@@ -103,10 +103,10 @@
   const toast = document.getElementById('selection-toast');
   const box = document.getElementById('new-comment-box');
   const previewEl = document.getElementById('nc-preview');
-  const startInput = document.getElementById('nc-start');
-  const endInput = document.getElementById('nc-end');
-  const quotedInput = document.getElementById('nc-quoted');
-  const bodyInput = document.getElementById('nc-body');
+  const startInput = /** @type {HTMLInputElement} */ (document.getElementById('nc-start'));
+  const endInput = /** @type {HTMLInputElement} */ (document.getElementById('nc-end'));
+  const quotedInput = /** @type {HTMLInputElement} */ (document.getElementById('nc-quoted'));
+  const bodyInput = /** @type {HTMLTextAreaElement} */ (document.getElementById('nc-body'));
   const cancelBtn = document.getElementById('nc-cancel');
 
   let pendingSelection = null;
@@ -138,7 +138,7 @@
 
   document.addEventListener('mouseup', (ev) => {
     if (commentsCurrentlyHidden()) return;
-    if (box && box.contains(ev.target)) return;
+    if (box && box.contains(/** @type {Node} */ (ev.target))) return;
     const result = getSelectionOffsets();
     if (!result) {
       toast.classList.add('hidden');

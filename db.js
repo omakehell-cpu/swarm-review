@@ -8,11 +8,18 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
 
-const DATA_DIR = path.join(__dirname, 'data');
+// SWARM_DB_PATH exists so the test suite can run the real schema, the real
+// migrations and the real seed data against a throwaway file in a temp
+// directory. Nothing in production sets it, and the default below is the
+// only path the app itself ever uses.
+const DB_PATH = process.env.SWARM_DB_PATH || path.join(__dirname, 'data', 'swarm-review.sqlite');
+const DATA_DIR = path.dirname(DB_PATH);
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-const DB_PATH = path.join(DATA_DIR, 'swarm-review.sqlite');
-const db = new DatabaseSync(DB_PATH);
+// The cast is for the type-checker only (see types.d.ts): node:sqlite
+// types every column as string | number | bigint | null | Uint8Array, and
+// this app's rows are known shapes its own schema fixes.
+/** @type {LooseDatabase} */
+const db = /** @type {any} */ (new DatabaseSync(DB_PATH));
 
 db.exec('PRAGMA journal_mode = WAL;');
 db.exec('PRAGMA foreign_keys = ON;');

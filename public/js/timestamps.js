@@ -17,7 +17,7 @@
     return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
-  document.querySelectorAll('time.ts').forEach((el) => {
+  document.querySelectorAll('time.ts').forEach((/** @type {HTMLElement} */ el) => {
     const iso = el.getAttribute('datetime');
     if (!iso) return;
     const date = new Date(iso);

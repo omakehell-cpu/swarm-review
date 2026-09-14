@@ -8,12 +8,17 @@ or rejects each comment. Authors can upload multiple revised versions of
 the same chapter; older versions and their comments stay around for
 reference.
 
-## Why it has zero dependencies
+## Why it has no runtime dependencies
 
 This app is built entirely on Node.js's own built-ins — including its
-built-in SQLite module (`node:sqlite`) — so there is **no `npm install`
-step and nothing to download**. That makes it trivial to self-host: copy
-the folder to a machine with a recent Node.js and run it.
+built-in SQLite module (`node:sqlite`) — so there is **nothing to download
+before you can run it**. That makes it trivial to self-host: copy the
+folder to a machine with a recent Node.js and run it.
+
+`npm install` only fetches the development tools described under
+[Checking your work](#checking-your-work): a linter, a type-checker and
+nothing the server itself ever loads. The app runs the same with
+`node_modules/` deleted.
 
 **Requirement: Node.js >= 22.5.0** (built-in SQLite support). Check with
 `node -v`. Node 22 LTS or newer works well.
@@ -196,10 +201,52 @@ lib/zip.js       minimal dependency-free ZIP reader/writer
 lib/multipart.js parser for file-upload (multipart/form-data) requests
 lib/time.js      renders SQLite timestamps as <time> elements (UTC fallback)
 lib/wiki.js      syncs + matches names against the shared-universe wiki
+lib/diff.js      paragraph- then word-level comparison of two versions
 lib/             other small shared helpers (HTML escaping, cookies, layout)
 public/          client-side CSS/JS (text-selection + highlighting logic)
+test/            the test suite (Node's own runner; see below)
+types.d.ts       type declarations used by the checker, never by the app
 data/            created at runtime: the SQLite database + secrets
 ```
+
+## Checking your work
+
+```
+npm install     # once: the dev tools below (nothing the server loads)
+npm run check   # lint, then types, then tests
+```
+
+Or one at a time:
+
+| command | what it does |
+| --- | --- |
+| `npm run lint` | ESLint. Mostly there for `no-undef`, which catches a name that doesn't exist — the mistake that breaks a rarely-taken branch of the browser code and shows up weeks later as "the editor stopped working for me". |
+| `npm run typecheck` | TypeScript reading the plain `.js` files (`checkJs`), no compile step and no conversion. It honours JSDoc where it exists and infers the rest. `strict` is off on purpose: see the comment at the top of `tsconfig.json`. |
+| `npm test` | Node's built-in test runner over `test/`. |
+
+The suite is small and deliberately weighted towards the things that have
+actually gone wrong:
+
+- `test/form-parsing.test.js` — a form field sent more than once (a row of
+  tag checkboxes) must arrive as all of its values. It once arrived as the
+  last one only, so eight ticked tags saved as one, with nothing thrown and
+  nothing logged.
+- `test/markdown-anchoring.test.js` — comment offsets are counted against
+  the text with the markdown stripped out. Read this before replacing the
+  markdown renderer with a library: a renderer that emits the same HTML but
+  counts characters differently would slide every existing comment in the
+  archive off its quote.
+- `test/diff.test.js` — version comparison, including that a 400-paragraph
+  chapter diffs in well under a second.
+- `test/wiki-html.test.js` — the glossary converter, against the shapes the
+  real wiki actually contains rather than tidy textbook wikitext.
+- `test/server.e2e.test.js` — a throwaway database in a temp directory, the
+  real `node server.js` in a child process, and an HTTP client doing what a
+  browser does: register, log in, post a story with eight tags, edit a
+  chapter, read the diff, search, log out.
+
+Tests never touch `data/swarm-review.sqlite`; they set `SWARM_DB_PATH`,
+which is the only thing that environment variable exists for.
 
 ## Known limitations / ideas for later
 
