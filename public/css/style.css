@@ -381,9 +381,17 @@ input[type="file"] { padding: 6px 4px; }
    grouped and separated by hairlines, rather than a row of competing
    buttons sitting directly under the title. */
 .version-bar {
-  display: flex; align-items: center; gap: 8px 14px; margin-top: 18px; flex-wrap: wrap;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px 20px;
+  margin-top: 18px; flex-wrap: wrap;
   font-size: 0.84rem; color: var(--text-muted);
 }
+/* Two halves: what you're looking at on the left, what you can do about
+   it on the right. Before this it was eight controls of equal weight in
+   one row that wrapped to four rows on a phone. */
+.version-context, .version-actions {
+  display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap;
+}
+.version-compare { white-space: nowrap; }
 .version-bar label { flex-direction: row; align-items: center; gap: 8px; font-size: 0.84rem; }
 .version-bar select { font-size: 0.84rem; padding: 5px 26px 5px 9px; }
 .version-bar .btn { font-size: 0.82rem; padding: 5px 11px; }
@@ -1222,3 +1230,97 @@ mark.search-hit {
 .error-page h1 { margin: 0 0 10px; font-size: 1.6rem; }
 .error-message { color: var(--text-muted); margin: 0 0 24px; }
 .error-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ---- the writing-checks card folds ---- */
+.wa-card-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.wa-card-toggle:hover { color: var(--text); }
+.wa-card-caret {
+  width: 0;
+  height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transform: rotate(90deg);
+  transition: transform 120ms ease;
+}
+.wa-card-folded .wa-card-caret { transform: none; }
+.wa-card-folded .wa-sections { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .wa-card-caret { transition: none; }
+}
+
+
+/* ---- the "More" menu, JS-free ---- */
+.menu { position: relative; }
+.menu > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+.menu > summary::-webkit-details-marker { display: none; }
+.menu > summary::after {
+  content: "";
+  display: inline-block;
+  margin-left: 6px;
+  border-top: 4px solid currentColor;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  vertical-align: 0.1em;
+}
+.menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  min-width: 210px;
+  padding: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+.menu-heading {
+  margin: 6px 8px 4px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.menu-panel a, .menu-danger {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.menu-panel a:hover, .menu-danger:hover { background: var(--bg-sunken); }
+.menu-danger { color: var(--rejected); }
+@media (max-width: 720px) {
+  /* No room to hang a panel off the edge of a phone. */
+  .menu-panel { position: static; min-width: 0; margin-top: 6px; box-shadow: none; }
+  .version-bar { flex-direction: column; align-items: stretch; }
+  .version-actions { justify-content: flex-start; }
+}

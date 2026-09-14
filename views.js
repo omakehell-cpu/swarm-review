@@ -970,28 +970,39 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     <p class="breadcrumb"><a href="/stories/${chapter.story_id}">&larr; ${escapeHtml(chapter.story_title)}</a></p>
     <div class="chapter-header">
       <h1>Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</h1>
-      <p class="muted byline">by ${escapeHtml(chapter.author_name)} &middot; ${timeHtml(chapter.created_at)}</p>
+      <p class="muted byline">by ${escapeHtml(chapter.author_name)} &middot; ${timeHtml(chapter.created_at)}${
+        neighbours && neighbours.total > 1 ? ` &middot; <a href="/stories/${chapter.story_id}">chapter ${neighbours.position} of ${neighbours.total}</a>` : ''
+      }</p>
       ${chapter.summary ? `<p class="summary">${escapeHtml(chapter.summary)}</p>` : ''}
       <div class="version-bar">
-        <label>Version:
-          <select id="version-select">${versionOptions}</select>
-        </label>
-        ${timeHtml(currentVersion.created_at, 'version-ts')}
-        ${currentVersion.changelog ? `<span class="changelog muted">"${escapeHtml(currentVersion.changelog)}"</span>` : ''}
-        ${isChapterAuthor ? `<a class="btn ghost" href="/chapters/${chapter.id}/edit">Edit chapter</a>` : ''}
-        ${isChapterAuthor ? `
-          <form method="post" action="/chapters/${chapter.id}/archive" class="inline-form">
-            <button class="btn ghost small" type="submit">Archive chapter</button>
-          </form>` : ''}
-        <span class="download-links muted">Download:
-          <a href="/chapters/${chapter.id}/download.md?v=${currentVersion.version_number}">.md</a>
-          <a href="/chapters/${chapter.id}/download.txt?v=${currentVersion.version_number}">.txt</a>
-          <a href="/chapters/${chapter.id}/download.docx?v=${currentVersion.version_number}">.docx</a>
-        </span>
-        ${versions.length > 1 ? `<a class="btn ghost small" href="/chapters/${chapter.id}/diff?to=${currentVersion.version_number}">Compare versions</a>` : ''}
-        <button id="reading-fill-screen" class="btn ghost small" type="button">Fill screen</button>
+        <div class="version-context">
+          <label>Version:
+            <select id="version-select">${versionOptions}</select>
+          </label>
+          ${timeHtml(currentVersion.created_at, 'version-ts')}
+          ${currentVersion.changelog ? `<span class="changelog muted">&ldquo;${escapeHtml(currentVersion.changelog)}&rdquo;</span>` : ''}
+          ${versions.length > 1 ? `<a class="version-compare" href="/chapters/${chapter.id}/diff?to=${currentVersion.version_number}">What changed?</a>` : ''}
+        </div>
+        <div class="version-actions">
+          <button id="reading-fill-screen" class="btn ghost small" type="button">Fill screen</button>
+          ${isChapterAuthor ? `<a class="btn ghost small" href="/chapters/${chapter.id}/edit">Edit</a>` : ''}
+          <details class="menu">
+            <summary class="btn ghost small">More</summary>
+            <div class="menu-panel">
+              <p class="menu-heading">Download this version</p>
+              <a href="/chapters/${chapter.id}/download.docx?v=${currentVersion.version_number}">Word (.docx)</a>
+              <a href="/chapters/${chapter.id}/download.md?v=${currentVersion.version_number}">Markdown (.md)</a>
+              <a href="/chapters/${chapter.id}/download.txt?v=${currentVersion.version_number}">Plain text (.txt)</a>
+              ${isChapterAuthor ? `
+                <p class="menu-heading">Chapter</p>
+                <form method="post" action="/chapters/${chapter.id}/archive" class="inline-form"
+                      data-confirm="Archive this chapter? It stays readable from the story's archived chapters.">
+                  <button class="menu-danger" type="submit">Archive chapter</button>
+                </form>` : ''}
+            </div>
+          </details>
+        </div>
       </div>
-      ${chapterNav(chapter, neighbours, { compact: true })}
     </div>
     <div class="chapter-body-grid">
       <div class="reading-pane">
