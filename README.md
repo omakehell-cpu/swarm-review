@@ -23,6 +23,16 @@ and writing Word files.
 | `docx` | writes the `.docx` you get from a chapter's download link, as a document Word will edit further rather than a flat approximation of one. |
 | `markdown-it` | parses the Markdown a chapter is written in. It replaced a hand-written parser that made `file_name_here` italic, had no escape syntax, and couldn't see an indented list at all. |
 
+Nothing else was worth its weight. The writing checks were the obvious
+candidate — `compromise` can conjugate an irregular verb, which is what
+turning a passive round needs — but it is 352KB in every reader's browser
+and the only thing needed from it is a table of 138 irregular participles.
+That table is 2.7KB and is inlined in `public/js/writing-analyzer.js`,
+taken from [english-verbs-irregular](https://www.npmjs.com/package/english-verbs-irregular)
+(Apache-2.0, part of RosaeNLG). The prose linters in that corner of npm —
+`write-good`, `retext-passive`, `no-cliches` — only detect, and this app
+already detects with per-check toggles, positions and suggestions.
+
 So a fresh copy does need one `npm install` before it will start. The
 development tools under [Checking your work](#checking-your-work) come
 down with it and the server never loads them; `npm install --omit=dev`
