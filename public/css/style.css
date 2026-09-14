@@ -1744,3 +1744,35 @@ mark.search-hit {
   }
   .chapter-row { transition: none; }
 }
+
+/* ---------------------------------------------------------------------
+   Who has read what
+   --------------------------------------------------------------------- */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px;
+  padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* On the author's own chapter, in words. */
+.readers-line { margin: var(--s-3) 0 0; font-size: var(--t-sm); }
+.readers { color: var(--text-muted); }
+.readers.none { font-style: italic; opacity: 0.8; }
+.readers-note { opacity: 0.75; }
+
+/* In a list of chapters, one initial per person: the names would not fit
+   and the count is the part that matters at a glance. */
+.reader-dots { display: inline-flex; gap: 2px; }
+.reader-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; border-radius: 50%;
+  background: rgba(var(--accepted-rgb), 0.18);
+  color: var(--accepted);
+  font-size: 9px; font-weight: 700; line-height: 1;
+  text-transform: uppercase;
+}
+/* Somebody who read an earlier draft has still not seen this one. */
+.reader-dot.earlier {
+  background: transparent;
+  color: var(--text-muted);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}

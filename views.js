@@ -882,6 +882,33 @@ function synopsisSection(story) {
     </details>`;
 }
 
+// Who has been through a chapter, and whether it was this draft or an
+// earlier one. Stated plainly, because the reading is recorded by opening
+// the page and anything grander than "opened it" would be a claim the app
+// cannot support.
+function readersLine(readers, currentVersionNumber) {
+  if (!readers || !readers.length) return '<span class="readers none">Nobody has opened this yet</span>';
+  const current = readers.filter((r) => r.version_number >= currentVersionNumber);
+  const earlier = readers.filter((r) => r.version_number < currentVersionNumber);
+  const names = (list) => list.map((r) => escapeHtml(r.display_name)).join(', ');
+  const parts = [];
+  if (current.length) parts.push(`Read by ${names(current)}`);
+  if (earlier.length) {
+    parts.push(`${current.length ? '' : 'Read by '}${names(earlier)} <span class="readers-note">(an earlier draft)</span>`);
+  }
+  return `<span class="readers">${parts.join(' &middot; ')}</span>`;
+}
+
+// The same thing in one glyph per person, for a list of chapters where the
+// names would not fit.
+function readerDots(readers, currentVersionNumber) {
+  if (!readers || !readers.length) return '';
+  const title = readers.map((r) => r.display_name).join(', ');
+  return `<span class="reader-dots" title="Opened by ${escapeHtml(title)}">${readers.map((r) => `
+    <span class="reader-dot${r.version_number >= currentVersionNumber ? '' : ' earlier'}"
+          aria-hidden="true">${escapeHtml(r.display_name.trim()[0] || '?')}</span>`).join('')}<span class="visually-hidden">Opened by ${escapeHtml(title)}</span></span>`;
+}
+
 function coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId }) {
   const rows = coauthors.length
     ? coauthors.map((c) => `
@@ -916,7 +943,7 @@ function coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, c
     </section>`;
 }
 
-function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null }) {
+function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map() }) {
   const rows = chapters.length ? chapters.map((c, i) => `
     <div class="chapter-row-outer">
       <a class="chapter-row" href="/chapters/${c.id}">
@@ -927,6 +954,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           <p class="muted">${escapeHtml(c.summary || '')}</p>
         </div>
         <div class="chapter-row-meta">
+          ${readerDots(readersByChapter.get(c.id) || [], c.latest_version)}
           <span>by ${escapeHtml(c.author_name)}</span>
           <span>v${c.latest_version}${c.word_count ? ` &middot; ${wordCount(c.word_count)}` : ''}</span>
           ${timeHtml(c.created_at)}
@@ -1182,7 +1210,7 @@ function chapterNav(chapter, neighbours, { compact = false } = {}) {
     </nav>`;
 }
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, neighbours = null }) {
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, neighbours = null, readers = [] }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -1215,6 +1243,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         neighbours && neighbours.total > 1 ? ` &middot; <a href="/stories/${chapter.story_id}">chapter ${neighbours.position} of ${neighbours.total}</a>` : ''
       }</p>
       ${chapter.summary ? `<p class="summary">${escapeHtml(chapter.summary)}</p>` : ''}
+      ${isChapterAuthor ? `<p class="readers-line">${readersLine(readers, currentVersion.version_number)}</p>` : ''}
       <div class="version-bar">
         <div class="version-context">
           <label>Version:

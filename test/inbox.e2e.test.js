@@ -114,12 +114,44 @@ test('a chapter somebody else added is new to read; your own is not', () => {
   assert.ok(his.newChapters[0].word_count > 0, 'it says how long it is');
 });
 
-test('nothing time-based shows up on a first-ever visit', () => {
-  // since is null the first time an account loads the index, and
-  // "everything since the beginning of time" would be a wall.
+test('on a first-ever visit, replies stay quiet and unread chapters do not', () => {
+  // since is null the first time an account loads the index. Replies are
+  // news and have nowhere to start from, so they say nothing. What there
+  // is left to read is not news -- it is a list of things to do, and it
+  // does not depend on when anybody last looked at the index.
   const first = models.inboxFor(luisId, { since: null });
   assert.strictEqual(first.replies.length, 0);
-  assert.strictEqual(first.newChapters.length, 0);
+  assert.strictEqual(first.newChapters.length, 1, 'the chapter he has not opened is still there');
+});
+
+test('a chapter stops being "to read" once you open it, and stays that way', () => {
+  assert.strictEqual(models.inboxFor(luisId, { since: null }).newChapters.length, 1);
+  models.markChapterRead(chapterId, luisId, 1);
+  assert.strictEqual(models.inboxFor(luisId, { since: null }).newChapters.length, 0);
+
+  // And unlike the old "since your last visit" rule, reloading the index
+  // does not bring it back or take anything else away.
+  assert.strictEqual(models.inboxFor(luisId, { since: null }).newChapters.length, 0);
+});
+
+test('reading is recorded per person, and the author is not a reader of their own', () => {
+  const readers = models.listChapterReaders(chapterId);
+  assert.deepStrictEqual(readers.map((r) => r.display_name), ['Luis']);
+  assert.ok(!readers.some((r) => r.display_name === 'Ana'), 'Ana wrote it');
+});
+
+test('a new version does not erase who read the last one, but is distinguishable', () => {
+  // Somebody who read draft one has not seen draft two, and the story page
+  // has to be able to tell those apart.
+  const before = models.listChapterReaders(chapterId)[0];
+  assert.strictEqual(before.version_number, 1);
+
+  models.markChapterRead(chapterId, luisId, 3);
+  assert.strictEqual(models.listChapterReaders(chapterId)[0].version_number, 3);
+
+  // An older reading never overwrites a newer one.
+  models.markChapterRead(chapterId, luisId, 2);
+  assert.strictEqual(models.listChapterReaders(chapterId)[0].version_number, 3);
 });
 
 test('an archived story stops being anybody\'s business', () => {

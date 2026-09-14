@@ -379,6 +379,28 @@ test('the reading time is an estimate, and says so', async () => {
   assert.strictEqual(stats.words, sum);
 });
 
+test('opening a chapter records that you read it, and the page says so', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapterId = models.listChaptersForStory(story.id)[0].id;
+
+  // The author is reading their own chapter here, so nothing is recorded.
+  await request(`/chapters/${chapterId}`);
+  assert.deepStrictEqual(models.listChapterReaders(chapterId), []);
+
+  // Somebody else opening it is what counts.
+  const auth = require('../auth');
+  models.createUser({ username: 'reader', displayName: 'A Reader', passwordHash: auth.hashPassword(USER.password), isAdmin: false });
+  const other = makeClient(app.base);
+  await other.login('reader', USER.password);
+  await other.request(`/chapters/${chapterId}`);
+
+  assert.deepStrictEqual(models.listChapterReaders(chapterId).map((r) => r.display_name), ['A Reader']);
+
+  // And the author sees it on their own chapter.
+  const html = await (await request(`/chapters/${chapterId}`)).text();
+  assert.match(html, /Read by A Reader/);
+});
+
 test('logging out invalidates the session', async () => {
   const res = await request('/logout', { method: 'POST', ...form([]) });
   assert.strictEqual(res.status, 302);
