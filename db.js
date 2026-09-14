@@ -305,6 +305,12 @@ ensureColumn('tags', 'proposed_by', 'INTEGER');
 // body yet for a given page until the next sync fills it in.
 ensureColumn('wiki_pages', 'content_html', 'TEXT');
 
+// Word counts are stored rather than computed per request: a story page
+// lists every chapter, and counting words means parsing the markdown of
+// each one. Backfilled once, below, for versions written before this
+// column existed.
+ensureColumn('chapter_versions', 'word_count', 'INTEGER');
+
 // One-time migration: older versions of this app gated registration with a
 // single static code stored in data/invite-code.txt (valid forever, for
 // anyone). If that file exists and the new invite_codes table is still

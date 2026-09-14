@@ -302,6 +302,33 @@ test('a change that only moves emphasis says so instead of looking broken', asyn
   assert.match(html, /Only the formatting changed/);
 });
 
+test('word counts reach the page, and follow an edit', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapterId = models.listChaptersForStory(story.id)[0].id;
+
+  const before = models.getLatestVersion(chapterId).word_count;
+  assert.ok(before > 0, 'the stored version carries a count');
+
+  await request(`/chapters/${chapterId}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['title', 'Chapter One'],
+      ['summary', ''],
+      ['content', 'One two three four five six seven eight nine ten eleven twelve.'],
+      ['changelog', 'counted'],
+    ]),
+  });
+  assert.strictEqual(models.getLatestVersion(chapterId).word_count, 12);
+
+  const chapterHtml = await (await request(`/chapters/${chapterId}`)).text();
+  assert.match(chapterHtml, /12 words/);
+
+  // And the story page adds them up, next to who wrote each chapter.
+  const storyHtml = await (await request(`/stories/${story.id}`)).text();
+  assert.match(storyHtml, /12 words/);
+  assert.match(storyHtml, /by Test Writer/);
+});
+
 test('logging out invalidates the session', async () => {
   const res = await request('/logout', { method: 'POST', ...form([]) });
   assert.strictEqual(res.status, 302);

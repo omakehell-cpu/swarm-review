@@ -1324,3 +1324,8 @@ mark.search-hit {
   .version-bar { flex-direction: column; align-items: stretch; }
   .version-actions { justify-content: flex-start; }
 }
+
+/* The word count sits first in the checks strip and stays put, so it
+   doesn't jump sideways as issue chips appear and disappear. */
+.wa-words { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
+.wa-chip.muted { color: var(--text-muted); font-weight: 400; }

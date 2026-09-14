@@ -3,8 +3,21 @@
 
 const db = require('./db');
 const auth = require('./auth');
+const { countWords } = require('./lib/markdown');
 
 const DELETED_USER_USERNAME = 'deleted-user';
+
+// Versions written before chapter_versions.word_count existed have no
+// count. Filling them in needs the markdown parser, which db.js has no
+// business importing, so it happens here, once, on the first load after
+// the column is added.
+{
+  const missing = db.prepare('SELECT id, content FROM chapter_versions WHERE word_count IS NULL').all();
+  if (missing.length) {
+    const update = db.prepare('UPDATE chapter_versions SET word_count = ? WHERE id = ?');
+    for (const row of missing) update.run(countWords(row.content), row.id);
+  }
+}
 
 // ---------- users ----------
 // Excludes the "deleted-user" placeholder (seeded by db.js at startup) so
@@ -369,6 +382,12 @@ function listStories({ since, onlyArchived = false, tagIds = [] } = {}) {
         WHERE c2.story_id = s.id AND cm.status = 'pending' AND cm.parent_id IS NULL AND cm.deleted_at IS NULL
           AND v.version_number = (SELECT MAX(v3.version_number) FROM chapter_versions v3 WHERE v3.chapter_id = c2.id)
       ) AS pending_comments,
+      (
+        SELECT COALESCE(SUM(v.word_count), 0) FROM chapters c3
+        JOIN chapter_versions v ON v.chapter_id = c3.id
+        WHERE c3.story_id = s.id AND c3.archived_at IS NULL
+          AND v.version_number = (SELECT MAX(v5.version_number) FROM chapter_versions v5 WHERE v5.chapter_id = c3.id)
+      ) AS word_count,
       ${since ? `(SELECT EXISTS(SELECT 1 FROM chapters ch3 WHERE ch3.story_id = s.id AND ch3.archived_at IS NULL AND ch3.created_at > @since))` : '0'} AS has_new_chapters
     FROM stories s
     JOIN users u ON u.id = s.author_id
@@ -417,6 +436,8 @@ function listChaptersForStory(storyId, { since, onlyArchived = false } = {}) {
     SELECT c.*, u.display_name AS author_name,
       (SELECT MAX(version_number) FROM chapter_versions v WHERE v.chapter_id = c.id) AS latest_version,
       (SELECT COUNT(*) FROM chapter_versions v WHERE v.chapter_id = c.id) AS version_count,
+      (SELECT v.word_count FROM chapter_versions v WHERE v.chapter_id = c.id
+        ORDER BY v.version_number DESC LIMIT 1) AS word_count,
       (SELECT COUNT(*) FROM comments cm
          JOIN chapter_versions v2 ON v2.id = cm.version_id
          WHERE v2.chapter_id = c.id AND v2.version_number = (
@@ -472,7 +493,7 @@ function createChapter({ storyId, title, summary, authorId, content, changelog }
     'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id) VALUES (?, ?, ?, ?, ?)'
   );
   const insertVersion = db.prepare(
-    'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog) VALUES (?, 1, ?, ?)'
+    'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, 1, ?, ?, ?)'
   );
   const nextNumber = (db.prepare(
     'SELECT COALESCE(MAX(chapter_number), 0) AS n FROM chapters WHERE story_id = ?'
@@ -482,7 +503,7 @@ function createChapter({ storyId, title, summary, authorId, content, changelog }
   try {
     const info = insertChapter.run(storyId, nextNumber, title, summary || '', authorId);
     const chapterId = Number(info.lastInsertRowid);
-    insertVersion.run(chapterId, content, changelog || 'Initial version');
+    insertVersion.run(chapterId, content, changelog || 'Initial version', countWords(content));
     db.exec('COMMIT');
     return getChapterById(chapterId);
   } catch (err) {
@@ -512,8 +533,8 @@ function insertChapterAt({ storyId, position, title, summary, authorId, content,
     ).run(storyId, position, title, summary || '', authorId);
     const chapterId = Number(info.lastInsertRowid);
     db.prepare(
-      'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog) VALUES (?, 1, ?, ?)'
-    ).run(chapterId, content, changelog || 'Initial version');
+      'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, 1, ?, ?, ?)'
+    ).run(chapterId, content, changelog || 'Initial version', countWords(content));
     db.exec('COMMIT');
     return getChapterById(chapterId);
   } catch (err) {
@@ -544,8 +565,8 @@ function editChapter({ chapterId, title, summary, content, changelog }) {
     if (!latest || latest.content !== content) {
       const nextNumber = (latest ? latest.version_number : 0) + 1;
       const info = db.prepare(
-        'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog) VALUES (?, ?, ?, ?)'
-      ).run(chapterId, nextNumber, content, changelog || '');
+        'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, ?, ?, ?, ?)'
+      ).run(chapterId, nextNumber, content, changelog || '', countWords(content));
       newVersion = getVersion(Number(info.lastInsertRowid));
     }
 
@@ -572,8 +593,8 @@ function createStoryWithFirstChapter({ title, description, authorId, chapterTitl
     const chapterId = Number(chapterInfo.lastInsertRowid);
 
     db.prepare(
-      'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog) VALUES (?, 1, ?, ?)'
-    ).run(chapterId, content, 'Initial version');
+      'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, 1, ?, ?, ?)'
+    ).run(chapterId, content, 'Initial version', countWords(content));
 
     db.exec('COMMIT');
     return { story: getStoryById(storyId), chapter: getChapterById(chapterId) };
@@ -658,8 +679,8 @@ function addVersion({ chapterId, content, changelog }) {
   ).get(chapterId).n;
   const nextNumber = max + 1;
   const info = db.prepare(
-    'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog) VALUES (?, ?, ?, ?)'
-  ).run(chapterId, nextNumber, content, changelog || '');
+    'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, ?, ?, ?, ?)'
+  ).run(chapterId, nextNumber, content, changelog || '', countWords(content));
   return getVersion(Number(info.lastInsertRowid));
 }
 

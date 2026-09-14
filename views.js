@@ -8,6 +8,16 @@ const wiki = require('./lib/wiki');
 
 const MARKDOWN_HINT = `Markdown is supported: **bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - or 1. list items. Put a backslash before a character to keep it literal (\\* shows a real asterisk). Line breaks are kept as you type them.`;
 
+// Word counts are read at a glance, not audited: exact under ten thousand,
+// rounded to a tenth of a thousand above it, where the last three digits
+// stop telling anybody anything.
+function wordCount(n) {
+  const count = Number(n) || 0;
+  if (!count) return '';
+  if (count < 10000) return `${count.toLocaleString('en-GB')} words`;
+  return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}k words`;
+}
+
 function fileUploadField() {
   return `
     <label>Or upload a file instead (.md, .txt, or .docx) &mdash; replaces the text above
@@ -144,7 +154,7 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } 
       </div>
       <div class="chapter-row-meta">
         <span>${bylineWith(s.author_name, coauthors)}</span>
-        <span>${s.chapter_count} chapter${s.chapter_count === 1 ? '' : 's'}</span>
+        <span>${s.chapter_count} chapter${s.chapter_count === 1 ? '' : 's'}${s.word_count ? ` &middot; ${wordCount(s.word_count)}` : ''}</span>
         ${timeHtml(s.last_chapter_at || s.created_at)}
         ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} pending</span>` : ''}
       </div>
@@ -700,7 +710,8 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           <p class="muted">${escapeHtml(c.summary || '')}</p>
         </div>
         <div class="chapter-row-meta">
-          <span>v${c.latest_version}</span>
+          <span>by ${escapeHtml(c.author_name)}</span>
+          <span>v${c.latest_version}${c.word_count ? ` &middot; ${wordCount(c.word_count)}` : ''}</span>
           ${timeHtml(c.created_at)}
           ${c.pending_comments > 0 ? `<span class="badge pending">${c.pending_comments} pending</span>` : ''}
         </div>
@@ -971,6 +982,8 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     <div class="chapter-header">
       <h1>Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</h1>
       <p class="muted byline">by ${escapeHtml(chapter.author_name)} &middot; ${timeHtml(chapter.created_at)}${
+        currentVersion.word_count ? ` &middot; ${wordCount(currentVersion.word_count)}` : ''
+      }${
         neighbours && neighbours.total > 1 ? ` &middot; <a href="/stories/${chapter.story_id}">chapter ${neighbours.position} of ${neighbours.total}</a>` : ''
       }</p>
       ${chapter.summary ? `<p class="summary">${escapeHtml(chapter.summary)}</p>` : ''}
