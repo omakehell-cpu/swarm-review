@@ -32,5 +32,5 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["types.d.ts", "*.js", "lib/**/*.js", "test/**/*.js", "public/js/**/*.js"],
-  "exclude": ["node_modules", "data", "_to_delete", "public/js/nspell.bundle.js", "eslint.config.mjs"]
+  "exclude": ["node_modules", "data", "_to_delete", "_review-snapshots", "public/js/nspell.bundle.js", "eslint.config.mjs"]
 }

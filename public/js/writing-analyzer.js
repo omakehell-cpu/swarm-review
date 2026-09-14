@@ -526,11 +526,35 @@
   function findWordHighlights(sentenceText, storyWords, settings) {
     const found = [];
 
-    function addAll(re, kind, labelFn, suggestionFn) {
+    // Spans of the sentence that are inside quotation marks. A character
+    // saying "I know" is speaking, not filtering the scene through a
+    // perception verb, and flagging it would train people to ignore the
+    // check. Only the filter check uses this -- the others are about how
+    // the words are written, which applies to dialogue too.
+    const quotedSpans = [];
+    {
+      const quoteRe = /["\u201c\u201d]/g;
+      let open = null;
+      let q;
+      while ((q = quoteRe.exec(sentenceText))) {
+        if (open === null) open = q.index;
+        else { quotedSpans.push([open, q.index + 1]); open = null; }
+      }
+      // An unclosed quote runs to the end of the sentence, which is what
+      // a line of dialogue split across a paragraph actually looks like.
+      if (open !== null) quotedSpans.push([open, sentenceText.length]);
+    }
+    const insideQuotes = (start) => quotedSpans.some(([a, b]) => start >= a && start < b);
+
+    function addAll(re, kind, labelFn, suggestionFn, { skipInQuotes = false } = {}) {
       if (settings && settings[kind] === false) return;
       re.lastIndex = 0;
       let m;
       while ((m = re.exec(sentenceText))) {
+        if (skipInQuotes && insideQuotes(m.index)) {
+          if (m[0].length === 0) re.lastIndex += 1;
+          continue;
+        }
         found.push({
           start: m.index,
           end: m.index + m[0].length,
@@ -552,7 +576,7 @@
     addAll(WEAK_PHRASE_RE, 'filler', () => 'This phrase can usually be cut or shortened.');
     addAll(WEAK_WORD_RE, 'filler', () => 'Filler word -- try cutting it and see if the sentence still works.');
     addAll(COMPLEX_WORD_RE, 'complex', (m) => `Simpler alternative: "${COMPLEX_WORDS[m[0].toLowerCase()]}"`, (m) => COMPLEX_WORDS[m[0].toLowerCase()]);
-    addAll(FILTER_RE, 'filter', () => 'Filter verb -- this puts the reader one step outside the scene. Try the thing itself: "the door opened" rather than "she saw the door open".');
+    addAll(FILTER_RE, 'filter', () => 'Filter verb -- this puts the reader one step outside the scene. Try the thing itself: "the door opened" rather than "she saw the door open".', null, { skipInQuotes: true });
     addAll(DIALOGUE_TAG_RE, 'dialogue', () => 'Said-bookism -- "said" and "asked" disappear on the page; this one asks to be noticed. Keep it if the sound of it is the point.');
     addAll(DIALOGUE_ADVERB_RE, 'dialogue', () => 'Adverb propping up a speech tag -- if the line needs it to land, the line is usually what to change.');
 

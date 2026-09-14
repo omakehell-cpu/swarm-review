@@ -18,6 +18,9 @@ export default [
       'node_modules/**',
       'data/**',
       '_to_delete/**',
+      // Throwaway renderings of the app's own pages, used to look at the
+      // design; they are copies of files already linted where they live.
+      '_review-snapshots/**',
       // Vendored, minified, and not ours to fix.
       'public/js/nspell.bundle.js',
     ],

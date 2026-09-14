@@ -192,3 +192,16 @@ test('the summary counts every kind it marks', () => {
     assert.strictEqual(stats[kind], all.filter((r) => r.kind === kind).length, kind);
   }
 });
+
+test('a perception verb inside dialogue is somebody speaking, not filtering', () => {
+  // "I know" is a line, not a camera between the reader and the scene.
+  assert.deepStrictEqual(kinds('"I know," she said.', 'filter'), []);
+  assert.deepStrictEqual(kinds('"I saw it too," he answered.', 'filter'), []);
+  // But the narration around the dialogue is still checked.
+  const mixed = kinds('"I know," she said. She saw the hatch swing open.', 'filter');
+  assert.deepStrictEqual(mixed, ['She saw']);
+});
+
+test('an unclosed quote protects the rest of the line, the way dialogue runs on', () => {
+  assert.deepStrictEqual(kinds('"I know what I saw and I heard it too', 'filter'), []);
+});

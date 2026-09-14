@@ -1047,10 +1047,49 @@ function setStoryTags(storyId, tagIds) {
   }
 }
 
-function updateStoryDetails(storyId, { title, description }) {
-  db.prepare('UPDATE stories SET title = ?, description = ? WHERE id = ?')
-    .run(String(title).trim(), String(description || '').trim(), storyId);
+/**
+ * @param {number} storyId
+ * @param {{ title: string, description?: string, synopsis?: string }} details
+ */
+function updateStoryDetails(storyId, { title, description, synopsis }) {
+  db.prepare('UPDATE stories SET title = ?, description = ?, synopsis = ? WHERE id = ?')
+    .run(String(title).trim(), String(description || '').trim(), String(synopsis || '').trim(), storyId);
   return getStoryById(storyId);
+}
+
+// Everything the story page's header wants to say about the shape of the
+// thing, in one query rather than five. Word counts come from each
+// chapter's current version only -- adding up every draft would make a
+// story look four times longer than it reads.
+function getStoryStats(storyId) {
+  const row = db.prepare(`
+    SELECT
+      (SELECT COUNT(*) FROM chapters c WHERE c.story_id = @storyId AND c.archived_at IS NULL) AS chapters,
+      (SELECT COUNT(*) FROM chapters c WHERE c.story_id = @storyId AND c.archived_at IS NOT NULL) AS archived_chapters,
+      (SELECT COALESCE(SUM(v.word_count), 0) FROM chapters c
+        JOIN chapter_versions v ON v.chapter_id = c.id
+        WHERE c.story_id = @storyId AND c.archived_at IS NULL
+          AND v.version_number = (SELECT MAX(v2.version_number) FROM chapter_versions v2 WHERE v2.chapter_id = c.id)
+      ) AS words,
+      (SELECT MAX(v.created_at) FROM chapters c
+        JOIN chapter_versions v ON v.chapter_id = c.id
+        WHERE c.story_id = @storyId AND c.archived_at IS NULL) AS last_written_at,
+      (SELECT COUNT(*) FROM comments cm
+        JOIN chapter_versions v ON v.id = cm.version_id
+        JOIN chapters c ON c.id = v.chapter_id
+        WHERE c.story_id = @storyId AND c.archived_at IS NULL
+          AND cm.deleted_at IS NULL AND cm.parent_id IS NULL
+          AND v.version_number = (SELECT MAX(v3.version_number) FROM chapter_versions v3 WHERE v3.chapter_id = c.id)
+      ) AS comments,
+      (SELECT COUNT(*) FROM comments cm
+        JOIN chapter_versions v ON v.id = cm.version_id
+        JOIN chapters c ON c.id = v.chapter_id
+        WHERE c.story_id = @storyId AND c.archived_at IS NULL
+          AND cm.status = 'pending' AND cm.deleted_at IS NULL AND cm.parent_id IS NULL
+          AND v.version_number = (SELECT MAX(v4.version_number) FROM chapter_versions v4 WHERE v4.chapter_id = c.id)
+      ) AS pending_comments
+  `).get({ storyId });
+  return row || { chapters: 0, archived_chapters: 0, words: 0, last_written_at: null, comments: 0, pending_comments: 0 };
 }
 
 // ---------- per-reader hidden tags (SOL's excluded codes) ----------
@@ -1391,6 +1430,7 @@ module.exports = {
   approveTag,
   mergeTag,
   inboxFor,
+  getStoryStats,
   listStoryCoauthors,
   coauthorsForStories,
   isStoryCoauthor,

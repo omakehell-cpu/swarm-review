@@ -329,6 +329,56 @@ test('word counts reach the page, and follow an edit', async () => {
   assert.match(storyHtml, /by Test Writer/);
 });
 
+test('the story page carries a synopsis the author writes, and the shape of the story', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+
+  // Nothing written yet: no empty synopsis block.
+  const before = await (await request(`/stories/${story.id}`)).text();
+  assert.ok(!before.includes('story-synopsis'), 'no fold until there is something in it');
+  // But the shape of the story is always there.
+  assert.match(before, /story-stats/);
+  assert.match(before, /to read/);
+
+  const tags = models.getStoryTags(story.id).map((t) => String(t.id));
+  const saved = await request(`/stories/${story.id}/edit`, {
+    method: 'POST',
+    ...form([
+      ['title', story.title],
+      ['description', 'A short blurb.'],
+      ['synopsis', 'Kessler finds the **body** in the service spine.\n\nNobody reports it.'],
+      ...tags.map((id) => ['tagIds', id]),
+    ]),
+  });
+  assert.strictEqual(saved.status, 302);
+
+  const after = await (await request(`/stories/${story.id}`)).text();
+  assert.match(after, /story-synopsis/);
+  assert.match(after, /spoilers/);
+  // Rendered, not printed: the markdown marks must not reach the page.
+  assert.match(after, /<strong>body<\/strong>/);
+  assert.ok(!after.includes('**body**'));
+
+  // And editing the story again brings it back into the form.
+  const editPage = await (await request(`/stories/${story.id}/edit`)).text();
+  assert.match(editPage, /name="synopsis"/);
+  assert.match(editPage, /service spine/);
+
+  // The tags it already had survive a synopsis edit.
+  assert.strictEqual(models.getStoryTags(story.id).length, tags.length);
+});
+
+test('the reading time is an estimate, and says so', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const stats = models.getStoryStats(story.id);
+  assert.ok(stats.chapters >= 1);
+  assert.ok(stats.words > 0);
+  // Counted from each chapter's current version only: adding up every
+  // draft would make a story look several times longer than it reads.
+  const chapters = models.listChaptersForStory(story.id);
+  const sum = chapters.reduce((n, c) => n + (c.word_count || 0), 0);
+  assert.strictEqual(stats.words, sum);
+});
+
 test('logging out invalidates the session', async () => {
   const res = await request('/logout', { method: 'POST', ...form([]) });
   assert.strictEqual(res.status, 302);
