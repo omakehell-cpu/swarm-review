@@ -1,0 +1,25 @@
+#!/bin/sh
+# Runs the lint, the type-checker and the tests before a commit is written.
+# It takes about a second and a half. A commit that can't pass it is a
+# commit somebody has to come back to, usually weeks later, from a bug
+# report rather than from a test name.
+#
+# Enable it once, in this clone:
+#     git config core.hooksPath .githooks
+#
+# Skip it for a single commit when you know what you're doing:
+#     git commit --no-verify
+#
+# If node_modules isn't installed the hook steps aside rather than
+# blocking the commit -- the app itself doesn't need it to run.
+if [ ! -d node_modules/.bin ]; then
+  echo "pre-commit: no node_modules, skipping checks (run 'npm install' to enable them)"
+  exit 0
+fi
+
+npm run --silent check || {
+  echo
+  echo "pre-commit: 'npm run check' failed, so nothing was committed."
+  echo "            Fix it, or use 'git commit --no-verify' to commit anyway."
+  exit 1
+}

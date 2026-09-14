@@ -248,13 +248,23 @@ actually gone wrong:
 Tests never touch `data/swarm-review.sqlite`; they set `SWARM_DB_PATH`,
 which is the only thing that environment variable exists for.
 
+To have all three run automatically before every commit, enable the hook
+once per clone:
+
+```
+git config core.hooksPath .githooks
+```
+
+It takes about a second and a half, steps aside if `node_modules` isn't
+installed, and `git commit --no-verify` skips it when you need it to.
+
 ## Known limitations / ideas for later
 
-- No self-service password reset (no email flow to support it) — but the
-  admin can set anyone a new password directly from `/admin`, so this is
-  a quick fix, not a database chore, now.
-- No live Markdown preview while writing — formatting only shows once you
-  publish. Could add a preview pane later if useful.
+- Password resets need an admin to start them: there is no email, so
+  nobody can ask for a reset link on their own. What the admin generates
+  from `/admin` is a single-use link, good for 24 hours, that lets the
+  person choose their own password — the admin never sees or sets it, and
+  the link can be revoked before it's used.
 - `.docx` upload is "good enough," not perfect: bullet vs. numbered lists
   both come back as bullets (real Word numbering isn't reconstructed),
   tables/images/footnotes are ignored, and a downloaded chapter that's
