@@ -754,6 +754,80 @@ function removeStoryDictionaryWord(storyId, id) {
   db.prepare('DELETE FROM story_dictionary_words WHERE story_id = ? AND id = ?').run(storyId, id);
 }
 
+// ---------- search ----------
+// Plain LIKE rather than SQLite's full-text index: this is a writing group
+// with a few hundred chapters, where a scan costs milliseconds, and an FTS
+// table would need triggers keeping it in step with every edit, every new
+// version and every wiki sync -- three more places to drift out of sync
+// for a speed nobody would notice. Worth revisiting if the archive ever
+// gets big enough to feel it.
+const LIKE = (q) => `%${String(q).replace(/[%_\\]/g, (ch) => `\\${ch}`)}%`;
+
+function searchStories(query, limit) {
+  return db.prepare(`
+    SELECT s.id, s.title, s.description, u.display_name AS author_name
+    FROM stories s JOIN users u ON u.id = s.author_id
+    WHERE s.archived_at IS NULL
+      AND (s.title LIKE @q ESCAPE '\\' OR s.description LIKE @q ESCAPE '\\')
+    ORDER BY s.title COLLATE NOCASE
+    LIMIT @limit
+  `).all({ q: LIKE(query), limit });
+}
+
+// Chapters matched on their own title/summary. Kept apart from the text
+// search below so a chapter whose title matches ranks as a chapter hit
+// rather than being lost among passages.
+function searchChapters(query, limit) {
+  return db.prepare(`
+    SELECT c.id, c.title, c.summary, c.chapter_number, c.story_id, s.title AS story_title
+    FROM chapters c JOIN stories s ON s.id = c.story_id
+    WHERE c.archived_at IS NULL AND s.archived_at IS NULL
+      AND (c.title LIKE @q ESCAPE '\\' OR c.summary LIKE @q ESCAPE '\\')
+    ORDER BY s.title COLLATE NOCASE, c.chapter_number
+    LIMIT @limit
+  `).all({ q: LIKE(query), limit });
+}
+
+// The prose itself, searched only in each chapter's current version --
+// searching every version would bury one real hit under a copy of it from
+// every draft the chapter has been through.
+function searchChapterText(query, limit) {
+  return db.prepare(`
+    SELECT c.id, c.title, c.chapter_number, c.story_id, s.title AS story_title,
+           v.version_number, v.content
+    FROM chapters c
+    JOIN stories s ON s.id = c.story_id
+    JOIN chapter_versions v ON v.chapter_id = c.id
+    WHERE c.archived_at IS NULL AND s.archived_at IS NULL
+      AND v.version_number = (SELECT MAX(v2.version_number) FROM chapter_versions v2 WHERE v2.chapter_id = c.id)
+      AND v.content LIKE @q ESCAPE '\\'
+    ORDER BY s.title COLLATE NOCASE, c.chapter_number
+    LIMIT @limit
+  `).all({ q: LIKE(query), limit });
+}
+
+function searchGlossary(query, limit) {
+  return db.prepare(`
+    SELECT title, slug_title AS slug, summary, content_html
+    FROM (SELECT title, title AS slug_title, summary, content_html FROM wiki_pages)
+    WHERE title LIKE @q ESCAPE '\\' OR summary LIKE @q ESCAPE '\\' OR content_html LIKE @q ESCAPE '\\'
+    ORDER BY title COLLATE NOCASE
+    LIMIT @limit
+  `).all({ q: LIKE(query), limit });
+}
+
+function searchEverything(query, { limit = 20 } = {}) {
+  const clean = String(query || '').trim();
+  if (clean.length < 2) return null;
+  return {
+    query: clean,
+    stories: searchStories(clean, limit),
+    chapters: searchChapters(clean, limit),
+    passages: searchChapterText(clean, limit),
+    glossary: searchGlossary(clean, limit),
+  };
+}
+
 // ---------- story tags (vocabulary curated on /admin, see db.js) ----------
 function slugifyTag(name) {
   return String(name).toLowerCase().trim()
@@ -1102,4 +1176,5 @@ module.exports = {
   updateStoryDetails,
   listUserHiddenTagIds,
   setUserHiddenTags,
+  searchEverything,
 };

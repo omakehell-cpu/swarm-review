@@ -88,6 +88,11 @@
     if (!ids.length) return;
     const target = document.getElementById(`comment-${ids[0]}`);
     if (target) {
+      // A settled comment is rendered as a collapsed <details> (see
+      // renderComment in views.js) -- scrolling to one that's still shut
+      // would land the reader on a one-line summary of the very thing
+      // they just asked to see, so open it on the way.
+      if (target.tagName === 'DETAILS') target.open = true;
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       target.classList.add('flash-highlight');
       setTimeout(() => target.classList.remove('flash-highlight'), 1500);
