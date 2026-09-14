@@ -29,6 +29,35 @@ const ICONS = {
   plus: '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><line x1="10" y1="4.5" x2="10" y2="15.5"/><line x1="4.5" y1="10" x2="15.5" y2="10"/></svg>',
 };
 
+// ---------- empty states ----------
+// A list with nothing in it used to say "No chapters yet." in grey and
+// stop there. That is the moment somebody is most lost and the app is
+// most silent: it should say what goes here, and offer the one thing
+// there is to do.
+//
+// The drawings are line art in the page's own ink -- a thin stroke, no
+// fill, no colour of their own -- so they read as a mark on paper rather
+// than as clip art, and they cost nothing to ship.
+const EMPTY_ART = {
+  sheets: '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="12" y="8" width="32" height="42" rx="2"/><rect x="20" y="14" width="32" height="42" rx="2"/><line x1="27" y1="26" x2="45" y2="26"/><line x1="27" y1="34" x2="45" y2="34"/><line x1="27" y1="42" x2="38" y2="42"/></svg>',
+  margin: '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="12" width="48" height="34" rx="3"/><line x1="17" y1="23" x2="39" y2="23"/><line x1="17" y1="31" x2="33" y2="31"/><path d="M20 46 L20 55 L29 46"/></svg>',
+  glass: '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="28" cy="27" r="15"/><line x1="39" y1="38" x2="52" y2="51"/><line x1="21" y1="24" x2="35" y2="24"/><line x1="21" y1="31" x2="30" y2="31"/></svg>',
+  label: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 20 L34 20 L52 32 L34 44 L8 44 Z"/><circle cx="18" cy="32" r="2.6"/></svg>',
+};
+
+/**
+ * @param {{ art?: string, title: string, body?: string, action?: string }} content
+ */
+function emptyState({ art, title, body, action }) {
+  return `
+    <div class="empty-state">
+      ${art ? `<div class="empty-art">${EMPTY_ART[art] || ''}</div>` : ''}
+      <p class="empty-title">${escapeHtml(title)}</p>
+      ${body ? `<p class="empty-body">${body}</p>` : ''}
+      ${action ? `<p class="empty-action">${action}</p>` : ''}
+    </div>`;
+}
+
 function fileUploadField() {
   return `
     <label>Or upload a file instead (.md, .txt, or .docx) &mdash; replaces the text above
@@ -237,7 +266,19 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
   const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
   const rows = stories.length
     ? stories.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, coauthors: coauthorsByStory.get(s.id) || [] })).join('')
-    : `<p class="muted">${activeTags.length ? 'No stories carry every tag you picked.' : 'No stories yet. Be the first to start one.'}</p>`;
+    : (activeTags.length
+      ? emptyState({
+        art: 'label',
+        title: 'Nothing carries every tag you picked',
+        body: `A story has to have <em>all</em> of them, not any. Try taking one off: ${activeTags.map((t) => escapeHtml(t.name)).join(', ')}.`,
+        action: '<a class="btn ghost small" href="/">Clear the filter</a>',
+      })
+      : emptyState({
+        art: 'sheets',
+        title: 'No stories yet',
+        body: 'A story is a set of chapters with one author and, if they want, coauthors. You write the first chapter as you create it.',
+        action: '<a class="btn" href="/stories/new">Start the first one</a>',
+      }));
 
   // The filter is a form of checkboxes rather than a list of links, so
   // picking several tags is one action instead of one page load each.
@@ -323,29 +364,81 @@ function tagPicker(groups, selectedTagIds, { allowPropose = false } = {}) {
   if (!groups.length) {
     return `<p class="hint">No tags have been set up yet. An admin can add them from the admin page.</p>${propose}`;
   }
-  return `<div class="tag-picker">${groups.map((g) => `
-    <fieldset class="tag-group">
-      <legend>${escapeHtml(g.group)}</legend>
+  // Sixty-four checkboxes in nine groups is most of the height of this
+  // form. Each group folds, and opens itself when it already has
+  // something ticked -- so editing a story shows you what you picked and
+  // creating one is a list of nine headings instead of a wall.
+  return `<div class="tag-picker">${groups.map((g) => {
+    const chosen = g.tags.filter((t) => selected.has(t.id));
+    return `
+    <details class="tag-group"${chosen.length ? ' open' : ''}>
+      <summary>
+        <span class="tag-group-name">${escapeHtml(g.group)}</span>
+        ${chosen.length
+          ? `<span class="tag-group-chosen">${chosen.map((t) => escapeHtml(t.name)).join(', ')}</span>`
+          : `<span class="tag-group-count">${g.tags.length}</span>`}
+      </summary>
       <div class="tag-group-options">${g.tags.map((t) => `
         <label class="tag-pick${selected.has(t.id) ? ' checked' : ''}${t.status === 'proposed' ? ' proposed' : ''}"${
           t.description ? ` title="${escapeHtml(t.description)}"` : ''}>
           <input type="checkbox" name="tagIds" value="${t.id}"${selected.has(t.id) ? ' checked' : ''}>
           <span>${escapeHtml(t.name)}</span>
         </label>`).join('')}</div>
-    </fieldset>`).join('')}</div>${propose}`;
+    </details>`;
+  }).join('')}</div>${propose}`;
 }
 
 function tagsIndexPage({ user, groups }) {
   const total = groups.reduce((n, g) => n + g.tags.length, 0);
-  const body = groups.length ? groups.map((g) => `
+  const chip = (t) => `
+    <a class="tag-chip${t.story_count ? '' : ' unused'}" href="/tags/${encodeURIComponent(t.slug)}"${
+      t.description ? ` title="${escapeHtml(t.description)}"` : ''}>
+      ${escapeHtml(t.name)}<span class="tag-count">${t.story_count}</span>
+    </a>`;
+
+  // Most of the vocabulary is unused most of the time -- a starting list
+  // of sixty-odd against an archive of a handful of stories. Showing all
+  // of it at once made the page read as a catalogue of nothing: rows and
+  // rows of "0". What somebody wants first is the tags that would
+  // actually take them somewhere.
+  const used = groups.map((g) => ({ ...g, tags: g.tags.filter((t) => t.story_count > 0) }))
+    .filter((g) => g.tags.length);
+  const unusedCount = total - used.reduce((n, g) => n + g.tags.length, 0);
+
+  const section = (g) => `
     <section class="tag-index-group">
       <h2>${escapeHtml(g.group)}</h2>
-      <div class="tag-chips">${g.tags.map((t) => `
-        <a class="tag-chip${t.story_count ? '' : ' unused'}" href="/tags/${encodeURIComponent(t.slug)}"${
-          t.description ? ` title="${escapeHtml(t.description)}"` : ''}>
-          ${escapeHtml(t.name)}<span class="tag-count">${t.story_count}</span>
-        </a>`).join('')}</div>
-    </section>`).join('') : '<p class="muted">No tags yet. An admin can add them from the admin page.</p>';
+      <div class="tag-chips">${g.tags.map(chip).join('')}</div>
+    </section>`;
+
+  let body;
+  if (!groups.length) {
+    body = emptyState({
+      art: 'label',
+      title: 'No tags have been set up',
+      body: 'Tags are the vocabulary the whole group shares. An admin adds them from the admin page.',
+      action: user.is_admin ? '<a class="btn ghost small" href="/admin#tags">Set them up</a>' : '',
+    });
+  } else if (!used.length) {
+    body = emptyState({
+      art: 'label',
+      title: 'Nothing is tagged yet',
+      body: `The vocabulary is there \u2014 ${total} tag${total === 1 ? '' : 's'} \u2014 but no story carries one. They go on a story from its own page, under &ldquo;Edit details&rdquo;.`,
+    }) + `
+      <details class="tag-vocabulary">
+        <summary>See the whole vocabulary</summary>
+        ${groups.map(section).join('')}
+      </details>`;
+  } else {
+    body = `
+      ${used.map(section).join('')}
+      ${unusedCount ? `
+        <details class="tag-vocabulary">
+          <summary>${unusedCount} more tag${unusedCount === 1 ? '' : 's'} nothing is using yet</summary>
+          ${groups.map((g) => ({ ...g, tags: g.tags.filter((t) => !t.story_count) }))
+            .filter((g) => g.tags.length).map(section).join('')}
+        </details>` : ''}`;
+  }
 
   return layout({
     title: 'Tags',
@@ -353,7 +446,7 @@ function tagsIndexPage({ user, groups }) {
     current: 'tags',
     body: `
       <div class="page-head"><h1>Tags</h1></div>
-      <p class="muted">${total} tag${total === 1 ? '' : 's'} in use across the group's stories. The number on each is how many stories carry it.</p>
+      <p class="muted">${total} tag${total === 1 ? '' : 's'} in the group's shared vocabulary. The number on each is how many stories carry it.</p>
       ${body}`,
   });
 }
@@ -361,7 +454,11 @@ function tagsIndexPage({ user, groups }) {
 function tagPage({ user, tag, stories, tagsByStory }) {
   const rows = stories.length
     ? stories.map((s) => storyRow(s, { tags: tagsByStory.get(s.id) || [] })).join('')
-    : '<p class="muted">No stories carry this tag yet.</p>';
+    : emptyState({
+      art: 'label',
+      title: 'No stories carry this tag yet',
+      body: 'Tags go on a story from its own page, under &ldquo;Edit details&rdquo;.',
+    });
   return layout({
     title: tag.name,
     user,
@@ -694,14 +791,19 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, v
 
 // ---------- story detail (chapter list) ----------
 
+// Two separate forms, because each posts somewhere different, but one
+// control as far as the eye is concerned: a single bordered pair sitting
+// against the row, quiet until you point at it. As two floating boxes
+// with a gap between them they read as debris in the margin.
 function chapterReorderButtons(chapter, index, total) {
+  const label = `chapter ${chapter.chapter_number}, ${escapeHtml(chapter.title)}`;
   return `
-    <div class="chapter-row-reorder">
+    <div class="chapter-row-reorder" role="group" aria-label="Reorder ${label}">
       <form method="post" action="/chapters/${chapter.id}/move-up" class="inline-form">
-        <button class="btn tiny ghost" type="submit" title="Move up" ${index === 0 ? 'disabled' : ''}>&uarr;</button>
+        <button type="submit" title="Move up" aria-label="Move ${label} up" ${index === 0 ? 'disabled' : ''}>&uarr;</button>
       </form>
       <form method="post" action="/chapters/${chapter.id}/move-down" class="inline-form">
-        <button class="btn tiny ghost" type="submit" title="Move down" ${index === total - 1 ? 'disabled' : ''}>&darr;</button>
+        <button type="submit" title="Move down" aria-label="Move ${label} down" ${index === total - 1 ? 'disabled' : ''}>&darr;</button>
       </form>
     </div>`;
 }
@@ -833,7 +935,12 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
       </a>
       ${isStoryAuthor ? chapterReorderButtons(c, i, chapters.length) : ''}
     </div>
-  `).join('') : '<p class="muted">No chapters yet.</p>';
+  `).join('') : emptyState({
+    art: 'sheets',
+    title: 'No chapters here',
+    body: 'Every chapter of this story has been archived. They are still readable, and can be brought back.',
+    action: `<a class="btn ghost small" href="/stories/${story.id}/archived-chapters">View archived chapters</a>`,
+  });
 
   return layout({
     title: story.title,
@@ -1089,7 +1196,11 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
 
   const commentsHtml = topLevel.length
     ? topLevel.map((c) => renderComment(c, { isChapterAuthor, currentUserId: user.id, replies: repliesByParent[c.id] || [] })).join('')
-    : '<p class="muted">No comments yet on this version.</p>';
+    : emptyState({
+      art: 'margin',
+      title: 'No comments on this version',
+      body: 'Select any passage in the chapter to comment on it, or use the general comment below for something that is not about one particular line.',
+    });
 
   const ast = parseMarkdown(currentVersion.content);
   const highlighted = renderHighlighted(ast, comments, wiki.findWikiMatches);
@@ -1316,7 +1427,12 @@ function searchPage({ user, results, query }) {
     </section>` : '');
 
   const body = total === 0
-    ? `<p class="muted search-empty">Nothing matches &ldquo;${escapeHtml(results.query)}&rdquo;. Archived stories and chapters aren't searched, and only each chapter's current version is.</p>`
+    ? emptyState({
+      art: 'glass',
+      title: `Nothing matches \u201c${results.query}\u201d`,
+      body: 'Archived stories and chapters are not searched, and only each chapter\'s current version is \u2014 so a phrase that was edited out will not be found.',
+      action: '<a class="btn ghost small" href="/">Back to the stories</a>',
+    })
     : [
       section('Stories', results.stories, (s) => `
         <a class="search-result" href="/stories/${s.id}">

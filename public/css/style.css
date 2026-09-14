@@ -447,7 +447,18 @@ select {
 }
 .chapter-list > .chapter-row:first-child,
 .chapter-list > .chapter-row-outer:first-child .chapter-row { border-top: 1px solid var(--border); }
-.chapter-row:hover { background: var(--bg-elevated); text-decoration: none; }
+/* A row is as clickable as a button and said so with nothing but a colour
+   change that appeared instantly. The rule on the left is the affordance;
+   it grows from the edge rather than blinking on, and being an inset
+   shadow it moves no text. */
+.chapter-row {
+  transition: background 0.14s ease, box-shadow 0.16s ease;
+  box-shadow: inset 0 0 0 0 var(--accent);
+}
+.chapter-row:hover {
+  background: var(--bg-elevated); text-decoration: none;
+  box-shadow: inset 2px 0 0 0 var(--accent);
+}
 .chapter-row h3 { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
 .chapter-row-main { min-width: 0; }
 .chapter-row-main p { margin: 0; font-size: var(--t-md); line-height: 1.55; max-width: 62ch; }
@@ -474,8 +485,39 @@ select {
 .archived-row .chapter-row-meta { gap: var(--s-3); }
 .chapter-row-outer { display: flex; gap: var(--s-4); align-items: stretch; }
 .chapter-row-outer .chapter-row { flex: 1; min-width: 0; }
-.chapter-row-reorder { display: flex; flex-direction: column; gap: var(--s-2); justify-content: center; }
-.chapter-row-reorder .btn[disabled] { opacity: 0.3; cursor: default; }
+.chapter-row-reorder {
+  display: flex; flex-direction: column;
+  align-self: center;
+  border: 1px solid var(--border); border-radius: 5px; overflow: hidden;
+  /* Reordering is something you do occasionally to a list you are mostly
+     reading, so it waits in the margin at less than half strength until
+     the row is pointed at or something inside it takes focus. Two small
+     bordered boxes with a gap between them read as debris; one pair with
+     a hairline through it reads as a control. */
+  opacity: 0.4;
+  transition: opacity 0.14s ease, border-color 0.14s ease;
+}
+.chapter-row-outer:hover .chapter-row-reorder,
+.chapter-row-reorder:focus-within { opacity: 1; border-color: var(--border-strong); }
+.chapter-row-reorder button {
+  display: block; width: 100%;
+  padding: 3px var(--s-3); border: 0; border-radius: 0;
+  background: transparent; box-shadow: none;
+  font: inherit; font-size: var(--t-xs); line-height: 1.2;
+  color: var(--text-muted); cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.chapter-row-reorder form + form button { border-top: 1px solid var(--border); }
+.chapter-row-reorder button:hover:not([disabled]) { background: var(--bg-sunken); color: var(--text); }
+.chapter-row-reorder button:focus-visible {
+  outline: none; background: var(--bg-sunken);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.chapter-row-reorder button[disabled] { opacity: 0.3; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .chapter-row-reorder, .chapter-row-reorder button { transition: none; }
+}
 .page-head-actions { display: flex; gap: var(--s-4); align-items: center; flex-shrink: 0; }
 .ts { white-space: nowrap; }
 
@@ -668,7 +710,19 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 }
 .comment.status-accepted { border-left-color: var(--accepted); }
 .comment.status-rejected { border-left-color: var(--rejected); opacity: 0.72; }
-.comment.flash-highlight { box-shadow: 0 0 0 2px var(--accent-strong); }
+/* Arriving at a comment -- from a highlight in the text, or from a link in
+   the inbox -- with no signal at all leaves you looking for the thing you
+   just asked for. Two pulses and done: enough to find it, not enough to
+   be a decoration. :target covers the link case with no JavaScript at
+   all, and the class covers the click-a-highlight case. */
+@keyframes comment-found {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0); }
+  15%, 55% { box-shadow: 0 0 0 2px var(--accent), 0 0 0 7px rgba(var(--accent-rgb), 0.16); }
+  35%      { box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35); }
+}
+.comment.flash-highlight, .comment:target {
+  animation: comment-found 1.4s ease-out 1;
+}
 .comment-meta { display: flex; justify-content: flex-start; align-items: baseline; gap: var(--s-4); flex-wrap: wrap; margin-bottom: var(--s-4); font-size: var(--t-md); }
 .comment-meta strong { font-weight: 600; }
 .status-badge { font-size: var(--t-2xs); padding: var(--s-1) var(--s-4); border-radius: 999px; font-weight: 600; text-transform: lowercase; }
@@ -1060,11 +1114,46 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 .hidden-by { margin: var(--s-4) 0 0; font-size: var(--t-sm); color: var(--text-muted); font-style: italic; }
 
 .tag-picker { display: flex; flex-direction: column; gap: var(--s-5); }
+/* Each group is a fold. Shut, it is one line that says what is in it and
+   what you have already picked from it; open, it is the chips. */
 .tag-group { border: none; padding: 0; margin: 0; min-width: 0; }
-.tag-group legend {
-  padding: 0; margin-bottom: var(--s-3);
+.tag-group > summary {
+  display: flex; align-items: baseline; gap: var(--s-4);
+  padding: var(--s-3) var(--s-2);
+  margin: 0 calc(-1 * var(--s-2)) var(--s-2);
+  border-radius: 4px;
+  cursor: pointer; list-style: none;
+  transition: background 0.14s ease;
+}
+.tag-group > summary::-webkit-details-marker { display: none; }
+.tag-group > summary:hover { background: var(--bg-sunken); }
+.tag-group > summary::before {
+  content: ""; flex: 0 0 auto; align-self: center;
+  border-left: 4px solid var(--text-muted);
+  border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+  transform: rotate(0deg); transition: transform 0.12s ease;
+}
+.tag-group[open] > summary::before { transform: rotate(90deg); }
+.tag-group-name {
   font-size: var(--t-2xs); text-transform: uppercase; letter-spacing: 0.08em;
   font-weight: 600; color: var(--text-muted);
+}
+/* What you have already ticked, so a shut group is still informative. */
+.tag-group-chosen { font-size: var(--t-sm); color: var(--text); min-width: 0; }
+.tag-group-count { font-size: var(--t-sm); color: var(--text-muted); opacity: 0.7; }
+.tag-group-options { padding-bottom: var(--s-5); }
+
+/* The rest of the vocabulary on /tags, out of the way but never gone. */
+.tag-vocabulary { margin-top: var(--s-9); }
+.tag-vocabulary > summary {
+  cursor: pointer; padding: var(--s-3) 0;
+  font-size: var(--t-md); color: var(--text-muted);
+}
+.tag-vocabulary > summary:hover { color: var(--text); }
+.tag-vocabulary .tag-index-group { margin-top: var(--s-6); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tag-group > summary, .tag-group > summary::before { transition: none; }
 }
 .tag-group-options { display: flex; flex-wrap: wrap; gap: var(--s-3); }
 /* The checkbox itself is the chip's dot: same trick as the writing-check
@@ -1581,4 +1670,77 @@ mark.search-hit {
 @media (prefers-reduced-motion: reduce) {
   .btn, .btn:hover, .btn:active { transition: box-shadow 0.16s ease; transform: none; }
   .container a { transition: none; }
+}
+
+/* ---------------------------------------------------------------------
+   Empty states
+   --------------------------------------------------------------------- */
+/* Centred, narrow, and quiet. The drawing is a mark on the page, not an
+   illustration: it inherits the text colour and is dropped to a third of
+   its weight so it never competes with the sentence under it. */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--s-4);
+  max-width: 46ch;
+  margin: var(--s-9) auto;
+  padding: var(--s-8) var(--s-6);
+}
+.empty-art {
+  width: 56px;
+  height: 56px;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+.empty-art svg { width: 100%; height: 100%; display: block; }
+.empty-art svg rect, .empty-art svg line, .empty-art svg circle, .empty-art svg path {
+  fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.empty-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--t-lg);
+  font-weight: 600;
+  color: var(--text);
+}
+.empty-body {
+  margin: 0;
+  font-size: var(--t-md);
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.empty-action { margin: var(--s-2) 0 0; }
+
+/* Inside the comments column there is no room to be generous about it. */
+.comments-pane .empty-state {
+  margin: var(--s-6) 0;
+  padding: var(--s-6) 0;
+  max-width: none;
+}
+.comments-pane .empty-art { width: 40px; height: 40px; }
+
+
+/* ---------------------------------------------------------------------
+   Motion
+   --------------------------------------------------------------------- */
+/* The comment box is created by selecting a passage, so it appears where
+   the eye already is. Sliding it up over a sixth of a second says it came
+   from the selection; appearing instantly reads as a layout jump. */
+@keyframes box-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.new-comment-box:not(.hidden) { animation: box-in 0.16s ease-out; }
+.wa-popover:not(.hidden) { animation: box-in 0.12s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .new-comment-box:not(.hidden), .wa-popover:not(.hidden) { animation: none; }
+  .comment.flash-highlight, .comment:target {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .chapter-row { transition: none; }
 }
