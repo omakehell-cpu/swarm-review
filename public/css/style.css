@@ -19,12 +19,17 @@
   font-weight: 100 900; font-style: normal; font-display: swap;
 }
 
-/* Swarm Review -- an editorial look for a drafting room: warm paper and
-   ink, real book typography for anything that is prose, and a sans for
-   everything that is not. The division is the whole idea: on any page the
-   book-like text is the text somebody wrote, and the interface around it
-   steps back. No framework, no build step; both faces are variable and
-   self-hosted, so the weight axis costs nothing.
+/* Swarm Review -- a Swiss grid for a drafting room. One grotesque, set
+   flush left; hairlines instead of boxes; labels in spaced capitals; a
+   single red; and no rounding and no shadow anywhere. The structure is
+   the decoration, so nothing has to be decorated.
+
+   The prose is the exception, and the only one. Anything a person wrote
+   -- the chapter, the blurb, the glossary, the editor's own paper -- is
+   set in Literata, because a book face is still what a novel wants to be
+   read in. On any page the serif is the work and the grotesque is the
+   apparatus; that single division does the job that colour, cards and
+   shadows used to do.
 
    Sizes and spacing come from the two scales in :root and nowhere else.
    If a value here is not a token, that is a bug -- it was forty distinct
@@ -40,49 +45,54 @@
    (no flash of the wrong theme) and public/js/theme-toggle.js for the
    toggle button in the top bar.
 
-   Colors are deliberately not full-contrast: near-black-on-white or
-   near-white-on-black is tiring over the long stretches of prose this
-   app is for, so text sits a bit short of either extreme, the light
-   theme's background is warm paper rather than white, and the dark theme
-   is a warm near-black rather than the usual blue-black -- the two
-   themes should read as day and night in the same room, not as two
-   different apps. The "-rgb" triplets exist so rgba() overlays (badges,
-   focus rings, status backgrounds) can follow the same token instead of
-   a hardcoded color that would silently go wrong in the other theme. */
+   Colour carries exactly one message. Red is the only hue in the
+   interface and it always means the same thing: this is waiting for you.
+   Everything settled is ink, everything spent is grey. A palette of
+   tinted statuses -- amber pending, green accepted, red rejected -- puts
+   three colours on screen to say what position and weight already say,
+   and then has nothing left for the one thing that is actually urgent.
+
+   The "-rgb" triplets exist so rgba() overlays can follow the same token
+   instead of a hardcoded colour that would silently go wrong in the
+   other theme. */
 :root {
-  --bg: #f3f0e7;
-  --bg-elevated: #fbf9f3;
-  /* Recessed surfaces -- inputs, wells, the editor's own paper. Slightly
-     *darker* than the page in light mode and slightly lighter in dark
-     mode, so a field always reads as cut into the surface either way. */
-  --bg-sunken: #eae5d8;
-  --border: #ded7c6;
-  --border-strong: #c7bfa9;
-  --text: #23201b;
-  --text-muted: #6d6658;
-  /* A bookbinding ink rather than a system blue: it was the only cool
-     colour in a palette of warm neutrals, and read as a default. */
-  --accent: #7d3b2e;
-  --accent-strong: #5e2b21;
-  --accent-rgb: 125, 59, 46;
-  --pending: #91641a;
-  --pending-rgb: 145, 100, 26;
-  --accepted: #3a6a48;
-  --accepted-rgb: 58, 106, 72;
-  --rejected: #983a32;
-  --rejected-rgb: 152, 58, 50;
-  --btn-text: #fbf9f3;
-  --code-bg: rgba(35, 32, 27, 0.06);
-  --shadow: rgba(60, 50, 30, 0.13);
-  /* Relief. A control is an object: light from above, a bright edge along
-     its top, and a short contact shadow rather than a soft cloud. --press
-     is what it looks like with a finger on it, and --sink is the opposite
-     -- a field cut into the paper instead of sitting on it. */
-  --lift-1: 0 1px 0 rgba(255, 255, 255, 0.28) inset, 0 1px 1.5px rgba(60, 50, 30, 0.16), 0 2px 5px -2px rgba(60, 50, 30, 0.22);
-  --lift-2: 0 1px 0 rgba(255, 255, 255, 0.34) inset, 0 2px 3px rgba(60, 50, 30, 0.18), 0 6px 14px -4px rgba(60, 50, 30, 0.26);
-  --press: 0 1px 2px rgba(60, 50, 30, 0.22) inset;
-  --sink: inset 0 1px 2px rgba(60, 50, 30, 0.10);
-  --edge-light: rgba(255, 255, 255, 0.5);
+  --bg: #ffffff;
+  /* On a white ground there is nothing above the page to raise a surface
+     to, so "elevated" and the page are the same white, and a recessed
+     surface -- an input, a well, the editor's paper -- is the only one
+     that differs. */
+  --bg-elevated: #ffffff;
+  --bg-sunken: #f4f4f2;
+  /* Two rules and no more: a hairline that divides (grey) and a rule that
+     structures (ink). Everything in the interface is drawn with one or
+     the other. */
+  --border: #dcdcd8;
+  --border-strong: #121210;
+  --text: #121210;
+  --text-muted: #6f6d67;
+  --accent: #d8231a;
+  --accent-strong: #ae1a13;
+  --accent-rgb: 216, 35, 26;
+  /* Pending is the red; accepted is ink; rejected is the grey of
+     something already dealt with. See the colour note above. */
+  --pending: #d8231a;
+  --pending-rgb: 216, 35, 26;
+  --accepted: #121210;
+  --accepted-rgb: 18, 18, 16;
+  --rejected: #6f6d67;
+  --rejected-rgb: 111, 109, 103;
+  --btn-text: #ffffff;
+  --code-bg: rgba(18, 18, 16, 0.06);
+  --shadow: rgba(18, 18, 16, 0.16);
+  /* No relief. The tokens stay because half the file references them --
+     emptying them here flattens every control at once, and keeps the one
+     surface that genuinely floats (the "More" panel, which overlaps the
+     page) able to opt back in explicitly. */
+  --lift-1: none;
+  --lift-2: none;
+  --press: none;
+  --sink: none;
+  --edge-light: transparent;
 
   /* Type. Nine steps, and every font-size in this file is one of them.
      Before this there were forty, most of them a tenth of a rem apart --
@@ -96,8 +106,8 @@
   --t-lg: 1.125rem;
   --t-xl: 1.375rem;
   --t-2xl: 1.75rem;
-  --t-3xl: 2.25rem;
-  --t-4xl: 3rem;
+  --t-3xl: 2.625rem;   /* the one display size: a page's own title */
+  --t-4xl: 4rem;
 
   /* Space. Twelve steps, down from thirty-four; 5px, 7px, 9px, 11px, 26px
      and 30px are gone. Hairlines (0 and 1px) stay literal -- they are
@@ -106,20 +116,21 @@
   --s-5: 12px; --s-6: 16px; --s-7: 20px; --s-8: 24px;
   --s-9: 32px; --s-10: 40px; --s-11: 48px; --s-12: 64px;
 
-  --radius: 8px;
-  --radius-lg: 12px;
+  /* Square. A radius is a softening, and this design does not soften. */
+  --radius: 0;
+  --radius-lg: 0;
 
-  /* Type. --font-prose is shared by the chapter text, the glossary, the
+  /* The measure of the labels: capitals need air between them or they set
+     as a block, and the smaller they are the more they need. */
+  --label-tracking: 0.13em;
+
+  /* --font-prose is shared by the chapter text, the glossary, the
      markdown preview AND the editor's textarea+overlay pair -- those last
      two must always resolve to the exact same family, size and line
      height or the highlight overlay drifts out of register with the text
      the reader is actually typing, so they both go through these tokens
      rather than repeating a font stack. */
   --font-prose: 'Prose', 'Iowan Old Style', 'Palatino Linotype', Charter, Georgia, serif;
-  /* Headings, the brand and every label are the sans. The serif is
-     reserved for what is actually prose -- the chapter, the blurb, the
-     glossary, the editor -- so on any page the book-like text is the
-     text somebody wrote, and never the furniture around it. */
   --font-display: var(--font-ui);
   --font-ui: 'UI Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --font-mono: "SF Mono", SFMono-Regular, Consolas, Monaco, monospace;
@@ -127,67 +138,53 @@
   --editor-padding: var(--s-5) var(--s-6);
 }
 
+/* Dark is the same drawing with the ink and the paper exchanged: the
+   hairline and the ink rule swap ends, and the red lifts far enough to
+   stay legible on near-black without turning pink. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #191713;
-    --bg-elevated: #211e19;
-    --bg-sunken: #131110;
-    --border: #342f26;
-    --border-strong: #4a4336;
-    --text: #e7e1d3;
-    --text-muted: #9b9281;
-    --accent: #d9927f;
-    --accent-strong: #e8ab99;
-    --accent-rgb: 217, 146, 127;
-    --pending: #d3a24e;
-    --pending-rgb: 211, 162, 78;
-    --accepted: #7fba82;
-    --accepted-rgb: 127, 186, 130;
-    --rejected: #d97e66;
-    --rejected-rgb: 217, 126, 102;
-    --btn-text: #191713;
-    --code-bg: rgba(231, 225, 211, 0.08);
-    --shadow: rgba(0, 0, 0, 0.45);
-  --lift-1: 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 1px 1.5px rgba(0, 0, 0, 0.5), 0 2px 5px -2px rgba(0, 0, 0, 0.6);
-  --lift-2: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 2px 3px rgba(0, 0, 0, 0.55), 0 6px 14px -4px rgba(0, 0, 0, 0.7);
-  --press: 0 1px 3px rgba(0, 0, 0, 0.6) inset;
-  --sink: inset 0 1px 2px rgba(0, 0, 0, 0.45);
-  --edge-light: rgba(255, 255, 255, 0.07);
+    --bg: #0f0f0e;
+    --bg-elevated: #0f0f0e;
+    --bg-sunken: #1a1a18;
+    --border: #2e2e2b;
+    --border-strong: #f0f0ec;
+    --text: #f0f0ec;
+    --text-muted: #96948e;
+    --accent: #ff4b3e;
+    --accent-strong: #ff6f64;
+    --accent-rgb: 255, 75, 62;
+    --pending: #ff4b3e;
+    --pending-rgb: 255, 75, 62;
+    --accepted: #f0f0ec;
+    --accepted-rgb: 240, 240, 236;
+    --rejected: #96948e;
+    --rejected-rgb: 150, 148, 142;
+    --btn-text: #0f0f0e;
+    --code-bg: rgba(240, 240, 236, 0.09);
+    --shadow: rgba(0, 0, 0, 0.6);
   }
 }
 
-/* The dark theme needs a little more of it: the same opacity over a
-   near-black ground reads as nothing at all. */
-:root[data-theme="dark"] body,
-:root:not([data-theme="light"]) body {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E");
-}
-
 :root[data-theme="dark"] {
-  --bg: #191713;
-  --bg-elevated: #211e19;
-  --bg-sunken: #131110;
-  --border: #342f26;
-  --border-strong: #4a4336;
-  --text: #e7e1d3;
-  --text-muted: #9b9281;
-  --accent: #d9927f;
-  --accent-strong: #e8ab99;
-  --accent-rgb: 217, 146, 127;
-  --pending: #d3a24e;
-  --pending-rgb: 211, 162, 78;
-  --accepted: #7fba82;
-  --accepted-rgb: 127, 186, 130;
-  --rejected: #d97e66;
-  --rejected-rgb: 217, 126, 102;
-  --btn-text: #191713;
-  --code-bg: rgba(231, 225, 211, 0.08);
-  --shadow: rgba(0, 0, 0, 0.45);
-  --lift-1: 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 1px 1.5px rgba(0, 0, 0, 0.5), 0 2px 5px -2px rgba(0, 0, 0, 0.6);
-  --lift-2: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 2px 3px rgba(0, 0, 0, 0.55), 0 6px 14px -4px rgba(0, 0, 0, 0.7);
-  --press: 0 1px 3px rgba(0, 0, 0, 0.6) inset;
-  --sink: inset 0 1px 2px rgba(0, 0, 0, 0.45);
-  --edge-light: rgba(255, 255, 255, 0.07);
+  --bg: #0f0f0e;
+  --bg-elevated: #0f0f0e;
+  --bg-sunken: #1a1a18;
+  --border: #2e2e2b;
+  --border-strong: #f0f0ec;
+  --text: #f0f0ec;
+  --text-muted: #96948e;
+  --accent: #ff4b3e;
+  --accent-strong: #ff6f64;
+  --accent-rgb: 255, 75, 62;
+  --pending: #ff4b3e;
+  --pending-rgb: 255, 75, 62;
+  --accepted: #f0f0ec;
+  --accepted-rgb: 240, 240, 236;
+  --rejected: #96948e;
+  --rejected-rgb: 150, 148, 142;
+  --btn-text: #0f0f0e;
+  --code-bg: rgba(240, 240, 236, 0.09);
+  --shadow: rgba(0, 0, 0, 0.6);
 }
 
 * { box-sizing: border-box; }
@@ -195,11 +192,9 @@
 body {
   margin: 0;
   font-family: var(--font-ui);
-  /* Paper grain: an embedded SVG of monochrome noise at 3.5%, tiled. You
-     do not see it; you notice it. It is the difference between a beige
-     background and paper, and it costs one declaration -- no image
-     request, no library. */
-  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E") repeat;
+  /* Flat. The paper grain that used to be here belonged to a warm beige
+     ground; on white it is dirt. */
+  background: var(--bg);
   color: var(--text);
   line-height: 1.5;
   /* A safety net, not the fix -- see .topbar nav's flex-wrap below for the
@@ -214,25 +209,46 @@ body {
 a { color: var(--accent-strong); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 2px; }
 
-/* Headings are the app's voice: book typography, not UI typography. */
+/* Headings are set, not styled: one weight, tight, flush left, and the
+   tracking closing up as the size grows. */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
-  font-weight: 600;
-  /* A sans needs more negative tracking at display sizes than a serif
-     does, and more the larger it gets. */
-  letter-spacing: -0.015em;
-  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.15;
 }
-h1 { letter-spacing: -0.022em; line-height: 1.12; }
-h1 { font-size: var(--t-2xl); line-height: 1.2; }
-h2 { font-size: var(--t-xl); line-height: 1.25; }
-h3 { font-size: var(--t-lg); line-height: 1.3; }
+h1 { font-size: var(--t-3xl); letter-spacing: -0.035em; line-height: 1.02; max-width: 20ch; }
+h2 { font-size: var(--t-xl); letter-spacing: -0.026em; line-height: 1.2; }
+h3 { font-size: var(--t-lg); letter-spacing: -0.02em; line-height: 1.25; }
+
+/* Every label in the interface -- the byline, the breadcrumb, the meta at
+   the end of a row, the little headings over a column -- is the same
+   object: capitals at eleven pixels with air between them. They are read
+   as signposts, not as sentences, and setting them all one way means the
+   eye learns the difference between a label and a thing in about two
+   pages. */
+.byline,
+.breadcrumb,
+.chapter-row-meta,
+.readers-line,
+.story-stat-label,
+.comments-pane h2,
+.menu-heading,
+.tag-group > legend {
+  text-transform: uppercase;
+  letter-spacing: var(--label-tracking);
+  font-size: var(--t-2xs);
+  font-weight: 700;
+  font-family: var(--font-ui);
+  font-style: normal;
+}
 
 /* --- top bar ---
    Three groups, not one undifferentiated row of links: the masthead, the
    places you go, and who you are. Only the middle group reads as
-   navigation, so the eye isn't asked to sort seven equal-weight purple
-   links every time the page loads. */
+   navigation, so the eye isn't asked to sort seven equal-weight links
+   every time the page loads. The bar is closed by the one two-pixel rule
+   on the page: everything below it is the document. */
 .topbar {
   display: flex;
   flex-wrap: wrap;
@@ -240,13 +256,14 @@ h3 { font-size: var(--t-lg); line-height: 1.3; }
   align-items: center;
   gap: var(--s-4) var(--s-8);
   padding: 0 var(--s-8);
-  min-height: 58px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-elevated);
+  min-height: 52px;
+  border-bottom: 2px solid var(--border-strong);
+  background: var(--bg);
 }
 .topbar .brand {
   font-family: var(--font-display);
-  font-weight: 600; font-size: var(--t-lg); letter-spacing: 0.01em;
+  font-weight: 700; font-size: var(--t-md); letter-spacing: -0.02em;
+  text-transform: uppercase;
   color: var(--text);
 }
 .topbar .brand:hover { text-decoration: none; color: var(--accent-strong); }
@@ -254,12 +271,15 @@ h3 { font-size: var(--t-lg); line-height: 1.3; }
 /* The navigation links proper -- everything except the account cluster,
    which .topbar-user below peels off to the right. */
 .topbar nav > a {
-  color: var(--text-muted); font-size: var(--t-md); font-weight: 500;
-  padding: var(--s-3) var(--s-4); border-radius: var(--radius);
+  color: var(--text-muted); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+  padding: var(--s-3) var(--s-4);
 }
-.topbar nav > a:hover { color: var(--text); background: var(--bg-sunken); text-decoration: none; }
-.topbar nav > a.current { color: var(--text); background: var(--bg-sunken); }
-.topbar .brand-mark { color: var(--text-muted); font-weight: 400; }
+.topbar nav > a:hover { color: var(--text); text-decoration: none; }
+/* Where you are is said in the one colour, not with a grey pill. */
+.topbar nav > a.current { color: var(--accent); }
+/* The only red in the masthead, and the reason the bar needs no logo. */
+.topbar .brand-mark { color: var(--accent); font-weight: 700; }
 /* Who you are and how to leave -- set apart from the navigation proper by
    a hairline, so "Log out" never sits in the same visual list as the
    places you might actually want to go. */
@@ -267,23 +287,25 @@ h3 { font-size: var(--t-lg); line-height: 1.3; }
   display: inline-flex; align-items: center; gap: var(--s-1);
   padding-left: var(--s-5); margin-left: var(--s-3); border-left: 1px solid var(--border);
 }
-.topbar-account > a {
-  color: var(--text-muted); font-size: var(--t-md); font-weight: 500;
-  padding: var(--s-3) var(--s-4); border-radius: var(--radius);
+.topbar-account > a,
+.topbar .whoami,
+.topbar .inline-form .linklike {
+  color: var(--text-muted); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+  padding: var(--s-3) var(--s-4);
 }
-.topbar-account > a:hover { color: var(--text); background: var(--bg-sunken); text-decoration: none; }
-.topbar-account > a.current { color: var(--text); background: var(--bg-sunken); }
-.topbar .whoami { color: var(--text-muted); font-size: var(--t-md); }
-.topbar .inline-form .linklike { color: var(--text-muted); font-size: var(--t-md); padding: var(--s-3) var(--s-4); border-radius: var(--radius); }
-.topbar .inline-form .linklike:hover { color: var(--text); background: var(--bg-sunken); text-decoration: none; }
+.topbar .whoami { padding-right: 0; }
+.topbar-account > a:hover,
+.topbar .inline-form .linklike:hover { color: var(--text); text-decoration: none; }
+.topbar-account > a.current { color: var(--accent); }
 
 .theme-toggle {
   display: flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; padding: 0; margin: 0 0 0 var(--s-1);
-  background: transparent; border: 1px solid transparent; border-radius: 999px;
+  background: transparent; border: 1px solid transparent;
   color: var(--text-muted); font-size: var(--t-md); line-height: 1; cursor: pointer;
 }
-.theme-toggle:hover { color: var(--text); background: var(--bg-sunken); }
+.theme-toggle:hover { color: var(--accent); background: transparent; }
 
 .linklike {
   background: none; border: none; color: var(--accent-strong); cursor: pointer;
@@ -301,9 +323,15 @@ h3 { font-size: var(--t-lg); line-height: 1.3; }
    the 2.1fr/1fr split generally) more breathing room, not longer lines. */
 .container.wa-fullwidth { max-width: none; }
 
-.flash { padding: var(--s-5) var(--s-8); text-align: center; font-size: var(--t-md); }
-.flash.error { background: rgba(var(--rejected-rgb), 0.14); color: var(--rejected); }
-.flash.info { background: rgba(var(--accent-rgb), 0.12); color: var(--accent-strong); }
+/* A flash is a banner across the full width, not a tinted box: ink on the
+   recessed grey, with the red rule under it when something went wrong. */
+.flash {
+  padding: var(--s-5) var(--s-8); text-align: center; font-size: var(--t-md);
+  background: var(--bg-sunken); color: var(--text);
+  border-bottom: 2px solid var(--border-strong);
+}
+.flash.error { border-bottom-color: var(--accent); }
+.flash.info { border-bottom-color: var(--border-strong); }
 
 h1 { margin-top: 0; }
 .muted { color: var(--text-muted); }
@@ -313,27 +341,23 @@ h1 { margin-top: 0; }
   display: inline-flex; align-items: center; justify-content: center; gap: var(--s-3);
   background: var(--accent);
   color: var(--btn-text);
-  border: 1px solid transparent;
+  border: 1px solid var(--border-strong);
   padding: var(--s-4) var(--s-6);
-  border-radius: var(--radius);
+  border-radius: 0;
   font-family: var(--font-ui);
-  font-weight: 600;
-  letter-spacing: 0.005em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
   cursor: pointer;
-  font-size: var(--t-md);
+  font-size: var(--t-2xs);
   line-height: 1.4;
-  /* The gradient is about 4% of lightness end to end -- not a shine, just
-     a direction for the light. Without it the fill reads as a coloured
-     rectangle whatever shadow sits underneath. */
-  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.13), rgba(0, 0, 0, 0.07));
-  box-shadow: var(--lift-1);
-  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease,
-              box-shadow 0.16s ease, transform 0.08s ease;
+  /* A button is a word inside a rectangle. There is no gradient, no
+     shadow and no lift on hover, because none of those is what tells you
+     it is pressable -- the box and the capitals are. What hover does is
+     fill it with the one colour that means "act". */
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-.btn:hover { box-shadow: var(--lift-2); transform: translateY(-1px); }
-/* Pressed: down a pixel, shadow inverted, gradient off. This is the half
-   people feel rather than see, and the half that was missing. */
-.btn:active { box-shadow: var(--press); transform: translateY(1px); background-image: none; }
+.btn:active { background: var(--accent-strong); border-color: var(--accent-strong); }
 /* Inline SVG, inheriting the button's own colour -- no icon font, no
    dependency. Only the verbs get one; a label with a picture beside every
    word is noise, not help. */
@@ -342,44 +366,52 @@ h1 { margin-top: 0; }
   stroke: currentColor; stroke-width: 2.2; fill: none;
   stroke-linecap: round; stroke-linejoin: round;
 }
-.btn:hover { background: var(--accent-strong); text-decoration: none; }
-.btn.ghost {
-  background: transparent; color: var(--text); border-color: var(--border-strong);
-  background-image: linear-gradient(to bottom, var(--edge-light), rgba(0, 0, 0, 0.02));
-  box-shadow: 0 1px 0 var(--edge-light) inset, 0 1px 1.5px rgba(60, 50, 30, 0.10);
-}
-.btn.ghost:hover { box-shadow: var(--lift-1); }
-.btn.ghost:hover { background: var(--bg-sunken); border-color: var(--text-muted); color: var(--text); }
-.btn.small { padding: var(--s-2) var(--s-5); font-size: var(--t-sm); }
-.btn.accept { background: var(--accepted); color: var(--btn-text); }
-.btn.reject { background: var(--rejected); color: var(--btn-text); }
-/* A destructive button does not invite: flat until you point at it. */
-.btn.danger {
-  background: transparent; color: var(--rejected); border-color: rgba(var(--rejected-rgb), 0.45);
-  background-image: none; box-shadow: none;
-}
-.btn.danger:hover {
-  background: rgba(var(--rejected-rgb), 0.1); border-color: var(--rejected);
-  box-shadow: var(--lift-1); transform: none;
-}
-.btn.tiny { padding: var(--s-1) var(--s-4); font-size: var(--t-xs); }
+/* The primary action is the only solid block of ink on a page, so there
+   is never a question about which button it is. */
+.btn { background: var(--text); color: var(--btn-text); }
+.btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; text-decoration: none; }
+/* Everything else is the same rectangle, empty. */
+.btn.ghost { background: transparent; color: var(--text); }
+.btn.ghost:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.small { padding: var(--s-2) var(--s-5); }
+.btn.tiny { padding: var(--s-1) var(--s-4); font-size: 0.625rem; letter-spacing: 0.1em; }
+.btn.accept { background: var(--text); color: var(--btn-text); }
+.btn.reject { background: transparent; color: var(--text); }
+/* A destructive button does not invite: an empty rectangle that only goes
+   red when you point at it, like everything else -- the difference is
+   that here the red is a warning rather than an invitation. */
+.btn.danger { background: transparent; color: var(--accent); border-color: var(--accent); }
+.btn.danger:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* --- auth --- */
 .auth-card {
-  max-width: 400px; margin: var(--s-12) auto; background: var(--bg-elevated);
-  border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--s-9) var(--s-9);
-  box-shadow: 0 1px 2px var(--shadow);
+  max-width: 400px; margin: var(--s-10) 0 var(--s-12); background: var(--bg);
+  border: 0; border-top: 2px solid var(--border-strong); padding: var(--s-8) 0 0;
 }
 .auth-card h1 { font-size: var(--t-2xl); margin-bottom: var(--s-2); }
 .auth-card form { display: flex; flex-direction: column; gap: var(--s-6); margin-top: var(--s-7); }
-label { display: flex; flex-direction: column; gap: var(--s-3); font-size: var(--t-sm); color: var(--text-muted); font-weight: 500; }
-input, textarea, select {
-  background: var(--bg-sunken); border: 1px solid var(--border); color: var(--text);
-  border-radius: var(--radius); padding: var(--s-4) var(--s-5); font: inherit; font-size: var(--t-md);
-  box-shadow: var(--sink);
-  transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+/* A field label is a label like any other: capitals, small, above the
+   box it names. */
+label {
+  display: flex; flex-direction: column; gap: var(--s-3);
+  font-size: var(--t-2xs); color: var(--text-muted); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
-input:hover, textarea:hover, select:hover { border-color: var(--border-strong); }
+/* Only the label's own words are capitals. Everything nested inside one
+   resets -- the field itself, a toggle pill, and in particular the whole
+   writing-checks card the analyzer injects into the chapter-text label,
+   which would otherwise inherit four-word-caption styling for a panel. */
+label > * { text-transform: none; letter-spacing: normal; font-weight: 400; }
+input, textarea, select {
+  background: transparent; border: 1px solid var(--border-strong); color: var(--text);
+  border-radius: 0; padding: var(--s-4) var(--s-5); font: inherit; font-size: var(--t-md);
+  /* A field sits inside its <label>, and the label is set in capitals --
+     which text-transform and letter-spacing would happily inherit into
+     the thing the person is actually typing. */
+  text-transform: none; letter-spacing: normal; font-weight: 400;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+input:hover, textarea:hover, select:hover { background: var(--bg-sunken); }
 textarea { resize: vertical; font-family: var(--font-prose); font-size: var(--t-base); line-height: 1.6; }
 ::placeholder { color: var(--text-muted); opacity: 0.65; }
 
@@ -435,51 +467,71 @@ select {
 .breadcrumb { margin: 0 0 var(--s-6); font-size: var(--t-md); }
 .breadcrumb a { color: var(--text-muted); }
 .breadcrumb a:hover { color: var(--accent-strong); }
-.chapter-list { display: flex; flex-direction: column; gap: var(--s-1); }
+/* The list of chapters in a story is a numbered index, and the counter
+   lives here rather than in the markup so reordering a chapter renumbers
+   it for free. Only chapters are numbered -- the story list on the front
+   page is ordered by what happened last, and numbering that would be
+   claiming a sequence that does not exist. */
+.chapter-list { display: flex; flex-direction: column; gap: 0; counter-reset: ch; }
 /* Rows, not floating cards: a stack of works in progress reads better as
    a contents page -- hairline-separated entries in one column -- than as
    a scattering of separately-bordered boxes. */
 .chapter-row {
   display: flex; justify-content: space-between; gap: var(--s-8); align-items: baseline;
   background: transparent; border: none; border-bottom: 1px solid var(--border); border-radius: 0;
-  padding: var(--s-6) var(--s-5); margin: 0 -var(--s-5); color: var(--text);
-  transition: background 0.14s ease;
+  padding: var(--s-6) 0; color: var(--text);
 }
 .chapter-list > .chapter-row:first-child,
 .chapter-list > .chapter-row-outer:first-child .chapter-row { border-top: 1px solid var(--border); }
 /* A row is as clickable as a button and said so with nothing but a colour
-   change that appeared instantly. The rule on the left is the affordance;
-   it grows from the edge rather than blinking on, and being an inset
-   shadow it moves no text. */
+   change that appeared instantly. The rule that thickens along the bottom
+   edge is the affordance: it is the same hairline the row already has,
+   turned red and doubled, so nothing moves and nothing else appears. */
 .chapter-row {
-  transition: background 0.14s ease, box-shadow 0.16s ease;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
   box-shadow: inset 0 0 0 0 var(--accent);
 }
 .chapter-row:hover {
-  background: var(--bg-elevated); text-decoration: none;
-  box-shadow: inset 2px 0 0 0 var(--accent);
+  text-decoration: none;
+  box-shadow: inset 0 -2px 0 0 var(--accent);
 }
 .chapter-row h3 { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
 .chapter-row-main { min-width: 0; }
+/* The number hangs in its own column to the left of the title, and the
+   rest of the row is pushed into the second column by giving the number
+   all three rows of it. */
+.chapter-row-outer { counter-increment: ch; }
+.chapter-row-outer .chapter-row-main {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 0 var(--s-6); align-items: start;
+}
+.chapter-row-outer .chapter-row-main::before {
+  content: counter(ch, decimal-leading-zero);
+  grid-row: 1 / span 4;
+  font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em;
+  color: var(--accent); padding-top: 3px; font-variant-numeric: tabular-nums;
+}
 .chapter-row-main p { margin: 0; font-size: var(--t-md); line-height: 1.55; max-width: 62ch; }
 .chapter-row-meta {
   display: flex; gap: var(--s-5); align-items: baseline; white-space: nowrap;
   color: var(--text-muted); font-size: var(--t-sm); flex-shrink: 0;
 }
-/* A badge is a status, not a control. The dot says so at a glance and
-   stops it reading as a very small button. */
+/* A badge is a status, not a control: no fill, no pill, no border. It is
+   a label like every other label, with a square of colour in front of it
+   -- and since red is the only colour, a badge with a red square is the
+   only badge that asks for anything. */
 .badge {
   display: inline-flex; align-items: center; gap: var(--s-3);
-  padding: var(--s-1) var(--s-4); border-radius: 3px;
-  font-size: var(--t-xs); font-weight: 600; letter-spacing: 0.01em;
+  padding: 0; border-radius: 0; background: transparent;
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
 .badge::before {
-  content: ""; width: 5px; height: 5px; border-radius: 50%;
-  background: currentColor; opacity: 0.9; flex: 0 0 auto;
+  content: ""; width: 6px; height: 6px; border-radius: 0;
+  background: currentColor; flex: 0 0 auto;
 }
-.badge.pending { background: rgba(var(--pending-rgb), 0.15); color: var(--pending); }
-.badge.new { background: rgba(var(--accent-rgb), 0.14); color: var(--accent-strong); }
-.badge.new-comments { background: rgba(var(--accepted-rgb), 0.15); color: var(--accepted); }
+.badge.pending { color: var(--accent); }
+.badge.new { color: var(--accent); }
+.badge.new-comments { color: var(--text); }
 .archive-link { margin-top: var(--s-7); font-size: var(--t-md); }
 .archived-row { opacity: 0.85; }
 .archived-row .chapter-row-meta { gap: var(--s-3); }
@@ -528,16 +580,24 @@ select {
 input[type="file"] { padding: var(--s-3) var(--s-2); }
 
 /* --- chapter page --- */
-.chapter-header { border-bottom: 1px solid var(--border); padding-bottom: var(--s-7); margin-bottom: var(--s-8); }
+/* The head of a chapter is bracketed: the two-pixel rule opens it, the
+   hairline under the controls closes it, and everything between belongs
+   to the piece rather than to the app. */
+.chapter-header {
+  border-top: 2px solid var(--border-strong); padding-top: var(--s-5);
+  border-bottom: 1px solid var(--border); padding-bottom: var(--s-6); margin-bottom: var(--s-8);
+}
 .chapter-header h1 { font-size: var(--t-3xl); margin-bottom: var(--s-4); }
-.byline { margin-top: 0; font-size: var(--t-md); color: var(--text-muted); }
-.summary { font-style: italic; font-family: var(--font-prose); font-size: var(--t-base); color: var(--text-muted); max-width: 64ch; }
+.byline { margin-top: 0; color: var(--text-muted); }
+/* The blurb is the author's words, so it is set in the author's face --
+   the one place in the furniture where the serif is allowed out. */
+.summary { font-style: normal; font-family: var(--font-prose); font-size: var(--t-base); color: var(--text-muted); max-width: 56ch; }
 /* The chapter's controls (version, edit, archive, downloads, width) are
    secondary to the chapter itself: one quiet strip of small controls,
    grouped and separated by hairlines, rather than a row of competing
    buttons sitting directly under the title. */
 .version-bar {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--s-4) var(--s-7);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-4) var(--s-6);
   margin-top: var(--s-6); flex-wrap: wrap;
   font-size: var(--t-sm); color: var(--text-muted);
 }
@@ -545,31 +605,27 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
    it on the right. Before this it was eight controls of equal weight in
    one row that wrapped to four rows on a phone. */
 .version-context, .version-actions {
-  display: flex; align-items: center; gap: var(--s-4) var(--s-5); flex-wrap: wrap;
+  display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap;
 }
 .version-compare { white-space: nowrap; }
-.version-bar label { flex-direction: row; align-items: center; gap: var(--s-4); font-size: var(--t-sm); }
-.version-bar select { font-size: var(--t-sm); padding: var(--s-2) var(--s-8) var(--s-2) var(--s-4); }
-.version-bar .btn { font-size: var(--t-sm); padding: var(--s-2) var(--s-5); }
+.version-bar label { flex-direction: row; align-items: center; gap: var(--s-3); font-size: var(--t-2xs); }
+.version-bar select { font-size: var(--t-2xs); padding: var(--s-2) var(--s-8) var(--s-2) var(--s-4); }
+.version-bar .btn { padding: var(--s-2) var(--s-5); }
 .changelog { font-style: italic; }
 .download-links { display: inline-flex; align-items: baseline; gap: var(--s-4); }
 .download-links a { margin-left: 0; }
 
 .chapter-body-grid { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr); gap: var(--s-10); align-items: start; }
 
-/* The page the draft is printed on. Deliberately the lightest surface on
-   screen and wider-padded than any other card -- everything else in this
-   app exists to serve what is inside it. */
+/* There is no sheet. The draft is not printed on a card laid over the
+   page -- it is the page, and the only thing marking it off is the rule
+   it hangs from on the left. A card here was drawing a box around the one
+   thing on screen that never needed one. */
 .reading-pane {
-  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-lg);
-  padding: var(--s-11) var(--s-11);
-  box-shadow: 0 1px 2px var(--shadow);
-  /* The sheet ends where the text does. Everything inside is capped at a
-     72ch measure and centred, so without this the card was 1040px wide
-     around a 640px column and had 200px of nothing down each side -- most
-     visible on the glossary and the diff, where it is the only thing on
-     the page. */
-  max-width: calc(72ch + var(--s-11) * 2);
+  background: transparent; border: 0; border-left: 1px solid var(--border); border-radius: 0;
+  padding: var(--s-2) 0 0 var(--s-9);
+  box-shadow: none;
+  max-width: none;
 }
 /* The three numbers that decide what reading this is like. They were
    fixed, which is a strange thing for an application whose content is
@@ -591,14 +647,19 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   font-size: var(--read-size);
   line-height: var(--read-leading);
   max-width: var(--read-measure);
-  margin: 0 auto;
+  /* Flush left against its rule, not centred in the column: the measure
+     starts at the same place on every page and every chapter. */
+  margin: 0;
 }
 #chapter-text p { margin: 0 0 1.1em; }
 #chapter-text p:last-child { margin-bottom: 0; }
+/* Headings inside a chapter are the writer's, not the app's, so they keep
+   the writer's face. */
 #chapter-text h1, #chapter-text h2, #chapter-text h3,
 #chapter-text h4, #chapter-text h5, #chapter-text h6 {
-  font-family: var(--font-display);
-  margin: 1.5em 0 0.55em; line-height: 1.25; color: var(--text); font-weight: 600;
+  font-family: var(--font-prose);
+  margin: 1.6em 0 0.55em; line-height: 1.25; color: var(--text); font-weight: 700;
+  letter-spacing: 0;
 }
 #chapter-text h1 { font-size: var(--t-xl); }
 #chapter-text h2 { font-size: var(--t-xl); }
@@ -615,7 +676,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 #chapter-text hr::before { content: "* * *"; letter-spacing: 0.5em; font-size: 1.1em; opacity: 0.7; }
 #chapter-text code {
   font-family: var(--font-mono); font-size: 0.92em;
-  background: var(--code-bg); padding: 1px var(--s-2); border-radius: 4px;
+  background: var(--code-bg); padding: 1px var(--s-2); border-radius: 0;
 }
 #chapter-text a { color: var(--accent-strong); }
 /* Auto-linked character/place/ship names (see lib/wiki.js) get a dotted
@@ -639,14 +700,15 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   font-size: var(--t-lg);
   line-height: 1.78;
   max-width: 72ch;
-  margin: 0 auto;
+  margin: 0;
 }
 .glossary-content p { margin: 0 0 1.1em; }
 .glossary-content p:last-child { margin-bottom: 0; }
 .glossary-content h1, .glossary-content h2, .glossary-content h3,
 .glossary-content h4, .glossary-content h5, .glossary-content h6 {
-  font-family: var(--font-display);
-  margin: 1.5em 0 0.55em; line-height: 1.25; color: var(--text); font-weight: 600;
+  font-family: var(--font-prose);
+  margin: 1.6em 0 0.55em; line-height: 1.25; color: var(--text); font-weight: 700;
+  letter-spacing: 0;
 }
 .glossary-content h1 { font-size: var(--t-xl); }
 .glossary-content h2 { font-size: var(--t-xl); }
@@ -690,19 +752,23 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 /* A glossary entry the index knows about but hasn't got the text of yet
    (see glossaryPage in views.js) -- deliberately looks like a note, not
    like a page that failed to load. */
-.glossary-empty { max-width: 60ch; margin: 0 auto; }
+.glossary-empty { max-width: 60ch; margin: 0; }
 .glossary-empty p { margin: 0 0 var(--s-4); }
 .glossary-empty .quoted { margin-top: var(--s-6); font-size: var(--t-base); }
 
 .glossary-search { display: flex; gap: var(--s-4); align-items: center; margin-bottom: var(--s-6); flex-wrap: wrap; }
 .glossary-search input[type="search"] {
-  flex: 1; min-width: 180px; padding: var(--s-3) var(--s-4); border-radius: var(--radius);
-  border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit;
+  flex: 1; min-width: 180px; padding: var(--s-3) var(--s-4); border-radius: 0;
+  border: 1px solid var(--border-strong); background: transparent; color: var(--text); font: inherit;
 }
-.hl { border-radius: 3px; cursor: pointer; padding: 1px 0; }
-.hl-pending { background: rgba(var(--pending-rgb), 0.28); box-shadow: inset 0 -2px 0 var(--pending); }
-.hl-accepted { background: rgba(var(--accepted-rgb), 0.2); box-shadow: inset 0 -2px 0 var(--accepted); }
-.hl-rejected { background: rgba(var(--rejected-rgb), 0.15); box-shadow: inset 0 -2px 0 var(--rejected); opacity: 0.75; }
+/* A marked passage is underscored, not painted. A block of colour behind
+   prose changes the colour of the paper the writer is trying to read; a
+   rule under it does not, and still says exactly where the comment
+   begins and ends. */
+.hl { border-radius: 0; cursor: pointer; padding: 1px 0; background: transparent; }
+.hl-pending { box-shadow: inset 0 -2px 0 var(--accent); }
+.hl-accepted { box-shadow: inset 0 -2px 0 var(--text); }
+.hl-rejected { box-shadow: inset 0 -1px 0 var(--rejected); opacity: 0.7; }
 
 .comments-pane { position: sticky; top: 20px; display: flex; flex-direction: column; gap: var(--s-5); max-height: calc(100vh - 40px); overflow-y: auto; }
 .comments-pane h2 {
@@ -710,54 +776,60 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);
 }
 
-/* Margin notes, not chat messages: a hairline card with one coloured edge
-   carrying the status, and type a size down from the prose it annotates so
-   it never competes with the draft itself. */
+/* Margin notes, not chat messages, and not cards either: each one is
+   opened by a rule the width of the column -- red while it is waiting for
+   you, ink once it is settled -- and separated from the next by nothing
+   but space. Twelve bordered boxes stacked down a column read as twelve
+   objects; twelve rules read as one list. */
 .comment {
-  background: var(--bg-elevated); border: 1px solid var(--border); border-left: 3px solid var(--pending);
-  border-radius: var(--radius); padding: var(--s-5) var(--s-6); font-size: var(--t-md);
-  transition: box-shadow 0.3s, border-color 0.14s ease;
+  background: transparent; border: 0; border-top: 2px solid var(--accent);
+  border-radius: 0; padding: var(--s-5) 0 var(--s-2); font-size: var(--t-md);
+  transition: border-color 0.14s ease;
 }
-.comment.status-accepted { border-left-color: var(--accepted); }
-.comment.status-rejected { border-left-color: var(--rejected); opacity: 0.72; }
+.comment.status-accepted { border-top-color: var(--text); }
+.comment.status-rejected { border-top-color: var(--border); opacity: 0.6; }
 /* Arriving at a comment -- from a highlight in the text, or from a link in
    the inbox -- with no signal at all leaves you looking for the thing you
    just asked for. Two pulses and done: enough to find it, not enough to
    be a decoration. :target covers the link case with no JavaScript at
    all, and the class covers the click-a-highlight case. */
 @keyframes comment-found {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0); }
-  15%, 55% { box-shadow: 0 0 0 2px var(--accent), 0 0 0 7px rgba(var(--accent-rgb), 0.16); }
-  35%      { box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35); }
+  0%, 100% { background: transparent; }
+  15%, 55% { background: rgba(var(--accent-rgb), 0.10); }
+  35%      { background: rgba(var(--accent-rgb), 0.04); }
 }
 .comment.flash-highlight, .comment:target {
   animation: comment-found 1.4s ease-out 1;
 }
 .comment-meta { display: flex; justify-content: flex-start; align-items: baseline; gap: var(--s-4); flex-wrap: wrap; margin-bottom: var(--s-4); font-size: var(--t-md); }
 .comment-meta strong { font-weight: 600; }
-.status-badge { font-size: var(--t-2xs); padding: var(--s-1) var(--s-4); border-radius: 999px; font-weight: 600; text-transform: lowercase; }
-.status-badge.status-pending { background: rgba(var(--pending-rgb), 0.18); color: var(--pending); }
-.status-badge.status-accepted { background: rgba(var(--accepted-rgb), 0.18); color: var(--accepted); }
-.status-badge.status-rejected { background: rgba(var(--rejected-rgb), 0.18); color: var(--rejected); }
+.status-badge {
+  font-size: var(--t-2xs); padding: 0; border-radius: 0; background: transparent;
+  font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.status-badge.status-pending { color: var(--accent); }
+.status-badge.status-accepted { color: var(--text); }
+.status-badge.status-rejected { color: var(--text-muted); }
 .edited-tag { font-size: var(--t-xs); }
 /* The passage being commented on, quoted in the draft's own face so it
    reads as a lift from the page rather than as more UI copy. */
 .quoted {
-  margin: 0 0 var(--s-4); padding: var(--s-1) 0 var(--s-1) var(--s-5); border-left: 2px solid var(--border-strong);
+  margin: 0 0 var(--s-4); padding: 0; border-left: 0;
   color: var(--text-muted); font-family: var(--font-prose); font-size: var(--t-md); font-style: italic;
 }
 .comment-body { margin: 0 0 var(--s-4); white-space: pre-wrap; line-height: 1.55; }
 .comment.retracted { opacity: 0.7; }
 .comment-actions { display: flex; gap: var(--s-3); flex-wrap: wrap; margin-bottom: var(--s-3); }
-/* Accept/reject are consequential but routine -- outline them instead of
-   painting two saturated blocks into every single note. */
+/* Accept/reject are consequential but routine -- two empty rectangles,
+   with the difference between them carried by the border rather than by
+   two saturated blocks in every single note. */
 .comment-actions .btn.accept, .comment-actions .btn.reject {
-  background: transparent; border-width: 1px; border-style: solid; font-weight: 600;
+  background: transparent; color: var(--text); font-weight: 700;
 }
-.comment-actions .btn.accept { color: var(--accepted); border-color: rgba(var(--accepted-rgb), 0.5); }
-.comment-actions .btn.accept:hover { background: rgba(var(--accepted-rgb), 0.12); border-color: var(--accepted); }
-.comment-actions .btn.reject { color: var(--rejected); border-color: rgba(var(--rejected-rgb), 0.5); }
-.comment-actions .btn.reject:hover { background: rgba(var(--rejected-rgb), 0.12); border-color: var(--rejected); }
+.comment-actions .btn.accept { border-color: var(--border-strong); }
+.comment-actions .btn.accept:hover { background: var(--text); color: var(--btn-text); border-color: var(--text); }
+.comment-actions .btn.reject { border-color: var(--border); color: var(--text-muted); }
+.comment-actions .btn.reject:hover { background: transparent; color: var(--text); border-color: var(--border-strong); }
 .edit-comment { margin: var(--s-2) 0 var(--s-4); }
 .edit-comment summary { cursor: pointer; color: var(--text-muted); font-size: var(--t-sm); }
 .edit-comment form { display: flex; flex-direction: column; gap: var(--s-3); margin-top: var(--s-3); }
@@ -780,9 +852,10 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 .general-comment form { display: flex; flex-direction: column; gap: var(--s-4); margin-top: var(--s-4); }
 
 .selection-toast {
-  position: absolute; z-index: 50; background: var(--accent); color: var(--btn-text);
-  border: none; border-radius: 999px; padding: var(--s-3) var(--s-5); font-weight: 600; cursor: pointer;
-  box-shadow: 0 4px 14px var(--shadow);
+  position: absolute; z-index: 50; background: var(--accent); color: #fff;
+  border: none; border-radius: 0; padding: var(--s-3) var(--s-5); cursor: pointer;
+  font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.11em;
+  box-shadow: none;
 }
 .selection-toast.hidden { display: none; }
 
@@ -850,9 +923,9 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 
 /* --- writer card (new story / new chapter / edit chapter) --- */
 .writer-card {
-  max-width: 1300px; margin: 0 auto; background: var(--bg-elevated);
-  border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--s-10) var(--s-10);
-  box-shadow: 0 1px 2px var(--shadow);
+  max-width: 1300px; margin: 0 auto; background: transparent;
+  border: 0; border-top: 2px solid var(--border-strong); border-radius: 0; padding: var(--s-7) 0 0;
+  box-shadow: none;
   transition: max-width 0.2s ease;
 }
 /* "Fill screen" editor-width button (see writing-analyzer.js) -- widens
@@ -866,16 +939,16 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 .writer-card .chapter-form > label:not(.main-field) { max-width: 640px; }
 .writer-section { display: flex; flex-direction: column; gap: var(--s-6); padding-top: var(--s-7); border-top: 1px solid var(--border); max-width: 640px; }
 .writer-section-label {
-  text-transform: uppercase; letter-spacing: 0.08em; font-size: var(--t-2xs);
-  color: var(--text-muted); font-weight: 600; margin: 0;
+  text-transform: uppercase; letter-spacing: var(--label-tracking); font-size: var(--t-2xs);
+  color: var(--text-muted); font-weight: 700; margin: 0;
 }
 .writer-card .main-field textarea { min-height: 380px; }
 .writer-actions { display: flex; justify-content: flex-end; align-items: center; gap: var(--s-4); margin-top: var(--s-2); }
 .writer-actions { padding-top: var(--s-3); }
-.writer-actions .btn { padding: var(--s-4) var(--s-7); font-size: var(--t-md); }
+.writer-actions .btn { padding: var(--s-4) var(--s-8); }
 input:focus, textarea:focus, select:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
-  background: var(--bg-elevated);
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent);
+  background: transparent;
 }
 /* Buttons/links had no visible focus state at all -- fine with a mouse,
    but keyboard-only navigation had no way to tell which one was about to
@@ -887,20 +960,21 @@ input:focus, textarea:focus, select:focus {
   outline: none;
   /* Paper first, then ink. A ring of the page colour before the accent
      one, so it reads on a filled button as clearly as on the background. */
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), var(--lift-1);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
 }
 
 /* --- writing analyzer (Hemingway-style highlights + markdown preview) --- */
 .wa-wrap { display: block; }
 .wa-card {
-  border: 1px solid var(--border); border-radius: var(--radius); background: transparent;
+  border: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  border-radius: 0; background: transparent;
   padding: var(--s-5) var(--s-5); display: flex; flex-direction: column; gap: var(--s-4); margin-bottom: var(--s-6);
 }
 .wa-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-5); flex-wrap: wrap; }
-.wa-card-title { font-weight: 600; font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.wa-card-title { font-weight: 700; font-size: var(--t-2xs); text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); }
 .wa-summary { display: flex; align-items: center; gap: var(--s-5); flex-wrap: wrap; font-size: var(--t-sm); color: var(--text-muted); }
 .wa-chip { display: inline-flex; align-items: center; gap: var(--s-3); white-space: nowrap; }
-.wa-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.wa-dot { width: 7px; height: 7px; border-radius: 0; flex-shrink: 0; }
 
 /* A row of labeled sections (Spelling / Style / Markdown preview /
    Comments), sitting side by side when there's room. Each section's own
@@ -915,8 +989,8 @@ input:focus, textarea:focus, select:focus {
 .wa-sections { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-4) var(--s-6); }
 .wa-section { display: flex; flex-flow: row wrap; align-items: center; gap: var(--s-3); }
 .wa-section-title {
-  font-weight: 600; font-size: var(--t-2xs); text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--text-muted); margin: 0 var(--s-1) 0 0; opacity: 0.8;
+  font-weight: 700; font-size: var(--t-2xs); text-transform: uppercase; letter-spacing: var(--label-tracking);
+  color: var(--text-muted); margin: 0 var(--s-1) 0 0;
 }
 .wa-section-rows { display: flex; flex-flow: row wrap; gap: var(--s-3); }
 .wa-check-row {
@@ -925,8 +999,9 @@ input:focus, textarea:focus, select:focus {
      over an input, it's a toggle pill. */
   display: inline-flex; flex-direction: row; align-items: center; gap: var(--s-3);
   padding: var(--s-2) var(--s-5) var(--s-2) var(--s-4); margin: 0;
-  border: 1px solid var(--border); border-radius: 3px;
+  border: 1px solid var(--border); border-radius: 0;
   background: transparent; cursor: pointer; user-select: none;
+  text-transform: none; letter-spacing: normal;
   font-size: var(--t-sm); font-weight: 500; color: var(--text-muted); white-space: nowrap;
   transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
 }
@@ -936,7 +1011,7 @@ input:focus, textarea:focus, select:focus {
    when the check is off, filled with that check's own highlight color
    when it's on. */
 .wa-check-row input[type="checkbox"] {
-  width: 9px; height: 9px; margin: 0; padding: 0; border-radius: 50%;
+  width: 9px; height: 9px; margin: 0; padding: 0; border-radius: 0;
   border: 1.5px solid var(--wa-color, var(--border-strong)); background: transparent;
   cursor: pointer; flex-shrink: 0; opacity: 0.5;
   transition: background 0.14s ease, opacity 0.14s ease;
@@ -959,17 +1034,20 @@ input:focus, textarea:focus, select:focus {
 }
 
 .wa-width-bar { display: flex; align-items: center; gap: var(--s-4); margin-bottom: var(--s-4); }
-.wa-width-label { font-size: var(--t-sm); color: var(--text-muted); }
+.wa-width-label {
+  font-size: var(--t-2xs); color: var(--text-muted); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
 .wa-split { display: block; }
 .wa-split.wa-split-active { display: flex; gap: var(--s-6); align-items: stretch; }
 .wa-split.wa-split-active > .wa-editor-wrap { flex: 1 1 50%; min-width: 0; }
 .wa-split.wa-split-active > .md-preview { flex: 1 1 50%; min-width: 0; display: block; }
 .wa-editor-wrap {
   position: relative;
-  background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-sunken); border: 1px solid var(--border-strong); border-radius: 0;
   transition: border-color 0.14s ease, box-shadow 0.14s ease;
 }
-.wa-editor-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16); }
+.wa-editor-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .wa-overlay {
   position: absolute; top: 0; right: 0; bottom: 0; left: 0;
   margin: 0; padding: var(--editor-padding); border: none;
@@ -978,6 +1056,11 @@ input:focus, textarea:focus, select:focus {
      drifts a little further from the word it belongs to down the page.
      Both sides read the same tokens so they can't be changed apart. */
   font-family: var(--font-prose); font-size: var(--t-base); line-height: var(--editor-line-height);
+  /* Third and fourth terms of the same contract: the overlay is a div and
+     the textarea is a field, and they sit inside a <label> that is set in
+     spaced capitals. Either one inheriting that alone would put the
+     highlights half a word out. */
+  text-transform: none; letter-spacing: normal; font-weight: 400;
   white-space: pre-wrap; word-wrap: break-word; overflow: hidden; pointer-events: none;
   color: var(--text); background: transparent;
 }
@@ -986,6 +1069,7 @@ input:focus, textarea:focus, select:focus {
   /* The other half of the overlay's metric contract -- see .wa-overlay. */
   padding: var(--editor-padding); font-family: var(--font-prose);
   font-size: var(--t-base); line-height: var(--editor-line-height);
+  text-transform: none; letter-spacing: normal; font-weight: 400;
   /* A manually-resized width is remembered in pixels (see writing-
      analyzer.js) and re-applied inline on every future visit -- max-width
      is the backstop for when that remembered width came from a wider
@@ -1000,7 +1084,7 @@ input:focus, textarea:focus, select:focus {
 .wa-textarea::selection { background: rgba(var(--accent-rgb), 0.4); color: transparent; }
 
 .md-preview {
-  display: none; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elevated);
+  display: none; border: 1px solid var(--border); border-radius: 0; background: transparent;
   padding: var(--s-8) var(--s-9); overflow: auto; font-family: var(--font-prose); font-size: var(--t-base); line-height: var(--editor-line-height);
 }
 .md-preview p { margin: 0 0 1.05em; }
@@ -1074,10 +1158,10 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 .story-dictionary summary { cursor: pointer; color: var(--text-muted); font-size: var(--t-md); padding: var(--s-2) 0; }
 .story-dictionary-list { display: flex; flex-wrap: wrap; gap: var(--s-4); list-style: none; margin: var(--s-4) 0 0; padding: 0; }
 .story-dictionary-list li {
-  display: inline-flex; align-items: center; gap: var(--s-2); background: var(--bg-elevated);
-  border: 1px solid var(--border); border-radius: 999px; padding: var(--s-1) var(--s-2) var(--s-1) var(--s-4); font-size: var(--t-sm);
+  display: inline-flex; align-items: center; gap: var(--s-2); background: transparent;
+  border: 1px solid var(--border); border-radius: 0; padding: var(--s-1) var(--s-2) var(--s-1) var(--s-4); font-size: var(--t-sm);
 }
-.story-dictionary-list .btn.tiny { padding: 0 var(--s-3); line-height: 1.6; border-radius: 999px; }
+.story-dictionary-list .btn.tiny { padding: 0 var(--s-3); line-height: 1.6; border-radius: 0; }
 
 /* --- narrow-phone tweaks -- kept at the very end of the file so these
    deliberately win the cascade over same-specificity rules earlier on
@@ -1101,10 +1185,11 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 .tag-chips { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-4); }
 .tag-chip {
   display: inline-flex; align-items: center; gap: var(--s-3);
-  padding: var(--s-1) var(--s-4); border: 1px solid rgba(var(--accent-rgb), 0.22); border-radius: 3px;
-  background: rgba(var(--accent-rgb), 0.055); color: var(--text);
-  box-shadow: 0 1px 0 var(--edge-light) inset;
-  font-family: var(--font-ui); font-size: var(--t-xs); font-weight: 500; white-space: nowrap;
+  padding: var(--s-2) var(--s-4); border: 1px solid var(--border); border-radius: 0;
+  background: transparent; color: var(--text-muted);
+  font-family: var(--font-ui); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking); white-space: nowrap;
+  transition: border-color 0.12s ease, color 0.12s ease;
 }
 .tag-chip:hover { border-color: var(--border-strong); color: var(--text); text-decoration: none; }
 .tag-chip.unused { opacity: 0.55; }
@@ -1171,14 +1256,15 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 .tag-pick {
   display: inline-flex; flex-direction: row; align-items: center; gap: var(--s-3);
   padding: var(--s-2) var(--s-5) var(--s-2) var(--s-4); margin: 0;
-  border: 1px solid var(--border); border-radius: 3px;
+  border: 1px solid var(--border); border-radius: 0;
   background: transparent; cursor: pointer; user-select: none;
+  text-transform: none; letter-spacing: normal;
   font-size: var(--t-sm); font-weight: 500; color: var(--text-muted); white-space: nowrap;
   transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
 }
 .tag-pick:hover { border-color: var(--border-strong); color: var(--text); }
 .tag-pick input[type="checkbox"] {
-  width: 9px; height: 9px; margin: 0; padding: 0; border-radius: 50%;
+  width: 9px; height: 9px; margin: 0; padding: 0; border-radius: 0;
   border: 1.5px solid var(--border-strong); background: transparent; opacity: 0.55;
 }
 .tag-pick input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); opacity: 1; }
@@ -1209,7 +1295,10 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 .folded-stories .chapter-row { opacity: 0.72; }
 
 .tag-index-group { margin-bottom: var(--s-8); }
-.tag-index-group h2 { font-size: var(--t-base); margin-bottom: var(--s-4); }
+.tag-index-group h2 {
+  font-size: var(--t-2xs); margin-bottom: var(--s-4);
+  text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
 .tag-index-group .tag-chips { margin-top: 0; }
 .tag-index-group .tag-chip { font-size: var(--t-sm); padding: var(--s-2) var(--s-5); }
 
@@ -1271,13 +1360,13 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 }
 .chapter-nav-link {
   display: flex; flex-direction: column; gap: var(--s-1); min-width: 0;
-  padding: var(--s-5) var(--s-6); border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--bg-elevated); color: var(--text);
-  transition: border-color 0.14s ease;
+  padding: var(--s-5) 0; border: 0; border-top: 1px solid var(--border); border-radius: 0;
+  background: transparent; color: var(--text);
+  transition: border-color 0.12s ease;
 }
-.chapter-nav-link:hover { border-color: var(--border-strong); text-decoration: none; }
+.chapter-nav-link:hover { border-top-color: var(--accent); text-decoration: none; }
 .chapter-nav-link.next { text-align: right; }
-.chapter-nav-dir { font-size: var(--t-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; }
+.chapter-nav-dir { font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--label-tracking); }
 .chapter-nav-title {
   font-family: var(--font-display); font-size: var(--t-base); line-height: 1.3;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -1301,10 +1390,10 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 .diff-picker select { max-width: 320px; }
 .diff-summary { display: flex; align-items: baseline; gap: var(--s-4); flex-wrap: wrap; font-size: var(--t-sm); margin-bottom: var(--s-7); }
 .diff-count { font-weight: 600; font-variant-numeric: tabular-nums; }
-.diff-count.added { color: var(--accepted); }
-.diff-count.removed { color: var(--rejected); }
+.diff-count.added { color: var(--text); }
+.diff-count.removed { color: var(--text-muted); }
 
-.diff-body { font-family: var(--font-prose); font-size: var(--t-lg); line-height: 1.8; max-width: 72ch; margin: 0 auto; }
+.diff-body { font-family: var(--font-prose); font-size: var(--t-lg); line-height: 1.8; max-width: 72ch; margin: 0; }
 .diff-para {
   margin: 0 0 1.1em;
   /* The chapter itself keeps the author's line breaks (see #chapter-text),
@@ -1314,19 +1403,22 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 }
 /* Untouched paragraphs step back so the eye lands on what moved. */
 .diff-equal { color: var(--text-muted); }
+/* What arrived is underscored in the one colour; what went is struck
+   through in grey. No two-colour ledger: the reader can see which is
+   which from the strikethrough alone. */
 .diff-body ins {
-  text-decoration: none; background: rgba(var(--accepted-rgb), 0.16);
-  box-shadow: inset 0 -2px 0 rgba(var(--accepted-rgb), 0.55);
-  border-radius: 2px; padding: 0 1px;
+  text-decoration: none; background: transparent;
+  box-shadow: inset 0 -2px 0 var(--accent);
+  border-radius: 0; padding: 0 1px;
 }
 .diff-body del {
-  text-decoration: line-through; text-decoration-color: rgba(var(--rejected-rgb), 0.7);
-  background: rgba(var(--rejected-rgb), 0.12); color: var(--text-muted);
-  border-radius: 2px; padding: 0 1px;
+  text-decoration: line-through; text-decoration-color: var(--text-muted);
+  background: transparent; color: var(--text-muted);
+  border-radius: 0; padding: 0 1px;
 }
 .diff-added, .diff-removed { padding-left: var(--s-5); border-left: 2px solid transparent; }
-.diff-added { border-left-color: rgba(var(--accepted-rgb), 0.5); }
-.diff-removed { border-left-color: rgba(var(--rejected-rgb), 0.5); }
+.diff-added { border-left-color: var(--accent); }
+.diff-removed { border-left-color: var(--border); }
 .diff-identical { text-align: center; padding: var(--s-9) 0; }
 
 
@@ -1399,14 +1491,15 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 }
 .search-results > .search-result:first-child { border-top: 1px solid var(--border); }
 .search-result:hover { background: var(--bg-elevated); text-decoration: none; }
-.search-result-title { font-family: var(--font-display); font-size: var(--t-base); }
+.search-result-title { font-family: var(--font-display); font-size: var(--t-lg); font-weight: 700; letter-spacing: -0.02em; }
 .search-result-where { font-size: var(--t-sm); color: var(--text-muted); }
 .search-result-snippet { font-size: var(--t-md); color: var(--text-muted); line-height: 1.55; }
 /* A hit inside chapter prose is quoted, so it's set in the book face. */
 .search-result-snippet.prose { font-family: var(--font-prose); font-size: var(--t-base); }
 mark.search-hit {
-  background: rgba(var(--pending-rgb), 0.22); color: inherit;
-  border-radius: 2px; padding: 0 var(--s-1);
+  background: transparent; color: inherit;
+  box-shadow: inset 0 -2px 0 var(--accent);
+  border-radius: 0; padding: 0;
 }
 
 @media (max-width: 720px) {
@@ -1429,9 +1522,9 @@ mark.search-hit {
   gap: var(--s-4);
   padding: var(--s-2) var(--s-4);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0;
   font-size: var(--t-md);
-  background: var(--bg-elevated);
+  background: transparent;
 }
 .coauthor-list li.muted { border-style: dashed; background: none; }
 .coauthor-add { display: flex; align-items: flex-end; gap: var(--s-4); flex-wrap: wrap; margin-top: var(--s-5); }
@@ -1446,9 +1539,11 @@ mark.search-hit {
 .error-status {
   font-family: var(--font-display);
   font-size: var(--t-4xl);
+  font-weight: 700;
+  letter-spacing: -0.04em;
   line-height: 1;
   margin: 0 0 var(--s-2);
-  color: var(--border-strong);
+  color: var(--accent);
 }
 .error-page h1 { margin: 0 0 var(--s-4); font-size: var(--t-2xl); }
 .error-message { color: var(--text-muted); margin: 0 0 var(--s-8); }
@@ -1511,18 +1606,20 @@ mark.search-hit {
   z-index: 30;
   min-width: 210px;
   padding: var(--s-4);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  background: var(--bg);
+  /* The only floating surface in the app, and the only one that still
+     needs an edge: it overlaps the page, so it has to say where it ends. */
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  box-shadow: 4px 4px 0 rgba(var(--accent-rgb), 0.10);
   text-align: left;
 }
 .menu-heading {
   margin: var(--s-3) var(--s-4) var(--s-2);
   font-size: var(--t-2xs);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--label-tracking);
   color: var(--text-muted);
 }
 .menu-panel a, .menu-danger {
@@ -1530,7 +1627,7 @@ mark.search-hit {
   width: 100%;
   padding: var(--s-3) var(--s-4);
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: none;
   font: inherit;
   font-size: var(--t-md);
@@ -1557,23 +1654,25 @@ mark.search-hit {
 .wa-words { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
 .wa-chip.muted { color: var(--text-muted); font-weight: 400; }
 
-/* ---- what's waiting for you, above the story list ---- */
+/* ---- what's waiting for you, above the story list ----
+   Not a panel: a block at the head of the page, opened by the red rule
+   and closed by the hairline the story list starts with. */
 .inbox {
   display: grid;
   gap: var(--s-7);
   margin: 0 0 var(--s-9);
-  padding: var(--s-7) var(--s-7);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius);
+  padding: var(--s-6) 0 var(--s-2);
+  background: transparent;
+  border: 0;
+  border-top: 2px solid var(--accent);
+  border-radius: 0;
 }
 .inbox-group h3 {
   margin: 0 0 var(--s-4);
   font-size: var(--t-2xs);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
+  letter-spacing: var(--label-tracking);
   color: var(--text-muted);
 }
 .inbox-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-1); }
@@ -1582,21 +1681,23 @@ mark.search-hit {
   grid-template-columns: auto 1fr;
   align-items: baseline;
   gap: var(--s-2) var(--s-4);
-  padding: var(--s-3) var(--s-4);
-  margin: 0 -var(--s-4);
-  border-radius: 6px;
+  padding: var(--s-3) 0 var(--s-3) var(--s-5);
+  margin: 0;
+  border-radius: 0;
   text-decoration: none;
   color: inherit;
+  box-shadow: inset 2px 0 0 0 transparent;
+  transition: box-shadow 0.12s ease;
 }
-.inbox-list a:hover { background: var(--bg-sunken); }
+.inbox-list a:hover { background: transparent; box-shadow: inset 2px 0 0 0 var(--accent); }
 .inbox-count {
   grid-row: span 2;
   align-self: center;
   min-width: 1.9em;
   padding: var(--s-1) var(--s-3);
-  border-radius: 999px;
-  background: var(--pending);
-  color: var(--btn-text);
+  border-radius: 0;
+  background: var(--accent);
+  color: #fff;
   font-size: var(--t-sm);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -1610,7 +1711,7 @@ mark.search-hit {
 .inbox-list a:not(:has(.inbox-count)) .inbox-what,
 .inbox-list a:not(:has(.inbox-count)) .inbox-where { grid-column: 1 / -1; }
 @media (max-width: 720px) {
-  .inbox { padding: var(--s-6); gap: var(--s-6); }
+  .inbox { padding: var(--s-5) 0 var(--s-2); gap: var(--s-6); }
 }
 
 /* ---- what the highlight is asking you to do ---- */
@@ -1625,27 +1726,34 @@ mark.search-hit {
 .wa-popover-suggest { margin-top: var(--s-3); font-weight: 600; font-size: var(--t-sm); }
 
 /* ---- the shape of a story, under its blurb ---- */
+/* A measured block rather than a flex line. The six figures share a
+   column with the blurb -- the actions take the other half of the head --
+   and six of them never fit across it, so they are set three by two on
+   purpose instead of five and an orphan. */
 .story-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-4) var(--s-8);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-6) var(--s-5);
   margin-top: var(--s-6);
   padding-top: var(--s-5);
   border-top: 1px solid var(--border);
+  max-width: 520px;
+}
+@media (max-width: 560px) {
+  .story-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .story-stat { display: flex; flex-direction: column; gap: 1px; }
+/* Six numbers in a row under the blurb: set big and tight, with the
+   label below in the same capitals as every other label. */
 .story-stat-value {
   font-family: var(--font-display);
-  font-size: var(--t-base);
+  font-size: var(--t-lg);
+  font-weight: 700;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   color: var(--text);
 }
-.story-stat-label {
-  font-size: var(--t-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-muted);
-}
+.story-stat-label { color: var(--text-muted); }
 
 .story-synopsis { margin: var(--s-8) 0 var(--s-4); }
 .story-synopsis > summary {
@@ -1657,11 +1765,10 @@ mark.search-hit {
 .story-synopsis > summary:hover { color: var(--text); }
 .story-synopsis .prose {
   margin-top: var(--s-4);
-  padding: var(--s-6) var(--s-7);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  max-width: 68ch;
+  padding: 0 0 0 var(--s-7);
+  background: transparent;
+  border: 0; border-left: 1px solid var(--border);
+  max-width: 64ch;
 }
 
 
@@ -1803,20 +1910,20 @@ mark.search-hit {
 .mode-switch {
   display: inline-flex;
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: 0;
   overflow: hidden;
-  background: var(--bg-elevated);
-  box-shadow: 0 1px 0 var(--edge-light) inset;
+  background: transparent;
 }
 .mode-switch button {
   border: 0; border-radius: 0; background: transparent; box-shadow: none;
-  font: inherit; font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 600;
+  font: inherit; font-family: var(--font-ui); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
   padding: var(--s-3) var(--s-5); cursor: pointer; color: var(--text-muted);
-  transition: background 0.14s ease, color 0.14s ease;
+  transition: background 0.12s ease, color 0.12s ease;
 }
-.mode-switch button + button { border-left: 1px solid var(--border); }
+.mode-switch button + button { border-left: 1px solid var(--border-strong); }
 .mode-switch button:hover { color: var(--text); }
-.mode-switch button[aria-pressed="true"] { background: var(--accent); color: var(--btn-text); }
+.mode-switch button[aria-pressed="true"] { background: var(--accent); color: #fff; }
 .mode-switch button:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
 
 main[data-reading="read"] .chapter-body-grid { grid-template-columns: 1fr; }
@@ -1857,19 +1964,19 @@ main[data-reading="read"] .reading-pane {
 .reading-prefs-panel {
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
   min-width: 240px; padding: var(--s-5);
-  background: var(--bg-elevated); border: 1px solid var(--border);
-  border-radius: var(--radius); box-shadow: var(--shadow) 0 6px 20px -6px;
+  background: var(--bg); border: 1px solid var(--border-strong);
+  border-radius: 0; box-shadow: 4px 4px 0 rgba(var(--accent-rgb), 0.10);
   display: grid; gap: var(--s-5);
 }
 .reading-prefs-row { display: grid; gap: var(--s-3); }
 .reading-prefs-row > span {
-  font-size: var(--t-2xs); text-transform: uppercase; letter-spacing: 0.08em;
-  font-weight: 600; color: var(--text-muted);
+  font-size: var(--t-2xs); text-transform: uppercase; letter-spacing: var(--label-tracking);
+  font-weight: 700; color: var(--text-muted);
 }
 .reading-prefs-options { display: flex; gap: var(--s-2); }
 .reading-prefs-options button {
   flex: 1; padding: var(--s-3) var(--s-2);
-  border: 1px solid var(--border); border-radius: 5px;
+  border: 1px solid var(--border); border-radius: 0;
   background: transparent; box-shadow: none;
   font: inherit; font-family: var(--font-ui); font-size: var(--t-sm);
   color: var(--text-muted); cursor: pointer;
@@ -1911,7 +2018,7 @@ main[data-reading="read"] .reading-pane {
 }
 .margin-links path {
   fill: none;
-  stroke: var(--border-strong);
+  stroke: var(--border);
   stroke-width: 1.2;
   opacity: 0.75;
 }
