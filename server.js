@@ -28,6 +28,7 @@ const views = require('./views');
 const { parseMarkdown, flattenLength, renderPlainText, renderHighlighted } = require('./lib/markdown');
 const { markdownToDocxBuffer, docxBufferToMarkdown } = require('./lib/docx');
 const wiki = require('./lib/wiki');
+const diff = require('./lib/diff');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
 } = require('./lib/util');
@@ -426,6 +427,11 @@ async function handleAdminBackup(req, res, user) {
   }
 }
 
+async function handleSearch(req, res, user, query) {
+  const q = (query.get('q') || '').trim();
+  sendHtml(res, 200, views.searchPage({ user, query: q, results: models.searchEverything(q) }));
+}
+
 // ---------- story tags (vocabulary curated on /admin, see models.js) ----------
 // Tag ids arrive from a form as either one value or many, depending on how
 // many boxes were ticked -- parseBody hands back a string in the first
@@ -799,6 +805,30 @@ async function handleChapterPage(req, res, user, chapterId, query) {
   }));
 }
 
+async function handleChapterDiff(req, res, user, chapterId, query) {
+  const chapter = models.getChapterById(chapterId);
+  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
+  const versions = models.listVersions(chapterId); // newest first
+  if (versions.length < 2) {
+    return sendHtml(res, 400, views.diffUnavailablePage({ user, chapter }));
+  }
+
+  // Default to the most recent pair, which is the comparison anyone
+  // opening this page almost always wants.
+  const pick = (param, fallback) => {
+    const wanted = Number(query.get(param));
+    return versions.find((v) => v.version_number === wanted) || fallback;
+  };
+  const toVersion = pick('to', versions[0]);
+  const fromVersion = pick('from', versions.find((v) => v.version_number < toVersion.version_number) || versions[versions.length - 1]);
+
+  const blocks = diff.diffVersions(fromVersion.content, toVersion.content);
+  sendHtml(res, 200, views.chapterDiffPage({
+    user, chapter, versions, fromVersion, toVersion,
+    blocks, summary: diff.summarizeDiff(blocks),
+  }));
+}
+
 async function handleEditChapterPage(req, res, user, chapterId) {
   const chapter = models.getChapterById(chapterId);
   if (!chapter) return sendHtml(res, 404, 'Chapter not found');
@@ -1117,6 +1147,7 @@ async function router(req, res) {
     if (pathname === '/admin/wiki/sync' && req.method === 'POST') return handleAdminSyncWiki(req, res, user);
     if (pathname === '/admin/backup' && req.method === 'GET') return handleAdminBackup(req, res, user);
 
+    if (pathname === '/search' && req.method === 'GET') return handleSearch(req, res, user, url.searchParams);
     if (pathname === '/tags' && req.method === 'GET') return handleTagsIndex(req, res, user);
     if ((m = pathname.match(/^\/tags\/([^/]+)$/)) && req.method === 'GET') return handleTagPage(req, res, user, m[1]);
 
@@ -1170,6 +1201,9 @@ async function router(req, res) {
     // Old link some bookmarks might still point to -- send them to the edit page.
     if ((m = pathname.match(/^\/chapters\/(\d+)\/versions\/new$/)) && req.method === 'GET') {
       return redirect(res, `/chapters/${m[1]}/edit`);
+    }
+    if ((m = pathname.match(/^\/chapters\/(\d+)\/diff$/)) && req.method === 'GET') {
+      return handleChapterDiff(req, res, user, Number(m[1]), url.searchParams);
     }
     if ((m = pathname.match(/^\/chapters\/(\d+)\/edit$/)) && req.method === 'GET') {
       return handleEditChapterPage(req, res, user, Number(m[1]));

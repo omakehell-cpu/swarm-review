@@ -726,15 +726,15 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies }) {
   }
 
   const isCommentAuthor = currentUserId === c.author_id;
+  // An accepted or rejected note has been dealt with, so it folds to one
+  // line: the column should read as a list of what still needs answering,
+  // with the settled ones a click away rather than gone. Pending notes are
+  // the actual work and stay open. <details> rather than a script, so the
+  // column still behaves with JavaScript off.
+  const settled = c.status !== 'pending';
+  const statusBadge = `<span class="status-badge status-${c.status}">${statusLabel}</span>`;
 
-  return `
-    <div class="comment status-${c.status}" id="comment-${c.id}" data-comment-id="${c.id}">
-      <div class="comment-meta">
-        <strong>${escapeHtml(c.author_name)}</strong>
-        <span class="status-badge status-${c.status}">${statusLabel}</span>
-        ${timeHtml(c.created_at)}
-        ${c.edited_at ? '<span class="muted edited-tag">(edited)</span>' : ''}
-      </div>
+  const inner = `
       ${c.quoted_text ? `<blockquote class="quoted">${escapeHtml(c.quoted_text)}</blockquote>` : ''}
       <p class="comment-body">${escapeHtml(c.body)}</p>
       <div class="comment-actions">
@@ -761,10 +761,36 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies }) {
           </form>
         </details>` : ''}
       ${repliesHtml}
-      <form method="post" action="/comments/${c.id}/reply" class="reply-form">
-        <input type="text" name="body" placeholder="Reply..." required maxlength="2000">
-        <button type="submit" class="btn small ghost">Reply</button>
-      </form>
+      <details class="reply-box">
+        <summary>Reply</summary>
+        <form method="post" action="/comments/${c.id}/reply" class="reply-form">
+          <input type="text" name="body" placeholder="Reply..." required maxlength="2000">
+          <button type="submit" class="btn small ghost">Reply</button>
+        </form>
+      </details>`;
+
+  if (settled) {
+    return `
+    <details class="comment settled status-${c.status}" id="comment-${c.id}" data-comment-id="${c.id}">
+      <summary class="comment-summary">
+        <strong>${escapeHtml(c.author_name)}</strong>
+        ${statusBadge}
+        <span class="comment-gist">${escapeHtml(c.body)}</span>
+      </summary>
+      <p class="comment-when muted">${timeHtml(c.created_at)}${c.edited_at ? ' &middot; edited' : ''}</p>
+      ${inner}
+    </details>`;
+  }
+
+  return `
+    <div class="comment status-${c.status}" id="comment-${c.id}" data-comment-id="${c.id}">
+      <div class="comment-meta">
+        <strong>${escapeHtml(c.author_name)}</strong>
+        ${statusBadge}
+        ${timeHtml(c.created_at)}
+        ${c.edited_at ? '<span class="muted edited-tag">(edited)</span>' : ''}
+      </div>
+      ${inner}
     </div>`;
 }
 
@@ -882,6 +908,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
           <a href="/chapters/${chapter.id}/download.txt?v=${currentVersion.version_number}">.txt</a>
           <a href="/chapters/${chapter.id}/download.docx?v=${currentVersion.version_number}">.docx</a>
         </span>
+        ${versions.length > 1 ? `<a class="btn ghost small" href="/chapters/${chapter.id}/diff?to=${currentVersion.version_number}">Compare versions</a>` : ''}
         <button id="reading-fill-screen" class="btn ghost small" type="button">Fill screen</button>
       </div>
       ${chapterNav(chapter, neighbours, { compact: true })}
@@ -928,6 +955,180 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
   `;
 
   return layout({ title: chapter.title, user, body });
+}
+
+// ---------- comparing two versions of a chapter ----------
+function diffVersionOptions(versions, selectedNumber) {
+  return versions.map((v) => `
+    <option value="${v.version_number}"${v.version_number === selectedNumber ? ' selected' : ''}>
+      v${v.version_number}${v.changelog ? ` -- ${escapeHtml(v.changelog)}` : ''}
+    </option>`).join('');
+}
+
+function diffBlockHtml(block) {
+  if (block.type === 'equal') {
+    return `<p class="diff-para diff-equal">${escapeHtml(block.text)}</p>`;
+  }
+  if (block.type === 'add') {
+    return `<p class="diff-para diff-added"><ins>${escapeHtml(block.text)}</ins></p>`;
+  }
+  if (block.type === 'remove') {
+    return `<p class="diff-para diff-removed"><del>${escapeHtml(block.text)}</del></p>`;
+  }
+  // A paragraph that was edited: the surviving words in normal type, with
+  // what went and what arrived marked in place, so the sentence can still
+  // be read as a sentence.
+  const inner = block.words.map((w) => {
+    if (w.type === 'equal') return escapeHtml(w.text);
+    if (w.type === 'add') return `<ins>${escapeHtml(w.text)}</ins>`;
+    return `<del>${escapeHtml(w.text)}</del>`;
+  }).join('');
+  return `<p class="diff-para diff-changed">${inner}</p>`;
+}
+
+function chapterDiffPage({ user, chapter, versions, fromVersion, toVersion, blocks, summary }) {
+  const body = summary.identical
+    ? '<p class="muted diff-identical">These two versions are word for word the same.</p>'
+    : blocks.map(diffBlockHtml).join('\n');
+
+  // Reading the diff of a version against itself is a legitimate thing to
+  // ask for by fiddling with the URL, and produces an empty page rather
+  // than an error -- but say so plainly.
+  const sameVersion = fromVersion.id === toVersion.id;
+
+  return layout({
+    title: `Changes - ${chapter.title}`,
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/chapters/${chapter.id}">&larr; Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</a></p>
+      <div class="page-head">
+        <h1>What changed</h1>
+      </div>
+
+      <form method="get" action="/chapters/${chapter.id}/diff" class="diff-picker">
+        <label>From
+          <select name="from">${diffVersionOptions(versions, fromVersion.version_number)}</select>
+        </label>
+        <label>To
+          <select name="to">${diffVersionOptions(versions, toVersion.version_number)}</select>
+        </label>
+        <button class="btn small" type="submit">Compare</button>
+      </form>
+
+      <p class="muted diff-summary">
+        ${sameVersion ? 'Comparing a version with itself. ' : ''}
+        ${summary.identical ? 'No differences.' : `
+          <span class="diff-count added">+${summary.added} word${summary.added === 1 ? '' : 's'}</span>
+          <span class="diff-count removed">&minus;${summary.removed} word${summary.removed === 1 ? '' : 's'}</span>
+          across ${summary.touched} paragraph${summary.touched === 1 ? '' : 's'}`}
+        &middot; v${fromVersion.version_number} ${timeHtml(fromVersion.created_at)} &rarr; v${toVersion.version_number} ${timeHtml(toVersion.created_at)}
+      </p>
+
+      <div class="reading-pane">
+        <div class="diff-body">${body}</div>
+      </div>`,
+  });
+}
+
+// A chapter that has only ever had one version has nothing to compare it
+// with -- which is a normal state for a new chapter, not an error.
+function diffUnavailablePage({ user, chapter }) {
+  return layout({
+    title: `Changes - ${chapter.title}`,
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/chapters/${chapter.id}">&larr; Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</a></p>
+      <h1>Nothing to compare yet</h1>
+      <p class="muted">This chapter has only one version. A second one appears the first time its author saves a change to the text, and then this page will show what moved.</p>`,
+  });
+}
+
+// ---------- search ----------
+// A window of text around the first occurrence, with the term marked.
+// Works on plain text, so anything HTML (a glossary body) has to be
+// flattened before it gets here.
+function searchSnippet(text, query, { radius = 110 } = {}) {
+  const source = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!source) return '';
+  const at = source.toLowerCase().indexOf(query.toLowerCase());
+  if (at === -1) return escapeHtml(source.slice(0, radius * 2)) + (source.length > radius * 2 ? '&hellip;' : '');
+  const from = Math.max(0, at - radius);
+  const to = Math.min(source.length, at + query.length + radius);
+  // Don't cut a word in half at either end.
+  const start = from === 0 ? 0 : source.indexOf(' ', from) + 1;
+  const end = to === source.length ? source.length : source.lastIndexOf(' ', to);
+  const before = source.slice(start, at);
+  const match = source.slice(at, at + query.length);
+  const after = source.slice(at + query.length, end);
+  return `${start > 0 ? '&hellip;' : ''}${escapeHtml(before)}<mark class="search-hit">${escapeHtml(match)}</mark>${escapeHtml(after)}${end < source.length ? '&hellip;' : ''}`;
+}
+
+const stripTags = (html) => String(html || '').replace(/<[^>]*>/g, ' ');
+
+function searchPage({ user, results, query }) {
+  const box = `
+    <form method="get" action="/search" class="search-page-form">
+      <input type="search" name="q" value="${escapeHtml(query || '')}" placeholder="Search stories, chapters and the glossary" autofocus>
+      <button class="btn" type="submit">Search</button>
+    </form>`;
+
+  if (!results) {
+    return layout({
+      title: 'Search',
+      user,
+      current: 'search',
+      body: `
+        <div class="page-head"><h1>Search</h1></div>
+        ${box}
+        <p class="muted">${query ? 'Give it at least two characters.' : 'Looks through story titles and blurbs, chapter titles and summaries, the current text of every chapter, and the glossary.'}</p>`,
+    });
+  }
+
+  const total = results.stories.length + results.chapters.length + results.passages.length + results.glossary.length;
+
+  const section = (title, items, render) => (items.length ? `
+    <section class="search-group">
+      <h2>${title} <span class="search-count">${items.length}</span></h2>
+      <div class="search-results">${items.map(render).join('')}</div>
+    </section>` : '');
+
+  const body = total === 0
+    ? `<p class="muted search-empty">Nothing matches &ldquo;${escapeHtml(results.query)}&rdquo;. Archived stories and chapters aren't searched, and only each chapter's current version is.</p>`
+    : [
+      section('Stories', results.stories, (s) => `
+        <a class="search-result" href="/stories/${s.id}">
+          <span class="search-result-title">${searchSnippet(s.title, results.query, { radius: 60 })}</span>
+          <span class="search-result-where">by ${escapeHtml(s.author_name)}</span>
+          ${s.description ? `<span class="search-result-snippet">${searchSnippet(s.description, results.query)}</span>` : ''}
+        </a>`),
+      section('Chapters', results.chapters, (c) => `
+        <a class="search-result" href="/chapters/${c.id}">
+          <span class="search-result-title">${searchSnippet(`Chapter ${c.chapter_number}: ${c.title}`, results.query, { radius: 60 })}</span>
+          <span class="search-result-where">${escapeHtml(c.story_title)}</span>
+          ${c.summary ? `<span class="search-result-snippet">${searchSnippet(c.summary, results.query)}</span>` : ''}
+        </a>`),
+      section('In the text', results.passages, (p) => `
+        <a class="search-result" href="/chapters/${p.id}">
+          <span class="search-result-title">${escapeHtml(p.story_title)} &middot; Chapter ${p.chapter_number}: ${escapeHtml(p.title)}</span>
+          <span class="search-result-snippet prose">${searchSnippet(p.content, results.query)}</span>
+        </a>`),
+      section('Glossary', results.glossary, (g) => `
+        <a class="search-result" href="/glossary/${encodeURIComponent(g.title)}">
+          <span class="search-result-title">${searchSnippet(g.title, results.query, { radius: 60 })}</span>
+          <span class="search-result-snippet">${searchSnippet(stripTags(g.content_html) || g.summary, results.query)}</span>
+        </a>`),
+    ].join('');
+
+  return layout({
+    title: `Search: ${results.query}`,
+    user,
+    current: 'search',
+    body: `
+      <div class="page-head"><h1>Search</h1></div>
+      ${box}
+      <p class="muted search-summary">${total} result${total === 1 ? '' : 's'} for &ldquo;${escapeHtml(results.query)}&rdquo;.</p>
+      ${body}`,
+  });
 }
 
 // ---------- account settings ----------
@@ -1268,6 +1469,9 @@ module.exports = {
   glossaryIndexPage,
   glossaryPage,
   glossaryNotFoundPage,
+  chapterDiffPage,
+  diffUnavailablePage,
+  searchPage,
   tagsIndexPage,
   tagPage,
   tagNotFoundPage,

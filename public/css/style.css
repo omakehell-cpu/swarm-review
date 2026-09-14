@@ -1057,3 +1057,128 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
   .chapter-nav.foot .chapter-nav-link.next { text-align: left; }
   .chapter-nav.foot .chapter-nav-here { justify-self: start; }
 }
+
+
+/* --- comparing versions (see lib/diff.js) -----------------------------
+   Deliberately not the two-column, line-numbered view a code diff gets:
+   this is prose, and what an author needs to see is the paragraph as it
+   now reads, with what went and what arrived marked inside it. */
+.diff-picker {
+  display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.diff-picker label { font-size: 0.8rem; }
+.diff-picker select { max-width: 320px; }
+.diff-summary { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 0.86rem; margin-bottom: 20px; }
+.diff-count { font-weight: 600; font-variant-numeric: tabular-nums; }
+.diff-count.added { color: var(--accepted); }
+.diff-count.removed { color: var(--rejected); }
+
+.diff-body { font-family: var(--font-prose); font-size: 1.08rem; line-height: 1.8; max-width: 72ch; margin: 0 auto; }
+.diff-para {
+  margin: 0 0 1.1em;
+  /* The chapter itself keeps the author's line breaks (see #chapter-text),
+     so the diff has to as well -- otherwise a quoted exchange or a stanza
+     collapses into one run-on line and reads as a change that isn't one. */
+  white-space: pre-wrap;
+}
+/* Untouched paragraphs step back so the eye lands on what moved. */
+.diff-equal { color: var(--text-muted); }
+.diff-body ins {
+  text-decoration: none; background: rgba(var(--accepted-rgb), 0.16);
+  box-shadow: inset 0 -2px 0 rgba(var(--accepted-rgb), 0.55);
+  border-radius: 2px; padding: 0 1px;
+}
+.diff-body del {
+  text-decoration: line-through; text-decoration-color: rgba(var(--rejected-rgb), 0.7);
+  background: rgba(var(--rejected-rgb), 0.12); color: var(--text-muted);
+  border-radius: 2px; padding: 0 1px;
+}
+.diff-added, .diff-removed { padding-left: 12px; border-left: 2px solid transparent; }
+.diff-added { border-left-color: rgba(var(--accepted-rgb), 0.5); }
+.diff-removed { border-left-color: rgba(var(--rejected-rgb), 0.5); }
+.diff-identical { text-align: center; padding: 30px 0; }
+
+
+/* --- a comments column that reads as a to-do list ---------------------
+   Settled notes (accepted/rejected) render as a collapsed <details>; only
+   what still needs answering is open. See renderComment in views.js. */
+.comment.settled { padding: 9px 13px; }
+.comment-summary {
+  cursor: pointer; display: flex; align-items: baseline; gap: 7px;
+  list-style: none; font-size: 0.86rem;
+}
+.comment-summary::-webkit-details-marker { display: none; }
+.comment-summary::before {
+  content: "\25B8"; color: var(--text-muted); font-size: 0.8em;
+  transition: transform 0.15s ease; flex-shrink: 0;
+}
+.comment.settled[open] > .comment-summary::before { transform: rotate(90deg); }
+.comment.settled[open] > .comment-summary { margin-bottom: 8px; }
+/* The first line of the note, clipped -- enough to recognise which one
+   this is without expanding it. */
+.comment-gist {
+  color: var(--text-muted); overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; min-width: 0; flex: 1;
+}
+.comment.settled[open] .comment-gist { display: none; }
+.comment-when { margin: 0 0 8px; font-size: 0.8rem; }
+
+/* The reply field used to sit open under every single note, which made a
+   column of four comments look like a form. */
+.reply-box { margin-top: 8px; }
+.reply-box > summary {
+  cursor: pointer; color: var(--text-muted); font-size: 0.82rem;
+  list-style: none; display: inline-block;
+}
+.reply-box > summary::-webkit-details-marker { display: none; }
+.reply-box > summary:hover { color: var(--text); }
+.reply-box > summary::before { content: "\21A9\FE0E"; margin-right: 5px; opacity: 0.7; }
+.reply-box[open] > summary { margin-bottom: 6px; }
+
+
+/* --- search ----------------------------------------------------------- */
+.topbar-search { display: flex; margin-left: 4px; }
+.topbar-search input[type="search"] {
+  width: 150px; padding: 5px 10px; font-size: 0.85rem; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--border);
+  transition: width 0.16s ease, border-color 0.14s ease;
+}
+.topbar-search input[type="search"]:focus { width: 220px; }
+
+.search-page-form { display: flex; gap: 10px; margin-bottom: 16px; max-width: 620px; }
+.search-page-form input[type="search"] { flex: 1; min-width: 0; padding: 10px 14px; font-size: 1rem; }
+.search-summary, .search-empty { margin-bottom: 24px; font-size: 0.9rem; }
+.search-empty { max-width: 62ch; }
+
+.search-group { margin-bottom: 30px; }
+.search-group h2 {
+  font-size: 0.72rem; font-family: var(--font-ui); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);
+  margin: 0 0 10px; display: flex; align-items: baseline; gap: 8px;
+}
+.search-count {
+  font-size: 0.72rem; color: var(--text-muted); background: var(--bg-sunken);
+  border-radius: 999px; padding: 1px 8px; letter-spacing: 0;
+}
+.search-results { display: flex; flex-direction: column; gap: 2px; }
+.search-result {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px; margin: 0 -14px; border-bottom: 1px solid var(--border);
+  color: var(--text); transition: background 0.14s ease;
+}
+.search-results > .search-result:first-child { border-top: 1px solid var(--border); }
+.search-result:hover { background: var(--bg-elevated); text-decoration: none; }
+.search-result-title { font-family: var(--font-display); font-size: 1.05rem; }
+.search-result-where { font-size: 0.8rem; color: var(--text-muted); }
+.search-result-snippet { font-size: 0.9rem; color: var(--text-muted); line-height: 1.55; }
+/* A hit inside chapter prose is quoted, so it's set in the book face. */
+.search-result-snippet.prose { font-family: var(--font-prose); font-size: 0.98rem; }
+mark.search-hit {
+  background: rgba(var(--pending-rgb), 0.22); color: inherit;
+  border-radius: 2px; padding: 0 2px;
+}
+
+@media (max-width: 720px) {
+  .topbar-search { order: 10; width: 100%; }
+  .topbar-search input[type="search"], .topbar-search input[type="search"]:focus { width: 100%; }
+}
