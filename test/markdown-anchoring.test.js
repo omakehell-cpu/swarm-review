@@ -17,7 +17,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { parseMarkdown, flattenLength, renderHighlighted, renderPlainText } = require('../lib/markdown');
+const { parseMarkdown, flattenLength, renderHighlighted, renderPlainText, countWords } = require('../lib/markdown');
 
 // Where `needle` starts in the flattened text -- the offset the browser
 // would have computed from a selection, and what gets stored.
@@ -181,4 +181,47 @@ test('table syntax is not a table here, and its text is left alone', () => {
   // Enabling tables would add a block type renderHighlighted would have to
   // learn to count characters through. Until it does, the pipes are prose.
   assert.match(flatten('| a | b |\n| - | - |'), /\| a \| b \|/);
+});
+
+// ---- word counts ------------------------------------------------------
+// Stored with every version and shown in three places, so it has to count
+// what a writer means by a word: the prose, and nothing that is only there
+// to tell the renderer what to do with it.
+
+test('markdown marks are not words', () => {
+  assert.strictEqual(countWords('**Kestrel Anchorage**'), 2);
+  assert.strictEqual(countWords('*aboard* the ~~old~~ station'), 4);
+  assert.strictEqual(countWords('# A heading\n\nAnd a line.'), 5);
+});
+
+test('a link counts its text and not its target', () => {
+  // renderPlainText writes a link as "the wiki (https://...)", which is
+  // right for a .txt file and would put four more words in this count.
+  assert.strictEqual(countWords('See [the wiki](https://swarmwiki.tampaad.net/) now.'), 4);
+});
+
+test('list markers and scene breaks are not words', () => {
+  assert.strictEqual(countWords('- one\n- two\n- three'), 3);
+  assert.strictEqual(countWords('1. first\n2. second'), 2);
+  assert.strictEqual(countWords('Before.\n\n---\n\nAfter.'), 2);
+});
+
+test('words are not fused across a paragraph or a list item', () => {
+  assert.strictEqual(countWords('End.\n\nStart.'), 2);
+  assert.strictEqual(countWords('- alpha\n- beta'), 2);
+});
+
+test('hyphens and apostrophes stay inside their word', () => {
+  assert.strictEqual(countWords("It's a well-lit room, isn't it?"), 6);
+  assert.strictEqual(countWords('She said \u2018don\u2019t\u2019.'), 3);
+});
+
+test('an empty chapter has no words', () => {
+  assert.strictEqual(countWords(''), 0);
+  assert.strictEqual(countWords('   \n\n  '), 0);
+});
+
+test('a realistic paragraph counts the way a person would', () => {
+  const para = 'The station had been dying for eleven years, and nobody who lived there said so out loud.';
+  assert.strictEqual(countWords(para), para.split(/\s+/).length);
 });

@@ -663,10 +663,28 @@
     return `<span class="wa-chip"><span class="wa-dot" style="background:${color}"></span>${count} ${count === 1 ? singular : plural}</span>`;
   }
 
-  function summaryHtml(stats) {
+  // A writing group counts words, so the count is always there -- even
+  // when nothing else is, and even with every check switched off. It sits
+  // with the issue chips rather than under the textarea because that strip
+  // is the one place on the page already reserved for "how is this going".
+  function wordsChip(text) {
+    const words = String(text || '')
+      // A link's target is not prose. Dropping it keeps this in step with
+      // the count the server stores (see countWords in lib/markdown.js),
+      // which works on the parsed document rather than on the source.
+      .replace(/\]\([^)]*\)/g, ']')
+      .replace(/[*_~`#>]/g, ' ')
+      .match(/[\p{L}\p{N}][\p{L}\p{N}'\u2019-]*/gu);
+    const count = words ? words.length : 0;
+    const shown = count < 10000 ? count.toLocaleString('en-GB') : `${(count / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+    return `<span class="wa-chip wa-words">${shown} ${count === 1 ? 'word' : 'words'}</span>`;
+  }
+
+  function summaryHtml(stats, text) {
+    const words = wordsChip(text);
     const total = stats.yellow + stats.red + stats.passive + stats.adverb + stats.filler + stats.complex + stats.spell;
-    if (total === 0) return 'No issues spotted.';
-    return [
+    if (total === 0) return `${words}<span class="wa-chip muted">No issues spotted.</span>`;
+    return words + [
       statChip(SEVERITY_COLOR.red, stats.red, 'very dense sentence', 'very dense sentences'),
       statChip(SEVERITY_COLOR.yellow, stats.yellow, 'long sentence', 'long sentences'),
       statChip(CHECK_META.passive.color, stats.passive, 'passive-voice phrase', 'passive-voice phrases'),
@@ -1093,7 +1111,7 @@
       const { html, ranges, stats } = analyze(textarea.value, storyWords, settings, resolveCommentRanges());
       overlay.innerHTML = html + (textarea.value.endsWith('\n') ? '&nbsp;' : '');
       currentRanges = ranges;
-      summary.innerHTML = summaryHtml(stats);
+      summary.innerHTML = summaryHtml(stats, textarea.value);
       syncScroll();
     }
 
@@ -1430,7 +1448,7 @@
       const text = flattenText(container);
       const { ranges, stats } = analyze(text, storyWords, settings);
       applyRangesToDom(container, ranges);
-      summary.innerHTML = summaryHtml(stats);
+      summary.innerHTML = summaryHtml(stats, text);
     }
 
     Promise.all([loadDictionary(), loadStoryWords(storyId)]).then(([, words]) => {
