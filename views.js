@@ -162,7 +162,66 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } 
   `;
 }
 
-function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [] }) {
+// A short quote of a comment, enough to recognise which one it is without
+// reproducing the whole thing where it can't be replied to.
+function commentGist(body, max = 120) {
+  const text = String(body || '').replace(/\s+/g, ' ').trim();
+  return escapeHtml(text.length > max ? `${text.slice(0, max - 1).trimEnd()}\u2026` : text);
+}
+
+// What's waiting for this reader, above the list of everything. Renders
+// nothing at all when there is nothing -- an empty "you're all caught up"
+// box every single day is furniture, not information.
+function inboxSection(inbox) {
+  if (!inbox || inbox.empty) return '';
+
+  const pending = inbox.pending.length ? `
+    <section class="inbox-group">
+      <h3>Waiting on you</h3>
+      <ul class="inbox-list">
+        ${inbox.pending.map((row) => `
+          <li>
+            <a href="/chapters/${row.chapter_id}">
+              <span class="inbox-count">${row.pending}</span>
+              <span class="inbox-what">comment${row.pending === 1 ? '' : 's'} to accept or reject</span>
+              <span class="inbox-where">${escapeHtml(row.story_title)} &middot; chapter ${row.chapter_number}: ${escapeHtml(row.chapter_title)}</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+    </section>` : '';
+
+  const replies = inbox.replies.length ? `
+    <section class="inbox-group">
+      <h3>Replies to you</h3>
+      <ul class="inbox-list">
+        ${inbox.replies.map((r) => `
+          <li>
+            <a href="/chapters/${r.chapter_id}#comment-${r.id}">
+              <span class="inbox-what"><strong>${escapeHtml(r.author_name)}</strong> ${commentGist(r.body)}</span>
+              <span class="inbox-where">${escapeHtml(r.story_title)} &middot; chapter ${r.chapter_number}: ${escapeHtml(r.chapter_title)}</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+    </section>` : '';
+
+  const fresh = inbox.newChapters.length ? `
+    <section class="inbox-group">
+      <h3>New to read</h3>
+      <ul class="inbox-list">
+        ${inbox.newChapters.map((c) => `
+          <li>
+            <a href="/chapters/${c.id}">
+              <span class="inbox-what">Chapter ${c.chapter_number}: ${escapeHtml(c.title)}</span>
+              <span class="inbox-where">${escapeHtml(c.story_title)} &middot; by ${escapeHtml(c.author_name)}${c.word_count ? ` &middot; ${wordCount(c.word_count)}` : ''}</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+    </section>` : '';
+
+  return `<div class="inbox">${pending}${replies}${fresh}</div>`;
+}
+
+function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null }) {
   const sinceQs = since ? `?since=${encodeURIComponent(since)}` : '';
   const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
   const rows = stories.length
@@ -212,6 +271,7 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
         <h1>The Swarm stories</h1>
         <a class="btn" href="/stories/new">New story</a>
       </div>
+      ${activeTags.length ? '' : inboxSection(inbox)}
       ${filter}
       <div class="chapter-list">${rows}</div>
       ${foldedBlock}
