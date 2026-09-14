@@ -243,6 +243,65 @@ test('search finds a chapter by a word in its prose, in its current version only
   assert.match(await gone.text(), /Nothing matches/);
 });
 
+test('a dead link lands on a page, not a blank window', async () => {
+  const res = await request('/stories/999999');
+  assert.strictEqual(res.status, 404);
+  const html = await res.text();
+  // The site's own chrome, so there is a way out.
+  assert.match(html, /<title>[^<]*The Swarm Review<\/title>/);
+  assert.match(html, /class="topbar"/);
+  assert.match(html, /href="\/"/);
+  assert.match(html, /404/);
+});
+
+test('a refusal explains itself in the same clothes', async () => {
+  // Somebody else's chapter: a 403 that used to be the bare words
+  // "Only the chapter author can edit it." on a white page.
+  const res = await request('/chapters/999999/edit');
+  const html = await res.text();
+  assert.ok([403, 404].includes(res.status));
+  assert.match(html, /class="error-page"/);
+  assert.match(html, /class="topbar"/);
+});
+
+test('the diff shows prose, not markdown source', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapterId = models.listChaptersForStory(story.id)[0].id;
+  await request(`/chapters/${chapterId}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['title', 'Chapter One'],
+      ['summary', ''],
+      ['content', 'The **station** had been dying for thirteen years.\n\n> She said nothing.'],
+      ['changelog', 'bolded a word, added a line'],
+    ]),
+  });
+  const html = await (await request(`/chapters/${chapterId}/diff`)).text();
+  assert.ok(!html.includes('**station**'), 'no raw emphasis marks');
+  assert.ok(!html.includes('&gt; She said'), 'no raw blockquote marker');
+  assert.match(html, /station/, 'the word itself is still there');
+});
+
+test('a change that only moves emphasis says so instead of looking broken', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapterId = models.listChaptersForStory(story.id)[0].id;
+  const current = models.getLatestVersion(chapterId).content;
+  await request(`/chapters/${chapterId}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['title', 'Chapter One'],
+      ['summary', ''],
+      ['content', current.replace('**station**', '*station*')],
+      ['changelog', 'bold to italic'],
+    ]),
+  });
+  const versions = models.listVersions(chapterId);
+  const html = await (await request(
+    `/chapters/${chapterId}/diff?from=${versions[1].version_number}&to=${versions[0].version_number}`
+  )).text();
+  assert.match(html, /Only the formatting changed/);
+});
+
 test('logging out invalidates the session', async () => {
   const res = await request('/logout', { method: 'POST', ...form([]) });
   assert.strictEqual(res.status, 302);

@@ -17,6 +17,8 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.5.1",
+    "@typescript/typescript-darwin-arm64": "^7.0.2",
+    "@typescript/typescript-linux-arm64": "^7.0.2",
     "eslint": "^10.10.0",
     "globals": "^17.12.0",
     "typescript": "^7.0.2"

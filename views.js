@@ -15,6 +15,37 @@ function fileUploadField() {
     </label>`;
 }
 
+// ---------- errors ----------
+// Every 403/404/500 used to be a bare string written straight into the
+// response: a white page, no typography, no navigation, no way back. A
+// wrong link is the most ordinary thing that happens on a site, and it
+// should look like part of the site.
+const ERROR_HEADINGS = {
+  400: "That didn't work",
+  403: 'Not yours to change',
+  404: "That isn't here",
+  409: 'Already taken',
+  500: 'Something broke',
+};
+
+function errorPage({ user, status, message }) {
+  const heading = ERROR_HEADINGS[status] || 'Something went wrong';
+  return layout({
+    title: heading,
+    user,
+    body: `
+      <div class="error-page">
+        <p class="error-status">${status}</p>
+        <h1>${escapeHtml(heading)}</h1>
+        <p class="error-message">${escapeHtml(message)}</p>
+        <p class="error-actions">
+          <a class="btn" href="/">Back to the stories</a>
+          ${status === 404 ? '<a class="btn ghost" href="/search">Search instead</a>' : ''}
+        </p>
+      </div>`,
+  });
+}
+
 // ---------- auth pages ----------
 
 function loginPage({ error, notice } = /** @type {{ error?: string, notice?: string }} */ ({})) {
@@ -1035,9 +1066,11 @@ function diffBlockHtml(block) {
   return `<p class="diff-para diff-changed">${inner}</p>`;
 }
 
-function chapterDiffPage({ user, chapter, versions, fromVersion, toVersion, blocks, summary }) {
+function chapterDiffPage({ user, chapter, versions, fromVersion, toVersion, blocks, summary, formattingOnly = false }) {
   const body = summary.identical
-    ? '<p class="muted diff-identical">These two versions are word for word the same.</p>'
+    ? `<p class="muted diff-identical">${formattingOnly
+        ? 'The prose is word for word the same. Only the formatting changed &mdash; emphasis, a heading, a link.'
+        : 'These two versions are word for word the same.'}</p>`
     : blocks.map(diffBlockHtml).join('\n');
 
   // Reading the diff of a version against itself is a legitimate thing to
@@ -1502,6 +1535,7 @@ function resetLinksSection(pendingResetLinks) {
 }
 
 module.exports = {
+  errorPage,
   loginPage,
   registerPage,
   resetPasswordPage,
