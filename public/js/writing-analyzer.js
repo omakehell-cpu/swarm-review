@@ -64,11 +64,22 @@
     filler: { label: 'Filler words', color: '#b06a8f' },
     complex: { label: 'Complex words', color: '#8d72b8' },
     sentence: { label: 'Long sentences', color: '#c2a04e' },
+    // The four below are craft checks rather than prose-hygiene ones:
+    // they catch things a critique partner would write in the margin, and
+    // no generic writing tool looks for them.
+    echo: { label: 'Repeated words', color: '#4f9d5d' },
+    filter: { label: 'Filter verbs', color: '#b4574f' },
+    dialogue: { label: 'Dialogue tags', color: '#8a8f3f' },
+    opening: { label: 'Repeated openings', color: '#a0679e' },
   };
-  const CHECK_ORDER = ['spell', 'passive', 'adverb', 'filler', 'complex', 'sentence'];
+  const CHECK_ORDER = ['spell', 'passive', 'adverb', 'filler', 'complex', 'sentence',
+    'echo', 'filter', 'dialogue', 'opening'];
   const SEVERITY_COLOR = { yellow: '#c2a04e', red: '#c26a4e' };
 
-  const DEFAULT_SETTINGS = { spell: true, passive: true, adverb: true, filler: true, complex: true, sentence: true };
+  const DEFAULT_SETTINGS = {
+    spell: true, passive: true, adverb: true, filler: true, complex: true, sentence: true,
+    echo: true, filter: true, dialogue: true, opening: true,
+  };
   const SETTINGS_KEY = 'wa-settings-v2';
   const LEGACY_ENABLED_KEY = 'wa-enabled'; // the old single on/off switch
 
@@ -77,7 +88,10 @@
   // mark answers a question nobody asked, so the checks start off there
   // and remember separately: turning "long sentences" off while reading
   // shouldn't turn it off in the editor, where it is the whole point.
-  const READ_DEFAULT_SETTINGS = { spell: false, passive: false, adverb: false, filler: false, complex: false, sentence: false };
+  const READ_DEFAULT_SETTINGS = {
+    spell: false, passive: false, adverb: false, filler: false, complex: false, sentence: false,
+    echo: false, filter: false, dialogue: false, opening: false,
+  };
   const READ_SETTINGS_KEY = 'wa-read-settings-v1';
 
   function loadSettings(key = SETTINGS_KEY, defaults = DEFAULT_SETTINGS) {
@@ -367,6 +381,140 @@
   }
 
   // ---------------------------------------------------------------------
+  // craft checks
+  // ---------------------------------------------------------------------
+  // The five checks above are prose hygiene: they would say the same thing
+  // about a memo. These four are the notes a reader of fiction actually
+  // writes in the margin.
+
+  // "She saw the door open" puts a camera between the reader and the door.
+  // Deliberately narrow: only clear perception/cognition verbs, and only
+  // straight after a subject, because "looked" and "seemed" are far too
+  // often innocent ("she looked tired") to be worth the false positives.
+  const FILTER_VERBS = [
+    'saw', 'sees', 'see', 'heard', 'hears', 'hear', 'felt', 'feels', 'feel',
+    'noticed', 'notices', 'notice', 'realised', 'realized', 'realises', 'realizes',
+    'watched', 'watches', 'watch', 'wondered', 'wonders', 'wonder',
+    'thought', 'thinks', 'think', 'knew', 'knows', 'know',
+    'remembered', 'remembers', 'remember', 'sensed', 'senses', 'sense',
+    'observed', 'observes', 'observe', 'decided', 'decides', 'decide',
+  ];
+  const FILTER_RE = new RegExp(
+    `\\b(?:he|she|they|i|we|you|it)\\s+(?:could\\s+|would\\s+)?(?:${FILTER_VERBS.join('|')})\\b`,
+    'gi'
+  );
+
+  // Speech verbs other than the invisible ones. These are only flagged
+  // when they sit against a quotation mark -- "growled" in narration is
+  // a perfectly good verb, and only becomes a said-bookism when it is
+  // carrying a line of dialogue.
+  const SPEECH_VERBS = [
+    'exclaimed', 'shouted', 'screamed', 'shrieked', 'hissed', 'growled', 'snarled',
+    'chuckled', 'laughed', 'giggled', 'smirked', 'grinned', 'smiled', 'sighed',
+    'breathed', 'gasped', 'retorted', 'quipped', 'interjected', 'opined',
+    'declared', 'proclaimed', 'announced', 'stated', 'uttered', 'voiced',
+    'bellowed', 'barked', 'snapped', 'purred', 'cooed', 'drawled', 'spluttered',
+    'ventured', 'offered', 'countered', 'admonished', 'chided',
+  ];
+  const DIALOGUE_TAG_RE = new RegExp(
+    `["”]\\s*[,.!?]?\\s*(?:(?:[A-Z][a-z]+|he|she|they|I|we|you)\\s+)?(?:${SPEECH_VERBS.join('|')})\\b`,
+    'g'
+  );
+  // The other half of the same note: an adverb propping up a speech tag.
+  const DIALOGUE_ADVERB_RE = new RegExp(
+    `\\b(?:said|asked|replied|answered|whispered|muttered|murmured|called|added|${SPEECH_VERBS.join('|')})\\s+[a-z]+ly\\b`,
+    'gi'
+  );
+
+  // Words common enough that repeating them is not an echo. Everything
+  // short is excluded too (see ECHO_MIN_LENGTH): "the" twice in a line is
+  // not a note anybody writes.
+  const ECHO_SKIP = new Set([
+    'about', 'after', 'again', 'against', 'almost', 'along', 'already', 'also',
+    'although', 'always', 'among', 'another', 'around', 'because', 'before',
+    'behind', 'being', 'below', 'between', 'could', 'course', 'doing', 'down',
+    'during', 'each', 'either', 'enough', 'even', 'every', 'first', 'from',
+    'given', 'going', 'have', 'having', 'here', 'himself', 'herself', 'into',
+    'itself', 'just', 'like', 'little', 'made', 'make', 'many', 'might',
+    'more', 'most', 'much', 'must', 'myself', 'never', 'next', 'nothing',
+    'only', 'other', 'over', 'own', 'perhaps', 'quite', 'really', 'said',
+    'same', 'seem', 'seemed', 'should', 'since', 'some', 'something', 'still',
+    'such', 'than', 'that', 'their', 'them', 'then', 'there', 'these', 'they',
+    'thing', 'think', 'this', 'those', 'though', 'through', 'time', 'under',
+    'until', 'very', 'well', 'were', 'what', 'when', 'where', 'which', 'while',
+    'with', 'without', 'would', 'your', 'yours',
+  ]);
+  const ECHO_MIN_LENGTH = 5;
+  const ECHO_WINDOW_WORDS = 50;
+
+  // The same distinctive word twice within a short span. Names are left
+  // alone -- a character's name is supposed to repeat -- which is what the
+  // story's own dictionary is for.
+  function findEchoes(text, storyWords) {
+    const tokens = [];
+    const re = new RegExp(WORD_TOKEN_RE.source, 'g');
+    let m;
+    while ((m = re.exec(text))) tokens.push({ raw: m[0], start: m.index, end: m.index + m[0].length });
+
+    const found = [];
+    const lastSeen = new Map();
+    for (let i = 0; i < tokens.length; i++) {
+      const lower = tokens[i].raw.toLowerCase();
+      if (lower.length < ECHO_MIN_LENGTH) continue;
+      if (ECHO_SKIP.has(lower)) continue;
+      if (storyWords && storyWords.has(lower)) continue;
+      // A capitalised word mid-sentence is a name we don't know about.
+      const previous = lastSeen.get(lower);
+      if (previous !== undefined && i - previous <= ECHO_WINDOW_WORDS) {
+        found.push({
+          start: tokens[i].start,
+          end: tokens[i].end,
+          kind: 'echo',
+          label: `"${tokens[i].raw}" again, ${i - previous} word${i - previous === 1 ? '' : 's'} after the last one.`,
+        });
+      }
+      lastSeen.set(lower, i);
+    }
+    return found;
+  }
+
+  // Three sentences in a row opening on the same word, or two in a row
+  // opening on a participle. Both read as a stutter in the paragraph and
+  // are almost impossible to notice while writing the sentences one at a
+  // time.
+  function findRepeatedOpenings(chunks) {
+    // Only the opening word is marked, not the whole sentence: it is what
+    // the note is actually about, and a sentence-long underline would sit
+    // on top of every other mark inside it.
+    const openings = chunks.map((chunk) => {
+      const m = /[A-Za-z][A-Za-z'\u2019-]*/.exec(chunk.text);
+      if (!m) return null;
+      return { word: m[0].toLowerCase(), start: chunk.start + m.index, end: chunk.start + m.index + m[0].length };
+    });
+    const found = [];
+    for (let i = 1; i < openings.length; i++) {
+      const here = openings[i];
+      const back1 = openings[i - 1];
+      const back2 = i >= 2 ? openings[i - 2] : null;
+      if (!here || !back1) continue;
+      if (back2 && here.word === back1.word && here.word === back2.word) {
+        found.push({
+          start: here.start, end: here.end, kind: 'opening',
+          label: `Third sentence in a row opening on "${here.word}".`,
+        });
+        continue;
+      }
+      if (here.word.length > 4 && /ing$/.test(here.word) && /ing$/.test(back1.word)) {
+        found.push({
+          start: here.start, end: here.end, kind: 'opening',
+          label: 'Second sentence in a row opening on a participle.',
+        });
+      }
+    }
+    return found;
+  }
+
+  // ---------------------------------------------------------------------
   // word/phrase-level detectors (run within one sentence chunk at a time)
   // ---------------------------------------------------------------------
 
@@ -404,6 +552,9 @@
     addAll(WEAK_PHRASE_RE, 'filler', () => 'This phrase can usually be cut or shortened.');
     addAll(WEAK_WORD_RE, 'filler', () => 'Filler word -- try cutting it and see if the sentence still works.');
     addAll(COMPLEX_WORD_RE, 'complex', (m) => `Simpler alternative: "${COMPLEX_WORDS[m[0].toLowerCase()]}"`, (m) => COMPLEX_WORDS[m[0].toLowerCase()]);
+    addAll(FILTER_RE, 'filter', () => 'Filter verb -- this puts the reader one step outside the scene. Try the thing itself: "the door opened" rather than "she saw the door open".');
+    addAll(DIALOGUE_TAG_RE, 'dialogue', () => 'Said-bookism -- "said" and "asked" disappear on the page; this one asks to be noticed. Keep it if the sound of it is the point.');
+    addAll(DIALOGUE_ADVERB_RE, 'dialogue', () => 'Adverb propping up a speech tag -- if the line needs it to land, the line is usually what to change.');
 
     // Drop the adverb matches we deliberately nulled out above (excluded
     // words), then keep matches sorted by start position.
@@ -519,6 +670,31 @@
     return false;
   }
 
+  // nspell.suggest() walks the dictionary computing edit distances, which
+  // is far too slow to run for every misspelling on every keystroke. So it
+  // is never called during analysis: the suggestions are fetched the
+  // moment somebody actually asks for them, by hovering or clicking a
+  // highlight, and remembered. A word the dictionary has no idea about --
+  // an invented name, usually -- returns nothing, which is the honest
+  // answer and stops the cache from retrying it.
+  const suggestionCache = new Map();
+  const MAX_SUGGESTIONS = 3;
+
+  function suggestFor(word) {
+    if (!SPELL || !word) return [];
+    const key = word.toLowerCase();
+    if (suggestionCache.has(key)) return suggestionCache.get(key);
+    let out;
+    try {
+      out = (SPELL.suggest(word) || []).slice(0, MAX_SUGGESTIONS);
+      // nspell is case-aware, so a lowercase typo of a capitalised word
+      // can come back empty; try the other casing before giving up.
+      if (!out.length && word !== key) out = (SPELL.suggest(key) || []).slice(0, MAX_SUGGESTIONS);
+    } catch (e) { out = []; }
+    suggestionCache.set(key, out);
+    return out;
+  }
+
   // Returns {start, end, kind: 'spell', label} for every word-like token in
   // `sentenceText` that isn't in the dictionary, a contraction, or this
   // story's approved-word list. Returns [] while the dictionary hasn't
@@ -574,7 +750,8 @@
       const wordRange = waRanges.find((r) => r.kind.indexOf('sentence-') !== 0 && r.start <= segStart && r.end >= segEnd);
       if (wordRange) {
         inner = `<mark class="wa-word wa-${wordRange.kind}" style="${wordMarkStyle(wordRange.kind)}" `
-          + `data-wa-start="${wordRange.start}" data-wa-end="${wordRange.end}" data-wa-label="${escapeHtml(wordRange.label)}">${inner}</mark>`;
+          + `data-wa-start="${wordRange.start}" data-wa-end="${wordRange.end}" data-wa-label="${escapeHtml(wordRange.label)}"`
+          + `${wordRange.suggestion ? ` data-wa-suggestion="${escapeHtml(wordRange.suggestion)}"` : ''}>${inner}</mark>`;
       }
 
       const sentenceRange = waRanges.find((r) => r.kind.indexOf('sentence-') === 0 && r.start <= segStart && r.end >= segEnd);
@@ -615,6 +792,7 @@
     const ranges = [];
     const stats = {
       yellow: 0, red: 0, passive: 0, adverb: 0, filler: 0, complex: 0, spell: 0, maxGrade: 0,
+      echo: 0, filter: 0, dialogue: 0, opening: 0,
     };
     const sentenceChecksOn = !settings || settings.sentence !== false;
 
@@ -650,6 +828,24 @@
       }
     }
 
+    // Echoes and repeated openings are the two checks that cannot be
+    // answered inside one sentence, so they run over the whole text once
+    // rather than per chunk.
+    // Two marks on the same words would nest badly in the overlay, and the
+    // per-sentence pass above has already resolved its own overlaps, so a
+    // whole-text match that lands on an existing one simply stands down.
+    const collides = (r) => ranges.some((existing) =>
+      existing.kind.indexOf('sentence-') !== 0 && r.start < existing.end && existing.start < r.end);
+    const addWholeText = (list, key) => {
+      for (const r of list) {
+        if (collides(r)) continue;
+        ranges.push(r);
+        stats[key] += 1;
+      }
+    };
+    if (!settings || settings.echo !== false) addWholeText(findEchoes(text, storyWords), 'echo');
+    if (!settings || settings.opening !== false) addWholeText(findRepeatedOpenings(chunks), 'opening');
+
     ranges.sort((a, b) => a.start - b.start);
     const html = buildOverlayHtml(text, ranges, commentRanges);
     return { html, ranges, stats };
@@ -682,7 +878,8 @@
 
   function summaryHtml(stats, text) {
     const words = wordsChip(text);
-    const total = stats.yellow + stats.red + stats.passive + stats.adverb + stats.filler + stats.complex + stats.spell;
+    const total = stats.yellow + stats.red + stats.passive + stats.adverb + stats.filler
+      + stats.complex + stats.spell + stats.echo + stats.filter + stats.dialogue + stats.opening;
     if (total === 0) return `${words}<span class="wa-chip muted">No issues spotted.</span>`;
     return words + [
       statChip(SEVERITY_COLOR.red, stats.red, 'very dense sentence', 'very dense sentences'),
@@ -692,6 +889,10 @@
       statChip(CHECK_META.filler.color, stats.filler, 'filler word/phrase', 'filler words/phrases'),
       statChip(CHECK_META.complex.color, stats.complex, 'complex word', 'complex words'),
       statChip(CHECK_META.spell.color, stats.spell, 'possible misspelling', 'possible misspellings'),
+      statChip(CHECK_META.echo.color, stats.echo, 'repeated word', 'repeated words'),
+      statChip(CHECK_META.filter.color, stats.filter, 'filter verb', 'filter verbs'),
+      statChip(CHECK_META.dialogue.color, stats.dialogue, 'dialogue tag', 'dialogue tags'),
+      statChip(CHECK_META.opening.color, stats.opening, 'repeated opening', 'repeated openings'),
     ].filter(Boolean).join('');
   }
 
@@ -832,7 +1033,28 @@
     tip.className = 'wa-hover-tip hidden';
     document.body.appendChild(tip);
     function show(mark) {
-      tip.textContent = mark.dataset.waLabel || '';
+      tip.textContent = '';
+      const label = document.createElement('span');
+      label.className = 'wa-tip-label';
+      label.textContent = mark.dataset.waLabel || '';
+      tip.appendChild(label);
+
+      // The point of hovering is to find out what to do about it, so the
+      // proposed change comes with the diagnosis rather than one click
+      // further in. A misspelling asks the dictionary here, on hover,
+      // which is the first moment anybody has wanted to know.
+      const suggestions = mark.dataset.waSuggestion
+        ? [mark.dataset.waSuggestion]
+        : (mark.dataset.waKind === 'spell' ? suggestFor(mark.textContent) : []);
+      if (suggestions.length) {
+        const line = document.createElement('span');
+        line.className = 'wa-tip-suggest';
+        line.textContent = suggestions.length === 1
+          ? `Try: ${suggestions[0]}`
+          : `Did you mean: ${suggestions.join(', ')}?`;
+        tip.appendChild(line);
+      }
+
       const rect = mark.getBoundingClientRect();
       tip.style.top = `${window.scrollY + rect.top - 8}px`;
       tip.style.left = `${window.scrollX + rect.left}px`;
@@ -1206,22 +1428,32 @@
       text.className = 'wa-popover-text';
       text.textContent = range.label;
       popover.appendChild(text);
-      if (range.suggestion) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'btn tiny';
-        btn.textContent = `Use "${range.suggestion}"`;
-        btn.addEventListener('click', (ev) => {
-          ev.preventDefault();
-          const original = textarea.value.slice(range.start, range.end);
-          const replacement = matchCase(original, range.suggestion);
-          textarea.setRangeText(replacement, range.start, range.end, 'end');
-          hidePopover();
-          textarea.focus();
-          scheduleRender();
-        });
-        popover.appendChild(btn);
-      } else if (range.kind === 'spell' && storyId) {
+      // One button per proposed word, so the fix is a click and not a
+      // retype. A misspelling can have several; a complex word has the one.
+      const replacements = range.suggestion
+        ? [range.suggestion]
+        : (range.kind === 'spell' ? suggestFor(textarea.value.slice(range.start, range.end)) : []);
+      if (replacements.length) {
+        const row = document.createElement('div');
+        row.className = 'wa-popover-actions';
+        for (const word of replacements) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn tiny';
+          btn.textContent = word;
+          btn.addEventListener('click', (ev2) => {
+            ev2.preventDefault();
+            const original = textarea.value.slice(range.start, range.end);
+            textarea.setRangeText(matchCase(original, word), range.start, range.end, 'end');
+            hidePopover();
+            textarea.focus();
+            scheduleRender();
+          });
+          row.appendChild(btn);
+        }
+        popover.appendChild(row);
+      }
+      if (range.kind === 'spell' && storyId) {
         const word = textarea.value.slice(range.start, range.end);
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -1349,6 +1581,7 @@
         }
         mark.dataset.waLabel = r.label;
         mark.dataset.waKind = r.kind;
+        if (r.suggestion) mark.dataset.waSuggestion = r.suggestion;
         range.surroundContents(mark);
       } catch (e) {
         // Skip this one highlight; never let it break the reading page.
@@ -1476,6 +1709,19 @@
       text.textContent = mark.dataset.waLabel || '';
       popover.appendChild(text);
 
+      // Reading view: the chapter is rendered HTML, not a textarea, so
+      // there is nothing here to click-to-replace. Naming the proposal is
+      // still the useful half -- it says what the highlight is asking for.
+      const proposals = mark.dataset.waSuggestion
+        ? [mark.dataset.waSuggestion]
+        : (mark.dataset.waKind === 'spell' ? suggestFor(mark.textContent) : []);
+      if (proposals.length) {
+        const line = document.createElement('div');
+        line.className = 'wa-popover-suggest';
+        line.textContent = proposals.length === 1 ? `Try: ${proposals[0]}` : `Did you mean: ${proposals.join(', ')}?`;
+        popover.appendChild(line);
+      }
+
       if (mark.dataset.waKind === 'spell' && storyId && canEditDictionary) {
         const word = mark.textContent;
         const btn = document.createElement('button');
@@ -1542,6 +1788,21 @@
       }
     }
   }
+
+  // A seam for the test suite, and nothing else. These are the pure
+  // detection functions -- no DOM, no dictionary, no settings storage --
+  // so test/writing-checks.test.js can assert what each check actually
+  // finds in a paragraph instead of guessing from a screenshot. Nothing
+  // in the app reads this.
+  window.__writingAnalyzer = {
+    analyze,
+    splitSentences,
+    findWordHighlights,
+    findEchoes,
+    findRepeatedOpenings,
+    CHECK_META,
+    CHECK_ORDER,
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
