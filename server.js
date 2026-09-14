@@ -48,6 +48,14 @@ const UPLOAD_LIMIT_BYTES = 15 * 1024 * 1024;
 // production.
 const SECURE_COOKIES = process.env.SECURE_COOKIES === '1' || process.env.SECURE_COOKIES === 'true';
 
+// Every refusal and every dead link goes through here, so it arrives as a
+// page with the site's own type and a way back rather than as a bare
+// string in a blank window. `user` may be absent (nobody is signed in, or
+// the handler never looked one up), and the layout copes.
+function sendError(res, status, message, user) {
+  sendHtml(res, status, views.errorPage({ user: user || null, status, message }));
+}
+
 // Turns an uploaded file (from a <input type="file"> field) into markdown
 // source text, based on its extension. Returns null if there's no file to
 // use (so callers fall back to the pasted-textarea value instead).
@@ -293,7 +301,7 @@ async function handleAdminCloseRegistration(req, res, _user) {
 
 async function handleAdminSetPassword(req, res, user, targetUserId) {
   const target = models.getUserById(targetUserId);
-  if (!target || target.username === models.DELETED_USER_USERNAME) return sendHtml(res, 404, 'User not found');
+  if (!target || target.username === models.DELETED_USER_USERNAME) return sendError(res, 404, 'User not found', user);
   const body = await parseBody(req);
   const password = body.password || '';
   if (password.length < 8) {
@@ -305,23 +313,23 @@ async function handleAdminSetPassword(req, res, user, targetUserId) {
 
 async function handleAdminLockUser(req, res, user, targetUserId) {
   const target = models.getUserById(targetUserId);
-  if (!target || target.username === models.DELETED_USER_USERNAME) return sendHtml(res, 404, 'User not found');
-  if (target.id === user.id) return sendHtml(res, 400, "You can't lock your own account.");
+  if (!target || target.username === models.DELETED_USER_USERNAME) return sendError(res, 404, 'User not found', user);
+  if (target.id === user.id) return sendError(res, 400, "You can't lock your own account.", user);
   models.adminLockAccount(targetUserId);
   redirect(res, `/admin?notice=${encodeURIComponent(target.display_name)}'s account is now locked.`);
 }
 
 async function handleAdminUnlockUser(req, res, user, targetUserId) {
   const target = models.getUserById(targetUserId);
-  if (!target || target.username === models.DELETED_USER_USERNAME) return sendHtml(res, 404, 'User not found');
+  if (!target || target.username === models.DELETED_USER_USERNAME) return sendError(res, 404, 'User not found', user);
   models.adminUnlockAccount(targetUserId);
   redirect(res, `/admin?notice=${encodeURIComponent(target.display_name)}'s account is reactivated.`);
 }
 
 async function handleAdminDeleteUser(req, res, user, targetUserId) {
   const target = models.getUserById(targetUserId);
-  if (!target || target.username === models.DELETED_USER_USERNAME) return sendHtml(res, 404, 'User not found');
-  if (target.id === user.id) return sendHtml(res, 400, "You can't delete your own account.");
+  if (!target || target.username === models.DELETED_USER_USERNAME) return sendError(res, 404, 'User not found', user);
+  if (target.id === user.id) return sendError(res, 400, "You can't delete your own account.", user);
   if (target.is_admin) {
     const remainingAdmins = models.listUsersForAdmin().filter((u) => u.is_admin && u.id !== target.id);
     if (remainingAdmins.length === 0) {
@@ -352,14 +360,14 @@ async function handleAdminCreateNamedInvite(req, res, user) {
 
 async function handleAdminRevokeNamedInvite(req, res, user, inviteId) {
   const invite = models.getInviteCodeById(inviteId);
-  if (!invite || !invite.username) return sendHtml(res, 404, 'Invite not found');
+  if (!invite || !invite.username) return sendError(res, 404, 'Invite not found', user);
   models.revokeNamedInvite(inviteId);
   redirect(res, `/admin?notice=Invite for "${encodeURIComponent(invite.username)}" revoked.`);
 }
 
 async function handleAdminGenerateResetLink(req, res, user, targetUserId) {
   const target = models.getUserById(targetUserId);
-  if (!target || target.username === models.DELETED_USER_USERNAME) return sendHtml(res, 404, 'User not found');
+  if (!target || target.username === models.DELETED_USER_USERNAME) return sendError(res, 404, 'User not found', user);
   const resetToken = models.createPasswordResetToken(targetUserId, user.id);
   const proto = SECURE_COOKIES ? 'https' : 'http';
   const link = `${proto}://${req.headers.host}/reset-password/${resetToken.token}`;
@@ -471,8 +479,8 @@ async function handleTagPage(req, res, user, slug) {
 
 async function handleEditStoryPage(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
-  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can edit its details.');
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (story.author_id !== user.id) return sendError(res, 403, 'Only the story author can edit its details.', user);
   sendHtml(res, 200, views.editStoryPage({
     user,
     story,
@@ -483,8 +491,8 @@ async function handleEditStoryPage(req, res, user, storyId) {
 
 async function handleEditStorySubmit(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
-  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can edit its details.');
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (story.author_id !== user.id) return sendError(res, 403, 'Only the story author can edit its details.', user);
 
   const body = await parseBody(req);
   const title = (body.title || '').trim();
@@ -595,25 +603,25 @@ async function handleArchivedStories(req, res, user) {
 
 async function handleArchiveStory(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
-  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can archive it.');
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (story.author_id !== user.id) return sendError(res, 403, 'Only the story author can archive it.', user);
   models.archiveStory(storyId);
   redirect(res, `/stories/${storyId}`);
 }
 
 async function handleUnarchiveStory(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
-  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can unarchive it.');
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (story.author_id !== user.id) return sendError(res, 403, 'Only the story author can unarchive it.', user);
   models.unarchiveStory(storyId);
   redirect(res, '/archived-stories');
 }
 
 async function handleDeleteStory(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
-  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can delete it.');
-  if (!story.archived_at) return sendHtml(res, 400, 'Archive the story before deleting it forever.');
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (story.author_id !== user.id) return sendError(res, 403, 'Only the story author can delete it.', user);
+  if (!story.archived_at) return sendError(res, 400, 'Archive the story before deleting it forever.', user);
   models.deleteStoryForever(storyId);
   redirect(res, '/archived-stories');
 }
@@ -656,7 +664,7 @@ async function handleNewStorySubmit(req, res, user) {
 
 async function handleStoryPage(req, res, user, storyId, query) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
+  if (!story) return sendError(res, 404, 'Story not found', user);
   const since = query.get('since') || null;
   const chapters = models.listChaptersForStory(storyId, { since });
   const isStoryAuthor = user.id === story.author_id;
@@ -692,7 +700,7 @@ async function handleGetStoryDictionary(req, res, user, storyId) {
 async function handleAddStoryDictionaryWord(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
   const wantsJson = (req.headers.accept || '').includes('application/json');
-  if (!story) return wantsJson ? sendJson(res, 404, { error: 'Story not found' }) : sendHtml(res, 404, 'Story not found');
+  if (!story) return wantsJson ? sendJson(res, 404, { error: 'Story not found' }) : sendError(res, 404, 'Story not found', user);
   if (!models.canWriteInStory(story, user)) {
     const message = "Only the story's authors can manage this.";
     return wantsJson ? sendJson(res, 403, { error: message }) : sendHtml(res, 403, message);
@@ -706,8 +714,8 @@ async function handleAddStoryDictionaryWord(req, res, user, storyId) {
 
 async function handleRemoveStoryDictionaryWord(req, res, user, storyId, entryId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
-  if (!models.canWriteInStory(story, user)) return sendHtml(res, 403, "Only the story's authors can manage this.");
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (!models.canWriteInStory(story, user)) return sendError(res, 403, "Only the story's authors can manage this.", user);
   models.removeStoryDictionaryWord(storyId, entryId);
   redirect(res, `/stories/${storyId}#dictionary`);
 }
@@ -719,8 +727,8 @@ async function handleRemoveStoryDictionaryWord(req, res, user, storyId, entryId)
 
 async function handleAddCoauthor(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
-  if (story.author_id !== user.id) return sendHtml(res, 403, 'Only the story author can add coauthors.');
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (story.author_id !== user.id) return sendError(res, 403, 'Only the story author can add coauthors.', user);
   const body = await parseBody(req);
   const userId = Number(body.userId);
   if (Number.isInteger(userId) && userId > 0) models.addStoryCoauthor(storyId, userId, user.id);
@@ -729,11 +737,11 @@ async function handleAddCoauthor(req, res, user, storyId) {
 
 async function handleRemoveCoauthor(req, res, user, storyId, coauthorId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
+  if (!story) return sendError(res, 404, 'Story not found', user);
   // Somebody can also step back from a story they were added to, without
   // having to ask the owner to remove them.
   if (story.author_id !== user.id && coauthorId !== user.id) {
-    return sendHtml(res, 403, 'Only the story author can remove a coauthor.');
+    return sendError(res, 403, 'Only the story author can remove a coauthor.', user);
   }
   models.removeStoryCoauthor(storyId, coauthorId);
   redirect(res, story.author_id === user.id ? `/stories/${storyId}#authors` : '/');
@@ -741,32 +749,32 @@ async function handleRemoveCoauthor(req, res, user, storyId, coauthorId) {
 
 async function handleArchivedChaptersForStory(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
+  if (!story) return sendError(res, 404, 'Story not found', user);
   const chapters = models.listChaptersForStory(storyId, { onlyArchived: true });
   sendHtml(res, 200, views.archivedChaptersPage({ user, story, chapters }));
 }
 
 async function handleArchiveChapter(req, res, user, chapterId) {
   const chapter = models.getChapterById(chapterId);
-  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
-  if (chapter.author_id !== user.id) return sendHtml(res, 403, 'Only the chapter author can archive it.');
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
+  if (chapter.author_id !== user.id) return sendError(res, 403, 'Only the chapter author can archive it.', user);
   models.archiveChapter(chapterId);
   redirect(res, `/stories/${chapter.story_id}`);
 }
 
 async function handleUnarchiveChapter(req, res, user, chapterId) {
   const chapter = models.getChapterById(chapterId);
-  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
-  if (chapter.author_id !== user.id) return sendHtml(res, 403, 'Only the chapter author can unarchive it.');
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
+  if (chapter.author_id !== user.id) return sendError(res, 403, 'Only the chapter author can unarchive it.', user);
   models.unarchiveChapter(chapterId);
   redirect(res, `/stories/${chapter.story_id}/archived-chapters`);
 }
 
 async function handleDeleteChapter(req, res, user, chapterId) {
   const chapter = models.getChapterById(chapterId);
-  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
-  if (chapter.author_id !== user.id) return sendHtml(res, 403, 'Only the chapter author can delete it.');
-  if (!chapter.archived_at) return sendHtml(res, 400, 'Archive the chapter before deleting it forever.');
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
+  if (chapter.author_id !== user.id) return sendError(res, 403, 'Only the chapter author can delete it.', user);
+  if (!chapter.archived_at) return sendError(res, 400, 'Archive the chapter before deleting it forever.', user);
   const storyId = chapter.story_id;
   models.deleteChapterForever(chapterId);
   redirect(res, `/stories/${storyId}/archived-chapters`);
@@ -774,16 +782,16 @@ async function handleDeleteChapter(req, res, user, chapterId) {
 
 async function handleNewChapterPage(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
-  if (!models.canWriteInStory(story, user)) return sendHtml(res, 403, "Only the story's authors can add chapters.");
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (!models.canWriteInStory(story, user)) return sendError(res, 403, "Only the story's authors can add chapters.", user);
   const chapters = models.listChaptersForStory(storyId);
   sendHtml(res, 200, views.newChapterPage({ user, story, chapters, values: {} }));
 }
 
 async function handleNewChapterSubmit(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
-  if (!story) return sendHtml(res, 404, 'Story not found');
-  if (!models.canWriteInStory(story, user)) return sendHtml(res, 403, "Only the story's authors can add chapters.");
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (!models.canWriteInStory(story, user)) return sendError(res, 403, "Only the story's authors can add chapters.", user);
 
   const existingChapters = models.listChaptersForStory(storyId);
   const { fields: body, files } = await parseMultipartBody(req, UPLOAD_LIMIT_BYTES);
@@ -818,10 +826,10 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
 
 async function handleChapterPage(req, res, user, chapterId, query) {
   const chapter = models.getChapterById(chapterId);
-  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
 
   const versions = models.listVersions(chapterId); // desc by version_number
-  if (!versions.length) return sendHtml(res, 404, 'This chapter has no versions');
+  if (!versions.length) return sendError(res, 404, 'This chapter has no versions', user);
 
   let currentVersion;
   const requestedV = query.get('v');
@@ -841,7 +849,7 @@ async function handleChapterPage(req, res, user, chapterId, query) {
 
 async function handleChapterDiff(req, res, user, chapterId, query) {
   const chapter = models.getChapterById(chapterId);
-  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
   const versions = models.listVersions(chapterId); // newest first
   if (versions.length < 2) {
     // Not a bad request: a chapter nobody has revised yet is the normal
@@ -859,19 +867,28 @@ async function handleChapterDiff(req, res, user, chapterId, query) {
   const toVersion = pick('to', versions[0]);
   const fromVersion = pick('from', versions.find((v) => v.version_number < toVersion.version_number) || versions[versions.length - 1]);
 
-  const blocks = diff.diffVersions(fromVersion.content, toVersion.content);
+  // Compare the prose, not the source. Diffing the raw Markdown puts
+  // "**Kestrel Anchorage**" and "> " on the page, which is not what the
+  // author wrote or what a reader would see, and it reports a word as
+  // changed when only its emphasis moved.
+  const readable = (version) => renderPlainText(parseMarkdown(version.content), { quoteMarker: '' });
+  const blocks = diff.diffVersions(readable(fromVersion), readable(toVersion));
+  const summary = diff.summarizeDiff(blocks);
   sendHtml(res, 200, views.chapterDiffPage({
-    user, chapter, versions, fromVersion, toVersion,
-    blocks, summary: diff.summarizeDiff(blocks),
+    user, chapter, versions, fromVersion, toVersion, blocks, summary,
+    // The prose can be word for word the same while the source isn't --
+    // somebody bolded a name, or fixed a link. Worth saying so rather than
+    // showing an empty page that looks like the diff is broken.
+    formattingOnly: summary.identical && fromVersion.content !== toVersion.content,
   }));
 }
 
 async function handleEditChapterPage(req, res, user, chapterId) {
   const chapter = models.getChapterById(chapterId);
-  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
   // Deliberately the chapter's author, not the story's: being a coauthor
   // lets you write your own chapters, not rewrite somebody else's.
-  if (chapter.author_id !== user.id) return sendHtml(res, 403, 'Only the chapter author can edit it.');
+  if (chapter.author_id !== user.id) return sendError(res, 403, 'Only the chapter author can edit it.', user);
   const latest = models.getLatestVersion(chapterId);
   // Existing comments are shown alongside the edit form purely as
   // reference while writing (see views.js's editChapterPage) -- they stay
@@ -885,8 +902,8 @@ async function handleEditChapterPage(req, res, user, chapterId) {
 
 async function handleEditChapterSubmit(req, res, user, chapterId) {
   const chapter = models.getChapterById(chapterId);
-  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
-  if (chapter.author_id !== user.id) return sendHtml(res, 403, 'Only the chapter author can edit it.');
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
+  if (chapter.author_id !== user.id) return sendError(res, 403, 'Only the chapter author can edit it.', user);
 
   const { fields: body, files } = await parseMultipartBody(req, UPLOAD_LIMIT_BYTES);
   const title = (body.title || '').trim();
@@ -916,8 +933,8 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
 
 async function handleMoveChapter(req, res, user, chapterId, direction) {
   const chapter = models.getChapterById(chapterId);
-  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
-  if (chapter.story_author_id !== user.id) return sendHtml(res, 403, 'Only the story author can reorder chapters.');
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
+  if (chapter.story_author_id !== user.id) return sendError(res, 403, 'Only the story author can reorder chapters.', user);
   models.moveChapter(chapterId, direction);
   redirect(res, `/stories/${chapter.story_id}`);
 }
@@ -932,9 +949,9 @@ function slugForFilename(title) {
 
 async function handleDownload(req, res, user, chapterId, format, query) {
   const chapter = models.getChapterById(chapterId);
-  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
   const versions = models.listVersions(chapterId);
-  if (!versions.length) return sendHtml(res, 404, 'This chapter has no versions');
+  if (!versions.length) return sendError(res, 404, 'This chapter has no versions', user);
 
   let version;
   const requestedV = query.get('v');
@@ -962,16 +979,16 @@ async function handleDownload(req, res, user, chapterId, format, query) {
     });
     return res.end(buffer);
   }
-  sendHtml(res, 400, 'Unsupported download format');
+  sendError(res, 400, 'Unsupported download format', user);
 }
 
 async function handleCreateComment(req, res, user, chapterId) {
   const chapter = models.getChapterById(chapterId);
-  if (!chapter) return sendHtml(res, 404, 'Chapter not found');
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
   const body = await parseBody(req);
   const versionId = Number(body.versionId);
   const version = models.getVersion(versionId);
-  if (!version || version.chapter_id !== chapterId) return sendHtml(res, 400, 'Invalid version');
+  if (!version || version.chapter_id !== chapterId) return sendError(res, 400, 'Invalid version', user);
 
   const text = (body.body || '').trim();
   if (!text) return redirect(res, `/chapters/${chapterId}?v=${version.version_number}`);
@@ -995,7 +1012,7 @@ async function handleCreateComment(req, res, user, chapterId) {
 
 async function handleCommentReply(req, res, user, commentId) {
   const parent = models.getCommentById(commentId);
-  if (!parent) return sendHtml(res, 404, 'Comment not found');
+  if (!parent) return sendError(res, 404, 'Comment not found', user);
   const version = models.getVersion(parent.version_id);
   const body = await parseBody(req);
   const text = (body.body || '').trim();
@@ -1009,10 +1026,10 @@ async function handleCommentReply(req, res, user, commentId) {
 
 async function handleCommentStatus(req, res, user, commentId) {
   const comment = models.getCommentById(commentId);
-  if (!comment) return sendHtml(res, 404, 'Comment not found');
+  if (!comment) return sendError(res, 404, 'Comment not found', user);
   const version = models.getVersion(comment.version_id);
   const chapter = models.getChapterById(version.chapter_id);
-  if (chapter.author_id !== user.id) return sendHtml(res, 403, "Only the chapter's author can resolve comments.");
+  if (chapter.author_id !== user.id) return sendError(res, 403, "Only the chapter's author can resolve comments.", user);
 
   const body = await parseBody(req);
   const status = body.status === 'accepted' ? 'accepted' : body.status === 'rejected' ? 'rejected' : null;
@@ -1022,9 +1039,9 @@ async function handleCommentStatus(req, res, user, commentId) {
 
 async function handleCommentEdit(req, res, user, commentId) {
   const comment = models.getCommentById(commentId);
-  if (!comment) return sendHtml(res, 404, 'Comment not found');
-  if (comment.author_id !== user.id) return sendHtml(res, 403, 'Only the comment author can edit it.');
-  if (comment.deleted_at) return sendHtml(res, 400, 'This comment has been retracted.');
+  if (!comment) return sendError(res, 404, 'Comment not found', user);
+  if (comment.author_id !== user.id) return sendError(res, 403, 'Only the comment author can edit it.', user);
+  if (comment.deleted_at) return sendError(res, 400, 'This comment has been retracted.', user);
   const version = models.getVersion(comment.version_id);
   const body = await parseBody(req);
   const text = (body.body || '').trim();
@@ -1034,8 +1051,8 @@ async function handleCommentEdit(req, res, user, commentId) {
 
 async function handleCommentRetract(req, res, user, commentId) {
   const comment = models.getCommentById(commentId);
-  if (!comment) return sendHtml(res, 404, 'Comment not found');
-  if (comment.author_id !== user.id) return sendHtml(res, 403, 'Only the comment author can retract it.');
+  if (!comment) return sendError(res, 404, 'Comment not found', user);
+  if (comment.author_id !== user.id) return sendError(res, 403, 'Only the comment author can retract it.', user);
   const version = models.getVersion(comment.version_id);
   if (!comment.deleted_at) models.retractComment(commentId);
   redirect(res, `/chapters/${version.chapter_id}?v=${version.version_number}`);
@@ -1043,10 +1060,10 @@ async function handleCommentRetract(req, res, user, commentId) {
 
 async function handleCommentReopen(req, res, user, commentId) {
   const comment = models.getCommentById(commentId);
-  if (!comment) return sendHtml(res, 404, 'Comment not found');
+  if (!comment) return sendError(res, 404, 'Comment not found', user);
   const version = models.getVersion(comment.version_id);
   const chapter = models.getChapterById(version.chapter_id);
-  if (chapter.author_id !== user.id) return sendHtml(res, 403, "Only the chapter's author can reopen comments.");
+  if (chapter.author_id !== user.id) return sendError(res, 403, "Only the chapter's author can reopen comments.", user);
   if (!comment.deleted_at && comment.status !== 'pending') models.reopenComment(commentId);
   redirect(res, `/chapters/${chapter.id}?v=${version.version_number}#comment-${commentId}`);
 }
@@ -1122,7 +1139,7 @@ async function router(req, res) {
     return redirect(res, '/');
   }
   if (pathname === '/admin' || pathname.startsWith('/admin/')) {
-    if (!user.is_admin) return sendHtml(res, 403, 'Admin access only.');
+    if (!user.is_admin) return sendError(res, 403, 'Admin access only.', user);
   }
 
   try {
@@ -1293,17 +1310,19 @@ async function router(req, res) {
       return handleCommentReopen(req, res, user, Number(m[1]));
     }
 
-    sendHtml(res, 404, 'Page not found');
+    sendError(res, 404, 'There is no page at that address.', user);
   } catch (err) {
     console.error(err);
-    sendHtml(res, 500, 'Internal server error');
+    sendError(res, 500, 'Something went wrong at our end. The error has been logged.', user);
   }
 }
 
 const server = http.createServer((req, res) => {
   router(req, res).catch((err) => {
     console.error(err);
-    if (!res.headersSent) sendHtml(res, 500, 'Internal server error');
+    // No `user` here on purpose: this is the last line of defence, and
+    // whatever threw may well be whatever was looking the user up.
+    if (!res.headersSent) sendError(res, 500, 'Something went wrong at our end. The error has been logged.');
   });
 });
 
