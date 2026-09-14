@@ -1253,7 +1253,41 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
           ${currentVersion.changelog ? `<span class="changelog muted">&ldquo;${escapeHtml(currentVersion.changelog)}&rdquo;</span>` : ''}
           ${versions.length > 1 ? `<a class="version-compare" href="/chapters/${chapter.id}/diff?to=${currentVersion.version_number}">What changed?</a>` : ''}
         </div>
-        <div class="version-actions">
+        <div class="version-actions" id="reading-controls" data-has-comments="${comments.length ? '1' : '0'}">
+          <div class="mode-switch" role="group" aria-label="How to view this chapter">
+            <button type="button" data-mode="read" aria-pressed="false">Read</button>
+            <button type="button" data-mode="review" aria-pressed="false">Review</button>
+          </div>
+          <details class="reading-prefs">
+            <summary>Aa</summary>
+            <div class="reading-prefs-panel">
+              <div class="reading-prefs-row">
+                <span>Type size</span>
+                <div class="reading-prefs-options">
+                  <button type="button" data-pref="reading-size" data-value="1rem">S</button>
+                  <button type="button" data-pref="reading-size" data-value="">M</button>
+                  <button type="button" data-pref="reading-size" data-value="1.25rem">L</button>
+                  <button type="button" data-pref="reading-size" data-value="1.45rem">XL</button>
+                </div>
+              </div>
+              <div class="reading-prefs-row">
+                <span>Line length</span>
+                <div class="reading-prefs-options">
+                  <button type="button" data-pref="reading-measure" data-value="58ch">Narrow</button>
+                  <button type="button" data-pref="reading-measure" data-value="">Normal</button>
+                  <button type="button" data-pref="reading-measure" data-value="86ch">Wide</button>
+                </div>
+              </div>
+              <div class="reading-prefs-row">
+                <span>Line spacing</span>
+                <div class="reading-prefs-options">
+                  <button type="button" data-pref="reading-leading" data-value="1.55">Tight</button>
+                  <button type="button" data-pref="reading-leading" data-value="">Normal</button>
+                  <button type="button" data-pref="reading-leading" data-value="2.05">Loose</button>
+                </div>
+              </div>
+            </div>
+          </details>
           <button id="reading-fill-screen" class="btn ghost small" type="button">Fill screen</button>
           ${isChapterAuthor ? `<a class="btn ghost small" href="/chapters/${chapter.id}/edit">Edit</a>` : ''}
           <details class="menu">
