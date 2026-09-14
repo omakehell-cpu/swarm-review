@@ -1222,6 +1222,20 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       v${v.version_number}${v.id === versions[0].id ? ' (latest)' : ''}
     </option>`).join('');
 
+  // Two different things wearing one heading: a note on a passage, which
+  // belongs next to that passage, and a note on the chapter, which belongs
+  // to no particular line. Splitting them is what lets the first kind sit
+  // in the margin -- and it is better information either way.
+  const anchored = topLevel.filter((c) => c.start_offset != null && c.end_offset != null);
+  const general = topLevel.filter((c) => c.start_offset == null || c.end_offset == null);
+  const render = (c) => renderComment(c, { isChapterAuthor, currentUserId: user.id, replies: repliesByParent[c.id] || [] });
+  const anchoredHtml = anchored.map(render).join('');
+  const generalHtml = general.length ? `
+    <section class="general-notes">
+      <h3>On the chapter as a whole</h3>
+      ${general.map(render).join('')}
+    </section>` : '';
+
   const commentsHtml = topLevel.length
     ? topLevel.map((c) => renderComment(c, { isChapterAuthor, currentUserId: user.id, replies: repliesByParent[c.id] || [] })).join('')
     : emptyState({
@@ -1314,7 +1328,8 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       </div>
       <aside class="comments-pane">
         <h2>Comments</h2>
-        <div id="comment-list">${commentsHtml}</div>
+        <div id="comment-list">${topLevel.length ? anchoredHtml : commentsHtml}</div>
+        ${generalHtml}
 
         <div id="new-comment-box" class="new-comment-box hidden">
           <p class="quoted-preview" id="nc-preview"></p>
