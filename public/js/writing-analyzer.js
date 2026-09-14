@@ -381,6 +381,187 @@
   }
 
   // ---------------------------------------------------------------------
+  // turning a diagnosis into a rewrite
+  // ---------------------------------------------------------------------
+  // Past participles whose past tense is a different word. Regular verbs
+  // need no entry ("opened" is both), so this is only the irregulars --
+  // 138 of them, 2.7KB. Extracted from english-verbs-irregular (Apache-2.0,
+  // part of RosaeNLG) and inlined rather than depended on: the alternative
+  // was compromise, a 352KB NLP library in every reader's browser, and the
+  // only thing this needs from it is exactly this table.
+  const PARTICIPLE_PAST = {
+    arisen: 'arose', awoken: 'awoke', backslidden: 'backslid',
+    beaten: 'beat', become: 'became', begun: 'began', bidden: 'bade',
+    bitten: 'bit', blown: 'blew', borne: 'bore', broken: 'broke',
+    browbeaten: 'browbeat', chosen: 'chose', come: 'came',
+    disproven: 'disproved', dived: 'dove', done: 'did', drawn: 'drew',
+    driven: 'drove', drunk: 'drank', eaten: 'ate', fallen: 'fell',
+    flown: 'flew', forbidden: 'forbade', foregone: 'forewent',
+    foreseen: 'foresaw', forgiven: 'forgave', forgotten: 'forgot',
+    forsaken: 'forsook', frostbitten: 'frostbit', frozen: 'froze',
+    given: 'gave', gone: 'went', gotten: 'got', grown: 'grew',
+    handwritten: 'handwrote', hewn: 'hewed', hidden: 'hid',
+    interwoven: 'interwove', known: 'knew', lain: 'lay', misdone: 'misdid',
+    misspoken: 'misspoke', mistaken: 'mistook', miswritten: 'miswrote',
+    mown: 'mowed', outdone: 'outdid', outdrawn: 'outdrew',
+    outdriven: 'outdrove', outdrunk: 'outdrank', outflown: 'outflew',
+    outgrown: 'outgrew', outridden: 'outrode', outrun: 'outran',
+    outspoken: 'outspoke', outsung: 'outsang', outsworn: 'outswore',
+    outswum: 'outswam', outthrown: 'outthrew', outwritten: 'outwrote',
+    overcome: 'overcame', overdone: 'overdid', overdrawn: 'overdrew',
+    overdrunk: 'overdrank', overeaten: 'overate', overridden: 'overrode',
+    overrun: 'overran', overseen: 'oversaw', oversewn: 'oversewed',
+    overspoken: 'overspoke', overtaken: 'overtook', overthrown: 'overthrew',
+    overwritten: 'overwrote', partaken: 'partook', predone: 'predid',
+    preshrunk: 'preshrank', proven: 'proved', "quick-frozen": 'quick-froze',
+    reawaken: 'reawoke', redone: 'redid', redrawn: 'redrew',
+    regrown: 'regrew', rerun: 'reran', resewn: 'resewed', retaken: 'retook',
+    retorn: 'retore', rewaken: 'rewoke', reworn: 'rewore', rewoven: 'rewove',
+    rewritten: 'rewrote', ridden: 'rode', risen: 'rose', run: 'ran',
+    rung: 'rang', sawn: 'sawed', seen: 'saw', sewn: 'sewed', shaken: 'shook',
+    shaven: 'shaved', shorn: 'sheared', shown: 'showed', shrunk: 'shrank',
+    slain: 'slew', sown: 'sowed', spoken: 'spoke', sprung: 'sprang',
+    stolen: 'stole', strewn: 'strewed', stricken: 'struck',
+    stridden: 'strode', striven: 'strove', stunk: 'stank', sung: 'sang',
+    sunk: 'sank', swollen: 'swelled', sworn: 'swore', swum: 'swam',
+    taken: 'took', "test-driven": 'test-drove', "test-flown": 'test-flew',
+    thrown: 'threw', torn: 'tore', trodden: 'trod', typewritten: 'typewrote',
+    undergone: 'underwent', underlain: 'underlay', undertaken: 'undertook',
+    underwritten: 'underwrote', undone: 'undid', unfrozen: 'unfroze',
+    unhidden: 'unhid', unsewn: 'unsewed', unwoven: 'unwove',
+    withdrawn: 'withdrew', woken: 'woke', worn: 'wore', woven: 'wove',
+    written: 'wrote'
+  };
+
+  // English keeps case on pronouns, so a passive turned round has to turn
+  // them round with it: "She was frightened by the noise" becomes "The
+  // noise frightened her", not "frightened she".
+  const SUBJECT_TO_OBJECT = {
+    i: 'me', he: 'him', she: 'her', we: 'us', they: 'them', who: 'whom',
+    it: 'it', you: 'you',
+  };
+  const OBJECT_TO_SUBJECT = {
+    me: 'I', him: 'he', her: 'she', us: 'we', them: 'they', whom: 'who',
+    it: 'it', you: 'you',
+  };
+
+  function pastTenseOf(participle) {
+    const lower = participle.toLowerCase();
+    if (PARTICIPLE_PAST[lower]) return PARTICIPLE_PAST[lower];
+    // Regular verbs: the participle and the past tense are the same word.
+    if (/(?:ed|ied)$/.test(lower)) return lower;
+    return null;
+  }
+
+  const asObject = (phrase) => {
+    const lower = phrase.toLowerCase();
+    return SUBJECT_TO_OBJECT[lower] || phrase;
+  };
+  const asSubject = (phrase) => {
+    const lower = phrase.toLowerCase();
+    if (OBJECT_TO_SUBJECT[lower]) return OBJECT_TO_SUBJECT[lower];
+    return phrase;
+  };
+  const upperFirst = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t);
+  const lowerFirstUnlessName = (t) => {
+    // "The door" lowercases; "Kessler" does not, and neither does "I".
+    if (!t) return t;
+    if (t === 'I') return t;
+    const first = t.split(/\s+/)[0];
+    if (first.length > 1 && first === first.toUpperCase()) return t; // an acronym
+    if (/^(?:The|A|An|His|Her|Their|Its|My|Our|Your|This|That|These|Those)\b/.test(t)) {
+      return t[0].toLowerCase() + t.slice(1);
+    }
+    return t;
+  };
+
+  // A passive that names who did it can be turned round mechanically,
+  // which is the only case where a machine has any business proposing the
+  // sentence. "The door was opened by Kessler" has all three pieces; "The
+  // door was opened" does not have the one that matters, and there the
+  // check can only go on asking who opened it.
+  //
+  // The agent is deliberately narrow: a name, a pronoun, or a determiner
+  // and one noun. "by Luis every morning" gives "Luis", which is right --
+  // widening it to catch longer agents also catches the rest of the
+  // sentence, and a rewrite that moves "every morning" to the front is
+  // worse than no rewrite at all.
+  const PASSIVE_AGENT_RE = new RegExp(
+    '^\\s*([^.?!;:]{1,90}?)\\s+(was|were|had been|have been|has been)\\s+'
+    + '([a-z][a-z\'\u2019-]+)\\s+by\\s+'
+    + '((?:[A-Z][\\w\'\u2019-]+)'                                   // a name
+    + '|(?:the|a|an|his|her|their|its|my|our|your)\\s+[a-z][\\w\'\u2019-]+'  // the committee
+    + '|him|her|them|me|us|you|it)'                                  // a pronoun
+    + '(?![\\w\'\u2019-])'
+  );
+
+  function activeRewrite(sentenceText) {
+    const m = PASSIVE_AGENT_RE.exec(sentenceText);
+    if (!m) return null;
+    const [whole, subjectRaw, , participle, agentRaw] = m;
+    const past = pastTenseOf(participle);
+    if (!past) return null;
+    const subject = asObject(subjectRaw.trim());
+    const agent = asSubject(agentRaw.trim());
+    // The regex allows leading whitespace so it can anchor at the start of
+    // the sentence, but the mark must not include it -- replacing the span
+    // would then swallow the space after the previous full stop.
+    const lead = whole.length - whole.replace(/^\s+/, '').length;
+    return {
+      start: m.index + lead,
+      end: m.index + whole.length,
+      text: `${upperFirst(agent)} ${past} ${lowerFirstUnlessName(subject)}`,
+    };
+  }
+
+  // An adverb that a single stronger verb already contains. The left side
+  // is what people write; the right side is the word they meant. This is a
+  // list of pairs rather than a thesaurus on purpose -- "walked slowly"
+  // has an answer, "said carefully" does not, and inventing one would be
+  // worse than saying nothing.
+  const VERB_ADVERB_MERGE = {
+    'said loudly': 'shouted', 'said quietly': 'murmured', 'said softly': 'murmured',
+    'said angrily': 'snapped', 'said quickly': 'blurted', 'said firmly': 'insisted',
+    'spoke quietly': 'murmured', 'spoke loudly': 'boomed',
+    'walked slowly': 'ambled', 'walked quickly': 'hurried', 'walked quietly': 'crept',
+    'walked heavily': 'trudged', 'walked unsteadily': 'staggered',
+    'ran quickly': 'sprinted', 'ran slowly': 'jogged',
+    'looked quickly': 'glanced', 'looked closely': 'studied', 'looked angrily': 'glared',
+    'looked steadily': 'stared', 'looked briefly': 'glanced',
+    'held tightly': 'gripped', 'held loosely': 'cradled',
+    'closed loudly': 'slammed', 'closed quietly': 'eased shut',
+    'shut loudly': 'slammed', 'pushed hard': 'shoved', 'pulled hard': 'yanked',
+    'hit hard': 'struck', 'threw hard': 'hurled', 'ate quickly': 'wolfed',
+    'drank quickly': 'gulped', 'laughed loudly': 'roared', 'laughed quietly': 'chuckled',
+    'cried loudly': 'wailed', 'breathed heavily': 'panted', 'breathed deeply': 'inhaled',
+    'moved quickly': 'darted', 'moved slowly': 'inched', 'moved quietly': 'slipped',
+    'stood quickly': 'sprang up', 'sat heavily': 'slumped', 'fell heavily': 'crashed',
+    'smiled widely': 'grinned', 'smiled slightly': 'smirked',
+    'held firmly': 'clamped', 'touched lightly': 'brushed', 'rubbed hard': 'scrubbed',
+    'shook violently': 'convulsed', 'turned quickly': 'spun', 'turned slowly': 'pivoted',
+    'spoke slowly': 'drawled', 'wrote quickly': 'scrawled', 'read quickly': 'skimmed',
+  };
+
+  // The adverb the verb already means. Here the answer is to delete it.
+  const REDUNDANT_ADVERB = [
+    'whispered quietly', 'whispered softly', 'shouted loudly', 'screamed loudly',
+    'yelled loudly', 'sprinted quickly', 'ran quickly away', 'gulped quickly',
+    'crept quietly', 'tiptoed quietly', 'slammed loudly', 'grinned widely',
+    'stared fixedly', 'glared angrily', 'muttered quietly', 'murmured softly',
+    'trudged slowly', 'ambled slowly', 'hurried quickly', 'wept softly',
+    'shrieked loudly', 'bellowed loudly', 'whispered under his breath',
+    'whispered under her breath',
+  ];
+
+  const escapeForRe = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const VERB_ADVERB_RE = new RegExp(
+    `\\b(?:${Object.keys(VERB_ADVERB_MERGE).map(escapeForRe).join('|')})\\b`, 'gi'
+  );
+  const REDUNDANT_ADVERB_RE = new RegExp(
+    `\\b(?:${REDUNDANT_ADVERB.map(escapeForRe).join('|')})\\b`, 'gi'
+  );
+
+  // ---------------------------------------------------------------------
   // craft checks
   // ---------------------------------------------------------------------
   // The five checks above are prose hygiene: they would say the same thing
@@ -421,9 +602,17 @@
     'g'
   );
   // The other half of the same note: an adverb propping up a speech tag.
+  // Only verbs that are almost always speech -- not the bookism list
+  // above, which has "smiled" and "grinned" in it, and would then flag
+  // "she smiled carefully at the dial" as a dialogue tag in a paragraph
+  // with no dialogue in it. An adverb on those is just an adverb, and the
+  // adverb check already has it.
+  const SPEECH_VERBS_PLAIN = [
+    'said', 'asked', 'replied', 'answered', 'whispered', 'muttered', 'murmured',
+    'called', 'added', 'shouted', 'yelled', 'cried', 'told',
+  ];
   const DIALOGUE_ADVERB_RE = new RegExp(
-    `\\b(?:said|asked|replied|answered|whispered|muttered|murmured|called|added|${SPEECH_VERBS.join('|')})\\s+[a-z]+ly\\b`,
-    'gi'
+    `\\b(?:${SPEECH_VERBS_PLAIN.join('|')})\\s+[a-z]+ly\\b`, 'gi'
   );
 
   // Words common enough that repeating them is not an echo. Everything
@@ -571,7 +760,30 @@
     // below) -- this only matters when two DIFFERENT checks would
     // otherwise both claim the same span, e.g. a filler word that's also
     // technically part of a passive-voice match.
+    // A passive that names its agent gets the sentence turned round for
+    // it, which is the only case where proposing the rewrite is honest.
+    // It is added first so it wins the overlap with the plain passive
+    // match sitting inside it.
+    const rewrite = (settings && settings.passive === false) ? null : activeRewrite(sentenceText);
+    if (rewrite) {
+      found.push({
+        start: rewrite.start,
+        end: rewrite.end,
+        kind: 'passive',
+        label: `Passive voice, and it says who did it \u2014 so it can simply be turned round: "${rewrite.text}".`,
+        suggestion: rewrite.text,
+      });
+    }
     addAll(PASSIVE_RE, 'passive', () => 'Passive voice -- consider naming who did this and using an active verb.');
+    // The two adverb checks that have an answer go before the general one,
+    // so "walked slowly" is offered "ambled" rather than just being told
+    // that "slowly" is an adverb.
+    addAll(REDUNDANT_ADVERB_RE, 'adverb',
+      (m) => `"${m[0].split(/\s+/)[0]}" already means this \u2014 the adverb can go.`,
+      (m) => m[0].split(/\s+/)[0]);
+    addAll(VERB_ADVERB_RE, 'adverb',
+      (m) => `One verb says this: "${VERB_ADVERB_MERGE[m[0].toLowerCase()]}".`,
+      (m) => VERB_ADVERB_MERGE[m[0].toLowerCase()]);
     addAll(ADVERB_RE, 'adverb', (m) => (LY_EXCLUDE.has(m[0].toLowerCase()) ? null : 'Adverb -- a stronger verb might say this more directly.'));
     addAll(WEAK_PHRASE_RE, 'filler', () => 'This phrase can usually be cut or shortened.');
     addAll(WEAK_WORD_RE, 'filler', () => 'Filler word -- try cutting it and see if the sentence still works.');

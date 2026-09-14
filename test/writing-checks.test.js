@@ -136,10 +136,20 @@ test('the same verb in narration is not a dialogue tag', () => {
   assert.deepStrictEqual(kinds('The engine snarled and died.', 'dialogue'), []);
 });
 
-test('an adverb propping up a speech tag is flagged', () => {
-  const found = kinds('"I know," she said quietly.', 'dialogue');
-  assert.strictEqual(found.length, 1);
-  assert.match(found[0], /said quietly/);
+test('an adverb propping up a speech tag is flagged, and named', () => {
+  // Both the dialogue check and the adverb check have something to say
+  // about "said quietly". The adverb one wins because it is the one that
+  // proposes a word -- being told "murmured" beats being told that the
+  // adverb is doing the work.
+  const marks = Array.from(run('"I know," she said quietly.').ranges)
+    .filter((r) => r.kind === 'adverb' || r.kind === 'dialogue');
+  assert.strictEqual(marks.length, 1, 'one note, not two on the same words');
+  assert.strictEqual(marks[0].suggestion, 'murmured');
+
+  // With the adverb check off, the dialogue check still catches it.
+  const withoutAdverbs = Array.from(run('"I know," she said quietly.', { adverb: false }).ranges)
+    .filter((r) => r.kind === 'dialogue');
+  assert.strictEqual(withoutAdverbs.length, 1);
 });
 
 test('a plain said is invisible and stays that way', () => {
@@ -204,4 +214,93 @@ test('a perception verb inside dialogue is somebody speaking, not filtering', ()
 
 test('an unclosed quote protects the rest of the line, the way dialogue runs on', () => {
   assert.deepStrictEqual(kinds('"I know what I saw and I heard it too', 'filter'), []);
+});
+
+// ---- turning the diagnosis into a rewrite ----------------------------
+
+const suggestionFor = (text, kind) => {
+  const r = Array.from(run(text).ranges).find((x) => x.kind === kind && x.suggestion);
+  return r ? { was: text.slice(r.start, r.end), now: r.suggestion } : null;
+};
+
+test('a passive that names who did it is turned round', () => {
+  assert.deepStrictEqual(suggestionFor('The door was opened by Kessler.', 'passive'),
+    { was: 'The door was opened by Kessler', now: 'Kessler opened the door' });
+});
+
+test('an irregular participle is conjugated, not left as it is', () => {
+  // "written" -> "wrote", which is the whole reason there is a verb table.
+  assert.deepStrictEqual(suggestionFor('The report was written by the committee.', 'passive'),
+    { was: 'The report was written by the committee', now: 'The committee wrote the report' });
+  assert.strictEqual(suggestionFor('The song was sung by Marta.', 'passive').now, 'Marta sang the song');
+});
+
+test('pronouns change case when the sentence turns round', () => {
+  // Not "The noise frightened she".
+  assert.strictEqual(suggestionFor('She was frightened by the noise.', 'passive').now,
+    'The noise frightened her');
+  assert.strictEqual(suggestionFor('The hatch was closed by him.', 'passive').now,
+    'He closed the hatch');
+});
+
+test('the rest of the sentence is left alone', () => {
+  const r = suggestionFor('The seals were checked by Luis every morning.', 'passive');
+  assert.strictEqual(r.was, 'The seals were checked by Luis');
+  assert.strictEqual(r.now, 'Luis checked the seals');
+});
+
+test('a passive with nobody in it is not rewritten, only flagged', () => {
+  // "The hatch was left open" -- by whom? A machine that guessed here
+  // would be inventing the one word that matters.
+  const text = 'The hatch was left open.';
+  const passive = Array.from(run(text).ranges).filter((r) => r.kind === 'passive');
+  assert.strictEqual(passive.length, 1, 'still flagged');
+  assert.ok(!passive[0].suggestion, 'but no rewrite is offered');
+});
+
+test('an adverb a single verb already contains is offered that verb', () => {
+  assert.deepStrictEqual(suggestionFor('She walked slowly to the hatch.', 'adverb'),
+    { was: 'walked slowly', now: 'ambled' });
+  assert.deepStrictEqual(suggestionFor('He looked quickly at the dial.', 'adverb'),
+    { was: 'looked quickly', now: 'glanced' });
+});
+
+test('an adverb the verb already means is offered deletion', () => {
+  assert.deepStrictEqual(suggestionFor('"Wait," she whispered quietly.', 'adverb'),
+    { was: 'whispered quietly', now: 'whispered' });
+});
+
+test('an adverb with no honest answer still gets none', () => {
+  // There is no single verb meaning "smiled carefully". Inventing one
+  // would be worse than saying nothing, so the check reports the adverb
+  // and stops there.
+  const r = Array.from(run('She smiled carefully at the dial.').ranges).find((x) => x.kind === 'adverb');
+  assert.ok(r, 'still flagged as an adverb');
+  assert.strictEqual(r.suggestion, null);
+});
+
+test('the paired checks win the overlap with the plain adverb check', () => {
+  const found = Array.from(run('She walked slowly.').ranges).filter((r) => r.kind === 'adverb');
+  assert.strictEqual(found.length, 1, 'one mark, not two');
+  assert.strictEqual(found[0].suggestion, 'ambled');
+});
+
+test('an adverb on a verb that is not speech is not a dialogue tag', () => {
+  // "smiled" is a said-bookism when it carries a line; in a paragraph with
+  // no dialogue in it, "she smiled carefully" is just an adverb.
+  assert.deepStrictEqual(kinds('She smiled carefully at the dial.', 'dialogue'), []);
+  assert.deepStrictEqual(kinds('He laughed bitterly and went below.', 'dialogue'), []);
+  // With a line of dialogue in front of it, it is a tag again.
+  assert.strictEqual(kinds('"Fine," he laughed bitterly.', 'dialogue').length, 1);
+});
+
+test('a rewrite never swallows the space after the previous sentence', () => {
+  const text = 'She waited. The door was opened by Kessler.';
+  const r = Array.from(run(text).ranges).find((x) => x.kind === 'passive' && x.suggestion);
+  const span = text.slice(r.start, r.end);
+  assert.strictEqual(span, 'The door was opened by Kessler');
+  assert.ok(!/^\s/.test(span), 'the mark starts on a word');
+  // And the replacement really does leave a readable sentence behind.
+  assert.strictEqual(text.slice(0, r.start) + r.suggestion + text.slice(r.end),
+    'She waited. Kessler opened the door.');
 });
