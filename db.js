@@ -317,6 +317,23 @@ ensureColumn('chapter_versions', 'word_count', 'INTEGER');
 // spoilers, so the story page keeps it folded.
 ensureColumn('stories', 'synopsis', "TEXT NOT NULL DEFAULT ''");
 
+// Who has opened which chapter. Recorded automatically when somebody loads
+// a chapter page rather than by a button: the question an author actually
+// has is "has anybody looked at this yet", and asking people to tick a box
+// to answer it means the answer is missing exactly when nobody bothered.
+// The author's own readings are not recorded -- "read by the person who
+// wrote it" is noise.
+db.exec(`
+CREATE TABLE IF NOT EXISTS chapter_reads (
+  chapter_id     INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+  user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  read_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (chapter_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_chapter_reads_user ON chapter_reads(user_id);
+`);
+
 // One-time migration: older versions of this app gated registration with a
 // single static code stored in data/invite-code.txt (valid forever, for
 // anyone). If that file exists and the new invite_codes table is still

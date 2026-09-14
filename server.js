@@ -669,6 +669,7 @@ async function handleStoryPage(req, res, user, storyId, query) {
   if (!story) return sendError(res, 404, 'Story not found', user);
   const since = query.get('since') || null;
   const chapters = models.listChaptersForStory(storyId, { since });
+  const readersByChapter = models.readersForChapters(chapters.map((c) => c.id));
   const isStoryAuthor = user.id === story.author_id;
   // A coauthor writes in the story but doesn't own it: they get the "Add
   // chapter" button and the dictionary, not "Edit details" or "Archive".
@@ -677,6 +678,7 @@ async function handleStoryPage(req, res, user, storyId, query) {
   sendHtml(res, 200, views.storyPage({
     user, story, chapters, isStoryAuthor, canWrite, dictionary,
     stats: models.getStoryStats(storyId),
+    readersByChapter,
     tags: models.getStoryTags(storyId),
     coauthors: models.listStoryCoauthors(storyId),
     addableCoauthors: isStoryAuthor ? models.listAddableCoauthors(story) : [],
@@ -844,9 +846,14 @@ async function handleChapterPage(req, res, user, chapterId, query) {
   const comments = models.listCommentsForVersion(currentVersion.id);
   const isChapterAuthor = user.id === chapter.author_id;
 
+  // Opening somebody else's chapter is what counts as reading it. Not the
+  // author's own: "read by the person who wrote it" tells nobody anything.
+  if (!isChapterAuthor) models.markChapterRead(chapterId, user.id, currentVersion.version_number);
+
   sendHtml(res, 200, views.chapterPage({
     user, chapter, versions, currentVersion, comments, isChapterAuthor,
     neighbours: models.getChapterNeighbours(chapter),
+    readers: models.listChapterReaders(chapterId),
   }));
 }
 

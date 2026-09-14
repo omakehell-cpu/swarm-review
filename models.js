@@ -1162,6 +1162,52 @@ function setWikiSyncState({ status, pageCount, error }) {
   `).run(status, pageCount || 0, error || null);
 }
 
+// ---------- who has read what ----------
+// An author posting a chapter and hearing nothing back cannot tell the
+// difference between "nobody has looked at it" and "three people read it
+// and had nothing to say". Those are opposite problems and the app used
+// to be silent about both.
+
+// Recorded when the page loads, and kept at the newest version somebody
+// has seen -- so revising a chapter does not wipe the fact that people
+// read the earlier draft, but the story page can still say who has seen
+// the version that is up now.
+function markChapterRead(chapterId, userId, versionNumber) {
+  db.prepare(`
+    INSERT INTO chapter_reads (chapter_id, user_id, version_number)
+    VALUES (@chapterId, @userId, @versionNumber)
+    ON CONFLICT (chapter_id, user_id) DO UPDATE SET
+      version_number = MAX(version_number, @versionNumber),
+      read_at = datetime('now')
+  `).run({ chapterId, userId, versionNumber });
+}
+
+function listChapterReaders(chapterId) {
+  return db.prepare(`
+    SELECT u.id, u.display_name, r.read_at, r.version_number
+    FROM chapter_reads r JOIN users u ON u.id = r.user_id
+    WHERE r.chapter_id = ?
+    ORDER BY r.read_at
+  `).all(chapterId);
+}
+
+// One query for a story's whole chapter list.
+function readersForChapters(chapterIds) {
+  const byChapter = new Map(chapterIds.map((id) => [Number(id), []]));
+  if (!chapterIds.length) return byChapter;
+  const rows = db.prepare(`
+    SELECT r.chapter_id, r.version_number, u.id, u.display_name
+    FROM chapter_reads r JOIN users u ON u.id = r.user_id
+    WHERE r.chapter_id IN (${chapterIds.map(() => '?').join(',')})
+    ORDER BY r.read_at
+  `).all(...chapterIds);
+  for (const row of rows) {
+    const list = byChapter.get(Number(row.chapter_id));
+    if (list) list.push({ id: row.id, display_name: row.display_name, version_number: row.version_number });
+  }
+  return byChapter;
+}
+
 // ---------- what's waiting for you ----------
 // The story index answers "what is here". This answers "what is here for
 // me", which for a group that exists to correct each other's drafts is
@@ -1216,8 +1262,11 @@ function repliesToMe(userId, since, limit) {
   `).all({ userId, since, limit });
 }
 
-function chaptersNewToMe(userId, since, limit) {
-  if (!since) return [];
+// Not "since your last visit" any more: what you have not opened. The old
+// version cleared itself every time somebody loaded the index, which is
+// the wrong behaviour for a list of things still to do -- reading the page
+// is not the same as reading the chapter.
+function chaptersNewToMe(userId, limit) {
   return db.prepare(`
     SELECT c.id, c.title, c.chapter_number, c.created_at,
            s.id AS story_id, s.title AS story_title, u.display_name AS author_name,
@@ -1226,11 +1275,14 @@ function chaptersNewToMe(userId, since, limit) {
     FROM chapters c
     JOIN stories s ON s.id = c.story_id
     JOIN users u ON u.id = c.author_id
-    WHERE c.author_id <> @userId AND c.created_at > @since
+    WHERE c.author_id <> @userId
       AND c.archived_at IS NULL AND s.archived_at IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM chapter_reads r WHERE r.chapter_id = c.id AND r.user_id = @userId
+      )
     ORDER BY c.created_at DESC
     LIMIT @limit
-  `).all({ userId, since, limit });
+  `).all({ userId, limit });
 }
 
 /**
@@ -1240,7 +1292,7 @@ function chaptersNewToMe(userId, since, limit) {
 function inboxFor(userId, { since = null, limit = 8 } = {}) {
   const pending = pendingOnMyChapters(userId);
   const replies = repliesToMe(userId, since, limit);
-  const newChapters = chaptersNewToMe(userId, since, limit);
+  const newChapters = chaptersNewToMe(userId, limit);
   return {
     pending,
     replies,
@@ -1430,6 +1482,9 @@ module.exports = {
   approveTag,
   mergeTag,
   inboxFor,
+  markChapterRead,
+  listChapterReaders,
+  readersForChapters,
   getStoryStats,
   listStoryCoauthors,
   coauthorsForStories,
