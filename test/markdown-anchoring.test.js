@@ -123,3 +123,62 @@ test('the plain-text rendering keeps the prose and drops the markup', () => {
   assert.match(text, /A bold claim\./);
   assert.ok(!text.includes('**'));
 });
+
+// ---- what changed when markdown-it took over the parsing --------------
+// The hand-written parser this replaced got these wrong. They are listed
+// here rather than in a commit message because each one moves characters,
+// and characters are where comments are anchored: before switching, every
+// stored version in the live archive was flattened both ways and compared,
+// and all twelve came out byte for byte identical. These are the cases
+// where they would not have.
+
+test('a backslash escapes a markdown character instead of showing up', () => {
+  // The old parser had no escape syntax, so it printed the backslash and
+  // ate the asterisks -- which is why "a stray * in an uploaded Word
+  // document" used to be a documented hazard.
+  assert.strictEqual(flatten('A literal \\*asterisk\\* here.'), 'A literal *asterisk* here.');
+});
+
+test('underscores inside a word are not emphasis', () => {
+  // The old parser turned file_name_here into "filenamehere", in italics.
+  assert.strictEqual(flatten('The file_name_here is odd.'), 'The file_name_here is odd.');
+  assert.strictEqual(flatten('un*frigging*believable'), 'unfriggingbelievable');
+});
+
+test('an indented list is a nested list, not raw text', () => {
+  // The old parser failed to match the indented line, gave up on the whole
+  // block, and rendered the dashes as prose.
+  const blocks = parseMarkdown('- one\n  - nested\n- two');
+  assert.strictEqual(blocks.length, 1);
+  assert.strictEqual(blocks[0].type, 'ul');
+  assert.strictEqual(flatten('- one\n  - nested\n- two'), 'onenestedtwo');
+});
+
+test('a lone asterisk in prose is still just an asterisk', () => {
+  assert.strictEqual(flatten('He was 5*7 feet, roughly.'), 'He was 5*7 feet, roughly.');
+});
+
+test('unclosed emphasis stays literal rather than swallowing the rest', () => {
+  assert.strictEqual(flatten('She said **wait, and stopped.'), 'She said **wait, and stopped.');
+});
+
+test('raw HTML in a chapter is text, not markup', () => {
+  const html = renderHighlighted(parseMarkdown('Text with <b>tags</b> in it.'), [], null);
+  assert.ok(!html.includes('<b>'), html);
+  assert.match(html, /&lt;b&gt;/);
+});
+
+test('a javascript: link never becomes a link', () => {
+  // markdown-it validates the target itself and refuses this one, so it
+  // stays literal text -- better than the old behaviour, which built an
+  // anchor and then pointed it at "#".
+  const html = renderHighlighted(parseMarkdown('[click](javascript:alert(1))'), [], null);
+  assert.ok(!html.includes('<a '), html);
+  assert.ok(!html.includes('href'), html);
+});
+
+test('table syntax is not a table here, and its text is left alone', () => {
+  // Enabling tables would add a block type renderHighlighted would have to
+  // learn to count characters through. Until it does, the pipes are prose.
+  assert.match(flatten('| a | b |\n| - | - |'), /\| a \| b \|/);
+});

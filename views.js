@@ -6,7 +6,7 @@ const { parseMarkdown, renderHighlighted } = require('./lib/markdown');
 const { timeHtml } = require('./lib/time');
 const wiki = require('./lib/wiki');
 
-const MARKDOWN_HINT = `Markdown is supported: **bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - list items. Line breaks are kept as you type them.`;
+const MARKDOWN_HINT = `Markdown is supported: **bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - or 1. list items. Put a backslash before a character to keep it literal (\\* shows a real asterisk). Line breaks are kept as you type them.`;
 
 function fileUploadField() {
   return `
