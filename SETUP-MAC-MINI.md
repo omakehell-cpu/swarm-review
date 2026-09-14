@@ -67,6 +67,7 @@ In Terminal, go to the project folder and run it:
 
 ```bash
 cd ~/Documents/swarmEditor/swarm-review
+npm install
 node server.js
 ```
 

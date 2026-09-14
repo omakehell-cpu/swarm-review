@@ -34,7 +34,7 @@ let cookie = '';
 // the redirect itself is usually what's being asserted.
 /**
  * @param {string} pathname
- * @param {{ method?: string, body?: string, contentType?: string, headers?: Record<string, string> }} [options]
+ * @param {{ method?: string, body?: string|Uint8Array, contentType?: string, headers?: Record<string, string> }} [options]
  */
 function request(pathname, { method = 'GET', body, contentType, headers = {} } = {}) {
   return fetch(BASE + pathname, {
@@ -45,7 +45,9 @@ function request(pathname, { method = 'GET', body, contentType, headers = {} } =
       ...(contentType ? { 'content-type': contentType } : {}),
       ...headers,
     },
-    body,
+    // Node's fetch takes a Buffer at runtime; its published types only
+    // admit the web BodyInit union, which doesn't name ArrayBufferView.
+    body: /** @type {any} */ (body),
   });
 }
 
@@ -58,6 +60,25 @@ const form = (fields) => {
 // The story form is multipart because it carries a file input, so the tag
 // checkboxes travel through the multipart parser rather than the
 // urlencoded one -- which is the path that has to be exercised here.
+// The same, with one binary file part -- what the browser sends when a
+// writer picks a .docx instead of pasting the text.
+function multipartWithFile(fields, file, boundary = 'swarmtest0987') {
+  const head = fields
+    .map(([name, value]) => `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`)
+    .join('');
+  const fileHead =
+    `--${boundary}\r\nContent-Disposition: form-data; name="${file.name}"; filename="${file.filename}"\r\n` +
+    'Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\n';
+  return {
+    body: Buffer.concat([
+      Buffer.from(head + fileHead, 'utf8'),
+      file.body,
+      Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8'),
+    ]),
+    contentType: `multipart/form-data; boundary=${boundary}`,
+  };
+}
+
 function multipart(fields, boundary = 'swarmtest0987') {
   let out = '';
   for (const [name, value] of fields) {
@@ -254,6 +275,48 @@ test('editing a chapter creates a second version, and the diff shows the edit', 
   assert.match(html, /<del>[^<]*eleven/, 'the old word is struck out');
   assert.match(html, /<ins>[^<]*twelve/, 'the new word is marked as added');
   assert.ok(html.includes('station'), 'the unchanged words are still readable in place');
+});
+
+test('a chapter can be written in Word and uploaded as .docx', async () => {
+  const { markdownToDocxBuffer } = require('../lib/docx');
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const docx = await markdownToDocxBuffer({
+    title: 'Written In Word',
+    markdownSource: 'She had **never** seen the anchorage from above.\n\n1. first\n2. second',
+  });
+
+  const res = await request(`/stories/${story.id}/chapters/new`, {
+    method: 'POST',
+    ...multipartWithFile(
+      [['title', 'From Word'], ['summary', ''], ['content', '']],
+      { name: 'file', filename: 'chapter.docx', body: docx }
+    ),
+  });
+  assert.strictEqual(res.status, 302, (await res.text()).slice(0, 400));
+
+  const chapter = models.listChaptersForStory(story.id).find((c) => c.title === 'From Word');
+  assert.ok(chapter, 'the chapter was created from the upload');
+  const text = models.getLatestVersion(chapter.id).content;
+  assert.match(text, /never/, 'the prose arrived');
+  assert.match(text, /^1\. first$/m, 'the numbered list stayed numbered');
+  assert.ok(!text.includes('Written In Word'), "the document's own title is not part of the prose");
+});
+
+test('a chapter downloads as a real Word file', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapterId = models.listChaptersForStory(story.id)[0].id;
+
+  const res = await request(`/chapters/${chapterId}/download.docx`);
+  assert.strictEqual(res.status, 200);
+  assert.match(res.headers.get('content-disposition'), /attachment; filename=".*\.docx"/);
+
+  const buffer = Buffer.from(await res.arrayBuffer());
+  // Every .docx is a ZIP, and every ZIP starts "PK".
+  assert.strictEqual(buffer.subarray(0, 2).toString('latin1'), 'PK');
+  assert.strictEqual(Number(res.headers.get('content-length')), buffer.length);
+
+  const { docxBufferToMarkdown } = require('../lib/docx');
+  assert.match(await docxBufferToMarkdown(buffer), /twelve years/);
 });
 
 test('search finds a chapter by a word in its prose, in its current version only', async () => {

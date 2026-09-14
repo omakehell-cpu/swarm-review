@@ -54,6 +54,7 @@ In PowerShell:
 
 ```powershell
 cd "$HOME\Desktop\review-project\swarm-review"
+npm install
 node server.js
 ```
 

@@ -117,6 +117,7 @@ Two things need to run at once. Open **two** Terminal windows:
 **Window 1** — the app itself:
 ```bash
 cd ~/Documents/swarmEditor/swarm-review
+npm install
 node server.js
 ```
 
