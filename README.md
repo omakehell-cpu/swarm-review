@@ -8,17 +8,24 @@ or rejects each comment. Authors can upload multiple revised versions of
 the same chapter; older versions and their comments stay around for
 reference.
 
-## Why it has no runtime dependencies
+## What it needs to run
 
-This app is built entirely on Node.js's own built-ins — including its
-built-in SQLite module (`node:sqlite`) — so there is **nothing to download
-before you can run it**. That makes it trivial to self-host: copy the
-folder to a machine with a recent Node.js and run it.
+Almost nothing. The web server, the database, the sessions, the Markdown
+and the file uploads are all Node.js built-ins — including SQLite itself,
+via `node:sqlite`. There is no build step, no bundler and no framework.
 
-`npm install` only fetches the development tools described under
-[Checking your work](#checking-your-work): a linter, a type-checker and
-nothing the server itself ever loads. The app runs the same with
-`node_modules/` deleted.
+Two libraries are the exception, and both exist for one feature: reading
+and writing Word files.
+
+| package | what it does |
+| --- | --- |
+| `mammoth` | reads an uploaded `.docx`. Word's file format is genuinely complicated — real numbering, styles, footnotes — and the hand-written reader this replaced quietly lost most of it. |
+| `docx` | writes the `.docx` you get from a chapter's download link, as a document Word will edit further rather than a flat approximation of one. |
+
+So a fresh copy does need one `npm install` before it will start. The
+development tools under [Checking your work](#checking-your-work) come
+down with it and the server never loads them; `npm install --omit=dev`
+skips them if you'd rather not have them on the server.
 
 **Requirement: Node.js >= 22.5.0** (built-in SQLite support). Check with
 `node -v`. Node 22 LTS or newer works well.
@@ -26,6 +33,7 @@ nothing the server itself ever loads. The app runs the same with
 ## Running it
 
 ```bash
+npm install     # once, and again after pulling changes
 node server.js
 ```
 
@@ -196,8 +204,7 @@ models.js        query helpers (users, stories, chapters, versions, comments)
 auth.js          password hashing, session cookies, invite code generator
 views.js         server-rendered HTML pages
 lib/markdown.js  the Markdown parser + offset-aware comment highlighting
-lib/docx.js      hand-written .docx (Word) reader/writer, built on lib/zip.js
-lib/zip.js       minimal dependency-free ZIP reader/writer
+lib/docx.js      .docx (Word) in and out, over mammoth and the docx package
 lib/multipart.js parser for file-upload (multipart/form-data) requests
 lib/time.js      renders SQLite timestamps as <time> elements (UTC fallback)
 lib/wiki.js      syncs + matches names against the shared-universe wiki
@@ -212,7 +219,7 @@ data/            created at runtime: the SQLite database + secrets
 ## Checking your work
 
 ```
-npm install     # once: the dev tools below (nothing the server loads)
+npm install     # the two runtime libraries, plus the dev tools below
 npm run check   # lint, then types, then tests
 ```
 
@@ -265,14 +272,14 @@ installed, and `git commit --no-verify` skips it when you need it to.
   from `/admin` is a single-use link, good for 24 hours, that lets the
   person choose their own password — the admin never sees or sets it, and
   the link can be revoked before it's used.
-- `.docx` upload is "good enough," not perfect: bullet vs. numbered lists
-  both come back as bullets (real Word numbering isn't reconstructed),
-  tables/images/footnotes are ignored, and a downloaded chapter that's
-  re-uploaded will show its embedded title as a bold line at the top of
-  the text (since the title lives in a separate field in this app, not
-  in the document body) — just delete that line if it bothers you.
-  A stray literal `*`/`_`/`~` character in an uploaded Word doc could in
-  rare cases get misread as Markdown formatting after upload.
+- `.docx` handling is good but not lossless, because a chapter is stored
+  as Markdown and Markdown has less in it than Word does. Headings,
+  bold/italic/strikethrough, links, inline code, blockquotes and both
+  kinds of list survive in both directions. Images are dropped. A table
+  keeps its text, one row per line with ` | ` between cells, but stops
+  being a table. Nested lists are flattened. A stray literal `*`/`_`/`~`
+  in an uploaded Word document could still be misread as Markdown
+  formatting, since this app's Markdown has no escape syntax.
 - No email notifications when someone comments on your chapter — just the
   in-app "New" / "New comments" badges since your last visit (see above).
   A real email digest could be added later if the group wants it, but it

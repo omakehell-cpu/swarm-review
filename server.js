@@ -51,12 +51,12 @@ const SECURE_COOKIES = process.env.SECURE_COOKIES === '1' || process.env.SECURE_
 // Turns an uploaded file (from a <input type="file"> field) into markdown
 // source text, based on its extension. Returns null if there's no file to
 // use (so callers fall back to the pasted-textarea value instead).
-function extractUploadedText(file) {
+async function extractUploadedText(file) {
   if (!file || !file.buffer || !file.buffer.length) return null;
   const ext = (file.filename.match(/\.([a-z0-9]+)$/i) || ['', ''])[1].toLowerCase();
   if (ext === 'docx') {
     try {
-      return docxBufferToMarkdown(file.buffer);
+      return await docxBufferToMarkdown(file.buffer);
     } catch (err) {
       const wrapped = new Error(`Could not read "${file.filename}": ${err.message}`);
       wrapped.userFacing = true;
@@ -635,7 +635,7 @@ async function handleNewStorySubmit(req, res, user) {
   }));
 
   try {
-    const uploaded = extractUploadedText(files.file);
+    const uploaded = await extractUploadedText(files.file);
     if (uploaded !== null) { content = uploaded; values.content = content; }
   } catch (err) {
     return retry(err.message);
@@ -759,7 +759,7 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   const values = { title, summary, content, position: body.position };
 
   try {
-    const uploaded = extractUploadedText(files.file);
+    const uploaded = await extractUploadedText(files.file);
     if (uploaded !== null) { content = uploaded; values.content = content; }
   } catch (err) {
     return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: err.message, values }));
@@ -861,7 +861,7 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
   const latest = models.getLatestVersion(chapterId);
 
   try {
-    const uploaded = extractUploadedText(files.file);
+    const uploaded = await extractUploadedText(files.file);
     if (uploaded !== null) { content = uploaded; values.content = content; }
   } catch (err) {
     return sendHtml(res, 400, views.editChapterPage({ user, chapter, latestContent: latest ? latest.content : '', error: err.message, values }));
@@ -918,7 +918,7 @@ async function handleDownload(req, res, user, chapterId, format, query) {
     return res.end(text);
   }
   if (format === 'docx') {
-    const buffer = markdownToDocxBuffer({ title: chapter.title, markdownSource: version.content });
+    const buffer = await markdownToDocxBuffer({ title: chapter.title, markdownSource: version.content });
     res.writeHead(200, {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'Content-Disposition': disposition,
