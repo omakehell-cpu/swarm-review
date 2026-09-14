@@ -142,6 +142,27 @@ file up and you have the whole site.
   deliberately with no automatic timer, since a full sync now fetches
   every page's complete content rather than just a short summary.
 
+## Coauthors
+
+A story belongs to the person who started it. From the story's page they
+can add anyone else in the group as a **coauthor**, and a coauthor can:
+
+- add chapters to that story
+- edit the chapters they wrote themselves
+- use and add to the story's dictionary (the universe's proper nouns,
+  which the spellchecker needs)
+
+A coauthor cannot rewrite a chapter somebody else wrote, edit the story's
+details or tags, reorder its chapters, archive it or delete it. Those stay
+with the owner, and being a site admin does not change any of it — admins
+run the site, they don't get a key to everyone's drafts.
+
+Either side can end it: the owner can remove a coauthor, and a coauthor
+can step back on their own. Either way the chapters they already wrote
+stay theirs — their name is on them and they can still edit them. This is
+a writing group, not a permissions system, and quietly reassigning
+somebody's prose because they left a story would be the wrong thing to do.
+
 ## Admin & account security
 
 - **Invite codes** are single-use now, not a shared static password. The
@@ -286,7 +307,5 @@ installed, and `git commit --no-verify` skips it when you need it to.
   in-app "New" / "New comments" badges since your last visit (see above).
   A real email digest could be added later if the group wants it, but it
   needs an SMTP setup this app deliberately doesn't have yet.
-- No co-authored stories — a story has a single author who is the only
-  one who can add chapters to it or edit them.
 - Deleting a story or chapter "forever" is a real, permanent SQL delete —
   there's no trash/undo beyond the archive step before it.

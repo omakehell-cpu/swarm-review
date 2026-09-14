@@ -1102,6 +1102,102 @@ function setWikiSyncState({ status, pageCount, error }) {
   `).run(status, pageCount || 0, error || null);
 }
 
+// ---------- coauthors ----------
+// A story's own author_id is its owner and is not repeated here: this
+// table holds only the people the owner has added. Everywhere the app asks
+// "can this person write in this story", it asks canWriteInStory below
+// rather than comparing ids, so there is one place to change if the rule
+// ever moves.
+
+function listStoryCoauthors(storyId) {
+  return db.prepare(`
+    SELECT u.id, u.display_name, u.username, sa.added_at
+    FROM story_authors sa JOIN users u ON u.id = sa.user_id
+    WHERE sa.story_id = ?
+    ORDER BY sa.added_at
+  `).all(storyId);
+}
+
+// One query for a whole page of stories, so the index doesn't run a query
+// per row.
+function coauthorsForStories(storyIds) {
+  const byStory = new Map(storyIds.map((id) => [Number(id), []]));
+  if (!storyIds.length) return byStory;
+  const placeholders = storyIds.map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT sa.story_id, u.id, u.display_name
+    FROM story_authors sa JOIN users u ON u.id = sa.user_id
+    WHERE sa.story_id IN (${placeholders})
+    ORDER BY sa.added_at
+  `).all(...storyIds);
+  for (const row of rows) {
+    const list = byStory.get(Number(row.story_id));
+    if (list) list.push({ id: row.id, display_name: row.display_name });
+  }
+  return byStory;
+}
+
+function isStoryCoauthor(storyId, userId) {
+  return Boolean(db.prepare(
+    'SELECT 1 FROM story_authors WHERE story_id = ? AND user_id = ?'
+  ).get(storyId, userId));
+}
+
+/**
+ * Can this person add chapters to this story, and use its dictionary?
+ * True for the owner and for anyone the owner has added as a coauthor.
+ * Editing a chapter is a separate question, answered by who wrote that
+ * chapter -- being a coauthor does not grant it.
+ * @param {Row} story
+ * @param {Row} user
+ */
+function canWriteInStory(story, user) {
+  if (!story || !user) return false;
+  if (story.author_id === user.id) return true;
+  return isStoryCoauthor(story.id, user.id);
+}
+
+// Returns the coauthor row, or null when there was nothing to do: the
+// story's owner is already an author of it, a person can only be added
+// once, and the placeholder that inherits a deleted account's work is not
+// somebody who can be invited to write.
+function addStoryCoauthor(storyId, userId, addedBy) {
+  const story = db.prepare('SELECT id, author_id FROM stories WHERE id = ?').get(storyId);
+  if (!story) return null;
+  const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId);
+  if (!user || user.username === DELETED_USER_USERNAME) return null;
+  if (story.author_id === user.id) return null;
+  if (isStoryCoauthor(storyId, user.id)) return null;
+  db.prepare(
+    'INSERT INTO story_authors (story_id, user_id, added_by) VALUES (?, ?, ?)'
+  ).run(storyId, user.id, addedBy || null);
+  return listStoryCoauthors(storyId).find((c) => c.id === user.id) || null;
+}
+
+// Removing a coauthor takes away what they can do from here on. The
+// chapters they already wrote stay theirs -- they wrote them, their name is
+// on them, and they can still edit them; this is a writing group, not a
+// permissions system, and quietly reassigning somebody's prose because
+// they left a story would be the wrong thing to do.
+function removeStoryCoauthor(storyId, userId) {
+  const info = db.prepare(
+    'DELETE FROM story_authors WHERE story_id = ? AND user_id = ?'
+  ).run(storyId, userId);
+  return info.changes > 0;
+}
+
+// Everyone who could be added: not the owner, not already a coauthor, not
+// the deleted-account placeholder.
+function listAddableCoauthors(story) {
+  return db.prepare(`
+    SELECT id, display_name, username FROM users
+    WHERE username != ?
+      AND id != ?
+      AND id NOT IN (SELECT user_id FROM story_authors WHERE story_id = ?)
+    ORDER BY display_name COLLATE NOCASE
+  `).all(DELETED_USER_USERNAME, story.author_id, story.id);
+}
+
 module.exports = {
   userCount,
   getUserByUsername,
@@ -1186,6 +1282,13 @@ module.exports = {
   proposeTag,
   approveTag,
   mergeTag,
+  listStoryCoauthors,
+  coauthorsForStories,
+  isStoryCoauthor,
+  canWriteInStory,
+  addStoryCoauthor,
+  removeStoryCoauthor,
+  listAddableCoauthors,
   getStoryTags,
   tagsForStories,
   setStoryTags,
