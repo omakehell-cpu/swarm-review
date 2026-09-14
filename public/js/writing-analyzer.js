@@ -1132,7 +1132,7 @@
       textarea.style.pointerEvents = 'none';
       const el = document.elementFromPoint(x, y);
       textarea.style.pointerEvents = prevPointerEvents;
-      return el ? el.closest('.wa-word, .wa-sentence') : null;
+      return el ? /** @type {HTMLElement|null} */ (el.closest('.wa-word, .wa-sentence')) : null;
     }
 
     let hoveredMark = null;
@@ -1228,7 +1228,7 @@
       // whether to show or hide the popover, so this is only for clicks
       // truly outside the editor.
       if (ev.target === textarea) return;
-      if (popover.contains(ev.target)) return;
+      if (popover.contains(/** @type {Node} */ (ev.target))) return;
       hidePopover();
     });
 
@@ -1474,7 +1474,7 @@
 
     document.addEventListener('click', (ev) => {
       if (container.contains(ev.target)) return;
-      if (popover.contains(ev.target)) return;
+      if (popover.contains(/** @type {Node} */ (ev.target))) return;
       hidePopover();
     });
   }

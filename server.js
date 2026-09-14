@@ -53,7 +53,7 @@ const SECURE_COOKIES = process.env.SECURE_COOKIES === '1' || process.env.SECURE_
 // use (so callers fall back to the pasted-textarea value instead).
 function extractUploadedText(file) {
   if (!file || !file.buffer || !file.buffer.length) return null;
-  const ext = (file.filename.match(/\.([a-z0-9]+)$/i) || [, ''])[1].toLowerCase();
+  const ext = (file.filename.match(/\.([a-z0-9]+)$/i) || ['', ''])[1].toLowerCase();
   if (ext === 'docx') {
     try {
       return docxBufferToMarkdown(file.buffer);
@@ -286,7 +286,7 @@ async function handleAdminGenerateInviteCode(req, res, user) {
   redirect(res, '/admin?notice=New invite code generated. The old one no longer works.');
 }
 
-async function handleAdminCloseRegistration(req, res, user) {
+async function handleAdminCloseRegistration(req, res, _user) {
   models.closeRegistration();
   redirect(res, '/admin?notice=Registration closed. No invite code will work until you generate a new one.');
 }
@@ -371,7 +371,7 @@ async function handleAdminRevokeResetLink(req, res, user, tokenId) {
   redirect(res, '/admin?notice=Reset link revoked.');
 }
 
-async function handleAdminSyncWiki(req, res, user) {
+async function handleAdminSyncWiki(req, res, _user) {
   try {
     const { pageCount } = await wiki.syncWikiIndex();
     redirect(res, `/admin?notice=Wiki index synced: ${pageCount} pages.`);
@@ -410,7 +410,7 @@ async function handleResetPasswordSubmit(req, res, token) {
   redirect(res, '/login?notice=Password changed. Log in with your new password.');
 }
 
-async function handleAdminBackup(req, res, user) {
+async function handleAdminBackup(req, res, _user) {
   const tmpPath = path.join(os.tmpdir(), `swarm-review-backup-${Date.now()}-${process.pid}.sqlite`);
   try {
     models.backupDatabaseTo(tmpPath);
@@ -503,7 +503,7 @@ async function handleEditStorySubmit(req, res, user, storyId) {
 }
 
 // ---------- admin: the tag vocabulary ----------
-async function handleAdminCreateTag(req, res, user) {
+async function handleAdminCreateTag(req, res, _user) {
   const body = await parseBody(req);
   models.createTag({ name: body.name, group: body.group, description: body.description });
   redirect(res, '/admin?notice=Tag added.#tags');
@@ -810,7 +810,10 @@ async function handleChapterDiff(req, res, user, chapterId, query) {
   if (!chapter) return sendHtml(res, 404, 'Chapter not found');
   const versions = models.listVersions(chapterId); // newest first
   if (versions.length < 2) {
-    return sendHtml(res, 400, views.diffUnavailablePage({ user, chapter }));
+    // Not a bad request: a chapter nobody has revised yet is the normal
+    // state of a new chapter, and the page returned says so. 200 keeps it
+    // out of the error logs and out of Cloudflare's 4xx handling.
+    return sendHtml(res, 200, views.diffUnavailablePage({ user, chapter }));
   }
 
   // Default to the most recent pair, which is the comparison anyone
@@ -1021,7 +1024,7 @@ async function handleCommentReopen(req, res, user, commentId) {
 // comment list), so the preview the writer sees while editing always
 // matches what readers will actually see once it's published. Stateless --
 // doesn't touch any story/chapter, so any logged-in user can call it.
-async function handleMarkdownPreview(req, res, user) {
+async function handleMarkdownPreview(req, res, _user) {
   const body = await parseBody(req);
   const text = typeof body.text === 'string' ? body.text : '';
   const html = renderHighlighted(parseMarkdown(text), [], wiki.findWikiMatches);

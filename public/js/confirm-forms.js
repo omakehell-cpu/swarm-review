@@ -11,7 +11,8 @@
 (function () {
   'use strict';
   document.addEventListener('submit', function (ev) {
-    const message = ev.target.getAttribute && ev.target.getAttribute('data-confirm');
+    const form = /** @type {Element} */ (ev.target);
+    const message = form.getAttribute && form.getAttribute('data-confirm');
     if (message && !window.confirm(message)) ev.preventDefault();
   });
 })();

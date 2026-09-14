@@ -1,0 +1,280 @@
+// End to end, against the real server.
+//
+// A fresh SQLite file in a temp directory, the real schema, the real
+// migrations, the real seed tags, `node server.js` in a child process, and
+// an HTTP client doing what a browser does. Nothing is stubbed.
+//
+// This is the level the tag bug lived at. Every piece read correctly on
+// its own: the picker rendered eight checkboxes, the parser looked
+// reasonable, the model wrote what it was given, the page redirected. Only
+// the round trip -- tick eight, save, count what came back -- showed that
+// seven of them never arrived.
+'use strict';
+
+const test = require('node:test');
+const assert = require('node:assert');
+const path = require('node:path');
+const { spawn } = require('node:child_process');
+
+const { useTempDatabase } = require('./helpers/tmpdb');
+const tmp = useTempDatabase();
+
+const ROOT = path.join(__dirname, '..');
+const PORT = 3000 + Math.floor(Math.random() * 20000);
+const BASE = `http://127.0.0.1:${PORT}`;
+
+const USER = { username: 'testwriter', displayName: 'Test Writer', password: 'correct horse battery' };
+
+let child;
+/** @type {any} */
+let models;
+let cookie = '';
+
+// A client that behaves like a browser except for following redirects --
+// the redirect itself is usually what's being asserted.
+/**
+ * @param {string} pathname
+ * @param {{ method?: string, body?: string, contentType?: string, headers?: Record<string, string> }} [options]
+ */
+function request(pathname, { method = 'GET', body, contentType, headers = {} } = {}) {
+  return fetch(BASE + pathname, {
+    method,
+    redirect: 'manual',
+    headers: {
+      ...(cookie ? { cookie } : {}),
+      ...(contentType ? { 'content-type': contentType } : {}),
+      ...headers,
+    },
+    body,
+  });
+}
+
+const form = (fields) => {
+  const params = new URLSearchParams();
+  for (const [k, v] of fields) params.append(k, v);
+  return { body: params.toString(), contentType: 'application/x-www-form-urlencoded' };
+};
+
+// The story form is multipart because it carries a file input, so the tag
+// checkboxes travel through the multipart parser rather than the
+// urlencoded one -- which is the path that has to be exercised here.
+function multipart(fields, boundary = 'swarmtest0987') {
+  let out = '';
+  for (const [name, value] of fields) {
+    out += `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`;
+  }
+  out += `--${boundary}--\r\n`;
+  return { body: out, contentType: `multipart/form-data; boundary=${boundary}` };
+}
+
+test.before(async () => {
+  child = spawn(process.execPath, ['server.js'], {
+    cwd: ROOT,
+    env: { ...process.env, SWARM_DB_PATH: tmp.file, PORT: String(PORT), NODE_ENV: 'test' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  const stderr = [];
+  child.stderr.on('data', (d) => stderr.push(String(d)));
+
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`server did not start in 15s\n${stderr.join('')}`)),
+      15000
+    );
+    child.stdout.on('data', (d) => {
+      if (String(d).includes('listening')) { clearTimeout(timer); resolve(undefined); }
+    });
+    child.on('exit', (code) => {
+      clearTimeout(timer);
+      reject(new Error(`server exited with ${code}\n${stderr.join('')}`));
+    });
+  });
+
+  // Safe only now the child has created and migrated the file.
+  models = require('../models');
+});
+
+test.after(() => {
+  if (child) child.kill('SIGTERM');
+  tmp.cleanup();
+});
+
+test('a signed-out visitor is sent to the login page', async () => {
+  const res = await request('/');
+  assert.strictEqual(res.status, 302);
+  assert.strictEqual(res.headers.get('location'), '/login');
+});
+
+test('registration accepts the invite code a fresh database generates', async () => {
+  const invite = models.getActiveInviteCode();
+  assert.ok(invite && invite.code, 'a fresh database seeds one invite code');
+
+  const res = await request('/register', {
+    method: 'POST',
+    ...form([
+      ['username', USER.username],
+      ['displayName', USER.displayName],
+      ['password', USER.password],
+      ['inviteCode', invite.code],
+    ]),
+  });
+  // The first registered user becomes the admin and is signed in straight
+  // away, so this lands on the index rather than the login form.
+  assert.strictEqual(res.status, 302, await res.text());
+  assert.strictEqual(res.headers.get('location'), '/');
+});
+
+test('the wrong password does not sign anyone in', async () => {
+  const res = await request('/login', {
+    method: 'POST',
+    ...form([['username', USER.username], ['password', 'not the password']]),
+  });
+  assert.notStrictEqual(res.status, 302);
+  assert.ok(!res.headers.get('set-cookie'), 'no session handed out');
+});
+
+test('logging in sets an HttpOnly, SameSite=Lax session cookie', async () => {
+  const res = await request('/login', {
+    method: 'POST',
+    ...form([['username', USER.username], ['password', USER.password]]),
+  });
+  assert.strictEqual(res.status, 302);
+
+  const setCookie = res.headers.get('set-cookie');
+  assert.ok(setCookie, 'a session cookie');
+  assert.match(setCookie, /HttpOnly/);
+  assert.match(setCookie, /SameSite=Lax/);
+  assert.match(setCookie, /Path=\//);
+
+  cookie = setCookie.split(';')[0];
+});
+
+test('HTML responses are never cached', async () => {
+  const res = await request('/');
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.headers.get('cache-control'), 'no-store');
+});
+
+test('the stylesheet is never cached but the fonts are cached forever', async () => {
+  const css = await request('/css/style.css');
+  assert.strictEqual(css.status, 200);
+  assert.strictEqual(css.headers.get('cache-control'), 'no-store');
+
+  const font = await request('/fonts/literata-roman.woff2');
+  assert.strictEqual(font.status, 200);
+  assert.match(font.headers.get('cache-control'), /immutable/);
+});
+
+// ---- the regression this whole file exists for ----------------------
+test('a story saved with eight tags comes back with eight tags', async () => {
+  const groups = models.listTagsGrouped();
+  const allTags = groups.flatMap((g) => g.tags);
+  assert.ok(allTags.length >= 8, 'the seed vocabulary has enough tags to test with');
+  const chosen = allTags.slice(0, 8);
+
+  const res = await request('/stories/new', {
+    method: 'POST',
+    ...multipart([
+      ['storyTitle', 'A Story With Many Tags'],
+      ['storyDescription', 'Testing that a group of checkboxes survives the round trip.'],
+      ['chapterTitle', 'Chapter One'],
+      ['chapterSummary', ''],
+      ['content', 'The station had been dying for eleven years.'],
+      ...chosen.map((t) => ['tagIds', String(t.id)]),
+    ]),
+  });
+  assert.strictEqual(res.status, 302, await res.text());
+  assert.match(res.headers.get('location'), /^\/chapters\/\d+$/);
+
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  assert.ok(story, 'the story was created');
+
+  const saved = models.getStoryTags(story.id).map((t) => t.name).sort();
+  assert.deepStrictEqual(saved, chosen.map((t) => t.name).sort());
+
+  // And the reader actually sees them.
+  const page = await request(`/stories/${story.id}`);
+  const html = await page.text();
+  for (const tag of chosen) assert.ok(html.includes(tag.name), `"${tag.name}" is on the page`);
+});
+
+test('filtering the index by a tag keeps the stories that carry it', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const tag = models.getStoryTags(story.id)[0];
+
+  const matching = models.listStories({ tagIds: [tag.id] });
+  assert.ok(matching.some((s) => s.id === story.id));
+
+  // AND, not OR: a story is only kept if it carries every tag asked for.
+  const otherTags = models.listTagsGrouped().flatMap((g) => g.tags)
+    .filter((t) => !models.getStoryTags(story.id).some((st) => st.id === t.id));
+  if (otherTags.length) {
+    const narrowed = models.listStories({ tagIds: [tag.id, otherTags[0].id] });
+    assert.ok(!narrowed.some((s) => s.id === story.id), 'a tag it lacks excludes it');
+  }
+});
+
+test('the chapter page renders and a second chapter unlocks the diff', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapters = models.listChaptersForStory(story.id);
+  assert.strictEqual(chapters.length, 1);
+
+  const res = await request(`/chapters/${chapters[0].id}`);
+  const html = await res.text();
+  assert.ok(res.status === 200, `status ${res.status}: ${html.slice(0, 400)}`);
+  assert.ok(html.includes('The station had been dying'), 'the prose is there');
+
+  // One version so far, so there is nothing to compare against yet -- a
+  // normal state for a new chapter, and a page that says so, not an error.
+  const none = await request(`/chapters/${chapters[0].id}/diff`);
+  assert.strictEqual(none.status, 200);
+  assert.match(await none.text(), /Nothing to compare yet/);
+});
+
+test('editing a chapter creates a second version, and the diff shows the edit', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapterId = models.listChaptersForStory(story.id)[0].id;
+
+  const saved = await request(`/chapters/${chapterId}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['title', 'Chapter One'],
+      ['summary', ''],
+      ['content', 'The station had been dying for twelve years.'],
+      ['changelog', 'eleven -> twelve'],
+    ]),
+  });
+  assert.strictEqual(saved.status, 302, await saved.text());
+  assert.strictEqual(models.listVersions(chapterId).length, 2);
+
+  const diff = await request(`/chapters/${chapterId}/diff`);
+  assert.strictEqual(diff.status, 200);
+  const html = await diff.text();
+  assert.match(html, /<del>[^<]*eleven/, 'the old word is struck out');
+  assert.match(html, /<ins>[^<]*twelve/, 'the new word is marked as added');
+  assert.ok(html.includes('station'), 'the unchanged words are still readable in place');
+});
+
+test('search finds a chapter by a word in its prose, in its current version only', async () => {
+  const found = await request(`/search?q=${encodeURIComponent('twelve years')}`);
+  assert.strictEqual(found.status, 200);
+  assert.ok((await found.text()).includes('A Story With Many Tags'), 'the story is in the results');
+
+  // "eleven years" was the wording of version 1, edited away in the test
+  // above. Searching every version would bury one real hit under a copy of
+  // it from every draft the chapter has ever been through, so only the
+  // current text is indexed -- and this is where that choice is written down.
+  const gone = await request(`/search?q=${encodeURIComponent('eleven years')}`);
+  assert.strictEqual(gone.status, 200);
+  assert.match(await gone.text(), /Nothing matches/);
+});
+
+test('logging out invalidates the session', async () => {
+  const res = await request('/logout', { method: 'POST', ...form([]) });
+  assert.strictEqual(res.status, 302);
+  cookie = '';
+  const after = await request('/');
+  assert.strictEqual(after.status, 302);
+  assert.strictEqual(after.headers.get('location'), '/login');
+});

@@ -6,11 +6,11 @@
 // with no saved choice yet, follows the OS's prefers-color-scheme).
 (function () {
   'use strict';
-  var btn = document.getElementById('theme-toggle');
+  const btn = document.getElementById('theme-toggle');
   if (!btn) return;
 
   function isDarkNow() {
-    var explicit = document.documentElement.getAttribute('data-theme');
+    const explicit = document.documentElement.getAttribute('data-theme');
     if (explicit === 'dark') return true;
     if (explicit === 'light') return false;
     return Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -19,14 +19,14 @@
   // Shows the icon for the mode a click would switch TO, not the current
   // one -- the usual convention for this kind of toggle.
   function updateButton() {
-    var dark = isDarkNow();
+    const dark = isDarkNow();
     btn.textContent = dark ? '☀' : '☾';
     btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
     btn.title = btn.getAttribute('aria-label');
   }
 
   btn.addEventListener('click', function () {
-    var next = isDarkNow() ? 'light' : 'dark';
+    const next = isDarkNow() ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     try { localStorage.setItem('theme', next); } catch (e) { /* ignore */ }
     updateButton();

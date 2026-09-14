@@ -17,7 +17,7 @@ function fileUploadField() {
 
 // ---------- auth pages ----------
 
-function loginPage({ error, notice } = {}) {
+function loginPage({ error, notice } = /** @type {{ error?: string, notice?: string }} */ ({})) {
   return layout({
     title: 'Log in',
     user: null,
@@ -37,7 +37,7 @@ function loginPage({ error, notice } = {}) {
   });
 }
 
-function registerPage({ error, values = {} } = {}) {
+function registerPage({ error, values = /** @type {FormValues} */ ({}) } = /** @type {{ error?: string, values?: FormValues }} */ ({})) {
   return layout({
     title: 'Register',
     user: null,
@@ -58,7 +58,7 @@ function registerPage({ error, values = {} } = {}) {
 }
 
 // ---------- password reset (from an admin-generated link, see /admin) ----------
-function resetPasswordPage({ token, displayName, error } = {}) {
+function resetPasswordPage({ token, displayName, error } = /** @type {{ token?: string, displayName?: string, error?: string }} */ ({})) {
   return layout({
     title: 'Reset password',
     user: null,
@@ -180,7 +180,7 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, activeTag
 
 // ---------- story tags ----------
 // One tag, as it appears anywhere it's being displayed rather than picked.
-function tagChip(tag, { muted } = {}) {
+function tagChip(tag, { muted } = /** @type {{ muted?: boolean }} */ ({})) {
   const proposed = tag.status === 'proposed';
   const title = proposed
     ? `Proposed${tag.proposed_by_name ? ` by ${tag.proposed_by_name}` : ''} -- waiting for an admin to confirm it`
@@ -274,7 +274,8 @@ function tagNotFoundPage({ user, slug }) {
   });
 }
 
-function editStoryPage({ user, story, groups, selectedTagIds, error, values = {} }) {
+/** @param {{ user: Row, story: Row, groups: any[], selectedTagIds: number[], error?: string|null, values?: FormValues }} props */
+function editStoryPage({ user, story, groups, selectedTagIds, error, values = /** @type {FormValues} */ ({}) }) {
   const title = values.title !== undefined ? values.title : story.title;
   const description = values.description !== undefined ? values.description : story.description;
   return layout({
@@ -412,7 +413,8 @@ function archivedStoriesPage({ user, stories }) {
 
 // ---------- new story (+ first chapter) ----------
 
-function newStoryPage({ user, error, values = {}, groups = [], selectedTagIds = [] }) {
+/** @param {{ user: Row, error?: string|null, values?: FormValues, groups?: any[], selectedTagIds?: number[] }} props */
+function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), groups = [], selectedTagIds = [] }) {
   return layout({
     title: 'New story',
     user,
@@ -469,7 +471,8 @@ function positionField(chapters, selectedValue) {
     </label>`;
 }
 
-function newChapterPage({ user, story, chapters = [], error, values = {} }) {
+/** @param {{ user: Row, story: Row, chapters?: Row[], error?: string|null, values?: FormValues }} props */
+function newChapterPage({ user, story, chapters = [], error, values = /** @type {FormValues} */ ({}) }) {
   return layout({
     title: `New chapter - ${story.title}`,
     user,
@@ -503,7 +506,8 @@ function newChapterPage({ user, story, chapters = [], error, values = {} }) {
 
 // ---------- edit chapter (title, summary, and the text itself) ----------
 
-function editChapterPage({ user, chapter, latestContent, comments = [], error, values = {} }) {
+/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, values?: FormValues }} props */
+function editChapterPage({ user, chapter, latestContent, comments = [], error, values = /** @type {FormValues} */ ({}) }) {
   const topLevelComments = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -1133,6 +1137,7 @@ function searchPage({ user, results, query }) {
 
 // ---------- account settings ----------
 
+/** @param {{ user: Row, error?: string|null, notice?: string|null, groups?: any[], hiddenTagIds?: number[] }} props */
 function accountPage({ user, error, notice, groups = [], hiddenTagIds = [] }) {
   return layout({
     title: 'Account',
