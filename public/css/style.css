@@ -74,6 +74,15 @@
   --btn-text: #fbf9f3;
   --code-bg: rgba(35, 32, 27, 0.06);
   --shadow: rgba(60, 50, 30, 0.13);
+  /* Relief. A control is an object: light from above, a bright edge along
+     its top, and a short contact shadow rather than a soft cloud. --press
+     is what it looks like with a finger on it, and --sink is the opposite
+     -- a field cut into the paper instead of sitting on it. */
+  --lift-1: 0 1px 0 rgba(255, 255, 255, 0.28) inset, 0 1px 1.5px rgba(60, 50, 30, 0.16), 0 2px 5px -2px rgba(60, 50, 30, 0.22);
+  --lift-2: 0 1px 0 rgba(255, 255, 255, 0.34) inset, 0 2px 3px rgba(60, 50, 30, 0.18), 0 6px 14px -4px rgba(60, 50, 30, 0.26);
+  --press: 0 1px 2px rgba(60, 50, 30, 0.22) inset;
+  --sink: inset 0 1px 2px rgba(60, 50, 30, 0.10);
+  --edge-light: rgba(255, 255, 255, 0.5);
 
   /* Type. Nine steps, and every font-size in this file is one of them.
      Before this there were forty, most of them a tenth of a rem apart --
@@ -139,7 +148,19 @@
     --btn-text: #191713;
     --code-bg: rgba(231, 225, 211, 0.08);
     --shadow: rgba(0, 0, 0, 0.45);
+  --lift-1: 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 1px 1.5px rgba(0, 0, 0, 0.5), 0 2px 5px -2px rgba(0, 0, 0, 0.6);
+  --lift-2: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 2px 3px rgba(0, 0, 0, 0.55), 0 6px 14px -4px rgba(0, 0, 0, 0.7);
+  --press: 0 1px 3px rgba(0, 0, 0, 0.6) inset;
+  --sink: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  --edge-light: rgba(255, 255, 255, 0.07);
   }
+}
+
+/* The dark theme needs a little more of it: the same opacity over a
+   near-black ground reads as nothing at all. */
+:root[data-theme="dark"] body,
+:root:not([data-theme="light"]) body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E");
 }
 
 :root[data-theme="dark"] {
@@ -162,6 +183,11 @@
   --btn-text: #191713;
   --code-bg: rgba(231, 225, 211, 0.08);
   --shadow: rgba(0, 0, 0, 0.45);
+  --lift-1: 0 1px 0 rgba(255, 255, 255, 0.10) inset, 0 1px 1.5px rgba(0, 0, 0, 0.5), 0 2px 5px -2px rgba(0, 0, 0, 0.6);
+  --lift-2: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 2px 3px rgba(0, 0, 0, 0.55), 0 6px 14px -4px rgba(0, 0, 0, 0.7);
+  --press: 0 1px 3px rgba(0, 0, 0, 0.6) inset;
+  --sink: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  --edge-light: rgba(255, 255, 255, 0.07);
 }
 
 * { box-sizing: border-box; }
@@ -169,7 +195,11 @@
 body {
   margin: 0;
   font-family: var(--font-ui);
-  background: var(--bg);
+  /* Paper grain: an embedded SVG of monochrome noise at 3.5%, tiled. You
+     do not see it; you notice it. It is the difference between a beige
+     background and paper, and it costs one declaration -- no image
+     request, no library. */
+  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E") repeat;
   color: var(--text);
   line-height: 1.5;
   /* A safety net, not the fix -- see .topbar nav's flex-wrap below for the
@@ -287,22 +317,51 @@ h1 { margin-top: 0; }
   padding: var(--s-4) var(--s-6);
   border-radius: var(--radius);
   font-family: var(--font-ui);
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.005em;
   cursor: pointer;
   font-size: var(--t-md);
   line-height: 1.4;
-  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  /* The gradient is about 4% of lightness end to end -- not a shine, just
+     a direction for the light. Without it the fill reads as a coloured
+     rectangle whatever shadow sits underneath. */
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.13), rgba(0, 0, 0, 0.07));
+  box-shadow: var(--lift-1);
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease,
+              box-shadow 0.16s ease, transform 0.08s ease;
+}
+.btn:hover { box-shadow: var(--lift-2); transform: translateY(-1px); }
+/* Pressed: down a pixel, shadow inverted, gradient off. This is the half
+   people feel rather than see, and the half that was missing. */
+.btn:active { box-shadow: var(--press); transform: translateY(1px); background-image: none; }
+/* Inline SVG, inheriting the button's own colour -- no icon font, no
+   dependency. Only the verbs get one; a label with a picture beside every
+   word is noise, not help. */
+.btn .ico { width: 1em; height: 1em; flex: 0 0 auto; }
+.btn .ico path, .btn .ico line, .btn .ico polyline {
+  stroke: currentColor; stroke-width: 2.2; fill: none;
+  stroke-linecap: round; stroke-linejoin: round;
 }
 .btn:hover { background: var(--accent-strong); text-decoration: none; }
 .btn.ghost {
   background: transparent; color: var(--text); border-color: var(--border-strong);
+  background-image: linear-gradient(to bottom, var(--edge-light), rgba(0, 0, 0, 0.02));
+  box-shadow: 0 1px 0 var(--edge-light) inset, 0 1px 1.5px rgba(60, 50, 30, 0.10);
 }
+.btn.ghost:hover { box-shadow: var(--lift-1); }
 .btn.ghost:hover { background: var(--bg-sunken); border-color: var(--text-muted); color: var(--text); }
 .btn.small { padding: var(--s-2) var(--s-5); font-size: var(--t-sm); }
 .btn.accept { background: var(--accepted); color: var(--btn-text); }
 .btn.reject { background: var(--rejected); color: var(--btn-text); }
-.btn.danger { background: transparent; color: var(--rejected); border-color: rgba(var(--rejected-rgb), 0.45); }
-.btn.danger:hover { background: rgba(var(--rejected-rgb), 0.1); border-color: var(--rejected); }
+/* A destructive button does not invite: flat until you point at it. */
+.btn.danger {
+  background: transparent; color: var(--rejected); border-color: rgba(var(--rejected-rgb), 0.45);
+  background-image: none; box-shadow: none;
+}
+.btn.danger:hover {
+  background: rgba(var(--rejected-rgb), 0.1); border-color: var(--rejected);
+  box-shadow: var(--lift-1); transform: none;
+}
 .btn.tiny { padding: var(--s-1) var(--s-4); font-size: var(--t-xs); }
 
 /* --- auth --- */
@@ -317,6 +376,7 @@ label { display: flex; flex-direction: column; gap: var(--s-3); font-size: var(-
 input, textarea, select {
   background: var(--bg-sunken); border: 1px solid var(--border); color: var(--text);
   border-radius: var(--radius); padding: var(--s-4) var(--s-5); font: inherit; font-size: var(--t-md);
+  box-shadow: var(--sink);
   transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
 }
 input:hover, textarea:hover, select:hover { border-color: var(--border-strong); }
@@ -395,7 +455,17 @@ select {
   display: flex; gap: var(--s-5); align-items: baseline; white-space: nowrap;
   color: var(--text-muted); font-size: var(--t-sm); flex-shrink: 0;
 }
-.badge { padding: var(--s-1) var(--s-4); border-radius: 999px; font-size: var(--t-xs); font-weight: 600; letter-spacing: 0.01em; }
+/* A badge is a status, not a control. The dot says so at a glance and
+   stops it reading as a very small button. */
+.badge {
+  display: inline-flex; align-items: center; gap: var(--s-3);
+  padding: var(--s-1) var(--s-4); border-radius: 3px;
+  font-size: var(--t-xs); font-weight: 600; letter-spacing: 0.01em;
+}
+.badge::before {
+  content: ""; width: 5px; height: 5px; border-radius: 50%;
+  background: currentColor; opacity: 0.9; flex: 0 0 auto;
+}
 .badge.pending { background: rgba(var(--pending-rgb), 0.15); color: var(--pending); }
 .badge.new { background: rgba(var(--accent-rgb), 0.14); color: var(--accent-strong); }
 .badge.new-comments { background: rgba(var(--accepted-rgb), 0.15); color: var(--accepted); }
@@ -749,8 +819,11 @@ input:focus, textarea:focus, select:focus {
    click doesn't leave a ring sitting on the button afterward -- only
    keyboard/programmatic focus does. */
 .btn:focus-visible, .linklike:focus-visible, .theme-toggle:focus-visible,
-.wa-check-row:focus-within, .chapter-row:focus-visible {
-  outline: none; box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.4);
+.wa-check-row:focus-within, .tag-pick:focus-within, .chapter-row:focus-visible {
+  outline: none;
+  /* Paper first, then ink. A ring of the page colour before the accent
+     one, so it reads on a filled button as clearly as on the background. */
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent), var(--lift-1);
 }
 
 /* --- writing analyzer (Hemingway-style highlights + markdown preview) --- */
@@ -788,7 +861,7 @@ input:focus, textarea:focus, select:focus {
      over an input, it's a toggle pill. */
   display: inline-flex; flex-direction: row; align-items: center; gap: var(--s-3);
   padding: var(--s-2) var(--s-5) var(--s-2) var(--s-4); margin: 0;
-  border: 1px solid var(--border); border-radius: 999px;
+  border: 1px solid var(--border); border-radius: 3px;
   background: transparent; cursor: pointer; user-select: none;
   font-size: var(--t-sm); font-weight: 500; color: var(--text-muted); white-space: nowrap;
   transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
@@ -964,8 +1037,9 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 .tag-chips { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-4); }
 .tag-chip {
   display: inline-flex; align-items: center; gap: var(--s-3);
-  padding: var(--s-1) var(--s-4); border: 1px solid var(--border); border-radius: 999px;
-  background: var(--bg-elevated); color: var(--text-muted);
+  padding: var(--s-1) var(--s-4); border: 1px solid rgba(var(--accent-rgb), 0.22); border-radius: 3px;
+  background: rgba(var(--accent-rgb), 0.055); color: var(--text);
+  box-shadow: 0 1px 0 var(--edge-light) inset;
   font-family: var(--font-ui); font-size: var(--t-xs); font-weight: 500; white-space: nowrap;
 }
 .tag-chip:hover { border-color: var(--border-strong); color: var(--text); text-decoration: none; }
@@ -998,7 +1072,7 @@ mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: 
 .tag-pick {
   display: inline-flex; flex-direction: row; align-items: center; gap: var(--s-3);
   padding: var(--s-2) var(--s-5) var(--s-2) var(--s-4); margin: 0;
-  border: 1px solid var(--border); border-radius: 999px;
+  border: 1px solid var(--border); border-radius: 3px;
   background: transparent; cursor: pointer; user-select: none;
   font-size: var(--t-sm); font-weight: 500; color: var(--text-muted); white-space: nowrap;
   transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
@@ -1485,4 +1559,26 @@ mark.search-hit {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   max-width: 68ch;
+}
+
+
+/* ---------------------------------------------------------------------
+   Last details
+   --------------------------------------------------------------------- */
+/* An underline that thickens as you point at it, the way a nib presses. */
+.container a:not(.btn):not(.tag-chip):not(.row-link):not(.chapter-nav-link) {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  transition: text-decoration-thickness 0.12s ease, text-underline-offset 0.12s ease;
+}
+.container a:not(.btn):not(.tag-chip):not(.row-link):not(.chapter-nav-link):hover {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.15em;
+}
+
+/* Everything above that moves is decoration. Somebody who has asked their
+   system for less motion gets the relief and none of the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn:hover, .btn:active { transition: box-shadow 0.16s ease; transform: none; }
+  .container a { transition: none; }
 }

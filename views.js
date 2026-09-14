@@ -18,6 +18,17 @@ function wordCount(n) {
   return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}k words`;
 }
 
+// Inline SVG, one line each, inheriting the button's own colour -- no
+// icon font and no dependency. Only the verbs get one: accepting and
+// rejecting a comment are what this app is for, and they should be
+// distinguishable across a room rather than by reading them. A picture
+// beside every label would be noise.
+const ICONS = {
+  tick: '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><polyline points="4,10.5 8,14.5 16,5.5"/></svg>',
+  cross: '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><line x1="5.5" y1="5.5" x2="14.5" y2="14.5"/><line x1="14.5" y1="5.5" x2="5.5" y2="14.5"/></svg>',
+  plus: '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><line x1="10" y1="4.5" x2="10" y2="15.5"/><line x1="4.5" y1="10" x2="15.5" y2="10"/></svg>',
+};
+
 function fileUploadField() {
   return `
     <label>Or upload a file instead (.md, .txt, or .docx) &mdash; replaces the text above
@@ -837,7 +848,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           ${storyStatsBlock(stats)}
         </div>
         <div class="page-head-actions">
-          ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">Add chapter</a>` : ''}
+          ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
           ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
           ${isStoryAuthor ? `
             <form method="post" action="/stories/${story.id}/archive" class="inline-form">
@@ -937,8 +948,8 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies }) {
       <div class="comment-actions">
         ${isChapterAuthor && c.status === 'pending' ? `
           <form method="post" action="/comments/${c.id}/status" class="inline-form">
-            <button name="status" value="accepted" class="btn small accept" type="submit">Accept</button>
-            <button name="status" value="rejected" class="btn small reject" type="submit">Reject</button>
+            <button name="status" value="accepted" class="btn small accept" type="submit">${ICONS.tick}Accept</button>
+            <button name="status" value="rejected" class="btn small reject" type="submit">${ICONS.cross}Reject</button>
           </form>` : ''}
         ${isChapterAuthor && c.status !== 'pending' ? `
           <form method="post" action="/comments/${c.id}/reopen" class="inline-form">
