@@ -379,6 +379,7 @@ function tagNotFoundPage({ user, slug }) {
 function editStoryPage({ user, story, groups, selectedTagIds, error, values = /** @type {FormValues} */ ({}) }) {
   const title = values.title !== undefined ? values.title : story.title;
   const description = values.description !== undefined ? values.description : story.description;
+  const synopsis = values.synopsis !== undefined ? values.synopsis : (story.synopsis || '');
   return layout({
     title: `Edit - ${story.title}`,
     user,
@@ -395,6 +396,10 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, values = /*
           <label>Description
             <textarea name="description" rows="3">${escapeHtml(description || '')}</textarea>
             <span class="hint">A couple of lines on what this story is, shown wherever it's listed.</span>
+          </label>
+          <label>Synopsis
+            <textarea name="synopsis" rows="6">${escapeHtml(synopsis)}</textarea>
+            <span class="hint">What actually happens, for somebody coming back to chapter nine after a month away. Spoilers are fine &mdash; it stays folded on the story page.</span>
           </label>
           <div class="writer-section">
             <p class="writer-section-label">Tags</p>
@@ -725,6 +730,45 @@ function bylineWith(authorName, coauthors) {
   return `${base} with ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
+// 250 words a minute is the usual figure for adult fiction read for
+// pleasure. It is an estimate and is written as one -- "about 40 minutes",
+// never "38 minutes" -- because the false precision is what makes this
+// kind of number annoying.
+function readingTime(words) {
+  const minutes = Math.round((Number(words) || 0) / 250);
+  if (!minutes) return 'a few minutes';
+  if (minutes < 60) return `about ${minutes} minute${minutes === 1 ? '' : 's'}`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!rest) return `about ${hours} hour${hours === 1 ? '' : 's'}`;
+  return `about ${hours}h ${rest}m`;
+}
+
+// The shape of the story at a glance: how much there is, how long it takes,
+// how much of it is waiting on somebody.
+function storyStatsBlock(stats) {
+  if (!stats) return '';
+  const item = (value, label) => `<div class="story-stat"><span class="story-stat-value">${value}</span><span class="story-stat-label">${label}</span></div>`;
+  return `
+    <div class="story-stats">
+      ${item(stats.chapters, `chapter${stats.chapters === 1 ? '' : 's'}`)}
+      ${stats.words ? item(wordCount(stats.words).replace(/ words$/, ''), 'words') : ''}
+      ${stats.words ? item(readingTime(stats.words).replace(/^about /, ''), 'to read') : ''}
+      ${stats.comments ? item(stats.comments, `comment${stats.comments === 1 ? '' : 's'}`) : ''}
+      ${stats.pending_comments ? item(stats.pending_comments, 'unresolved') : ''}
+      ${stats.last_written_at ? `<div class="story-stat"><span class="story-stat-value">${timeHtml(stats.last_written_at)}</span><span class="story-stat-label">last written</span></div>` : ''}
+    </div>`;
+}
+
+function synopsisSection(story) {
+  if (!story.synopsis) return '';
+  return `
+    <details class="story-synopsis">
+      <summary>Synopsis &mdash; what happens so far <span class="muted">(spoilers)</span></summary>
+      <div class="prose">${renderHighlighted(parseMarkdown(story.synopsis), [], null)}</div>
+    </details>`;
+}
+
 function coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId }) {
   const rows = coauthors.length
     ? coauthors.map((c) => `
@@ -759,7 +803,7 @@ function coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, c
     </section>`;
 }
 
-function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [] }) {
+function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null }) {
   const rows = chapters.length ? chapters.map((c, i) => `
     <div class="chapter-row-outer">
       <a class="chapter-row" href="/chapters/${c.id}">
@@ -790,6 +834,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           <p class="muted byline">${bylineWith(story.author_name, coauthors)} &middot; ${timeHtml(story.created_at)}</p>
           ${story.description ? `<p class="summary">${escapeHtml(story.description)}</p>` : ''}
           ${tagChips(tags)}
+          ${storyStatsBlock(stats)}
         </div>
         <div class="page-head-actions">
           ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">Add chapter</a>` : ''}
@@ -800,6 +845,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
             </form>` : ''}
         </div>
       </div>
+      ${synopsisSection(story)}
       <div class="chapter-list">${rows}</div>
       <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>
       ${(isStoryAuthor || coauthors.length) ? coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId: user.id }) : ''}

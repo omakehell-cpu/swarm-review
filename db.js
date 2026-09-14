@@ -311,6 +311,12 @@ ensureColumn('wiki_pages', 'content_html', 'TEXT');
 // column existed.
 ensureColumn('chapter_versions', 'word_count', 'INTEGER');
 
+// The blurb on the index (stories.description) sells the story in two
+// lines. The synopsis is the other thing: what actually happens, for
+// somebody coming back to chapter nine after a month away. It can carry
+// spoilers, so the story page keeps it folded.
+ensureColumn('stories', 'synopsis', "TEXT NOT NULL DEFAULT ''");
+
 // One-time migration: older versions of this app gated registration with a
 // single static code stored in data/invite-code.txt (valid forever, for
 // anyone). If that file exists and the new invite_codes table is still

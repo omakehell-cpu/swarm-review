@@ -497,15 +497,16 @@ async function handleEditStorySubmit(req, res, user, storyId) {
   const body = await parseBody(req);
   const title = (body.title || '').trim();
   const description = (body.description || '').trim();
+  const synopsis = (body.synopsis || '').trim();
   const tagIds = [...tagIdsFromBody(body), ...proposedTagIdsFromBody(body, user)];
   if (!title) {
     return sendHtml(res, 400, views.editStoryPage({
       user, story, groups: models.listTagsGrouped(), selectedTagIds: tagIds,
       error: 'A story needs a title.',
-      values: { title, description },
+      values: { title, description, synopsis },
     }));
   }
-  models.updateStoryDetails(storyId, { title, description });
+  models.updateStoryDetails(storyId, { title, description, synopsis });
   models.setStoryTags(storyId, tagIds);
   redirect(res, `/stories/${storyId}`);
 }
@@ -675,6 +676,7 @@ async function handleStoryPage(req, res, user, storyId, query) {
   const dictionary = canWrite ? models.listStoryDictionaryEntries(storyId) : [];
   sendHtml(res, 200, views.storyPage({
     user, story, chapters, isStoryAuthor, canWrite, dictionary,
+    stats: models.getStoryStats(storyId),
     tags: models.getStoryTags(storyId),
     coauthors: models.listStoryCoauthors(storyId),
     addableCoauthors: isStoryAuthor ? models.listAddableCoauthors(story) : [],

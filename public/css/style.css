@@ -1396,3 +1396,43 @@ mark.search-hit {
 .wa-popover-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .wa-popover-actions .btn.tiny { font-variant: none; }
 .wa-popover-suggest { margin-top: 6px; font-weight: 600; font-size: 0.85rem; }
+
+/* ---- the shape of a story, under its blurb ---- */
+.story-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.story-stat { display: flex; flex-direction: column; gap: 1px; }
+.story-stat-value {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.story-stat-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+
+.story-synopsis { margin: 26px 0 8px; }
+.story-synopsis > summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  padding: 5px 0;
+}
+.story-synopsis > summary:hover { color: var(--text); }
+.story-synopsis .prose {
+  margin-top: 10px;
+  padding: 16px 20px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 68ch;
+}
