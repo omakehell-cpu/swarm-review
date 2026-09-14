@@ -255,7 +255,12 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.02em; line-height: 1.25; }
   justify-content: space-between;
   align-items: center;
   gap: var(--s-4) var(--s-8);
-  padding: 0 var(--s-8);
+  /* The rule under the bar runs the full width of the window, but what
+     sits on it lines up with the page: the brand starts where the title
+     starts and the account ends where the text ends. The bar spanning
+     one grid and the document another was the single loudest thing on a
+     wide screen. */
+  padding: 0 calc(max(0px, (100% - 1400px) / 2) + var(--s-8));
   min-height: 52px;
   border-bottom: 2px solid var(--border-strong);
   background: var(--bg);
@@ -314,8 +319,10 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.02em; line-height: 1.25; }
 .linklike:hover { text-decoration: underline; }
 .inline-form { display: inline; }
 
-.container { max-width: 1040px; margin: 0 auto; padding: var(--s-10) var(--s-8) var(--s-12); transition: max-width 0.2s ease; }
-.container-wide { max-width: 1500px; }
+/* The page column, and the number the masthead's padding is derived from
+   above -- change one and change the other. */
+.container { max-width: 1400px; margin: 0 auto; padding: var(--s-10) var(--s-8) var(--s-12); transition: max-width 0.2s ease; }
+.container-wide { max-width: 1700px; }
 /* "Fill screen" on the chapter reading page (see public/js/app.js) -- same
    pattern as the editor's own Fill-screen button (.writer-card.wa-
    fullwidth below). #chapter-text's own max-width:72ch still caps actual
@@ -615,6 +622,18 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 .download-links { display: inline-flex; align-items: baseline; gap: var(--s-4); }
 .download-links a { margin-left: 0; }
 
+/* The one part of the app that cannot use a wider window: the draft is
+   capped at its measure whatever the screen does, and the further the
+   comment column drifts from the sentence it is about, the longer the
+   connector and the weaker the link. So the chapter page holds its own
+   width inside the wider page column -- and "Fill screen" is still there
+   for anyone who wants the whole window anyway. */
+.chapter-header,
+.chapter-body-grid,
+.chapter-nav { max-width: 1180px; }
+.wa-fullwidth .chapter-header,
+.wa-fullwidth .chapter-body-grid,
+.wa-fullwidth .chapter-nav { max-width: none; }
 .chapter-body-grid { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr); gap: var(--s-10); align-items: start; }
 
 /* There is no sheet. The draft is not printed on a card laid over the
@@ -869,6 +888,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   .chapter-row-main p { max-width: none; }
   .page-head { flex-wrap: wrap; }
   .topbar { padding: var(--s-4) var(--s-6); }
+  .chapter-header, .chapter-body-grid, .chapter-nav { max-width: none; }
   .topbar-account { padding-left: var(--s-4); margin-left: var(--s-1); }
   .reading-pane { padding: var(--s-8) var(--s-7); }
   .container { padding: var(--s-8) var(--s-6) var(--s-12); }
