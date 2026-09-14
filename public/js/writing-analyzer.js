@@ -72,10 +72,18 @@
   const SETTINGS_KEY = 'wa-settings-v2';
   const LEGACY_ENABLED_KEY = 'wa-enabled'; // the old single on/off switch
 
-  function loadSettings() {
-    const settings = Object.assign({}, DEFAULT_SETTINGS);
+  // The reading page is where you go to read a chapter and see what people
+  // said about it. Arriving to prose already covered in five colours of
+  // mark answers a question nobody asked, so the checks start off there
+  // and remember separately: turning "long sentences" off while reading
+  // shouldn't turn it off in the editor, where it is the whole point.
+  const READ_DEFAULT_SETTINGS = { spell: false, passive: false, adverb: false, filler: false, complex: false, sentence: false };
+  const READ_SETTINGS_KEY = 'wa-read-settings-v1';
+
+  function loadSettings(key = SETTINGS_KEY, defaults = DEFAULT_SETTINGS) {
+    const settings = Object.assign({}, defaults);
     try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
+      const raw = localStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw);
         CHECK_ORDER.forEach((id) => { if (typeof parsed[id] === 'boolean') settings[id] = parsed[id]; });
@@ -84,15 +92,15 @@
       // First time this browser sees the new per-check settings: honor the
       // old master on/off switch, if it was ever turned off, instead of
       // silently re-enabling everything.
-      if (localStorage.getItem(LEGACY_ENABLED_KEY) === '0') {
+      if (key === SETTINGS_KEY && localStorage.getItem(LEGACY_ENABLED_KEY) === '0') {
         CHECK_ORDER.forEach((id) => { settings[id] = false; });
       }
     } catch (e) { /* ignore, defaults stand */ }
     return settings;
   }
 
-  function saveSettings(settings) {
-    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* ignore */ }
+  function saveSettings(settings, key = SETTINGS_KEY) {
+    try { localStorage.setItem(key, JSON.stringify(settings)); } catch (e) { /* ignore */ }
   }
 
   // The "show comments" toggle is shared by the editor and the reading
@@ -740,15 +748,19 @@
   // callers append their own extra sections to (the editor adds a
   // "Markdown preview" section, and both the editor and the reading page
   // add a "Comments" section, after this).
-  function buildControlsCard(settings, onToggle) {
+  function buildControlsCard(settings, onToggle, { startOpen = true } = {}) {
     const card = document.createElement('div');
     card.className = 'wa-card';
 
     const head = document.createElement('div');
     head.className = 'wa-card-head';
-    const title = document.createElement('span');
-    title.className = 'wa-card-title';
-    title.textContent = 'Writing checks';
+    // The head is the fold's handle: the whole strip toggles, so the
+    // counts stay readable at a glance with the switches put away.
+    const title = document.createElement('button');
+    title.type = 'button';
+    title.className = 'wa-card-title wa-card-toggle';
+    title.setAttribute('aria-expanded', startOpen ? 'true' : 'false');
+    title.innerHTML = '<span class="wa-card-caret" aria-hidden="true"></span>Writing checks';
     const summary = document.createElement('span');
     summary.className = 'wa-summary';
     summary.innerHTML = 'Checking...';
@@ -758,6 +770,11 @@
 
     const sections = document.createElement('div');
     sections.className = 'wa-sections';
+    if (!startOpen) card.classList.add('wa-card-folded');
+    title.addEventListener('click', () => {
+      const open = card.classList.toggle('wa-card-folded');
+      title.setAttribute('aria-expanded', open ? 'false' : 'true');
+    });
 
     const spellRow = buildCheckRow(
       CHECK_META.spell.color, CHECK_META.spell.label, settings.spell !== false,
@@ -1379,14 +1396,14 @@
       return;
     }
 
-    let settings = loadSettings();
+    let settings = loadSettings(READ_SETTINGS_KEY, READ_DEFAULT_SETTINGS);
     let storyWords = new Set();
 
     const { card, summary, sections } = buildControlsCard(settings, (id, checked) => {
       settings = Object.assign({}, settings, { [id]: checked });
-      saveSettings(settings);
+      saveSettings(settings, READ_SETTINGS_KEY);
       render();
-    });
+    }, { startOpen: false });
     const commentsRow = buildCheckRow('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged);
     sections.appendChild(buildSection('Comments', [commentsRow]));
     const wikiRow = buildCheckRow('#5a8cd8', 'Wiki links', wikiLinksVisible, wikiLinksToggleChanged);
