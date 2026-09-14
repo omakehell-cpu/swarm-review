@@ -593,6 +593,7 @@ async function handleStories(req, res, user, query) {
   sendHtml(res, 200, views.storiesPage({
     user, stories: visible, folded, since, tagsByStory, coauthorsByStory,
     activeTags, allGroups: models.listTagsGrouped(),
+    inbox: models.inboxFor(user.id, { since }),
   }));
 }
 

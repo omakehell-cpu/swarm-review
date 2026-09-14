@@ -1329,3 +1329,59 @@ mark.search-hit {
    doesn't jump sideways as issue chips appear and disappear. */
 .wa-words { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
 .wa-chip.muted { color: var(--text-muted); font-weight: 400; }
+
+/* ---- what's waiting for you, above the story list ---- */
+.inbox {
+  display: grid;
+  gap: 22px;
+  margin: 0 0 30px;
+  padding: 20px 22px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+}
+.inbox-group h3 {
+  margin: 0 0 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+}
+.inbox-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.inbox-list a {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 7px 8px;
+  margin: 0 -8px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+}
+.inbox-list a:hover { background: var(--bg-sunken); }
+.inbox-count {
+  grid-row: span 2;
+  align-self: center;
+  min-width: 1.9em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--pending);
+  color: var(--btn-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.inbox-what { grid-column: 2; font-size: 0.95rem; }
+.inbox-what strong { font-weight: 600; }
+.inbox-where { grid-column: 2; font-size: 0.82rem; color: var(--text-muted); }
+.inbox-list a:has(.inbox-count) .inbox-what,
+.inbox-list a:has(.inbox-count) .inbox-where { grid-column: 2; }
+.inbox-list a:not(:has(.inbox-count)) .inbox-what,
+.inbox-list a:not(:has(.inbox-count)) .inbox-where { grid-column: 1 / -1; }
+@media (max-width: 720px) {
+  .inbox { padding: 16px; gap: 18px; }
+}

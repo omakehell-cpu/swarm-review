@@ -1123,6 +1123,93 @@ function setWikiSyncState({ status, pageCount, error }) {
   `).run(status, pageCount || 0, error || null);
 }
 
+// ---------- what's waiting for you ----------
+// The story index answers "what is here". This answers "what is here for
+// me", which for a group that exists to correct each other's drafts is
+// the question you actually arrive with.
+//
+// Two different kinds of thing, deliberately kept apart. Pending comments
+// on your own chapters are *outstanding*: they sit there until you accept
+// or reject them, and reloading the page does not make them go away. The
+// other two are *news*, and use the same "since your last visit" mark the
+// New badges already use -- which means reloading does clear them. Mixing
+// the two would make the durable list look dismissable.
+
+const LATEST_VERSION = `v.version_number = (
+  SELECT MAX(v9.version_number) FROM chapter_versions v9 WHERE v9.chapter_id = v.chapter_id
+)`;
+
+function pendingOnMyChapters(userId) {
+  return db.prepare(`
+    SELECT c.id AS chapter_id, c.title AS chapter_title, c.chapter_number,
+           s.id AS story_id, s.title AS story_title,
+           COUNT(*) AS pending, MAX(cm.created_at) AS latest_at
+    FROM comments cm
+    JOIN chapter_versions v ON v.id = cm.version_id
+    JOIN chapters c ON c.id = v.chapter_id
+    JOIN stories s ON s.id = c.story_id
+    WHERE c.author_id = @userId
+      AND c.archived_at IS NULL AND s.archived_at IS NULL
+      AND ${LATEST_VERSION}
+      AND cm.status = 'pending' AND cm.parent_id IS NULL AND cm.deleted_at IS NULL
+    GROUP BY c.id
+    ORDER BY latest_at DESC
+  `).all({ userId });
+}
+
+function repliesToMe(userId, since, limit) {
+  if (!since) return [];
+  return db.prepare(`
+    SELECT r.id, r.body, r.created_at, u.display_name AS author_name,
+           c.id AS chapter_id, c.title AS chapter_title, c.chapter_number,
+           s.title AS story_title
+    FROM comments r
+    JOIN comments parent ON parent.id = r.parent_id
+    JOIN chapter_versions v ON v.id = r.version_id
+    JOIN chapters c ON c.id = v.chapter_id
+    JOIN stories s ON s.id = c.story_id
+    JOIN users u ON u.id = r.author_id
+    WHERE parent.author_id = @userId AND r.author_id <> @userId
+      AND r.deleted_at IS NULL AND r.created_at > @since
+      AND c.archived_at IS NULL AND s.archived_at IS NULL
+    ORDER BY r.created_at DESC
+    LIMIT @limit
+  `).all({ userId, since, limit });
+}
+
+function chaptersNewToMe(userId, since, limit) {
+  if (!since) return [];
+  return db.prepare(`
+    SELECT c.id, c.title, c.chapter_number, c.created_at,
+           s.id AS story_id, s.title AS story_title, u.display_name AS author_name,
+           (SELECT v.word_count FROM chapter_versions v WHERE v.chapter_id = c.id
+             ORDER BY v.version_number DESC LIMIT 1) AS word_count
+    FROM chapters c
+    JOIN stories s ON s.id = c.story_id
+    JOIN users u ON u.id = c.author_id
+    WHERE c.author_id <> @userId AND c.created_at > @since
+      AND c.archived_at IS NULL AND s.archived_at IS NULL
+    ORDER BY c.created_at DESC
+    LIMIT @limit
+  `).all({ userId, since, limit });
+}
+
+/**
+ * @param {number} userId
+ * @param {{ since?: string|null, limit?: number }} [options]
+ */
+function inboxFor(userId, { since = null, limit = 8 } = {}) {
+  const pending = pendingOnMyChapters(userId);
+  const replies = repliesToMe(userId, since, limit);
+  const newChapters = chaptersNewToMe(userId, since, limit);
+  return {
+    pending,
+    replies,
+    newChapters,
+    empty: !pending.length && !replies.length && !newChapters.length,
+  };
+}
+
 // ---------- coauthors ----------
 // A story's own author_id is its owner and is not repeated here: this
 // table holds only the people the owner has added. Everywhere the app asks
@@ -1303,6 +1390,7 @@ module.exports = {
   proposeTag,
   approveTag,
   mergeTag,
+  inboxFor,
   listStoryCoauthors,
   coauthorsForStories,
   isStoryCoauthor,
