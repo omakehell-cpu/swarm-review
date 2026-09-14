@@ -1385,3 +1385,14 @@ mark.search-hit {
 @media (max-width: 720px) {
   .inbox { padding: 16px; gap: 18px; }
 }
+
+/* ---- what the highlight is asking you to do ---- */
+.wa-hover-tip .wa-tip-label { display: block; }
+.wa-hover-tip .wa-tip-suggest {
+  display: block;
+  margin-top: 3px;
+  font-weight: 600;
+}
+.wa-popover-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.wa-popover-actions .btn.tiny { font-variant: none; }
+.wa-popover-suggest { margin-top: 6px; font-weight: 600; font-size: 0.85rem; }

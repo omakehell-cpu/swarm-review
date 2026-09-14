@@ -80,4 +80,10 @@ interface Error {
 interface Window {
   /** The vendored nspell bundle at public/js/nspell.bundle.js. */
   NSpell?: any;
+  /**
+   * A seam for the test suite: the writing analyzer's pure detection
+   * functions, so test/writing-checks.test.js can run them outside a
+   * browser. Nothing in the app reads it.
+   */
+  __writingAnalyzer?: any;
 }
