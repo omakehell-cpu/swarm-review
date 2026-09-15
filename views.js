@@ -869,13 +869,14 @@ function bibleSortBar(story, kind, sort) {
 // they write in the bible, but whether it is anybody else's business is
 // the story's to say, and the story has one owner.
 function biblePrivacyBlock(story, isOwner) {
+  // The owner's, and nobody else's -- not the switch, and not the state
+  // it is in. A coauthor writes in the bible; who else may read it is the
+  // one thing about it that is not theirs to see or to set.
+  if (!isOwner) return '';
   const isPrivate = !!story.bible_private;
   const line = isPrivate
     ? 'Only the people who write this story can see it, and its names do not link in the chapters.'
     : 'Anyone who can read the story can read its bible.';
-  if (!isOwner) {
-    return `<p class="bible-privacy muted"><span class="ent-badge${isPrivate ? ' status-private' : ''}">${isPrivate ? 'Private' : 'Open'}</span> ${line}</p>`;
-  }
   return `
     <form method="post" action="/stories/${story.id}/bible/privacy" class="bible-privacy inline-form">
       <span class="ent-badge${isPrivate ? ' status-private' : ''}">${isPrivate ? 'Private' : 'Open'}</span>
@@ -927,7 +928,7 @@ function bibleIndexPage({
         </div>
       </div>
       ${notice ? `<p class="flash info">${escapeHtml(notice)}</p>` : ''}
-      ${canWrite ? biblePrivacyBlock(story, isOwner) : ''}
+      ${biblePrivacyBlock(story, isOwner)}
       ${bibleConflictNotice(conflicts)}
       ${total ? `
         <div class="glossary-doors bible-doors">${KIND_ORDER.map(door).join('')}</div>
@@ -1910,7 +1911,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
         </div>
         <div class="page-head-actions">
           ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
-          ${bibleVisible ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
+          ${bibleVisible ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
           ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
           ${isStoryAuthor ? `
             <form method="post" action="/stories/${story.id}/archive" class="inline-form">

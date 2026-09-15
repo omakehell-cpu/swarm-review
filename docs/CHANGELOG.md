@@ -8,7 +8,7 @@ missing on the site, it has not been restarted yet.
 
 - **A Help section**, from the top bar: six how-tos, one per part of the site, with screenshots.
 - **This changelog**, inside it, marking anything published since you last looked.
-- **A story bible can be made private.** The owner's switch, at the top of the bible page. Closed, only the people who write the story can see it -- and the chapters stop linking names or listing who is in them, so nothing leaks through the back.
+- **A story bible can be made private.** The owner's switch, at the top of the bible page, and only the owner sees it. Closed, only the people who write the story can see the bible -- and the chapters stop linking names or listing who is in them, so nothing leaks through the back.
 
 ## 2026-09-15 — The story bible
 

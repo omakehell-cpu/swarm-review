@@ -600,3 +600,38 @@ test('opening it again gives everything back', async () => {
   assert.strictEqual((await reader.request(`/stories/${storyId}/bible`)).status, 200);
   assert.match(await (await reader.request(`/chapters/${chapterOne}`)).text(), /In this chapter/);
 });
+
+test('the privacy switch is the owner\'s alone -- a coauthor does not even see it', async () => {
+  const auth = require('../auth');
+  models.createUser({ username: 'luis', displayName: 'Luis', passwordHash: auth.hashPassword(PASSWORD), isAdmin: false });
+  const helper = makeClient(app.base);
+  await helper.login('luis', PASSWORD);
+  models.addStoryCoauthor(storyId, models.getUserByUsername('luis').id, models.getUserByUsername('ana').id);
+
+  // A coauthor writes in the bible.
+  const made = await helper.request(`/stories/${storyId}/bible`, {
+    method: 'POST', ...form([['name', 'Yevgenia Bru'], ['kind', 'person']]),
+  });
+  assert.strictEqual(made.status, 302, 'they can add an entry');
+
+  for (const state of ['private', 'open']) {
+    await owner.request(`/stories/${storyId}/bible/privacy`, {
+      method: 'POST', ...form([['visibility', state]]),
+    });
+    const theirs = await (await helper.request(`/stories/${storyId}/bible`)).text();
+    assert.ok(!theirs.includes('bible-privacy'), `no switch when ${state}`);
+    assert.ok(!theirs.includes('Make it private'), `and no button when ${state}`);
+    assert.ok(!theirs.includes('Open it to readers'), `either way, when ${state}`);
+
+    // And the owner still has it.
+    const hers = await (await owner.request(`/stories/${storyId}/bible`)).text();
+    assert.match(hers, /class="bible-privacy inline-form"/);
+  }
+
+  // Posting it by hand is refused, not merely hidden.
+  const refused = await helper.request(`/stories/${storyId}/bible/privacy`, {
+    method: 'POST', ...form([['visibility', 'private']]),
+  });
+  assert.strictEqual(refused.status, 403);
+  assert.strictEqual(models.getStoryById(storyId).bible_private, 0);
+});

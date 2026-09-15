@@ -1766,6 +1766,11 @@ async function router(req, res) {
     if (!user.is_admin) return sendError(res, 403, 'Admin access only.', user);
   }
 
+  // The screenshots in the how-tos. Below the login check rather than
+  // beside the stylesheets: they are pictures of the inside of the app,
+  // and everything else about the inside of the app needs a session.
+  if (pathname.startsWith('/img/') && tryServeStatic(req, res, pathname)) return;
+
   try {
     let m;
     if (pathname === '/login' && req.method === 'GET') return handleLoginPage(req, res, url.searchParams);

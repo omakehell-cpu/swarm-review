@@ -690,6 +690,16 @@ test('the help section is readable, and the changelog marks what is new', async 
   assert.match(html, /<h2[^>]*>/);
   assert.ok(!html.includes('## '), 'the hashes did not survive');
 
+  // The screenshots are in the page as pictures, and the pictures are
+  // actually served. A figure line left as literal text means the parser
+  // never saw it.
+  assert.match(html, /<figure class="doc-figure">/);
+  assert.match(html, /<img src="\/img\/help\/bible-index\.png"/);
+  assert.ok(!html.includes('@figure'), 'no figure line survived as text');
+  const picture = await request('/img/help/bible-index.png');
+  assert.strictEqual(picture.status, 200);
+  assert.strictEqual(picture.headers.get('content-type'), 'image/png');
+
   // A how-to that does not exist is a page, not a crash -- and a slug is
   // never turned into a path.
   assert.strictEqual((await request('/help/no-such-page')).status, 404);
