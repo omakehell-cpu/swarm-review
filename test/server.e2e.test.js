@@ -429,6 +429,44 @@ test('search finds a chapter by a word in its prose, in its current version only
   assert.match(await gone.text(), /Nothing matches/);
 });
 
+test('the glossary is filed under the wiki\'s own categories', async () => {
+  models.replaceWikiPages([
+    { title: 'Kestrel Anchorage', summary: 'An anchorage.', categories: ['Colonies', 'Systems'],
+      contentHtml: '<p>Built for <a href="/glossary/Akarge">Akarge</a>, supplied by an <a href="/glossary/A20">A20</a>. The <a href="/glossary/Akarge">Akarge</a> contraction ended it.</p>' },
+    { title: 'Akarge', summary: 'A trading concern.', categories: ['Economy'], contentHtml: '<p>Akarge.</p>' },
+    { title: 'A20', summary: 'An interface craft.', categories: ['Ships', 'Technology'], contentHtml: '<p>The A20.</p>' },
+  ]);
+
+  const index = await (await request('/glossary')).text();
+  assert.match(index, /class="glossary-categories"/, 'the categories are on the index');
+  assert.match(index, /Colonies/);
+  assert.match(index, /Technology/);
+
+  const ships = await (await request('/glossary?category=Ships')).text();
+  assert.match(ships, /A20/, 'the category holds what it should');
+  assert.ok(!ships.includes('>Kestrel Anchorage<'), 'and nothing it should not');
+  assert.match(ships, /aria-current="true"/, 'and says which one you are in');
+
+  // A category nobody filed anything under is simply empty, not an error.
+  const none = await request('/glossary?category=Does%20Not%20Exist');
+  assert.strictEqual(none.status, 200);
+  assert.match(await none.text(), /Nothing here matches/);
+});
+
+test('a glossary entry explains its links once each, in the margin', async () => {
+  const html = await (await request('/glossary/Kestrel%20Anchorage')).text();
+
+  // Two mentions of Akarge in the text, one card about it.
+  assert.strictEqual((html.match(/data-preview="akarge"/g) || []).length, 1, 'only the first mention is marked');
+  assert.strictEqual((html.match(/data-preview-for="akarge"/g) || []).length, 1, 'and it gets one card');
+  assert.match(html, /class="glossary-margin"/);
+  assert.match(html, /A trading concern\./, 'the card carries the summary from the local copy');
+  assert.match(html, /An interface craft\./);
+
+  // The categories of the entry itself lead back to the filtered index.
+  assert.match(html, /href="\/glossary\?category=Colonies"/);
+});
+
 test('a dead link lands on a page, not a blank window', async () => {
   const res = await request('/stories/999999');
   assert.strictEqual(res.status, 404);
