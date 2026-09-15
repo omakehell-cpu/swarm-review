@@ -4,6 +4,10 @@ const { layout } = require('./lib/layout');
 const { escapeHtml, toScriptJson } = require('./lib/util');
 const { parseMarkdown, renderHighlighted } = require('./lib/markdown');
 const { timeHtml } = require('./lib/time');
+const {
+  storyState, STORY_STATES, CHOOSABLE_STORY_STATES,
+  CHAPTER_STAGES, DEFAULT_CHAPTER_STAGE, CHAPTER_STAGE_META,
+} = require('./lib/story-state');
 const wiki = require('./lib/wiki');
 
 const MARKDOWN_HINT = `Markdown is supported: **bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - or 1. list items. Put a backslash before a character to keep it literal (\\* shows a real asterisk). Line breaks are kept as you type them.`;
@@ -194,6 +198,7 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } 
       </div>
       <div class="chapter-row-meta">
         <span>${bylineWith(s.author_name, coauthors)}</span>
+        ${storyState(s) === 'ongoing' ? '' : storyStateBadge(s)}
         <span>${s.chapter_count} chapter${s.chapter_count === 1 ? '' : 's'}${s.word_count ? ` &middot; ${wordCount(s.word_count)}` : ''}</span>
         ${timeHtml(s.last_chapter_at || s.created_at)}
         ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} pending</span>` : ''}
@@ -488,6 +493,7 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, values = /*
   const title = values.title !== undefined ? values.title : story.title;
   const description = values.description !== undefined ? values.description : story.description;
   const synopsis = values.synopsis !== undefined ? values.synopsis : (story.synopsis || '');
+  const status = values.status !== undefined ? values.status : (story.status || 'ongoing');
   return layout({
     title: `Edit - ${story.title}`,
     user,
@@ -508,6 +514,13 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, values = /*
           <label>Synopsis
             <textarea name="synopsis" rows="6">${escapeHtml(synopsis)}</textarea>
             <span class="hint">What actually happens, for somebody coming back to chapter nine after a month away. Spoilers are fine &mdash; it stays folded on the story page.</span>
+          </label>
+          <label>Where it stands
+            <select name="status">
+              ${CHOOSABLE_STORY_STATES.map((key) => `
+                <option value="${key}"${key === status ? ' selected' : ''}>${escapeHtml(STORY_STATES[key].label)} &mdash; ${escapeHtml(STORY_STATES[key].hint)}</option>`).join('')}
+            </select>
+            <span class="hint">There is no &ldquo;on hiatus&rdquo; to pick: a story that has been ongoing with nothing new for six months says so on its own, and stops saying it the day you add a chapter.</span>
           </label>
           <div class="writer-section">
             <p class="writer-section-label">Tags</p>
@@ -669,6 +682,29 @@ function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), gr
 
 // ---------- add another chapter to an existing story ----------
 
+// What the chapter is asking for, and whether it opens an arc. Both live
+// in the same fold as the summary and the upload: they are things you set
+// once in a while, not things you fill in to publish.
+function stageField(selectedValue) {
+  const selected = CHAPTER_STAGES.includes(selectedValue) ? selectedValue : DEFAULT_CHAPTER_STAGE;
+  return `
+    <label>What this chapter wants
+      <select name="stage">
+        ${CHAPTER_STAGES.map((key) => `
+          <option value="${key}"${key === selected ? ' selected' : ''}>${escapeHtml(CHAPTER_STAGE_META[key].label)} &mdash; ${escapeHtml(CHAPTER_STAGE_META[key].hint)}</option>`).join('')}
+      </select>
+      <span class="hint">Only shows on the story's contents when it is not the usual one.</span>
+    </label>`;
+}
+
+function arcField(selectedValue) {
+  return `
+    <label>Starts an arc (optional)
+      <input type="text" name="arcTitle" value="${escapeHtml(selectedValue || '')}" maxlength="80" placeholder="e.g. Book Two: The long winter">
+      <span class="hint">Name the arc this chapter opens, and the story's contents group everything from here to the next named chapter under it. Leave it empty on every chapter that just carries on.</span>
+    </label>`;
+}
+
 function positionField(chapters, selectedValue) {
   if (!chapters.length) return '';
   const selected = selectedValue || 'end';
@@ -706,6 +742,8 @@ function newChapterPage({ user, story, chapters = [], error, values = /** @type 
             <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary || '')}</textarea></label>
             ${fileUploadField()}
             ${positionField(chapters, values.position)}
+            ${stageField(values.stage)}
+            ${arcField(values.arcTitle)}
           </div>
           <div class="writer-actions">
             <a class="btn ghost" href="/stories/${story.id}">Cancel</a>
@@ -752,6 +790,8 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, v
           <p class="writer-section-label">Optional details</p>
           <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary ?? chapter.summary ?? '')}</textarea></label>
           ${fileUploadField()}
+          ${stageField(values.stage ?? chapter.stage)}
+          ${arcField(values.arcTitle ?? chapter.arc_title)}
           <label>What changed? (shown in the version history)<input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Fixed a couple of typos"></label>
         </div>
         <div class="writer-actions">
@@ -873,6 +913,7 @@ function storyStatsBlock(stats) {
   const item = (value, label) => `<div class="story-stat"><span class="story-stat-value">${value}</span><span class="story-stat-label">${label}</span></div>`;
   return `
     <div class="story-stats">
+      ${stats.arcs ? item(stats.arcs, `arc${stats.arcs === 1 ? '' : 's'}`) : ''}
       ${item(stats.chapters, `chapter${stats.chapters === 1 ? '' : 's'}`)}
       ${stats.words ? item(wordCount(stats.words).replace(/ words$/, ''), 'words') : ''}
       ${stats.words ? item(readingTime(stats.words).replace(/^about /, ''), 'to read') : ''}
@@ -952,13 +993,61 @@ function coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, c
     </section>`;
 }
 
+// The badge that says where a story is. The three chosen states are ink
+// or grey; only the one nobody chose -- six months of silence -- gets the
+// red, because it is the only one that is news.
+function storyStateBadge(story) {
+  const state = storyState(story);
+  const meta = STORY_STATES[state];
+  if (!meta) return '';
+  return `<span class="state-badge state-${state}" title="${escapeHtml(meta.hint)}">${escapeHtml(meta.label)}</span>`;
+}
+
+// A chapter says what it wants only when it wants something other than
+// the usual. Fifteen rows all saying "wants notes" is not information.
+function chapterStageBadge(chapter) {
+  const stage = chapter.stage || DEFAULT_CHAPTER_STAGE;
+  if (stage === DEFAULT_CHAPTER_STAGE) return '';
+  const meta = CHAPTER_STAGE_META[stage];
+  if (!meta) return '';
+  return `<span class="state-badge stage-${stage}" title="${escapeHtml(meta.hint)}">${escapeHtml(meta.label)}</span>`;
+}
+
+// An arc is the stretch from the chapter that names it to the chapter
+// that names the next one. Chapters before the first named one are not an
+// arc and get no heading -- a story that never mentions arcs reads
+// exactly as it did before this existed.
+function groupChaptersIntoArcs(chapters) {
+  const groups = [];
+  for (const chapter of chapters) {
+    const name = (chapter.arc_title || '').trim();
+    if (name || !groups.length) {
+      groups.push({ title: name, chapters: [chapter] });
+    } else {
+      groups[groups.length - 1].chapters.push(chapter);
+    }
+  }
+  return groups;
+}
+
+function arcHeading(group, position) {
+  if (!group.title) return '';
+  const words = group.chapters.reduce((sum, c) => sum + (c.word_count || 0), 0);
+  return `
+    <div class="arc-head">
+      <h3 class="arc-title"><span class="arc-number">${String(position).padStart(2, '0')}</span>${escapeHtml(group.title)}</h3>
+      <p class="arc-meta">${group.chapters.length} chapter${group.chapters.length === 1 ? '' : 's'}${words ? ` &middot; ${wordCount(words)}` : ''}</p>
+    </div>`;
+}
+
 function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map() }) {
-  const rows = chapters.length ? chapters.map((c, i) => `
+  const chapterRow = (c, i) => `
     <div class="chapter-row-outer">
       <a class="chapter-row" href="/chapters/${c.id}">
         <div class="chapter-row-main">
           <h3>Chapter ${c.chapter_number}: ${escapeHtml(c.title)}
             ${c.is_new ? '<span class="badge new">New</span>' : (c.has_new_comments ? '<span class="badge new-comments">New comments</span>' : '')}
+            ${chapterStageBadge(c)}
           </h3>
           <p class="muted">${escapeHtml(c.summary || '')}</p>
         </div>
@@ -972,7 +1061,16 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
       </a>
       ${isStoryAuthor ? chapterReorderButtons(c, i, chapters.length) : ''}
     </div>
-  `).join('') : emptyState({
+  `;
+  const arcs = groupChaptersIntoArcs(chapters);
+  const named = arcs.filter((g) => g.title).length;
+  let arcNumber = 0;
+  const rows = chapters.length ? arcs.map((group) => {
+    if (group.title) arcNumber += 1;
+    return `<section class="arc">${arcHeading(group, arcNumber)}<div class="chapter-list">${
+      group.chapters.map((c) => chapterRow(c, chapters.indexOf(c))).join('')
+    }</div></section>`;
+  }).join('') : emptyState({
     art: 'sheets',
     title: 'No chapters here',
     body: 'Every chapter of this story has been archived. They are still readable, and can be brought back.',
@@ -985,7 +1083,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
     body: `
       <div class="page-head">
         <div>
-          <h1>${escapeHtml(story.title)}</h1>
+          <h1>${escapeHtml(story.title)} ${storyStateBadge(story)}</h1>
           <p class="muted byline">${bylineWith(story.author_name, coauthors, story.author_username)} &middot; ${timeHtml(story.created_at)}</p>
           ${story.description ? `<p class="summary">${escapeHtml(story.description)}</p>` : ''}
           ${tagChips(tags)}
@@ -1001,7 +1099,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
         </div>
       </div>
       ${synopsisSection(story)}
-      <div class="chapter-list">${rows}</div>
+      ${named ? `<div class="arc-stack">${rows}</div>` : `<div class="chapter-list">${rows}</div>`}
       <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>
       ${(isStoryAuthor || coauthors.length) ? coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId: user.id }) : ''}
       ${canWrite ? storyDictionarySection(story, dictionary) : ''}`,
@@ -1652,6 +1750,10 @@ const EVENT_SENTENCES = {
   'tag-approved': (s) => `approved the tag ${s}`,
   'tag-merged': (s) => `merged a tag into ${s}`,
   'tag-deleted': (s) => `deleted the tag ${s}`,
+  'arc-started': (s) => `began an arc, ${s}`,
+  'arc-removed': (s) => `took out the arc ${s}`,
+  'stage-changed': (s) => `moved ${s}`,
+  'status-changed': (s) => `moved ${s}`,
 };
 
 function eventLine(ev) {
