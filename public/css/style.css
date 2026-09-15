@@ -1137,7 +1137,18 @@ input:focus, textarea:focus, select:focus {
    that check's actual color in the legend above. Checks that DO set their
    own background (passive voice, adverbs, ...) simply override this. */
 mark.wa-sentence { border-radius: 2px; background: transparent; color: inherit; }
-mark.wa-word { border-radius: 2px; padding: 0 1px; cursor: pointer; background: transparent; color: inherit; }
+/* No horizontal padding, no border, no margin, ever, on anything drawn
+   inside the overlay. The overlay and the textarea hold the same string
+   and must break it into lines at exactly the same points; an inline box
+   one pixel wider on each side does not look like anything, but with a
+   few marks on a line it is enough to wrap one word earlier than the
+   textarea does -- and from that line down, every line of the overlay is
+   one line above the text the caret is actually in. You click a
+   sentence and type into the one below it. (Measured before the fix: on
+   twelve randomly generated drafts the overlay ran one to seven lines
+   longer than the textarea, every single time.) The tint hugging the
+   glyphs is a fair price. */
+mark.wa-word { border-radius: 2px; padding: 0; cursor: pointer; background: transparent; color: inherit; }
 /* The overlay marks opt back into pointer-events (the overlay itself
    stays none) -- not so the browser can hit-test a real mouse event
    straight to one (the real, typeable textarea sits *on top* of the
