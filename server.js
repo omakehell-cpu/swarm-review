@@ -852,6 +852,10 @@ async function handleChapterPage(req, res, user, chapterId, query) {
 
   sendHtml(res, 200, views.chapterPage({
     user, chapter, versions, currentVersion, comments, isChapterAuthor,
+    // Writing the next chapter is a story-level right, not a chapter-level
+    // one: a coauthor can add chapters to a story whose other chapters
+    // they cannot touch.
+    canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
     neighbours: models.getChapterNeighbours(chapter),
     readers: models.listChapterReaders(chapterId),
   }));

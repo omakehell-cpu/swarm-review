@@ -192,6 +192,13 @@ test('a chapter in the middle of a story offers three ways to the next one', asy
   const first = await (await request(`/chapters/${chapters[0].id}`)).text();
   assert.match(first, /chapter-nav-arrow disabled/, 'the way back is spelled out and dead');
   assert.ok(!first.includes('chapter-float-arrow prev'), 'and nothing floats towards it');
+
+  // Past the last chapter there is nothing to read, so the slot the next
+  // chapter would occupy offers to write it instead.
+  const last = await (await request(`/chapters/${chapters[2].id}`)).text();
+  assert.match(last, /Write the next chapter/, 'the last chapter offers the next one');
+  assert.match(last, new RegExp(`href="/stories/${story.id}/chapters/new"`), 'and it goes to the form');
+  assert.ok(!middle.includes('Write the next chapter'), 'a chapter with a next one does not');
 });
 
 test('editing a chapter creates a second version, and the diff shows the edit', async () => {
