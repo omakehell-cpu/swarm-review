@@ -194,10 +194,14 @@ test('a coauthor shares the story dictionary, a stranger does not', async () => 
   assert.strictEqual(theirs.status, 403);
 });
 
-test('the story page names its coauthors in the byline', async () => {
+test('the story page names its coauthors in the byline, and each name leads to them', async () => {
   const res = await owner.request(`/stories/${storyId}`);
   const html = await res.text();
-  assert.match(html, /by Ana with Luis/);
+  // Read as a sentence, with the markup taken out: the names are links
+  // now, and a byline is still a byline.
+  assert.match(html.replace(/<[^>]+>/g, ''), /by Ana with Luis/);
+  assert.match(html, /href="\/users\/owner"/, 'the author leads to their page');
+  assert.match(html, /href="\/users\/helper"/, 'and so does the coauthor');
 });
 
 test('the owner sees the add form; a coauthor sees the list without it', async () => {

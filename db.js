@@ -334,6 +334,34 @@ CREATE TABLE IF NOT EXISTS chapter_reads (
 CREATE INDEX IF NOT EXISTS idx_chapter_reads_user ON chapter_reads(user_id);
 `);
 
+// What people have done here, in the order they did it. Written as it
+// happens rather than worked out afterwards from timestamps on other
+// tables: most of it could be derived (a chapter row knows when it was
+// created and by whom), but signing in, downloading a copy and syncing
+// the wiki leave no other trace, and a log with holes in it is worse
+// than no log -- you cannot tell "nobody did that" from "that is not
+// recorded".
+//
+// subject and href are written at the time and never updated: a log
+// entry should say what the thing was called when it happened, and a
+// renamed chapter does not retroactively change what somebody did. The
+// two foreign keys are only there for counting; they go null rather than
+// taking the row with them when a story is deleted.
+db.exec(`
+CREATE TABLE IF NOT EXISTS events (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  kind       TEXT NOT NULL,
+  subject    TEXT NOT NULL DEFAULT '',
+  href       TEXT,
+  story_id   INTEGER REFERENCES stories(id) ON DELETE SET NULL,
+  chapter_id INTEGER REFERENCES chapters(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_events_time ON events(id DESC);
+`);
+
 // One-time migration: older versions of this app gated registration with a
 // single static code stored in data/invite-code.txt (valid forever, for
 // anyone). If that file exists and the new invite_codes table is still

@@ -201,6 +201,64 @@ test('a chapter in the middle of a story offers three ways to the next one', asy
   assert.ok(!middle.includes('Write the next chapter'), 'a chapter with a next one does not');
 });
 
+test('what people do gets written down, and shows on the admin page', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapters = models.listChaptersForStory(story.id);
+  const me = models.getUserByUsername(USER.username);
+
+  const kinds = models.listEventsForUser(me.id, 200).map((e) => e.kind);
+  // Everything this suite has done so far, in the order it did it.
+  assert.ok(kinds.includes('joined'), 'registering is the first line');
+  assert.ok(kinds.includes('story-started'), 'starting a story is recorded');
+  assert.ok(kinds.includes('chapter-added'), 'so is adding a chapter');
+
+  await request(`/chapters/${chapters[0].id}/download.md`);
+  const afterDownload = models.listEventsForUser(me.id, 1)[0];
+  assert.strictEqual(afterDownload.kind, 'downloaded', 'and so is taking a copy away');
+  assert.match(afterDownload.subject, /as \.md$/);
+
+  // The admin page folds each person's log away behind their own row.
+  const admin = await (await request('/admin')).text();
+  assert.match(admin, /What they have done/, 'every user row carries their log');
+  assert.match(admin, /downloaded/, 'with the lines in it');
+});
+
+test('a name change follows everything already written, and the sign-in name stays put', async () => {
+  const before = models.getUserByUsername(USER.username);
+  const res = await request('/account/name', { method: 'POST', ...form([['displayName', 'Renamed Writer']]) });
+  assert.strictEqual(res.status, 302);
+
+  const after = models.getUserByUsername(USER.username);
+  assert.strictEqual(after.display_name, 'Renamed Writer');
+  assert.strictEqual(after.username, before.username, 'the way in does not move');
+
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapters = models.listChaptersForStory(story.id);
+  const page = await (await request(`/chapters/${chapters[0].id}`)).text();
+  assert.match(page, /by <a href="\/users\/testwriter">Renamed Writer<\/a>/, 'the byline is the new name, and leads to them');
+
+  // An empty name is not a name.
+  const empty = await request('/account/name', { method: 'POST', ...form([['displayName', '   ']]) });
+  assert.strictEqual(empty.status, 400);
+  assert.strictEqual(models.getUserByUsername(USER.username).display_name, 'Renamed Writer');
+
+  await request('/account/name', { method: 'POST', ...form([['displayName', USER.displayName]]) });
+});
+
+test('a profile page counts what somebody has written and links to it', async () => {
+  const me = models.getUserByUsername(USER.username);
+  const html = await (await request(`/users/${me.username}`)).text();
+  assert.match(html, /A Story With Many Tags/, 'their stories are on it');
+  assert.match(html, /words/, 'with the numbers underneath');
+  const stats = models.userStats(me.id);
+  assert.ok(stats.words > 0 && stats.chapters > 0, 'and the numbers are not zero');
+
+  const missing = await request('/users/nobody-at-all');
+  assert.strictEqual(missing.status, 404);
+  const placeholder = await request(`/users/${models.DELETED_USER_USERNAME}`);
+  assert.strictEqual(placeholder.status, 404, 'the bookkeeping account is not a person');
+});
+
 test('editing a chapter creates a second version, and the diff shows the edit', async () => {
   const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
   const chapterId = models.listChaptersForStory(story.id)[0].id;

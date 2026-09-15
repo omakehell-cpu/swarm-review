@@ -143,6 +143,15 @@ function login(res, user) {
 // route handlers
 // ---------------------------------------------------------------------
 
+// A line in the log, and never more than a line: models.recordEvent
+// swallows its own errors, so nothing anybody does here can be undone by
+// the app failing to write down that they did it. Every call passes the
+// label and the link as they are at that moment -- see the note on the
+// events table in db.js for why they are not looked up later.
+function logEvent(user, kind, opts = {}) {
+  if (user) models.recordEvent({ userId: user.id, kind, ...opts });
+}
+
 async function handleLoginPage(req, res, query) {
   const error = query.get('locked') ? 'This account is locked. Ask an admin to reactivate it.' : null;
   const notice = query.get('notice') || null;
@@ -180,6 +189,7 @@ async function handleLoginSubmit(req, res) {
   }
 
   models.resetFailedLogins(user.id);
+  logEvent(user, 'signed-in');
   login(res, user);
   redirect(res, '/');
 }
@@ -227,6 +237,7 @@ async function handleRegisterSubmit(req, res) {
     isAdmin: isFirstUser,
   });
   models.markInviteCodeUsed(codeRow.id, user.id);
+  logEvent(user, 'joined');
   login(res, user);
   redirect(res, '/');
 }
@@ -262,6 +273,7 @@ async function handleAccountPasswordSubmit(req, res, user) {
   }
 
   models.setOwnPassword(user.id, auth.hashPassword(newPassword));
+  logEvent(user, 'password-changed');
   // Changing the password bumps session_version (see models.js), which
   // invalidates every session for this account -- including the one making
   // this very request. Issue a fresh cookie right away so the user lands on
@@ -274,6 +286,35 @@ async function handleAccountPasswordSubmit(req, res, user) {
 // admin panel
 // ---------------------------------------------------------------------
 
+// The name on everything they write. The sign-in name stays put: it is
+// how the app knows them, it is in every session, and a group this size
+// gains nothing from being able to change it except somebody locked out
+// of their own account.
+async function handleAccountNameSubmit(req, res, user) {
+  const body = await parseBody(req);
+  const displayName = (body.displayName || '').trim().slice(0, 60);
+  if (!displayName) {
+    return sendHtml(res, 400, views.accountPage({ user, error: 'A name cannot be empty.' }));
+  }
+  models.setDisplayName(user.id, displayName);
+  logEvent(user, 'name-changed', { subject: displayName, href: `/users/${user.username}` });
+  redirect(res, '/account?notice=Name changed. It shows on everything you have written, not just what you write next.');
+}
+
+async function handleProfilePage(req, res, user, username) {
+  const person = models.getUserByUsername(String(username).toLowerCase());
+  if (!person || person.username === models.DELETED_USER_USERNAME) {
+    return sendError(res, 404, 'No such person', user);
+  }
+  sendHtml(res, 200, views.profilePage({
+    user,
+    person,
+    stats: models.userStats(person.id),
+    stories: models.listStoriesForUser(person.id),
+    chapters: models.listChaptersByUser(person.id),
+  }));
+}
+
 async function handleAdminPage(req, res, user, query) {
   const users = models.listUsersForAdmin();
   const activeInviteCode = models.getActiveInviteCode();
@@ -282,8 +323,16 @@ async function handleAdminPage(req, res, user, query) {
   const pendingResetLinks = models.listPendingPasswordResetTokens();
   const wikiSyncState = models.getWikiSyncState();
   const notice = query.get('notice') || null;
+  // The log is per person and folded away, so the last 30 of each is
+  // plenty: the whole point is "what has this one been up to", not a
+  // site-wide audit trail to page through.
+  const usersWithLog = users.map((u) => ({
+    ...u,
+    events: models.listEventsForUser(u.id, 30),
+    event_count: models.countEventsForUser(u.id),
+  }));
   sendHtml(res, 200, views.adminPage({
-    user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice,
+    user, users: usersWithLog, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice,
     tagGroups: models.listTagsGrouped(),
     proposedTags: models.listProposedTags(),
   }));
@@ -291,11 +340,13 @@ async function handleAdminPage(req, res, user, query) {
 
 async function handleAdminGenerateInviteCode(req, res, user) {
   models.generateNewInviteCode(user.id);
+  logEvent(user, 'invite-made');
   redirect(res, '/admin?notice=New invite code generated. The old one no longer works.');
 }
 
-async function handleAdminCloseRegistration(req, res, _user) {
+async function handleAdminCloseRegistration(req, res, user) {
   models.closeRegistration();
+  logEvent(user, 'registration-closed');
   redirect(res, '/admin?notice=Registration closed. No invite code will work until you generate a new one.');
 }
 
@@ -308,6 +359,7 @@ async function handleAdminSetPassword(req, res, user, targetUserId) {
     return redirect(res, '/admin?notice=Password must be at least 8 characters long -- not changed.');
   }
   models.adminSetPassword(targetUserId, auth.hashPassword(password));
+  logEvent(user, 'password-set-for', { subject: target.display_name, href: `/users/${target.username}` });
   redirect(res, `/admin?notice=Password changed for ${encodeURIComponent(target.display_name)}.`);
 }
 
@@ -316,6 +368,7 @@ async function handleAdminLockUser(req, res, user, targetUserId) {
   if (!target || target.username === models.DELETED_USER_USERNAME) return sendError(res, 404, 'User not found', user);
   if (target.id === user.id) return sendError(res, 400, "You can't lock your own account.", user);
   models.adminLockAccount(targetUserId);
+  logEvent(user, 'account-locked', { subject: target.display_name, href: `/users/${target.username}` });
   redirect(res, `/admin?notice=${encodeURIComponent(target.display_name)}'s account is now locked.`);
 }
 
@@ -323,6 +376,7 @@ async function handleAdminUnlockUser(req, res, user, targetUserId) {
   const target = models.getUserById(targetUserId);
   if (!target || target.username === models.DELETED_USER_USERNAME) return sendError(res, 404, 'User not found', user);
   models.adminUnlockAccount(targetUserId);
+  logEvent(user, 'account-unlocked', { subject: target.display_name, href: `/users/${target.username}` });
   redirect(res, `/admin?notice=${encodeURIComponent(target.display_name)}'s account is reactivated.`);
 }
 
@@ -369,6 +423,7 @@ async function handleAdminGenerateResetLink(req, res, user, targetUserId) {
   const target = models.getUserById(targetUserId);
   if (!target || target.username === models.DELETED_USER_USERNAME) return sendError(res, 404, 'User not found', user);
   const resetToken = models.createPasswordResetToken(targetUserId, user.id);
+  logEvent(user, 'reset-link-made', { subject: target.display_name, href: `/users/${target.username}` });
   const proto = SECURE_COOKIES ? 'https' : 'http';
   const link = `${proto}://${req.headers.host}/reset-password/${resetToken.token}`;
   redirect(res, `/admin?notice=Reset link for ${encodeURIComponent(target.display_name)} (valid 24h, share it only with them): ${encodeURIComponent(link)}`);
@@ -379,9 +434,10 @@ async function handleAdminRevokeResetLink(req, res, user, tokenId) {
   redirect(res, '/admin?notice=Reset link revoked.');
 }
 
-async function handleAdminSyncWiki(req, res, _user) {
+async function handleAdminSyncWiki(req, res, user) {
   try {
     const { pageCount } = await wiki.syncWikiIndex();
+    logEvent(user, 'wiki-synced', { subject: `${pageCount} pages`, href: '/glossary' });
     redirect(res, `/admin?notice=Wiki index synced: ${pageCount} pages.`);
   } catch (err) {
     redirect(res, `/admin?notice=Wiki sync failed: ${encodeURIComponent(err.message)}`);
@@ -418,7 +474,8 @@ async function handleResetPasswordSubmit(req, res, token) {
   redirect(res, '/login?notice=Password changed. Log in with your new password.');
 }
 
-async function handleAdminBackup(req, res, _user) {
+async function handleAdminBackup(req, res, user) {
+  logEvent(user, 'backup-downloaded');
   const tmpPath = path.join(os.tmpdir(), `swarm-review-backup-${Date.now()}-${process.pid}.sqlite`);
   try {
     models.backupDatabaseTo(tmpPath);
@@ -508,37 +565,43 @@ async function handleEditStorySubmit(req, res, user, storyId) {
   }
   models.updateStoryDetails(storyId, { title, description, synopsis });
   models.setStoryTags(storyId, tagIds);
+  logEvent(user, 'story-edited', { subject: title, href: `/stories/${storyId}`, storyId });
   redirect(res, `/stories/${storyId}`);
 }
 
 // ---------- admin: the tag vocabulary ----------
-async function handleAdminCreateTag(req, res, _user) {
+async function handleAdminCreateTag(req, res, user) {
   const body = await parseBody(req);
   models.createTag({ name: body.name, group: body.group, description: body.description });
+  logEvent(user, 'tag-created', { subject: body.name, href: '/tags' });
   redirect(res, '/admin?notice=Tag added.#tags');
 }
 
 async function handleAdminUpdateTag(req, res, user, tagId) {
   const body = await parseBody(req);
   models.updateTag(tagId, { name: body.name, group: body.group, description: body.description });
+  logEvent(user, 'tag-edited', { subject: body.name, href: '/tags' });
   redirect(res, '/admin?notice=Tag updated.#tags');
 }
 
 async function handleAdminApproveTag(req, res, user, tagId) {
   const body = await parseBody(req);
   models.approveTag(tagId, { name: body.name, group: body.group });
+  logEvent(user, 'tag-approved', { subject: body.name, href: '/tags' });
   redirect(res, '/admin?notice=Tag approved.#tags');
 }
 
 async function handleAdminMergeTag(req, res, user, tagId) {
   const body = await parseBody(req);
   const into = models.mergeTag(tagId, Number(body.intoTagId));
+  logEvent(user, 'tag-merged', { subject: into ? into.name : '', href: '/tags' });
   redirect(res, `/admin?notice=${encodeURIComponent(into ? `Merged into "${into.name}".` : 'Nothing to merge into.')}#tags`);
 }
 
 async function handleAdminDeleteTag(req, res, user, tagId) {
   const tag = models.getTagById(tagId);
   models.deleteTag(tagId);
+  logEvent(user, 'tag-deleted', { subject: tag ? tag.name : '' });
   redirect(res, `/admin?notice=${encodeURIComponent(`Tag ${tag ? `"${tag.name}" ` : ''}deleted.`)}#tags`);
 }
 
@@ -608,6 +671,7 @@ async function handleArchiveStory(req, res, user, storyId) {
   if (!story) return sendError(res, 404, 'Story not found', user);
   if (story.author_id !== user.id) return sendError(res, 403, 'Only the story author can archive it.', user);
   models.archiveStory(storyId);
+  logEvent(user, 'story-archived', { subject: story.title, href: `/stories/${storyId}`, storyId });
   redirect(res, `/stories/${storyId}`);
 }
 
@@ -616,6 +680,7 @@ async function handleUnarchiveStory(req, res, user, storyId) {
   if (!story) return sendError(res, 404, 'Story not found', user);
   if (story.author_id !== user.id) return sendError(res, 403, 'Only the story author can unarchive it.', user);
   models.unarchiveStory(storyId);
+  logEvent(user, 'story-restored', { subject: story.title, href: `/stories/${storyId}`, storyId });
   redirect(res, '/archived-stories');
 }
 
@@ -625,6 +690,7 @@ async function handleDeleteStory(req, res, user, storyId) {
   if (story.author_id !== user.id) return sendError(res, 403, 'Only the story author can delete it.', user);
   if (!story.archived_at) return sendError(res, 400, 'Archive the story before deleting it forever.', user);
   models.deleteStoryForever(storyId);
+  logEvent(user, 'story-deleted', { subject: story.title });
   redirect(res, '/archived-stories');
 }
 
@@ -661,6 +727,7 @@ async function handleNewStorySubmit(req, res, user) {
     chapterTitle, chapterSummary, content,
   });
   models.setStoryTags(story.id, tagIds);
+  logEvent(user, 'story-started', { subject: story.title, href: `/stories/${story.id}`, storyId: story.id });
   redirect(res, `/chapters/${chapter.id}`);
 }
 
@@ -712,7 +779,10 @@ async function handleAddStoryDictionaryWord(req, res, user, storyId) {
   }
   const body = await parseBody(req);
   const word = (body.word || '').trim();
-  if (word) models.addStoryDictionaryWord(storyId, word, user.id);
+  if (word) {
+    models.addStoryDictionaryWord(storyId, word, user.id);
+    logEvent(user, 'word-added', { subject: word, href: `/stories/${storyId}#dictionary`, storyId });
+  }
   if (wantsJson) return sendJson(res, 200, { words: models.getStoryDictionary(storyId) });
   redirect(res, `/stories/${storyId}#dictionary`);
 }
@@ -722,6 +792,7 @@ async function handleRemoveStoryDictionaryWord(req, res, user, storyId, entryId)
   if (!story) return sendError(res, 404, 'Story not found', user);
   if (!models.canWriteInStory(story, user)) return sendError(res, 403, "Only the story's authors can manage this.", user);
   models.removeStoryDictionaryWord(storyId, entryId);
+  logEvent(user, 'word-removed', { subject: story.title, href: `/stories/${storyId}#dictionary`, storyId });
   redirect(res, `/stories/${storyId}#dictionary`);
 }
 
@@ -736,7 +807,14 @@ async function handleAddCoauthor(req, res, user, storyId) {
   if (story.author_id !== user.id) return sendError(res, 403, 'Only the story author can add coauthors.', user);
   const body = await parseBody(req);
   const userId = Number(body.userId);
-  if (Number.isInteger(userId) && userId > 0) models.addStoryCoauthor(storyId, userId, user.id);
+  if (Number.isInteger(userId) && userId > 0) {
+    models.addStoryCoauthor(storyId, userId, user.id);
+    const added = models.getUserById(userId);
+    logEvent(user, 'coauthor-added', {
+      subject: added ? `${added.display_name} to ${story.title}` : story.title,
+      href: `/stories/${storyId}#authors`, storyId,
+    });
+  }
   redirect(res, `/stories/${storyId}#authors`);
 }
 
@@ -748,7 +826,12 @@ async function handleRemoveCoauthor(req, res, user, storyId, coauthorId) {
   if (story.author_id !== user.id && coauthorId !== user.id) {
     return sendError(res, 403, 'Only the story author can remove a coauthor.', user);
   }
+  const removed = models.getUserById(coauthorId);
   models.removeStoryCoauthor(storyId, coauthorId);
+  logEvent(user, coauthorId === user.id ? 'coauthor-left' : 'coauthor-removed', {
+    subject: coauthorId === user.id ? story.title : `${removed ? removed.display_name : 'somebody'} from ${story.title}`,
+    href: `/stories/${storyId}`, storyId,
+  });
   redirect(res, story.author_id === user.id ? `/stories/${storyId}#authors` : '/');
 }
 
@@ -764,6 +847,7 @@ async function handleArchiveChapter(req, res, user, chapterId) {
   if (!chapter) return sendError(res, 404, 'Chapter not found', user);
   if (chapter.author_id !== user.id) return sendError(res, 403, 'Only the chapter author can archive it.', user);
   models.archiveChapter(chapterId);
+  logEvent(user, 'chapter-archived', { subject: chapter.title, href: `/stories/${chapter.story_id}`, storyId: chapter.story_id });
   redirect(res, `/stories/${chapter.story_id}`);
 }
 
@@ -772,6 +856,7 @@ async function handleUnarchiveChapter(req, res, user, chapterId) {
   if (!chapter) return sendError(res, 404, 'Chapter not found', user);
   if (chapter.author_id !== user.id) return sendError(res, 403, 'Only the chapter author can unarchive it.', user);
   models.unarchiveChapter(chapterId);
+  logEvent(user, 'chapter-restored', { subject: chapter.title, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId });
   redirect(res, `/stories/${chapter.story_id}/archived-chapters`);
 }
 
@@ -782,6 +867,7 @@ async function handleDeleteChapter(req, res, user, chapterId) {
   if (!chapter.archived_at) return sendError(res, 400, 'Archive the chapter before deleting it forever.', user);
   const storyId = chapter.story_id;
   models.deleteChapterForever(chapterId);
+  logEvent(user, 'chapter-deleted', { subject: chapter.title, href: `/stories/${storyId}`, storyId });
   redirect(res, `/stories/${storyId}/archived-chapters`);
 }
 
@@ -826,6 +912,9 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   const chapter = insertBeforeNumber !== null
     ? models.insertChapterAt({ storyId, position: insertBeforeNumber, title, summary, authorId: user.id, content })
     : models.createChapter({ storyId, title, summary, authorId: user.id, content });
+  logEvent(user, 'chapter-added', {
+    subject: `${title} (${story.title})`, href: `/chapters/${chapter.id}`, storyId, chapterId: chapter.id,
+  });
   redirect(res, `/chapters/${chapter.id}`);
 }
 
@@ -848,7 +937,11 @@ async function handleChapterPage(req, res, user, chapterId, query) {
 
   // Opening somebody else's chapter is what counts as reading it. Not the
   // author's own: "read by the person who wrote it" tells nobody anything.
-  if (!isChapterAuthor) models.markChapterRead(chapterId, user.id, currentVersion.version_number);
+  if (!isChapterAuthor && models.markChapterRead(chapterId, user.id, currentVersion.version_number)) {
+    logEvent(user, 'chapter-read', {
+      subject: chapter.title, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId,
+    });
+  }
 
   sendHtml(res, 200, views.chapterPage({
     user, chapter, versions, currentVersion, comments, isChapterAuthor,
@@ -942,6 +1035,12 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
   }
 
   const { version } = models.editChapter({ chapterId, title, summary, content, changelog });
+  // Saving without changing a word is an edit to the title or the
+  // summary, not a new draft of the chapter -- the log says which.
+  logEvent(user, version ? 'chapter-revised' : 'chapter-edited', {
+    subject: version ? `${title} (v${version.version_number})` : title,
+    href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId,
+  });
   redirect(res, version ? `/chapters/${chapterId}?v=${version.version_number}` : `/chapters/${chapterId}`);
 }
 
@@ -950,6 +1049,7 @@ async function handleMoveChapter(req, res, user, chapterId, direction) {
   if (!chapter) return sendError(res, 404, 'Chapter not found', user);
   if (chapter.story_author_id !== user.id) return sendError(res, 403, 'Only the story author can reorder chapters.', user);
   models.moveChapter(chapterId, direction);
+  logEvent(user, 'chapter-moved', { subject: chapter.title, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId });
   redirect(res, `/stories/${chapter.story_id}`);
 }
 
@@ -971,6 +1071,10 @@ async function handleDownload(req, res, user, chapterId, format, query) {
   const requestedV = query.get('v');
   if (requestedV) version = models.getVersionByNumber(chapterId, Number(requestedV));
   if (!version) version = versions[0];
+
+  logEvent(user, 'downloaded', {
+    subject: `${chapter.title} as .${format}`, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId,
+  });
 
   const filename = `${slugForFilename(chapter.title)}-v${version.version_number}.${format}`;
   const disposition = `attachment; filename="${filename}"`;
@@ -1021,6 +1125,10 @@ async function handleCreateComment(req, res, user, chapterId) {
   models.createComment({
     versionId, authorId: user.id, startOffset: start, endOffset: end, quotedText: quoted, body: text.slice(0, 4000),
   });
+  logEvent(user, 'comment-added', {
+    subject: chapter.title, href: `/chapters/${chapterId}?v=${version.version_number}`,
+    storyId: chapter.story_id, chapterId,
+  });
   redirect(res, `/chapters/${chapterId}?v=${version.version_number}`);
 }
 
@@ -1033,6 +1141,11 @@ async function handleCommentReply(req, res, user, commentId) {
   if (text) {
     models.createComment({
       versionId: parent.version_id, authorId: user.id, parentId: parent.id, body: text.slice(0, 2000),
+    });
+    const chapter = models.getChapterById(version.chapter_id);
+    logEvent(user, 'comment-replied', {
+      subject: chapter ? chapter.title : '', href: `/chapters/${version.chapter_id}?v=${version.version_number}`,
+      storyId: chapter ? chapter.story_id : null, chapterId: version.chapter_id,
     });
   }
   redirect(res, `/chapters/${version.chapter_id}?v=${version.version_number}`);
@@ -1047,7 +1160,13 @@ async function handleCommentStatus(req, res, user, commentId) {
 
   const body = await parseBody(req);
   const status = body.status === 'accepted' ? 'accepted' : body.status === 'rejected' ? 'rejected' : null;
-  if (status) models.setCommentStatus({ commentId, status, resolvedBy: user.id });
+  if (status) {
+    models.setCommentStatus({ commentId, status, resolvedBy: user.id });
+    logEvent(user, status === 'accepted' ? 'comment-accepted' : 'comment-rejected', {
+      subject: chapter.title, href: `/chapters/${chapter.id}?v=${version.version_number}#comment-${commentId}`,
+      storyId: chapter.story_id, chapterId: chapter.id,
+    });
+  }
   redirect(res, `/chapters/${chapter.id}?v=${version.version_number}`);
 }
 
@@ -1059,7 +1178,10 @@ async function handleCommentEdit(req, res, user, commentId) {
   const version = models.getVersion(comment.version_id);
   const body = await parseBody(req);
   const text = (body.body || '').trim();
-  if (text) models.editComment({ commentId, body: text.slice(0, 4000) });
+  if (text) {
+    models.editComment({ commentId, body: text.slice(0, 4000) });
+    logEvent(user, 'comment-edited', { href: `/chapters/${version.chapter_id}#comment-${commentId}`, chapterId: version.chapter_id });
+  }
   redirect(res, `/chapters/${version.chapter_id}?v=${version.version_number}#comment-${commentId}`);
 }
 
@@ -1068,7 +1190,10 @@ async function handleCommentRetract(req, res, user, commentId) {
   if (!comment) return sendError(res, 404, 'Comment not found', user);
   if (comment.author_id !== user.id) return sendError(res, 403, 'Only the comment author can retract it.', user);
   const version = models.getVersion(comment.version_id);
-  if (!comment.deleted_at) models.retractComment(commentId);
+  if (!comment.deleted_at) {
+    models.retractComment(commentId);
+    logEvent(user, 'comment-retracted', { href: `/chapters/${version.chapter_id}`, chapterId: version.chapter_id });
+  }
   redirect(res, `/chapters/${version.chapter_id}?v=${version.version_number}`);
 }
 
@@ -1078,7 +1203,13 @@ async function handleCommentReopen(req, res, user, commentId) {
   const version = models.getVersion(comment.version_id);
   const chapter = models.getChapterById(version.chapter_id);
   if (chapter.author_id !== user.id) return sendError(res, 403, "Only the chapter's author can reopen comments.", user);
-  if (!comment.deleted_at && comment.status !== 'pending') models.reopenComment(commentId);
+  if (!comment.deleted_at && comment.status !== 'pending') {
+    models.reopenComment(commentId);
+    logEvent(user, 'comment-reopened', {
+      subject: chapter.title, href: `/chapters/${chapter.id}#comment-${commentId}`,
+      storyId: chapter.story_id, chapterId: chapter.id,
+    });
+  }
   redirect(res, `/chapters/${chapter.id}?v=${version.version_number}#comment-${commentId}`);
 }
 
@@ -1172,6 +1303,10 @@ async function router(req, res) {
     if (pathname === '/account' && req.method === 'GET') return handleAccountPage(req, res, user, url.searchParams);
     if (pathname === '/account/password' && req.method === 'POST') return handleAccountPasswordSubmit(req, res, user);
     if (pathname === '/account/hidden-tags' && req.method === 'POST') return handleHiddenTagsSubmit(req, res, user);
+    if (pathname === '/account/name' && req.method === 'POST') return handleAccountNameSubmit(req, res, user);
+    if ((m = pathname.match(/^\/users\/([A-Za-z0-9_.-]+)$/)) && req.method === 'GET') {
+      return handleProfilePage(req, res, user, m[1]);
+    }
     if (pathname === '/markdown/preview' && req.method === 'POST') return handleMarkdownPreview(req, res, user);
 
     if (pathname === '/admin' && req.method === 'GET') return handleAdminPage(req, res, user, url.searchParams);

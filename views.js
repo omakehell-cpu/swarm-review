@@ -833,11 +833,20 @@ function storyDictionarySection(story, dictionary) {
     </details>`;
 }
 
+// A name is a way to the person it belongs to, wherever their handle
+// came along with it. Where it did not (an older query that only selects
+// display_name), it stays plain text rather than guessing a URL.
+function personLink(username, name) {
+  return username
+    ? `<a href="/users/${escapeHtml(username)}">${escapeHtml(name)}</a>`
+    : escapeHtml(name);
+}
+
 // Reads "by Ana", "by Ana with Luis", "by Ana with Luis and Marta",
 // "by Ana with Luis, Marta and Sergio" -- a byline, not a field listing.
-function bylineWith(authorName, coauthors) {
-  const names = (coauthors || []).map((c) => escapeHtml(c.display_name));
-  const base = `by ${escapeHtml(authorName)}`;
+function bylineWith(authorName, coauthors, authorUsername = null) {
+  const names = (coauthors || []).map((c) => personLink(c.username, c.display_name));
+  const base = `by ${personLink(authorUsername, authorName)}`;
   if (!names.length) return base;
   if (names.length === 1) return `${base} with ${names[0]}`;
   return `${base} with ${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
@@ -977,7 +986,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
       <div class="page-head">
         <div>
           <h1>${escapeHtml(story.title)}</h1>
-          <p class="muted byline">${bylineWith(story.author_name, coauthors)} &middot; ${timeHtml(story.created_at)}</p>
+          <p class="muted byline">${bylineWith(story.author_name, coauthors, story.author_username)} &middot; ${timeHtml(story.created_at)}</p>
           ${story.description ? `<p class="summary">${escapeHtml(story.description)}</p>` : ''}
           ${tagChips(tags)}
           ${storyStatsBlock(stats)}
@@ -1292,7 +1301,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     </div>
     <div class="chapter-header">
       <h1>Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</h1>
-      <p class="muted byline">by ${escapeHtml(chapter.author_name)} &middot; ${timeHtml(chapter.created_at)}${
+      <p class="muted byline">by ${personLink(chapter.author_username, chapter.author_name)} &middot; ${timeHtml(chapter.created_at)}${
         currentVersion.word_count ? ` &middot; ${wordCount(currentVersion.word_count)}` : ''
       }${
         neighbours && neighbours.total > 1 ? ` &middot; <a href="/stories/${chapter.story_id}">chapter ${neighbours.position} of ${neighbours.total}</a>` : ''
@@ -1593,6 +1602,144 @@ function searchPage({ user, results, query }) {
   });
 }
 
+
+// ---------- the log, in words ----------
+// One sentence per kind, with the subject the event was written with
+// dropped into it. Anything not listed falls back to its own kind with
+// the dashes taken out, so a new kind recorded in server.js shows up as
+// something readable on the day it is added rather than as nothing.
+const EVENT_SENTENCES = {
+  joined: () => 'joined the Swarm',
+  'signed-in': () => 'signed in',
+  'password-changed': () => 'changed their password',
+  'name-changed': (s) => `changed their name to ${s}`,
+  'story-started': (s) => `started ${s}`,
+  'story-edited': (s) => `edited the details of ${s}`,
+  'story-archived': (s) => `archived ${s}`,
+  'story-restored': (s) => `took ${s} out of the archive`,
+  'story-deleted': (s) => `deleted ${s} for good`,
+  'coauthor-added': (s) => `added ${s}`,
+  'coauthor-removed': (s) => `removed ${s}`,
+  'coauthor-left': (s) => `stepped back from ${s}`,
+  'chapter-added': (s) => `added ${s}`,
+  'chapter-revised': (s) => `saved a new version of ${s}`,
+  'chapter-edited': (s) => `edited the details of ${s}`,
+  'chapter-archived': (s) => `archived ${s}`,
+  'chapter-restored': (s) => `took ${s} out of the archive`,
+  'chapter-deleted': (s) => `deleted ${s} for good`,
+  'chapter-moved': (s) => `moved ${s} in the running order`,
+  'chapter-read': (s) => `read ${s}`,
+  downloaded: (s) => `downloaded ${s}`,
+  'comment-added': (s) => `commented on ${s}`,
+  'comment-replied': (s) => `replied on ${s}`,
+  'comment-accepted': (s) => `accepted a note on ${s}`,
+  'comment-rejected': (s) => `turned down a note on ${s}`,
+  'comment-edited': () => 'edited a comment',
+  'comment-retracted': () => 'retracted a comment',
+  'comment-reopened': (s) => `reopened a note on ${s}`,
+  'word-added': (s) => `taught the dictionary ${s}`,
+  'word-removed': (s) => `took a word out of the dictionary of ${s}`,
+  'invite-made': () => 'generated an invite code',
+  'registration-closed': () => 'closed registration',
+  'password-set-for': (s) => `set a new password for ${s}`,
+  'account-locked': (s) => `locked ${s}`,
+  'account-unlocked': (s) => `reactivated ${s}`,
+  'reset-link-made': (s) => `made a password reset link for ${s}`,
+  'backup-downloaded': () => 'downloaded a backup of everything',
+  'wiki-synced': (s) => `synced the wiki (${s})`,
+  'tag-created': (s) => `added the tag ${s}`,
+  'tag-edited': (s) => `edited the tag ${s}`,
+  'tag-approved': (s) => `approved the tag ${s}`,
+  'tag-merged': (s) => `merged a tag into ${s}`,
+  'tag-deleted': (s) => `deleted the tag ${s}`,
+};
+
+function eventLine(ev) {
+  const subject = ev.subject
+    ? (ev.href
+      ? `<a href="${escapeHtml(ev.href)}">${escapeHtml(ev.subject)}</a>`
+      : `<strong>${escapeHtml(ev.subject)}</strong>`)
+    : '';
+  const sentence = EVENT_SENTENCES[ev.kind]
+    ? EVENT_SENTENCES[ev.kind](subject)
+    : `${escapeHtml(ev.kind).replace(/-/g, ' ')}${subject ? ` ${subject}` : ''}`;
+  return `<li class="log-line"><span class="log-when">${timeHtml(ev.created_at)}</span> <span class="log-what">${sentence}</span></li>`;
+}
+
+function eventLog(events) {
+  if (!events.length) return '<p class="muted">Nothing recorded yet.</p>';
+  return `<ol class="log-list">${events.map(eventLine).join('')}</ol>`;
+}
+
+// ---------- somebody's page ----------
+// Everything the group can see about a member in one place: who they are,
+// what they have written, and the numbers underneath it. No activity feed
+// and no reading history -- what somebody has read is between them and
+// the author whose chapter it was.
+/** @param {{ user: Row, person: Row, stats: any, stories: any[], chapters: any[] }} props */
+function profilePage({ user, person, stats, stories, chapters }) {
+  const isSelf = person.id === user.id;
+  const stat = (value, label) => `<div class="story-stat"><span class="story-stat-value">${value}</span><span class="story-stat-label">${label}</span></div>`;
+
+  const storyRows = stories.length ? `<div class="chapter-list">${stories.map((s) => `
+    <a class="chapter-row" href="/stories/${s.id}">
+      <div class="chapter-row-main">
+        <h3>${escapeHtml(s.title)}</h3>
+        ${s.description ? `<p class="muted">${escapeHtml(s.description)}</p>` : ''}
+      </div>
+      <div class="chapter-row-meta">
+        <span>${s.is_owner ? 'author' : 'coauthor'}</span>
+        <span>${s.own_chapters} of ${s.chapters} chapter${s.chapters === 1 ? '' : 's'}</span>
+      </div>
+    </a>`).join('')}</div>` : `<p class="muted">${isSelf ? 'You have not started or been invited into a story yet.' : 'Nothing yet.'}</p>`;
+
+  const chapterRows = chapters.length ? `<div class="chapter-list">${chapters.map((c) => `
+    <a class="chapter-row" href="/chapters/${c.id}">
+      <div class="chapter-row-main">
+        <h3>${escapeHtml(c.title)}</h3>
+        <p class="muted">${escapeHtml(c.story_title)}</p>
+      </div>
+      <div class="chapter-row-meta">
+        ${c.word_count ? `<span>${wordCount(c.word_count)}</span>` : ''}
+        ${timeHtml(c.created_at)}
+      </div>
+    </a>`).join('')}</div>` : `<p class="muted">${isSelf ? 'Nothing written yet.' : 'Nothing yet.'}</p>`;
+
+  return layout({
+    title: person.display_name,
+    user,
+    body: `
+      <div class="page-head">
+        <div>
+          <h1>${escapeHtml(person.display_name)}</h1>
+          <p class="muted byline">@${escapeHtml(person.username)} &middot; joined ${timeHtml(person.created_at)}${
+  person.last_seen_at ? ` &middot; last seen ${timeHtml(person.last_seen_at)}` : ''
+}</p>
+        </div>
+        ${isSelf ? '<div class="page-head-actions"><a class="btn ghost small" href="/account">Account</a></div>' : ''}
+      </div>
+
+      <div class="story-stats">
+        ${stat(stats.words.toLocaleString('en-GB'), 'words')}
+        ${stat(stats.chapters, `chapter${stats.chapters === 1 ? '' : 's'}`)}
+        ${stat(stats.versions, `version${stats.versions === 1 ? '' : 's'}`)}
+        ${stat(stats.storiesStarted, `stor${stats.storiesStarted === 1 ? 'y' : 'ies'} started`)}
+        ${stat(stats.commentsWritten, 'notes given')}
+        ${stat(stats.commentsReceived, 'notes taken')}
+      </div>
+
+      <section class="profile-section">
+        <h2>Stories</h2>
+        ${storyRows}
+      </section>
+
+      <section class="profile-section">
+        <h2>Chapters</h2>
+        ${chapterRows}
+      </section>`,
+  });
+}
+
 // ---------- account settings ----------
 
 /** @param {{ user: Row, error?: string|null, notice?: string|null, groups?: any[], hiddenTagIds?: number[] }} props */
@@ -1604,6 +1751,15 @@ function accountPage({ user, error, notice, groups = [], hiddenTagIds = [] }) {
     flash: notice ? { type: 'info', message: notice } : null,
     body: `
       <h1>Account</h1>
+      <div class="auth-card">
+        <h2>Your name</h2>
+        <p class="muted">The name on everything you write and every note you leave. Your sign-in name, <strong>@${escapeHtml(user.username)}</strong>, does not change -- it is what the app knows you by.</p>
+        <form method="post" action="/account/name">
+          <label>Name people see<input type="text" name="displayName" value="${escapeHtml(user.display_name)}" required maxlength="60"></label>
+          <button class="btn" type="submit">Save name</button>
+        </form>
+        <p class="muted"><a href="/users/${escapeHtml(user.username)}">See your page as the group sees it &rarr;</a></p>
+      </div>
       <div class="auth-card">
         <h2>Change password</h2>
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
@@ -1715,7 +1871,12 @@ function adminUserRow(u, { currentUserId }) {
         <strong>${escapeHtml(u.display_name)}</strong> <span class="muted">@${escapeHtml(u.username)}</span>
         ${u.is_admin ? '<span class="badge admin-badge">Admin</span>' : ''}
         ${locked ? `<span class="badge locked-badge">${lockLabel}</span>` : ''}
-        <p class="muted small-meta">Joined ${timeHtml(u.created_at)} &middot; last seen ${timeHtml(u.last_seen_at)}${u.failed_login_attempts > 0 && !locked ? ` &middot; ${u.failed_login_attempts} recent failed login${u.failed_login_attempts === 1 ? '' : 's'}` : ''}</p>
+        <p class="muted small-meta">Joined ${timeHtml(u.created_at)} &middot; last seen ${timeHtml(u.last_seen_at)}${u.failed_login_attempts > 0 && !locked ? ` &middot; ${u.failed_login_attempts} recent failed login${u.failed_login_attempts === 1 ? '' : 's'}` : ''} &middot; <a href="/users/${escapeHtml(u.username)}">their page</a></p>
+        <details class="user-log">
+          <summary>What they have done${u.event_count ? ` (${u.event_count})` : ''}</summary>
+          ${eventLog(u.events || [])}
+          ${u.event_count > (u.events || []).length ? `<p class="muted small-meta">Showing the last ${(u.events || []).length} of ${u.event_count}.</p>` : ''}
+        </details>
       </div>
       <div class="admin-user-actions">
         <details class="admin-inline-form">
@@ -1922,6 +2083,7 @@ module.exports = {
   resetPasswordExpiredPage,
   accountPage,
   adminPage,
+  profilePage,
   storiesPage,
   archivedStoriesPage,
   newStoryPage,

@@ -925,15 +925,62 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 .admin-user-list { display: flex; flex-direction: column; gap: var(--s-4); }
 .admin-user-row {
   display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-6); flex-wrap: wrap;
-  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: var(--s-5) var(--s-6);
+  background: transparent; border: 0; border-top: 1px solid var(--border); border-radius: 0;
+  padding: var(--s-6) 0;
 }
-.admin-user-row.locked { border-color: var(--rejected); }
+.admin-user-main { flex: 1 1 340px; min-width: 0; }
+.admin-user-row.locked { border-top-color: var(--accent); }
+.badge.admin-badge, .badge.locked-badge { margin-left: var(--s-4); }
+
+/* ---- what somebody has done ----
+   Folded away under their own row, because nobody opens the admin page to
+   read a log -- they open it for one person, once, usually to answer "who
+   changed that". */
+.user-log { margin-top: var(--s-5); }
+.user-log > summary {
+  cursor: pointer; list-style: none; padding: var(--s-2) 0;
+  font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
+.user-log > summary::-webkit-details-marker { display: none; }
+.user-log > summary::before {
+  content: "\25b8"; display: inline-block; margin-right: var(--s-4);
+  transition: transform 0.12s ease;
+}
+.user-log[open] > summary::before { transform: rotate(90deg); }
+.user-log > summary:hover { color: var(--accent); }
+.log-list {
+  list-style: none; margin: var(--s-4) 0 0; padding: 0;
+  max-height: 340px; overflow-y: auto;
+}
+.log-line {
+  display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: var(--s-5);
+  padding: var(--s-3) 0; border-top: 1px solid var(--border);
+  font-size: var(--t-sm);
+}
+.log-when {
+  color: var(--text-muted); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+  white-space: nowrap; padding-top: 2px;
+}
+.log-what { min-width: 0; }
+
+/* ---- somebody's own page ---- */
+.profile-section { margin-top: var(--s-10); }
+.profile-section > h2 {
+  border-top: 2px solid var(--border-strong);
+  padding-top: var(--s-5); margin-bottom: var(--s-5);
+}
 .admin-user-main .small-meta { margin: var(--s-2) 0 0; font-size: var(--t-sm); }
 .badge.admin-badge { background: rgba(var(--accent-rgb), 0.22); color: var(--accent-strong); margin-left: var(--s-3); }
 .badge.locked-badge { background: rgba(var(--rejected-rgb), 0.18); color: var(--rejected); margin-left: var(--s-3); }
 .admin-user-actions { display: flex; gap: var(--s-4); align-items: flex-start; flex-wrap: wrap; }
-.admin-inline-form summary { cursor: pointer; color: var(--text-muted); font-size: var(--t-sm); padding: var(--s-2) 0; }
+.admin-inline-form summary {
+  cursor: pointer; color: var(--text-muted); padding: var(--s-2) 0;
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.admin-inline-form summary:hover { color: var(--accent); }
 .admin-inline-form form { display: flex; gap: var(--s-3); margin-top: var(--s-3); }
 .admin-inline-form input { padding: var(--s-3) var(--s-4); font-size: var(--t-sm); }
 .named-invite-form { display: flex; gap: var(--s-4); margin-bottom: var(--s-5); max-width: 420px; }

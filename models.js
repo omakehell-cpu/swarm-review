@@ -372,7 +372,7 @@ function listStories({ since, onlyArchived = false, tagIds = [] } = {}) {
             WHERE st.story_id = s.id AND st.tag_id IN (${wanted.join(',')})) = ${wanted.length}`
     : '';
   return db.prepare(`
-    SELECT s.*, u.display_name AS author_name,
+    SELECT s.*, u.display_name AS author_name, u.username AS author_username,
       (SELECT COUNT(*) FROM chapters c WHERE c.story_id = s.id AND c.archived_at IS NULL) AS chapter_count,
       (SELECT MAX(ch.created_at) FROM chapters ch WHERE ch.story_id = s.id AND ch.archived_at IS NULL) AS last_chapter_at,
       (
@@ -399,7 +399,7 @@ function listStories({ since, onlyArchived = false, tagIds = [] } = {}) {
 
 const getStoryById = (id) =>
   db.prepare(`
-    SELECT s.*, u.display_name AS author_name
+    SELECT s.*, u.display_name AS author_name, u.username AS author_username
     FROM stories s JOIN users u ON u.id = s.author_id
     WHERE s.id = ?
   `).get(id);
@@ -1172,7 +1172,11 @@ function setWikiSyncState({ status, pageCount, error }) {
 // has seen -- so revising a chapter does not wipe the fact that people
 // read the earlier draft, but the story page can still say who has seen
 // the version that is up now.
+// Returns true the first time this person opens this chapter, so the
+// caller can put that in the log once instead of on every visit: "read
+// it" is news, "looked at it again" is not.
 function markChapterRead(chapterId, userId, versionNumber) {
+  const before = db.prepare('SELECT 1 FROM chapter_reads WHERE chapter_id = ? AND user_id = ?').get(chapterId, userId);
   db.prepare(`
     INSERT INTO chapter_reads (chapter_id, user_id, version_number)
     VALUES (@chapterId, @userId, @versionNumber)
@@ -1180,6 +1184,7 @@ function markChapterRead(chapterId, userId, versionNumber) {
       version_number = MAX(version_number, @versionNumber),
       read_at = datetime('now')
   `).run({ chapterId, userId, versionNumber });
+  return !before;
 }
 
 function listChapterReaders(chapterId) {
@@ -1397,6 +1402,107 @@ function listAddableCoauthors(story) {
   `).all(DELETED_USER_USERNAME, story.author_id, story.id);
 }
 
+
+// ---------- the log ----------
+// One row per thing somebody did. Every call goes through here, and every
+// call site passes the label and the link at the time it happens (see the
+// note on the table in db.js). Nothing in here throws: a log that can fail
+// a request is a log that will one day take the app down for the sake of
+// remembering that somebody opened a chapter.
+const insertEvent = db.prepare(`
+  INSERT INTO events (user_id, kind, subject, href, story_id, chapter_id)
+  VALUES (@userId, @kind, @subject, @href, @storyId, @chapterId)
+`);
+
+function recordEvent({ userId, kind, subject = '', href = null, storyId = null, chapterId = null }) {
+  if (!userId || !kind) return null;
+  try {
+    return insertEvent.run({
+      userId, kind, subject: String(subject).slice(0, 300), href, storyId, chapterId,
+    });
+  } catch (e) {
+    return null;
+  }
+}
+
+const listEventsForUser = (userId, limit = 50) =>
+  db.prepare('SELECT * FROM events WHERE user_id = ? ORDER BY id DESC LIMIT ?').all(userId, limit);
+
+const countEventsForUser = (userId) =>
+  db.prepare('SELECT COUNT(*) AS n FROM events WHERE user_id = ?').get(userId).n;
+
+const listRecentEvents = (limit = 60) => db.prepare(`
+  SELECT e.*, u.display_name, u.username
+  FROM events e LEFT JOIN users u ON u.id = e.user_id
+  ORDER BY e.id DESC LIMIT ?
+`).all(limit);
+
+// ---------- what somebody has done, in numbers ----------
+// Words are counted from the current version of each chapter they wrote,
+// not from every version they ever saved: the second reading would make a
+// heavy reviser look ten times more productive than a careful one.
+function userStats(userId) {
+  const one = (sql, params = [userId]) => db.prepare(sql).get(...params);
+  const words = one(`
+    SELECT COALESCE(SUM(v.word_count), 0) AS n
+    FROM chapters c
+    JOIN chapter_versions v ON v.id = (
+      SELECT id FROM chapter_versions WHERE chapter_id = c.id ORDER BY version_number DESC LIMIT 1
+    )
+    WHERE c.author_id = ? AND c.archived_at IS NULL
+  `).n;
+  return {
+    words,
+    chapters: one('SELECT COUNT(*) AS n FROM chapters WHERE author_id = ? AND archived_at IS NULL').n,
+    // A version row records when it was saved but not by whom -- the
+    // only people who can save one are the chapter's author and the
+    // story's owner, so this counts the versions of their own chapters
+    // and calls it theirs.
+    versions: one(`
+      SELECT COUNT(*) AS n FROM chapter_versions v
+      JOIN chapters c ON c.id = v.chapter_id
+      WHERE c.author_id = ? AND c.archived_at IS NULL
+    `).n,
+    storiesStarted: one('SELECT COUNT(*) AS n FROM stories WHERE author_id = ? AND archived_at IS NULL').n,
+    commentsWritten: one('SELECT COUNT(*) AS n FROM comments WHERE author_id = ? AND deleted_at IS NULL').n,
+    commentsReceived: one(`
+      SELECT COUNT(*) AS n
+      FROM comments cm
+      JOIN chapter_versions v ON v.id = cm.version_id
+      JOIN chapters c ON c.id = v.chapter_id
+      WHERE c.author_id = ? AND cm.author_id != ? AND cm.deleted_at IS NULL
+    `, [userId, userId]).n,
+    chaptersRead: one('SELECT COUNT(*) AS n FROM chapter_reads WHERE user_id = ?').n,
+  };
+}
+
+// Every story this person has a hand in: the ones they started and the
+// ones they were invited into, with how much of each is theirs.
+const listStoriesForUser = (userId) => db.prepare(`
+  SELECT s.id, s.title, s.description, s.created_at, s.archived_at,
+         s.author_id = @userId AS is_owner,
+         (SELECT COUNT(*) FROM chapters c WHERE c.story_id = s.id AND c.archived_at IS NULL) AS chapters,
+         (SELECT COUNT(*) FROM chapters c WHERE c.story_id = s.id AND c.archived_at IS NULL AND c.author_id = @userId) AS own_chapters
+  FROM stories s
+  WHERE s.archived_at IS NULL
+    AND (s.author_id = @userId OR EXISTS (SELECT 1 FROM story_authors a WHERE a.story_id = s.id AND a.user_id = @userId))
+  ORDER BY s.created_at DESC
+`).all({ userId });
+
+const listChaptersByUser = (userId, limit = 100) => db.prepare(`
+  SELECT c.id, c.title, c.chapter_number, c.created_at, s.id AS story_id, s.title AS story_title,
+         (SELECT v.word_count FROM chapter_versions v WHERE v.chapter_id = c.id ORDER BY v.version_number DESC LIMIT 1) AS word_count
+  FROM chapters c JOIN stories s ON s.id = c.story_id
+  WHERE c.author_id = ? AND c.archived_at IS NULL AND s.archived_at IS NULL
+  ORDER BY c.created_at DESC
+  LIMIT ?
+`).all(userId, limit);
+
+function setDisplayName(userId, displayName) {
+  db.prepare("UPDATE users SET display_name = ? WHERE id = ?").run(displayName, userId);
+  return getUserById(userId);
+}
+
 module.exports = {
   userCount,
   getUserByUsername,
@@ -1500,4 +1606,12 @@ module.exports = {
   listUserHiddenTagIds,
   setUserHiddenTags,
   searchEverything,
+  recordEvent,
+  listEventsForUser,
+  countEventsForUser,
+  listRecentEvents,
+  userStats,
+  listStoriesForUser,
+  listChaptersByUser,
+  setDisplayName,
 };
