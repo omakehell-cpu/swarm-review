@@ -32,6 +32,7 @@ const taxonomy = require('./lib/glossary-taxonomy');
 const storyBible = require('./lib/story-bible');
 const entityImages = require('./lib/entity-images');
 const castLinks = require('./lib/cast-links');
+const docs = require('./lib/docs');
 const diff = require('./lib/diff');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
@@ -673,6 +674,30 @@ async function handleGlossaryPage(req, res, user, title) {
     summaries: models.summariesForTitles(linked),
     categories: models.categoriesByPage().get(page.title_lower) || [],
   }));
+}
+
+// ---------- help and the changelog (see lib/docs.js) ----------
+async function handleHelpIndex(req, res, user) {
+  sendHtml(res, 200, views.helpIndexPage({
+    user,
+    topics: docs.listHelpTopics(),
+    releases: docs.listReleases(),
+    unread: docs.hasUnreadReleases(user),
+  }));
+}
+
+async function handleChangelog(req, res, user) {
+  // What they had seen before this visit is what the marks are about, so
+  // it is read first and the column moved on afterwards.
+  const seenAt = user.changelog_seen_at || null;
+  models.markChangelogSeen(user.id);
+  sendHtml(res, 200, views.changelogPage({ user, releases: docs.listReleases(), seenAt }));
+}
+
+async function handleHelpTopic(req, res, user, slug) {
+  const topic = docs.getHelpTopic(slug);
+  if (!topic) return sendError(res, 404, 'No such how-to', user);
+  sendHtml(res, 200, views.helpTopicPage({ user, topic, topics: docs.listHelpTopics() }));
 }
 
 // ---------- the story bible (per story: its people, places and things) ----------
@@ -1767,6 +1792,13 @@ async function router(req, res) {
     if (pathname === '/tags' && req.method === 'GET') return handleTagsIndex(req, res, user);
     if ((m = pathname.match(/^\/tags\/([^/]+)$/)) && req.method === 'GET') return handleTagPage(req, res, user, m[1]);
 
+    if (pathname === '/help' && req.method === 'GET') return handleHelpIndex(req, res, user);
+    if (pathname === '/help/changelog' && req.method === 'GET') return handleChangelog(req, res, user);
+    // An older or shorter link people will try anyway.
+    if (pathname === '/changelog' && req.method === 'GET') return redirect(res, '/help/changelog');
+    if ((m = pathname.match(/^\/help\/([a-z0-9-]+)$/)) && req.method === 'GET') {
+      return handleHelpTopic(req, res, user, m[1]);
+    }
     if (pathname === '/glossary' && req.method === 'GET') return handleGlossaryIndex(req, res, user, url.searchParams);
     if ((m = pathname.match(/^\/glossary\/([^/]+)$/)) && req.method === 'GET') return handleGlossaryPage(req, res, user, m[1]);
 

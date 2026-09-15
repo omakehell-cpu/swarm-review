@@ -263,6 +263,10 @@ ensureColumn('comments', 'deleted_at', 'TEXT');
 // created database's users table), models.js's createUser sets it
 // explicitly on every insert rather than relying on one.
 ensureColumn('users', 'last_seen_at', 'TEXT');
+// When this person last opened the changelog. Its own column on purpose:
+// last_seen_at is what marks chapters as new, and reading about the app
+// must not mark the writing as read.
+ensureColumn('users', 'changelog_seen_at', 'TEXT');
 db.exec("UPDATE users SET last_seen_at = datetime('now') WHERE last_seen_at IS NULL");
 
 // Login lockout tracking. failed_login_attempts uses a constant default
