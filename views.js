@@ -670,9 +670,9 @@ function glossaryListPage({
     </section>`).join('');
 
   const count = `${pages.length} page${pages.length === 1 ? '' : 's'}`;
-  const describe = category ? `filed under ${escapeHtml(category)}`
-    : kind ? escapeHtml(String(taxonomy.KIND_LABELS[kind] || '').toLowerCase())
-      : view === 'all' ? 'in the glossary' : '';
+  // The heading already says which door this is, so only a category needs
+  // spelling out in the line under it.
+  const describe = category ? ` filed under ${escapeHtml(category)}` : '';
 
   return layout({
     title: heading,
@@ -681,7 +681,7 @@ function glossaryListPage({
     body: `
       <p class="breadcrumb"><a href="/glossary">&larr; Glossary</a></p>
       <div class="page-head"><h1>${escapeHtml(heading)}</h1></div>
-      <p class="muted"><span id="glossary-count">${count}</span>${describe ? ` ${describe}` : ''}${q ? ` matching &ldquo;${escapeHtml(q)}&rdquo;` : ''}${totalPages && pages.length !== totalPages ? ` &middot; <a href="/glossary?view=all">all ${totalPages}</a>` : ''}.</p>
+      <p class="muted"><span id="glossary-count">${count}</span>${describe}${q ? ` matching &ldquo;${escapeHtml(q)}&rdquo;` : ''}${totalPages && pages.length !== totalPages ? ` &middot; <a href="/glossary?view=all">all ${totalPages}</a>` : ''}.</p>
       ${glossarySearchForm(q, { kind, category, status, view })}
       ${glossaryStatusFilters(statusCounts, status, { kind, category, view, q })}
       ${pages.length ? `
