@@ -26,9 +26,9 @@ everyone else's search, and the chapters stop linking names or listing who
 is in them. A reader gets the chapter exactly as it was before any of this
 existed.
 
-It is the owner's switch, not a coauthor's: a coauthor writes in the bible,
-but whether it is anybody else's business is the story's to say, and a story
-has one owner. Either way it can be turned back, and nothing is lost by
+It is the owner's switch, and only the owner sees it -- a coauthor writes in
+the bible, but who else may read it is the one thing about it that is not
+theirs to set. Either way it can be turned back, and nothing is lost by
 closing it.
 
 If what you want to hide is one fact rather than the whole notebook, every
