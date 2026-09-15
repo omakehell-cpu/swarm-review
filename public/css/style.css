@@ -965,6 +965,55 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 }
 .log-what { min-width: 0; }
 
+/* ---- where a story is, what a chapter wants ----
+   Same object as a .badge and for the same reason: a status is not a
+   control. The colour is the whole of the meaning -- red is the one that
+   is news (nothing written in six months, or a chapter still moving),
+   ink is a decision somebody made, grey is something already over. */
+.state-badge {
+  display: inline-flex; align-items: center; gap: var(--s-3);
+  font-family: var(--font-ui);
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+  color: var(--text-muted); white-space: nowrap;
+  vertical-align: middle; margin-left: var(--s-4);
+}
+.state-badge::before {
+  content: ""; width: 6px; height: 6px; background: currentColor; flex: 0 0 auto;
+}
+.state-hiatus, .stage-draft { color: var(--accent); }
+.state-complete { color: var(--text); }
+.state-ongoing, .state-dropped, .stage-settled { color: var(--text-muted); }
+.chapter-row h3 .state-badge { margin-left: var(--s-4); }
+
+/* ---- arcs ----
+   The heading is the arc: a rule, a number, a name, and what is under it
+   in figures. There is no arc object behind this -- the chapter that
+   names one opens it and it runs to the chapter that names the next, so
+   these headings cannot disagree with the running order. */
+.arc-stack { display: grid; gap: var(--s-10); counter-reset: ch; }
+.arc { display: block; }
+.arc-stack .chapter-list { counter-reset: none; }
+.arc-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--s-4) var(--s-7); flex-wrap: wrap;
+  border-top: 2px solid var(--border-strong);
+  padding-top: var(--s-5); margin-bottom: var(--s-3);
+}
+.arc-title {
+  display: flex; align-items: baseline; gap: var(--s-6);
+  margin: 0; font-size: var(--t-xl); letter-spacing: -0.026em;
+}
+.arc-number {
+  font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.arc-meta {
+  margin: 0; color: var(--text-muted);
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+
 /* ---- somebody's own page ---- */
 .profile-section { margin-top: var(--s-10); }
 .profile-section > h2 {

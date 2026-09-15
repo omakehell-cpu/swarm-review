@@ -259,6 +259,96 @@ test('a profile page counts what somebody has written and links to it', async ()
   assert.strictEqual(placeholder.status, 404, 'the bookkeeping account is not a person');
 });
 
+test('a chapter can open an arc, and the contents group under it', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapters = models.listChaptersForStory(story.id);
+
+  // The middle chapter opens Book Two; the one before it stays where it is.
+  const res = await request(`/chapters/${chapters[1].id}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['title', chapters[1].title], ['summary', ''],
+      ['content', models.getLatestVersion(chapters[1].id).content],
+      ['changelog', ''], ['stage', 'notes'], ['arcTitle', 'Book Two: The long winter'],
+    ]),
+  });
+  assert.strictEqual(res.status, 302, (await res.text()).slice(0, 300));
+
+  const page = await (await request(`/stories/${story.id}`)).text();
+  assert.match(page, /class="arc-head"/, 'the contents are in arcs now');
+  assert.match(page, /Book Two: The long winter/);
+  assert.match(page, /2 chapters/, 'and the arc counts what is under it');
+  assert.strictEqual(models.getStoryStats(story.id).arcs, 1, 'one named arc');
+
+  // Taking the name off puts the story back exactly as it was.
+  await request(`/chapters/${chapters[1].id}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['title', chapters[1].title], ['summary', ''],
+      ['content', models.getLatestVersion(chapters[1].id).content],
+      ['changelog', ''], ['stage', 'notes'], ['arcTitle', ''],
+    ]),
+  });
+  const flat = await (await request(`/stories/${story.id}`)).text();
+  assert.ok(!flat.includes('class="arc-head"'), 'a story with no arcs shows none');
+});
+
+test('a chapter says what it wants only when it wants something unusual', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const chapters = models.listChaptersForStory(story.id);
+  const before = await (await request(`/stories/${story.id}`)).text();
+  assert.ok(!before.includes('Wants notes'), 'the normal state is not worth a badge');
+
+  await request(`/chapters/${chapters[0].id}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['title', chapters[0].title], ['summary', ''],
+      ['content', models.getLatestVersion(chapters[0].id).content],
+      ['changelog', ''], ['stage', 'draft'], ['arcTitle', ''],
+    ]),
+  });
+  const after = await (await request(`/stories/${story.id}`)).text();
+  assert.match(after, /stage-draft/, 'a draft says so');
+  assert.strictEqual(models.getChapterById(chapters[0].id).stage, 'draft');
+
+  // A stage the form never offers does not become one.
+  await request(`/chapters/${chapters[0].id}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['title', chapters[0].title], ['summary', ''],
+      ['content', models.getLatestVersion(chapters[0].id).content],
+      ['changelog', ''], ['stage', 'on fire'], ['arcTitle', ''],
+    ]),
+  });
+  assert.strictEqual(models.getChapterById(chapters[0].id).stage, 'notes', 'nonsense falls back to the default');
+});
+
+test('where a story stands is the author\'s to say, except for the hiatus', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  const tagIds = models.getStoryTags(story.id).map((t) => t.id);
+
+  const save = (status) => request(`/stories/${story.id}/edit`, {
+    method: 'POST',
+    ...form([
+      ['title', story.title], ['description', story.description || ''], ['synopsis', story.synopsis || ''],
+      ['status', status], ...tagIds.map((id) => ['tagIds', String(id)]),
+    ]),
+  });
+
+  assert.strictEqual((await save('complete')).status, 302);
+  assert.strictEqual(models.getStoryById(story.id).status, 'complete');
+  assert.match(await (await request(`/stories/${story.id}`)).text(), /state-complete/);
+
+  // A finished story is not paused however long it sits.
+  const { storyState } = require('../lib/story-state');
+  const old = { ...models.getStoryById(story.id), last_written_at: '2020-01-01 00:00:00' };
+  assert.strictEqual(storyState(old), 'complete');
+  assert.strictEqual(storyState({ ...old, status: 'ongoing' }), 'hiatus');
+
+  assert.strictEqual((await save('ongoing')).status, 302);
+  assert.match(await (await request(`/stories/${story.id}`)).text(), /state-ongoing/);
+});
+
 test('editing a chapter creates a second version, and the diff shows the edit', async () => {
   const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
   const chapterId = models.listChaptersForStory(story.id)[0].id;

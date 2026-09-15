@@ -555,6 +555,7 @@ async function handleEditStorySubmit(req, res, user, storyId) {
   const title = (body.title || '').trim();
   const description = (body.description || '').trim();
   const synopsis = (body.synopsis || '').trim();
+  const status = body.status;
   const tagIds = [...tagIdsFromBody(body), ...proposedTagIdsFromBody(body, user)];
   if (!title) {
     return sendHtml(res, 400, views.editStoryPage({
@@ -563,9 +564,12 @@ async function handleEditStorySubmit(req, res, user, storyId) {
       values: { title, description, synopsis },
     }));
   }
-  models.updateStoryDetails(storyId, { title, description, synopsis });
+  models.updateStoryDetails(storyId, { title, description, synopsis, status });
   models.setStoryTags(storyId, tagIds);
   logEvent(user, 'story-edited', { subject: title, href: `/stories/${storyId}`, storyId });
+  if (status && status !== story.status) {
+    logEvent(user, 'status-changed', { subject: `${title}: ${status}`, href: `/stories/${storyId}`, storyId });
+  }
   redirect(res, `/stories/${storyId}`);
 }
 
@@ -888,8 +892,10 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   const { fields: body, files } = await parseMultipartBody(req, UPLOAD_LIMIT_BYTES);
   const title = (body.title || '').trim();
   const summary = (body.summary || '').trim();
+  const stage = body.stage;
+  const arcTitle = (body.arcTitle || '').trim();
   let content = (body.content || '').replace(/\r\n/g, '\n');
-  const values = { title, summary, content, position: body.position };
+  const values = { title, summary, content, position: body.position, stage, arcTitle };
 
   try {
     const uploaded = await extractUploadedText(files.file);
@@ -910,8 +916,11 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
     : null;
 
   const chapter = insertBeforeNumber !== null
-    ? models.insertChapterAt({ storyId, position: insertBeforeNumber, title, summary, authorId: user.id, content })
-    : models.createChapter({ storyId, title, summary, authorId: user.id, content });
+    ? models.insertChapterAt({ storyId, position: insertBeforeNumber, title, summary, authorId: user.id, content, stage, arcTitle })
+    : models.createChapter({ storyId, title, summary, authorId: user.id, content, stage, arcTitle });
+  if (arcTitle) {
+    logEvent(user, 'arc-started', { subject: arcTitle, href: `/stories/${storyId}`, storyId, chapterId: chapter.id });
+  }
   logEvent(user, 'chapter-added', {
     subject: `${title} (${story.title})`, href: `/chapters/${chapter.id}`, storyId, chapterId: chapter.id,
   });
@@ -1017,7 +1026,9 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
   const summary = (body.summary || '').trim();
   let content = (body.content || '').replace(/\r\n/g, '\n');
   const changelog = (body.changelog || '').trim();
-  const values = { title, summary, content, changelog };
+  const stage = body.stage;
+  const arcTitle = (body.arcTitle || '').trim();
+  const values = { title, summary, content, changelog, stage, arcTitle };
   const latest = models.getLatestVersion(chapterId);
 
   try {
@@ -1034,7 +1045,15 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
     return sendHtml(res, 400, views.editChapterPage({ user, chapter, latestContent: latest ? latest.content : '', error: 'The chapter text cannot be empty. Paste some text or upload a .md/.txt/.docx file.', values }));
   }
 
-  const { version } = models.editChapter({ chapterId, title, summary, content, changelog });
+  const { version } = models.editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle });
+  if (stage && stage !== chapter.stage) {
+    logEvent(user, 'stage-changed', { subject: `${title}: ${stage}`, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId });
+  }
+  if (arcTitle !== (chapter.arc_title || '')) {
+    logEvent(user, arcTitle ? 'arc-started' : 'arc-removed', {
+      subject: arcTitle || chapter.arc_title, href: `/stories/${chapter.story_id}`, storyId: chapter.story_id, chapterId,
+    });
+  }
   // Saving without changing a word is an edit to the title or the
   // summary, not a new draft of the chapter -- the log says which.
   logEvent(user, version ? 'chapter-revised' : 'chapter-edited', {

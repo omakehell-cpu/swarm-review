@@ -4,6 +4,7 @@
 const db = require('./db');
 const auth = require('./auth');
 const { countWords } = require('./lib/markdown');
+const { CHOOSABLE_STORY_STATES, CHAPTER_STAGES } = require('./lib/story-state');
 
 const DELETED_USER_USERNAME = 'deleted-user';
 
@@ -375,6 +376,10 @@ function listStories({ since, onlyArchived = false, tagIds = [] } = {}) {
     SELECT s.*, u.display_name AS author_name, u.username AS author_username,
       (SELECT COUNT(*) FROM chapters c WHERE c.story_id = s.id AND c.archived_at IS NULL) AS chapter_count,
       (SELECT MAX(ch.created_at) FROM chapters ch WHERE ch.story_id = s.id AND ch.archived_at IS NULL) AS last_chapter_at,
+      -- Not the same as the last chapter: a story being heavily revised
+      -- is being written in, and storyState should not call it dormant.
+      (SELECT MAX(v6.created_at) FROM chapters c6 JOIN chapter_versions v6 ON v6.chapter_id = c6.id
+        WHERE c6.story_id = s.id AND c6.archived_at IS NULL) AS last_written_at,
       (
         SELECT COUNT(*) FROM comments cm
         JOIN chapter_versions v ON v.id = cm.version_id
@@ -487,10 +492,17 @@ const getChapterById = (id) =>
     WHERE c.id = ?
   `).get(id);
 
-/** @param {{ storyId: number, title: string, summary?: string, authorId: number, content: string, changelog?: string }} fields */
-function createChapter({ storyId, title, summary, authorId, content, changelog }) {
+// A stage that is not one of the three is the default one: form values
+// are user input, and the column is NOT NULL.
+const chapterStage = (stage) => (CHAPTER_STAGES.includes(stage) ? stage : 'notes');
+// An arc name is a name, not an essay, and an empty one means "this
+// chapter does not open an arc".
+const arcName = (title) => String(title || '').trim().slice(0, 80);
+
+/** @param {{ storyId: number, title: string, summary?: string, authorId: number, content: string, changelog?: string, stage?: string, arcTitle?: string }} fields */
+function createChapter({ storyId, title, summary, authorId, content, changelog, stage, arcTitle }) {
   const insertChapter = db.prepare(
-    'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id) VALUES (?, ?, ?, ?, ?)'
+    'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id, stage, arc_title) VALUES (?, ?, ?, ?, ?, ?, ?)'
   );
   const insertVersion = db.prepare(
     'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, 1, ?, ?, ?)'
@@ -501,7 +513,7 @@ function createChapter({ storyId, title, summary, authorId, content, changelog }
 
   db.exec('BEGIN');
   try {
-    const info = insertChapter.run(storyId, nextNumber, title, summary || '', authorId);
+    const info = insertChapter.run(storyId, nextNumber, title, summary || '', authorId, chapterStage(stage), arcName(arcTitle));
     const chapterId = Number(info.lastInsertRowid);
     insertVersion.run(chapterId, content, changelog || 'Initial version', countWords(content));
     db.exec('COMMIT');
@@ -518,8 +530,8 @@ function createChapter({ storyId, title, summary, authorId, content, changelog }
 // since they still hold a slot under UNIQUE(story_id, chapter_number) --
 // is shifted up by one, highest number first so no single UPDATE ever
 // collides with another chapter's current number.
-/** @param {{ storyId: number, position: number, title: string, summary?: string, authorId: number, content: string, changelog?: string }} fields */
-function insertChapterAt({ storyId, position, title, summary, authorId, content, changelog }) {
+/** @param {{ storyId: number, position: number, title: string, summary?: string, authorId: number, content: string, changelog?: string, stage?: string, arcTitle?: string }} fields */
+function insertChapterAt({ storyId, position, title, summary, authorId, content, changelog, stage, arcTitle }) {
   db.exec('BEGIN');
   try {
     const toShift = db.prepare(
@@ -529,8 +541,8 @@ function insertChapterAt({ storyId, position, title, summary, authorId, content,
     for (const row of toShift) bump.run(row.id);
 
     const info = db.prepare(
-      'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id) VALUES (?, ?, ?, ?, ?)'
-    ).run(storyId, position, title, summary || '', authorId);
+      'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id, stage, arc_title) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(storyId, position, title, summary || '', authorId, chapterStage(stage), arcName(arcTitle));
     const chapterId = Number(info.lastInsertRowid);
     db.prepare(
       'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, 1, ?, ?, ?)'
@@ -554,12 +566,21 @@ function updateChapter({ chapterId, title, summary }) {
 // rewriting the current version's row) so any comments already anchored to
 // the previous text keep pointing at the passage they were actually made
 // about. If the text is unchanged, no new version is created.
-function editChapter({ chapterId, title, summary, content, changelog }) {
+function editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle }) {
   const latest = getLatestVersion(chapterId);
   db.exec('BEGIN');
   try {
-    db.prepare('UPDATE chapters SET title = ?, summary = ? WHERE id = ?')
-      .run(title, summary || '', chapterId);
+    // stage and arcTitle are only written when the caller says something
+    // about them. Every form that edits a chapter sends both, but a caller
+    // that does not -- a script, a future import -- should not silently
+    // knock a chapter out of its arc by not mentioning it.
+    const sets = ['title = @title', 'summary = @summary'];
+    const params = { title, summary: summary || '', chapterId };
+    // node:sqlite refuses a parameter the statement does not mention, so
+    // the object and the SET list are built together.
+    if (stage !== undefined) { sets.push('stage = @stage'); params.stage = chapterStage(stage); }
+    if (arcTitle !== undefined) { sets.push('arc_title = @arcTitle'); params.arcTitle = arcName(arcTitle); }
+    db.prepare(`UPDATE chapters SET ${sets.join(', ')} WHERE id = @chapterId`).run(params);
 
     let newVersion = null;
     if (!latest || latest.content !== content) {
@@ -1049,11 +1070,16 @@ function setStoryTags(storyId, tagIds) {
 
 /**
  * @param {number} storyId
- * @param {{ title: string, description?: string, synopsis?: string }} details
+ * @param {{ title: string, description?: string, synopsis?: string, status?: string }} details
  */
-function updateStoryDetails(storyId, { title, description, synopsis }) {
-  db.prepare('UPDATE stories SET title = ?, description = ?, synopsis = ? WHERE id = ?')
-    .run(String(title).trim(), String(description || '').trim(), String(synopsis || '').trim(), storyId);
+function updateStoryDetails(storyId, { title, description, synopsis, status }) {
+  const state = CHOOSABLE_STORY_STATES.includes(status) ? status : null;
+  db.prepare(`
+    UPDATE stories SET title = ?, description = ?, synopsis = ?${state ? ', status = ?' : ''} WHERE id = ?
+  `).run(...[
+    String(title).trim(), String(description || '').trim(), String(synopsis || '').trim(),
+    ...(state ? [state] : []), storyId,
+  ]);
   return getStoryById(storyId);
 }
 
@@ -1065,6 +1091,8 @@ function getStoryStats(storyId) {
   const row = db.prepare(`
     SELECT
       (SELECT COUNT(*) FROM chapters c WHERE c.story_id = @storyId AND c.archived_at IS NULL) AS chapters,
+      (SELECT COUNT(*) FROM chapters c WHERE c.story_id = @storyId AND c.archived_at IS NULL
+        AND TRIM(c.arc_title) != '') AS arcs,
       (SELECT COUNT(*) FROM chapters c WHERE c.story_id = @storyId AND c.archived_at IS NOT NULL) AS archived_chapters,
       (SELECT COALESCE(SUM(v.word_count), 0) FROM chapters c
         JOIN chapter_versions v ON v.chapter_id = c.id

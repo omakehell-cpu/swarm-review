@@ -317,6 +317,28 @@ ensureColumn('chapter_versions', 'word_count', 'INTEGER');
 // spoilers, so the story page keeps it folded.
 ensureColumn('stories', 'synopsis', "TEXT NOT NULL DEFAULT ''");
 
+// Where a story is, said by whoever writes it: 'ongoing' | 'complete' |
+// 'dropped'. There is deliberately no 'hiatus' value here -- a story is
+// on hiatus when nobody has written in it for months, which is something
+// the dates already know (see storyStatus in models.js). Storing it would
+// mean it was wrong from the moment somebody posted a chapter, and
+// somebody would have to remember to take it off.
+ensureColumn('stories', 'status', "TEXT NOT NULL DEFAULT 'ongoing'");
+
+// What a chapter is asking of its readers: 'draft' (still moving, don't
+// line-edit it yet), 'notes' (the reason a chapter goes up in a workshop,
+// so it is the default) or 'settled' (done with, no need to comment).
+// A separate vocabulary from the story's on purpose -- "this chapter is
+// dropped" would not mean anything.
+ensureColumn('chapters', 'stage', "TEXT NOT NULL DEFAULT 'notes'");
+
+// An arc, a book, a part: a stretch of chapters with a name. The name
+// lives on the chapter that opens it, and the arc runs from there to
+// whatever chapter opens the next one -- so there is no arc table to keep
+// in step with the running order, no empty arcs, and no chapter that
+// belongs to two of them. Empty on every chapter that does not start one.
+ensureColumn('chapters', 'arc_title', "TEXT NOT NULL DEFAULT ''");
+
 // Who has opened which chapter. Recorded automatically when somebody loads
 // a chapter page rather than by a button: the question an author actually
 // has is "has anybody looked at this yet", and asking people to tick a box
