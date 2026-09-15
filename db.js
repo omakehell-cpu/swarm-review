@@ -495,6 +495,25 @@ CREATE TABLE IF NOT EXISTS story_entity_appearance_overrides (
 -- question about who is in what reads the same answer. Two places
 -- implementing "cache minus excludes plus includes" is two places to get
 -- it subtly different.
+-- Pictures of an entry: a portrait, a sketch, a deck plan. The bytes live
+-- in data/entity-images/ (see lib/entity-images.js) and only the metadata
+-- is here -- a database that swallows every photograph is a database that
+-- takes a minute to copy. The lowest position is the one used as the
+-- entry's face in listings.
+CREATE TABLE IF NOT EXISTS story_entity_images (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_id    INTEGER NOT NULL REFERENCES story_entities(id) ON DELETE CASCADE,
+  story_id     INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  filename     TEXT NOT NULL,
+  content_type TEXT NOT NULL,
+  bytes        INTEGER NOT NULL DEFAULT 0,
+  caption      TEXT NOT NULL DEFAULT '',
+  position     INTEGER NOT NULL DEFAULT 0,
+  uploaded_by  INTEGER REFERENCES users(id),
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_entity_images ON story_entity_images(entity_id, position, id);
+
 CREATE VIEW IF NOT EXISTS story_entity_chapters AS
   SELECT a.entity_id, a.chapter_id, a.story_id, a.mentions, a.first_name,
          CASE WHEN EXISTS (

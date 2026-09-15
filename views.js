@@ -11,6 +11,7 @@ const {
 const wiki = require('./lib/wiki');
 const taxonomy = require('./lib/glossary-taxonomy');
 const bible = require('./lib/story-bible');
+const bibleImages = require('./lib/entity-images');
 
 const MARKDOWN_HINT = `Markdown is supported: **bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - or 1. list items. Put a backslash before a character to keep it literal (\\* shows a real asterisk). Line breaks are kept as you type them.`;
 
@@ -811,10 +812,11 @@ function appearanceSummary(entity) {
   return `Chapters ${entity.first_chapter}&ndash;${entity.last_chapter} &middot; ${entity.appearances} of them`;
 }
 
-function entityRow(entity) {
+function entityRow(entity, coverId) {
   const search = `${entity.name} ${entity.summary || ''} ${entity.alias_list || ''}`.toLowerCase();
   return `
-    <a class="chapter-row glossary-row" href="/bible/${entity.id}" data-search="${escapeHtml(search)}">
+    <a class="chapter-row glossary-row${coverId ? ' has-cover' : ''}" href="/bible/${entity.id}" data-search="${escapeHtml(search)}">
+      ${coverId ? `<img class="row-cover" src="/entity-images/${coverId}" alt="" loading="lazy">` : ''}
       <div class="chapter-row-main">
         <h3>${escapeHtml(entity.name)} ${entityBadges(entity)}</h3>
         ${entity.summary ? `<p class="muted">${escapeHtml(entity.summary)}</p>` : ''}
@@ -841,7 +843,7 @@ function bibleConflictNotice(conflicts) {
 
 function bibleIndexPage({
   user, story, entities = [], counts = {}, total = 0, kind = '', canWrite = false,
-  conflicts = [], notice = '',
+  conflicts = [], notice = '', covers = new Map(),
 }) {
   const door = (k) => `
     <a class="glossary-door${k === kind ? ' current' : ''}" href="/stories/${story.id}/bible?kind=${k}">
@@ -851,7 +853,7 @@ function bibleIndexPage({
     </a>`;
 
   const list = entities.length
-    ? `<div class="chapter-list" id="glossary-list">${entities.map(entityRow).join('')}</div>
+    ? `<div class="chapter-list" id="glossary-list">${entities.map((e) => entityRow(e, covers.get(e.id))).join('')}</div>
        <p class="no-matches" id="glossary-no-matches" hidden>Nothing here matches.</p>`
     : emptyState({
       art: 'sheets',
@@ -960,20 +962,68 @@ function entityRelationBlock(entity, links, others, canWrite) {
   return `<ul class="relation-list">${rows}</ul>${form}`;
 }
 
+// The gallery. The first picture is the entry's face -- in the index, at
+// the top of its own page -- so "make this the portrait" is just "move it
+// to the front", and there is no second concept to keep in step.
+function entityImageBlock(entity, images, canWrite) {
+  const figures = images.map((image, i) => `
+    <figure class="entity-figure">
+      <a href="/entity-images/${image.id}" target="_blank" rel="noopener noreferrer">
+        <img src="/entity-images/${image.id}" alt="${escapeHtml(image.caption || entity.name)}" loading="lazy">
+      </a>
+      ${i === 0 ? '<span class="cover-flag">Cover</span>' : ''}
+      <figcaption>
+        ${canWrite ? `
+          <form method="post" action="/bible/${entity.id}/images/${image.id}/caption" class="caption-form">
+            <input type="text" name="caption" value="${escapeHtml(image.caption)}" placeholder="Caption" maxlength="240">
+            <button class="btn ghost tiny" type="submit">Save</button>
+          </form>
+          <div class="figure-actions">
+            ${i > 0 ? `<form method="post" action="/bible/${entity.id}/images/${image.id}/up" class="inline-form"><button class="btn ghost tiny" type="submit">&larr; Earlier</button></form>` : ''}
+            ${i < images.length - 1 ? `<form method="post" action="/bible/${entity.id}/images/${image.id}/down" class="inline-form"><button class="btn ghost tiny" type="submit">Later &rarr;</button></form>` : ''}
+            <form method="post" action="/bible/${entity.id}/images/${image.id}/delete" class="inline-form"><button class="btn ghost tiny danger" type="submit">Remove</button></form>
+          </div>`
+    : (image.caption ? escapeHtml(image.caption) : '')}
+      </figcaption>
+    </figure>`).join('');
+
+  const adder = canWrite && images.length < bibleImages.MAX_IMAGES_PER_ENTRY ? `
+    <form method="post" action="/bible/${entity.id}/images" enctype="multipart/form-data" class="image-form">
+      <label>Add a picture
+        <input type="file" name="image" accept="${bibleImages.ACCEPT_ATTRIBUTE}" data-shrink required>
+      </label>
+      <label>Caption <input type="text" name="caption" maxlength="240" placeholder="Optional"></label>
+      <button class="btn ghost small" type="submit">Upload</button>
+      <span class="hint">PNG, JPEG, GIF or WebP. Large pictures are shrunk in your browser before they are sent, so nothing waits on the upload.</span>
+    </form>` : '';
+
+  if (!figures && !adder) return '';
+  return `
+    <section class="entity-pictures" id="pictures">
+      <h2 class="side-head">Pictures</h2>
+      ${figures ? `<div class="figure-strip">${figures}</div>` : '<p class="ent-none">None yet.</p>'}
+      ${adder}
+    </section>`;
+}
+
 function entityPage({
   user, story, entity, aliases = [], links = [], appearances = [], chapters = [],
-  others = [], canWrite = false,
+  others = [], images = [], canWrite = false, error = '',
 }) {
   return layout({
     title: entity.name,
     user,
     body: `
       <p class="breadcrumb"><a href="/stories/${story.id}/bible">&larr; ${escapeHtml(story.title)} bible</a></p>
-      <div class="page-head">
-        <div>
+      ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+      <div class="page-head entity-head">
+        <div class="entity-head-main">
+          ${images.length ? `<img class="entity-portrait" src="/entity-images/${images[0].id}" alt="${escapeHtml(images[0].caption || entity.name)}">` : ''}
+          <div>
           <h1>${escapeHtml(entity.name)} ${entityBadges(entity)}</h1>
           <p class="muted">${escapeHtml(entityKindLabel(entity.kind))}${aliases.length ? ` &middot; also ${aliases.map((a) => escapeHtml(a)).join(', ')}` : ''}</p>
           ${entity.summary ? `<p class="summary">${escapeHtml(entity.summary)}</p>` : ''}
+          </div>
         </div>
         <div class="page-head-actions">
           ${canWrite ? `<a class="btn ghost small" href="/bible/${entity.id}/edit">Edit</a>` : ''}
@@ -988,6 +1038,7 @@ function entityPage({
               <summary>Spoilers &mdash; what the reader does not know yet</summary>
               <div class="reading-pane">${renderHighlighted(parseMarkdown(entity.secret), [], null)}</div>
             </details>` : ''}
+          ${entityImageBlock(entity, images, canWrite)}
         </div>
         <aside class="entity-side">
           <section>
@@ -2207,6 +2258,7 @@ const EVENT_SENTENCES = {
   'comment-retracted': () => 'retracted a comment',
   'comment-reopened': (s) => `reopened a note on ${s}`,
   'bible-entry-added': (s) => `added ${s} to the bible`,
+  'bible-image-added': (s) => `added a picture to ${s}`,
   'bible-entry-edited': (s) => `rewrote ${s} in the bible`,
   'bible-entry-deleted': (s) => `took ${s} out of the bible`,
   'word-added': (s) => `taught the dictionary ${s}`,
