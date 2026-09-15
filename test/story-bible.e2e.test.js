@@ -368,3 +368,72 @@ test('deleting a picture takes the file with it, and so does deleting the entry'
   await owner.request(`/bible/${id}/delete`, { method: 'POST', ...form([]) });
   assert.ok(!fs2.existsSync(path2), 'no orphaned faces on disk');
 });
+
+// ---------- custom fields ----------
+test('a template asks every entry of a kind the same questions', async () => {
+  const res = await owner.request(`/stories/${storyId}/bible/fields`, {
+    method: 'POST',
+    ...form([['person', 'Rank\nHome world\nrank'], ['place', 'Class'], ['group', ''], ['thing', ''], ['event', '']]),
+  });
+  assert.strictEqual(res.status, 200);
+  // Repeats fold together; the order is the order typed.
+  assert.deepStrictEqual(models.listFieldTemplate(storyId, 'person'), ['Rank', 'Home world']);
+  assert.deepStrictEqual(models.listFieldTemplate(storyId, 'place'), ['Class']);
+
+  const formPage = await (await owner.request(`/bible/${kesslerId}/edit`)).text();
+  assert.match(formPage, /data-kind="person"/);
+  assert.match(formPage, /Home world/);
+  // The other kinds' blocks are there but hidden and disabled, so changing
+  // your mind about the kind does not post two kinds' fields.
+  assert.match(formPage, /data-kind="place" hidden/);
+});
+
+test('an entry answers the template and adds its own', async () => {
+  await owner.request(`/bible/${kesslerId}`, {
+    method: 'POST',
+    ...form([
+      ['name', 'Kessler'], ['kind', 'person'], ['aliases', 'the Old Man'],
+      ['summary', 'Four hundred days on the anchorage.'], ['role', 'main'], ['status', 'alive'],
+      ['fieldLabel', 'Rank'], ['fieldValue', 'Chief of the watch'],
+      ['fieldLabel', 'Home world'], ['fieldValue', ''],
+      ['fieldLabel', 'Eyes'], ['fieldValue', 'grey'],
+      ['fieldLabel', ''], ['fieldValue', 'orphan with no label'],
+    ]),
+  });
+  // The template slot nobody answered is not stored as an empty answer,
+  // and a value with no label is not stored at all.
+  assert.deepStrictEqual(
+    models.listEntityFields(kesslerId).map((f) => [f.label, f.value]),
+    [['Rank', 'Chief of the watch'], ['Eyes', 'grey']]
+  );
+
+  const page = await (await owner.request(`/bible/${kesslerId}`)).text();
+  assert.match(page, /class="entity-fields"/);
+  assert.match(page, /Chief of the watch/);
+  assert.match(page, /grey/);
+
+  // The labels already in use are offered back as suggestions.
+  const next = await (await owner.request(`/stories/${storyId}/bible/new`)).text();
+  assert.match(next, /<datalist id="known-field-labels">/);
+  assert.match(next, /<option value="Eyes">/);
+});
+
+test('taking a label out of the template does not take what an entry said', async () => {
+  await owner.request(`/stories/${storyId}/bible/fields`, {
+    method: 'POST',
+    ...form([['person', 'Home world'], ['place', ''], ['group', ''], ['thing', ''], ['event', '']]),
+  });
+  const fields = models.listEntityFields(kesslerId).map((f) => f.label);
+  assert.ok(fields.includes('Rank'), 'the answer outlived the question');
+  // It is still shown, now as one of the entry's own extras.
+  assert.match(await (await owner.request(`/bible/${kesslerId}`)).text(), /Chief of the watch/);
+});
+
+test('only the story\'s authors can set the template', async () => {
+  const res = await reader.request(`/stories/${storyId}/bible/fields`, {
+    method: 'POST', ...form([['person', 'Whatever I like']]),
+  });
+  assert.strictEqual(res.status, 403);
+  assert.strictEqual((await reader.request(`/stories/${storyId}/bible/fields`)).status, 403);
+  assert.deepStrictEqual(models.listFieldTemplate(storyId, 'person'), ['Home world']);
+});

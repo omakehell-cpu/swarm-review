@@ -495,6 +495,41 @@ CREATE TABLE IF NOT EXISTS story_entity_appearance_overrides (
 -- question about who is in what reads the same answer. Two places
 -- implementing "cache minus excludes plus includes" is two places to get
 -- it subtly different.
+-- Custom fields, in two halves that answer two different needs.
+--
+-- The template is what every entry of one kind in this story should say:
+-- every person has a Rank and a Home world, every ship a Class. Define it
+-- once and the form asks for it every time, which is what makes a cast of
+-- hundreds comparable instead of a hundred private habits.
+CREATE TABLE IF NOT EXISTS story_field_templates (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  story_id    INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  kind        TEXT NOT NULL,
+  label       TEXT NOT NULL,
+  label_lower TEXT NOT NULL,
+  position    INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(story_id, kind, label_lower)
+);
+CREATE INDEX IF NOT EXISTS idx_field_templates ON story_field_templates(story_id, kind, position);
+
+-- And what one entry actually says, template or not. A field whose label
+-- matches the template fills that slot; anything else is an extra this
+-- one entry needed. Storing both the same way means an entry keeps what
+-- it says when the template changes its mind, and a field promoted into
+-- the template does not have to be retyped into every entry.
+CREATE TABLE IF NOT EXISTS story_entity_fields (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_id   INTEGER NOT NULL REFERENCES story_entities(id) ON DELETE CASCADE,
+  story_id    INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  label       TEXT NOT NULL,
+  label_lower TEXT NOT NULL,
+  value       TEXT NOT NULL DEFAULT '',
+  position    INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(entity_id, label_lower)
+);
+CREATE INDEX IF NOT EXISTS idx_entity_fields ON story_entity_fields(entity_id, position);
+CREATE INDEX IF NOT EXISTS idx_entity_fields_label ON story_entity_fields(story_id, label_lower);
+
 -- Pictures of an entry: a portrait, a sketch, a deck plan. The bytes live
 -- in data/entity-images/ (see lib/entity-images.js) and only the metadata
 -- is here -- a database that swallows every photograph is a database that

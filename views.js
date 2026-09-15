@@ -1006,9 +1006,97 @@ function entityImageBlock(entity, images, canWrite) {
     </section>`;
 }
 
+// The custom fields on an entry's page: what the template asked for, in
+// its order, then whatever else this one entry needed. Blanks are not
+// shown -- an unanswered question belongs in the form, not on the page.
+function entityFieldList(fields) {
+  if (!fields.length) return '';
+  return `
+    <section class="entity-fields">
+      <h2 class="side-head">Details</h2>
+      <dl class="field-list">
+        ${fields.map((f) => `
+          <div><dt>${escapeHtml(f.label)}</dt><dd>${escapeHtml(f.value)}</dd></div>`).join('')}
+      </dl>
+    </section>`;
+}
+
+// One block per kind, all but the current one hidden. With JavaScript the
+// block follows the "What is it" select; without it, the hidden ones stay
+// hidden and you get the fields for the kind the entry actually is, which
+// is the right answer anyway.
+function fieldTemplateBlocks(templates, fields, currentKind) {
+  return bible.KINDS.map((kind) => {
+    const rows = bible.fieldRows(templates[kind] || [], kind === currentKind ? fields : [], 0);
+    if (!rows.length) return '';
+    return `
+      <div class="template-fields" data-kind="${kind}"${kind === currentKind ? '' : ' hidden'}>
+        ${rows.map((row) => `
+          <label class="field-row">
+            <span class="field-name">${escapeHtml(row.label)}</span>
+            <input type="hidden" name="fieldLabel" value="${escapeHtml(row.label)}"${kind === currentKind ? '' : ' disabled'}>
+            <input type="text" name="fieldValue" value="${escapeHtml(row.value)}" maxlength="${bible.MAX_FIELD_VALUE}"${kind === currentKind ? '' : ' disabled'}>
+          </label>`).join('')}
+      </div>`;
+  }).join('');
+}
+
+function entityFieldFieldset({ templates, fields, currentKind, usedLabels }) {
+  const template = templates[currentKind] || [];
+  const inTemplate = new Set(template.map((l) => l.toLowerCase()));
+  const extras = (fields || []).filter((f) => !inTemplate.has(f.label.toLowerCase()));
+  const blank = (label = '', value = '') => `
+    <div class="field-pair">
+      <input type="text" name="fieldLabel" value="${escapeHtml(label)}" list="known-field-labels" placeholder="Field" maxlength="${bible.MAX_FIELD_LABEL}">
+      <input type="text" name="fieldValue" value="${escapeHtml(value)}" placeholder="Value" maxlength="${bible.MAX_FIELD_VALUE}">
+    </div>`;
+  return `
+    <div class="writer-section">
+      <p class="writer-section-label">Details</p>
+      <p class="hint">Whatever this story needs written down: a rank, a class, a home world, a colour of eyes. Fields the whole story shares are set once, <a href="#field-template">as a template per kind</a>; anything below that is this entry's own.</p>
+      ${fieldTemplateBlocks(templates, fields, currentKind)}
+      <div class="field-extras" id="field-extras">
+        ${extras.map((f) => blank(f.label, f.value)).join('')}
+        ${blank()}${blank()}${blank()}
+      </div>
+      <button class="btn ghost tiny" type="button" data-add-field>Another field</button>
+      <datalist id="known-field-labels">
+        ${(usedLabels || []).map((l) => `<option value="${escapeHtml(l)}"></option>`).join('')}
+      </datalist>
+    </div>`;
+}
+
+// The template editor: one box per kind, one label per line. A short
+// ordered list is easier to rewrite than to edit row by row, and
+// rewriting it is also how it gets reordered.
+function fieldTemplatePage({ user, story, templates = {}, notice = '' }) {
+  return layout({
+    title: `Fields &middot; ${story.title}`,
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/stories/${story.id}/bible">&larr; ${escapeHtml(story.title)} bible</a></p>
+      <div class="writer-card">
+        <h1>What every entry says</h1>
+        <p class="muted writer-intro">The fields the form should ask for, per kind. Every person gets a Rank and a Home world; every ship a Class. One label per line, in the order you want them asked.</p>
+        <p class="muted">Taking a label out never deletes what an entry already said under it -- it just stops being asked for, and stays on the entries that answered it.</p>
+        ${notice ? `<p class="flash info">${escapeHtml(notice)}</p>` : ''}
+        <form method="post" action="/stories/${story.id}/bible/fields" class="chapter-form">
+          ${bible.KINDS.map((kind) => `
+            <label>${escapeHtml(bible.KIND_PLURALS[kind])}
+              <textarea name="${kind}" rows="5" placeholder="One label per line">${escapeHtml((templates[kind] || []).join('\n'))}</textarea>
+            </label>`).join('')}
+          <div class="writer-actions">
+            <a class="btn ghost" href="/stories/${story.id}/bible">Cancel</a>
+            <button class="btn" type="submit">Save the template</button>
+          </div>
+        </form>
+      </div>`,
+  });
+}
+
 function entityPage({
   user, story, entity, aliases = [], links = [], appearances = [], chapters = [],
-  others = [], images = [], canWrite = false, error = '',
+  others = [], images = [], fields = [], canWrite = false, error = '',
 }) {
   return layout({
     title: entity.name,
@@ -1041,6 +1129,7 @@ function entityPage({
           ${entityImageBlock(entity, images, canWrite)}
         </div>
         <aside class="entity-side">
+          ${entityFieldList(fields)}
           <section>
             <h2 class="side-head">Appears in</h2>
             ${entityAppearanceList(entity, appearances, chapters, canWrite)}
@@ -1058,7 +1147,7 @@ function entityPage({
   });
 }
 
-function entityFormPage({ user, story, entity = null, aliases = [], error = '' }) {
+function entityFormPage({ user, story, entity = null, aliases = [], fields = [], templates = {}, usedLabels = [], error = '' }) {
   const value = (field) => escapeHtml(entity ? entity[field] || '' : '');
   const selected = (field, option) => ((entity ? entity[field] : '') === option ? ' selected' : '');
   return layout({
@@ -1098,6 +1187,10 @@ function entityFormPage({ user, story, entity = null, aliases = [], error = '' }
             </select>
           </label>
         </div>
+        ${entityFieldFieldset({
+    templates, fields, usedLabels,
+    currentKind: (entity && entity.kind) || bible.DEFAULT_KIND,
+  })}
         <label>Description
           <textarea name="description" rows="14" placeholder="Who they are, what they want, how they talk, what they look like. Markdown works here, and so do links to other chapters.">${value('description')}</textarea>
         </label>
@@ -1109,6 +1202,7 @@ function entityFormPage({ user, story, entity = null, aliases = [], error = '' }
           <a class="btn ghost" href="${entity ? `/bible/${entity.id}` : `/stories/${story.id}/bible`}">Cancel</a>
         </div>
       </form>
+      <p class="muted" id="field-template"><a href="/stories/${story.id}/bible/fields">Set the fields every entry of a kind is asked for &rarr;</a></p>
       </div>`,
   });
 }
@@ -2721,6 +2815,7 @@ module.exports = {
   archivedChaptersPage,
   chapterPage,
   bibleIndexPage,
+  fieldTemplatePage,
   chapterCastBlock,
   entityFormPage,
   entityPage,
