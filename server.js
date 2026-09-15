@@ -31,6 +31,7 @@ const wiki = require('./lib/wiki');
 const taxonomy = require('./lib/glossary-taxonomy');
 const storyBible = require('./lib/story-bible');
 const entityImages = require('./lib/entity-images');
+const castLinks = require('./lib/cast-links');
 const diff = require('./lib/diff');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
@@ -709,15 +710,17 @@ async function handleBibleIndex(req, res, user, storyId, query) {
   if (!story) return;
   const kind = (query.get('kind') || '').trim();
   const q = (query.get('q') || '').trim().toLowerCase();
+  const sort = Object.prototype.hasOwnProperty.call(models.ENTITY_SORTS, query.get('sort') || '')
+    ? String(query.get('sort')) : 'name';
   const { counts, total } = models.storyBibleCounts(storyId);
-  let entities = models.listStoryEntities(storyId, kind ? { kind } : {});
+  let entities = models.listStoryEntities(storyId, { kind: kind || undefined, sort });
   // The filter box does this in the page without a round trip; this is the
   // same filter for a browser with no JavaScript, and for a shared link.
   if (q) {
     entities = entities.filter((e) => `${e.name} ${e.summary} ${e.alias_list || ''}`.toLowerCase().includes(q));
   }
   sendHtml(res, 200, views.bibleIndexPage({
-    user, story, entities, counts, total, kind,
+    user, story, entities, counts, total, kind, sort,
     canWrite: models.canWriteInStory(story, user),
     conflicts: models.storyBibleNameConflicts(storyId),
     covers: models.coverImagesFor(storyId),
@@ -754,6 +757,52 @@ function entityFormExtras(storyId, entity) {
     usedLabels: models.listUsedFieldLabels(storyId),
     fields: entity ? models.listEntityFields(entity.id) : [],
   };
+}
+
+// One click from a name in the prose to an entry in the bible. The entry
+// it makes is a stub -- the name and what kind of thing it is -- because
+// the name was the part that was stopping anybody, and everything else can
+// be written when there is something to write.
+async function handleQuickEntity(req, res, user, storyId) {
+  const story = bibleGuard(res, user, storyId, { write: true });
+  if (!story) return;
+  const body = await parseBody(req);
+  const name = storyBible.cleanName(body.name);
+  // Where the click came from: a chapter, the editor, the bible itself.
+  // Only ever a path inside this app -- never whatever the form was told.
+  const back = /^\/[A-Za-z0-9/_?=&.-]*$/.test(String(body.returnTo || ''))
+    ? String(body.returnTo) : `/stories/${storyId}/bible`;
+  const wantsJson = (req.headers.accept || '').includes('application/json');
+  if (!name) {
+    return wantsJson ? sendJson(res, 400, { error: 'An entry needs a name.' }) : redirect(res, back);
+  }
+  const existing = models.getStoryEntityByName(storyId, name);
+  if (existing) {
+    return wantsJson
+      ? sendJson(res, 200, { id: existing.id, name, already: true })
+      : redirect(res, `/bible/${existing.id}`);
+  }
+  const entity = models.createStoryEntity({
+    storyId, name, kind: body.kind, summary: body.summary, createdBy: user.id,
+  });
+  if (!entity) {
+    return wantsJson ? sendJson(res, 400, { error: 'That entry could not be created.' }) : redirect(res, back);
+  }
+  logEvent(user, 'bible-entry-added', { subject: `${entity.name} (${story.title})`, href: `/bible/${entity.id}`, storyId });
+  if (wantsJson) return sendJson(res, 200, { id: entity.id, name: entity.name, kind: entity.kind });
+  redirect(res, back);
+}
+
+// The same question the chapter page answers, asked about a draft that has
+// not been saved: the editor posts what is in the textarea and gets back
+// the names nothing accounts for. One implementation of what counts as a
+// name, rather than a second one in JavaScript drifting away from it.
+async function handleUnknownNames(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendJson(res, 404, { error: 'Story not found' });
+  if (!models.canWriteInStory(story, user)) return sendJson(res, 403, { error: "Only the story's authors can see this." });
+  const body = await parseBody(req);
+  sendJson(res, 200, { names: models.missingNamesInText(storyId, String(body.text || '')) });
 }
 
 async function handleFieldTemplatePage(req, res, user, storyId) {
@@ -1299,6 +1348,9 @@ async function handleChapterPage(req, res, user, chapterId, query) {
     neighbours: models.getChapterNeighbours(chapter),
     readers: models.listChapterReaders(chapterId),
     cast: models.listChapterEntities(chapterId),
+    findMatches: castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches),
+    missingNames: models.canWriteInStory(models.getStoryById(chapter.story_id), user)
+      ? models.missingNamesInChapter(chapterId) : [],
   }));
 }
 
@@ -1352,6 +1404,7 @@ async function handleEditChapterPage(req, res, user, chapterId) {
   const comments = latest ? models.listCommentsForVersion(latest.id) : [];
   sendHtml(res, 200, views.editChapterPage({
     user, chapter, latestContent: latest ? latest.content : '', comments, values: {},
+    canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
   }));
 }
 
@@ -1757,6 +1810,12 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/new$/)) && req.method === 'GET') {
       return handleNewEntityPage(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/quick$/)) && req.method === 'POST') {
+      return handleQuickEntity(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/unknown-names$/)) && req.method === 'POST') {
+      return handleUnknownNames(req, res, user, Number(m[1]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/fields$/)) && req.method === 'GET') {
       return handleFieldTemplatePage(req, res, user, Number(m[1]));
