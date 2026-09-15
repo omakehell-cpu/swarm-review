@@ -397,6 +397,124 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id, id DESC);
 CREATE INDEX IF NOT EXISTS idx_events_time ON events(id DESC);
+
+-- ---------------------------------------------------------------------
+-- The story bible: one per story, holding the people, places, groups,
+-- things and events that story is made of.
+-- ---------------------------------------------------------------------
+-- Deliberately per-story and NOT the glossary. The glossary (wiki_pages)
+-- is a read-only mirror of the shared-universe wiki: it is written by the
+-- wiki, wiped and rewritten by every sync, and knows nothing about
+-- anybody's chapters. A bible entry is the opposite on all three counts --
+-- written here, kept here, and tied to the chapters of one story. A name
+-- can honestly exist in both: the wiki's public account of a ship, and
+-- what this author privately knows about it.
+CREATE TABLE IF NOT EXISTS story_entities (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  story_id     INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  kind         TEXT NOT NULL DEFAULT 'person',
+  name         TEXT NOT NULL,
+  name_lower   TEXT NOT NULL,
+  summary      TEXT NOT NULL DEFAULT '',
+  description  TEXT NOT NULL DEFAULT '',
+  secret       TEXT NOT NULL DEFAULT '',
+  status       TEXT NOT NULL DEFAULT '',
+  role         TEXT NOT NULL DEFAULT '',
+  created_by   INTEGER REFERENCES users(id),
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(story_id, name_lower)
+);
+CREATE INDEX IF NOT EXISTS idx_entities_story ON story_entities(story_id, kind, name_lower);
+
+-- The other names a person is called by -- a rank, a nickname, a maiden
+-- name, a ship's pennant number. They are what makes the appearance scan
+-- honest: "the Old Man" is the same character as "Commodore Raye", and a
+-- chapter that only ever uses one of them still counts as an appearance.
+-- story_id is denormalised so the per-story matcher is one indexed read.
+CREATE TABLE IF NOT EXISTS story_entity_aliases (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_id   INTEGER NOT NULL REFERENCES story_entities(id) ON DELETE CASCADE,
+  story_id    INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  alias       TEXT NOT NULL,
+  alias_lower TEXT NOT NULL,
+  UNIQUE(entity_id, alias_lower)
+);
+CREATE INDEX IF NOT EXISTS idx_entity_aliases_story ON story_entity_aliases(story_id);
+
+-- A relation is stored once and read from both ends: "Kessler --sister
+-- of--> Prado" is also "Prado --brother of--> Kessler", and storing it
+-- twice is how the two halves end up disagreeing. reverse_label is what
+-- the far end calls it; blank means the same word both ways ("married
+-- to", "rival of").
+CREATE TABLE IF NOT EXISTS story_entity_links (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  story_id      INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  from_id       INTEGER NOT NULL REFERENCES story_entities(id) ON DELETE CASCADE,
+  to_id         INTEGER NOT NULL REFERENCES story_entities(id) ON DELETE CASCADE,
+  label         TEXT NOT NULL DEFAULT '',
+  reverse_label TEXT NOT NULL DEFAULT '',
+  created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(from_id, to_id)
+);
+CREATE INDEX IF NOT EXISTS idx_entity_links_from ON story_entity_links(from_id);
+CREATE INDEX IF NOT EXISTS idx_entity_links_to ON story_entity_links(to_id);
+
+-- Where each entry is named, worked out by scanning the current text of
+-- every chapter (see lib/story-bible.js). A cache, not a source: every row
+-- here can be thrown away and rebuilt from the chapters, and is, whenever
+-- a chapter or a name changes. Caching it is what makes "who is in chapter
+-- 12" and "which chapters is she in" one indexed read instead of a scan of
+-- the whole story.
+CREATE TABLE IF NOT EXISTS story_entity_appearances (
+  entity_id   INTEGER NOT NULL REFERENCES story_entities(id) ON DELETE CASCADE,
+  chapter_id  INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+  story_id    INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  mentions    INTEGER NOT NULL DEFAULT 0,
+  first_name  TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (entity_id, chapter_id)
+);
+CREATE INDEX IF NOT EXISTS idx_entity_appearances_chapter ON story_entity_appearances(chapter_id);
+CREATE INDEX IF NOT EXISTS idx_entity_appearances_story ON story_entity_appearances(story_id);
+
+-- The scan is only as good as the prose: somebody present but never named
+-- is missed, and a name that is also a common word is found too often. So
+-- the author can overrule it either way, per chapter, and the override
+-- survives every rebuild -- it is the one thing about appearances that is
+-- a source rather than a cache.
+CREATE TABLE IF NOT EXISTS story_entity_appearance_overrides (
+  entity_id  INTEGER NOT NULL REFERENCES story_entities(id) ON DELETE CASCADE,
+  chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+  state      TEXT NOT NULL,
+  set_by     INTEGER REFERENCES users(id),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (entity_id, chapter_id)
+);
+
+-- The scan and the corrections, resolved once, in SQL, so that every
+-- question about who is in what reads the same answer. Two places
+-- implementing "cache minus excludes plus includes" is two places to get
+-- it subtly different.
+CREATE VIEW IF NOT EXISTS story_entity_chapters AS
+  SELECT a.entity_id, a.chapter_id, a.story_id, a.mentions, a.first_name,
+         CASE WHEN EXISTS (
+           SELECT 1 FROM story_entity_appearance_overrides o
+           WHERE o.entity_id = a.entity_id AND o.chapter_id = a.chapter_id AND o.state = 'include'
+         ) THEN 'both' ELSE 'scan' END AS source
+    FROM story_entity_appearances a
+   WHERE NOT EXISTS (
+     SELECT 1 FROM story_entity_appearance_overrides o
+     WHERE o.entity_id = a.entity_id AND o.chapter_id = a.chapter_id AND o.state = 'exclude'
+   )
+  UNION ALL
+  SELECT o.entity_id, o.chapter_id, c.story_id, 0, '', 'manual'
+    FROM story_entity_appearance_overrides o
+    JOIN chapters c ON c.id = o.chapter_id
+   WHERE o.state = 'include'
+     AND NOT EXISTS (
+       SELECT 1 FROM story_entity_appearances a
+       WHERE a.entity_id = o.entity_id AND a.chapter_id = o.chapter_id
+     );
 `);
 
 // One-time migration: older versions of this app gated registration with a

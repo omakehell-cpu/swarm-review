@@ -5,6 +5,7 @@ const db = require('./db');
 const auth = require('./auth');
 const { countWords } = require('./lib/markdown');
 const { CHOOSABLE_STORY_STATES, CHAPTER_STAGES } = require('./lib/story-state');
+const bible = require('./lib/story-bible');
 
 const DELETED_USER_USERNAME = 'deleted-user';
 
@@ -499,6 +500,13 @@ const chapterStage = (stage) => (CHAPTER_STAGES.includes(stage) ? stage : 'notes
 // chapter does not open an arc".
 const arcName = (title) => String(title || '').trim().slice(0, 80);
 
+// Keeping the bible in step with the prose must never be the reason a
+// chapter fails to save: the cache can always be rebuilt, the chapter
+// cannot be retyped.
+function refreshChapterAppearances(chapterId) {
+  try { rebuildChapterAppearances(chapterId); } catch (err) { /* rebuilt on the next edit, or from the bible page */ }
+}
+
 /** @param {{ storyId: number, title: string, summary?: string, authorId: number, content: string, changelog?: string, stage?: string, arcTitle?: string }} fields */
 function createChapter({ storyId, title, summary, authorId, content, changelog, stage, arcTitle }) {
   const insertChapter = db.prepare(
@@ -517,6 +525,7 @@ function createChapter({ storyId, title, summary, authorId, content, changelog, 
     const chapterId = Number(info.lastInsertRowid);
     insertVersion.run(chapterId, content, changelog || 'Initial version', countWords(content));
     db.exec('COMMIT');
+    refreshChapterAppearances(chapterId);
     return getChapterById(chapterId);
   } catch (err) {
     db.exec('ROLLBACK');
@@ -548,6 +557,7 @@ function insertChapterAt({ storyId, position, title, summary, authorId, content,
       'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, 1, ?, ?, ?)'
     ).run(chapterId, content, changelog || 'Initial version', countWords(content));
     db.exec('COMMIT');
+    refreshChapterAppearances(chapterId);
     return getChapterById(chapterId);
   } catch (err) {
     db.exec('ROLLBACK');
@@ -592,6 +602,7 @@ function editChapter({ chapterId, title, summary, content, changelog, stage, arc
     }
 
     db.exec('COMMIT');
+    if (newVersion) refreshChapterAppearances(chapterId);
     return { chapter: getChapterById(chapterId), version: newVersion };
   } catch (err) {
     db.exec('ROLLBACK');
@@ -702,6 +713,7 @@ function addVersion({ chapterId, content, changelog }) {
   const info = db.prepare(
     'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, ?, ?, ?, ?)'
   ).run(chapterId, nextNumber, content, changelog || '', countWords(content));
+  refreshChapterAppearances(chapterId);
   return getVersion(Number(info.lastInsertRowid));
 }
 
@@ -1584,7 +1596,364 @@ function setDisplayName(userId, displayName) {
   return getUserById(userId);
 }
 
+
+// ---------- the story bible (see lib/story-bible.js and db.js) ----------
+// Per story, not per site: the glossary is the shared universe's public
+// account of things, and this is one author's private account of their own
+// cast. They can disagree, and both can be right.
+
+const APPEARANCE_COUNT_SQL = `
+  (SELECT COUNT(*) FROM story_entity_chapters sc
+     JOIN chapters ch ON ch.id = sc.chapter_id
+    WHERE sc.entity_id = e.id AND ch.archived_at IS NULL)`;
+
+const ENTITY_COLUMNS = `
+  e.*, u.display_name AS created_by_name,
+  (SELECT GROUP_CONCAT(a.alias, ', ') FROM story_entity_aliases a WHERE a.entity_id = e.id) AS alias_list,
+  ${APPEARANCE_COUNT_SQL} AS appearances,
+  (SELECT MIN(ch.chapter_number) FROM story_entity_chapters sc
+     JOIN chapters ch ON ch.id = sc.chapter_id
+    WHERE sc.entity_id = e.id AND ch.archived_at IS NULL) AS first_chapter,
+  (SELECT MAX(ch.chapter_number) FROM story_entity_chapters sc
+     JOIN chapters ch ON ch.id = sc.chapter_id
+    WHERE sc.entity_id = e.id AND ch.archived_at IS NULL) AS last_chapter,
+  (SELECT COUNT(*) FROM story_entity_links l WHERE l.from_id = e.id OR l.to_id = e.id) AS link_count`;
+
+/**
+ * Everything in one story's bible, alphabetical.
+ * @param {number} storyId
+ * @param {{ kind?: string }} [opts]
+ */
+function listStoryEntities(storyId, { kind } = {}) {
+  return db.prepare(`
+    SELECT ${ENTITY_COLUMNS}
+    FROM story_entities e LEFT JOIN users u ON u.id = e.created_by
+    WHERE e.story_id = @storyId ${kind ? 'AND e.kind = @kind' : ''}
+    ORDER BY e.name COLLATE NOCASE
+  `).all(kind ? { storyId, kind } : { storyId });
+}
+
+function getStoryEntity(entityId) {
+  return db.prepare(`
+    SELECT ${ENTITY_COLUMNS}, s.title AS story_title
+    FROM story_entities e
+    LEFT JOIN users u ON u.id = e.created_by
+    JOIN stories s ON s.id = e.story_id
+    WHERE e.id = ?
+  `).get(entityId) || null;
+}
+
+const getStoryEntityByName = (storyId, name) => db.prepare(
+  'SELECT id FROM story_entities WHERE story_id = ? AND name_lower = ?'
+).get(storyId, bible.nameKey(name)) || null;
+
+const listEntityAliases = (entityId) => db.prepare(
+  'SELECT alias FROM story_entity_aliases WHERE entity_id = ? ORDER BY alias COLLATE NOCASE'
+).all(entityId).map((r) => r.alias);
+
+// How many of each kind, so the bible's front page can be a directory
+// rather than a list -- the same reason the glossary's is.
+function storyBibleCounts(storyId) {
+  const rows = db.prepare(
+    'SELECT kind, COUNT(*) AS n FROM story_entities WHERE story_id = ? GROUP BY kind'
+  ).all(storyId);
+  const counts = Object.fromEntries(bible.KINDS.map((k) => [k, 0]));
+  let total = 0;
+  for (const row of rows) {
+    if (counts[row.kind] === undefined) continue;
+    counts[row.kind] = row.n;
+    total += row.n;
+  }
+  return { counts, total };
+}
+
+// The names two entries both answer to. Nothing is scanned for them (see
+// buildMatcher), so the bible says so out loud instead of quietly losing
+// appearances.
+function storyBibleNameConflicts(storyId) {
+  const entities = entitiesWithAliases(storyId);
+  return bible.buildMatcher(entities).conflicts.map((conflict) => ({
+    name: conflict.name,
+    entities: conflict.entityIds
+      .map((id) => entities.find((e) => e.id === id))
+      .filter(Boolean)
+      .map((e) => ({ id: e.id, name: e.name })),
+  }));
+}
+
+/** @returns {{id: number, name: string, aliases: string[]}[]} */
+function entitiesWithAliases(storyId) {
+  const entities = db.prepare(
+    'SELECT id, name FROM story_entities WHERE story_id = ?'
+  ).all(storyId).map((e) => ({ id: Number(e.id), name: String(e.name), aliases: /** @type {string[]} */ ([]) }));
+  const byId = new Map(entities.map((e) => [e.id, e]));
+  for (const row of db.prepare(
+    'SELECT entity_id, alias FROM story_entity_aliases WHERE story_id = ?'
+  ).all(storyId)) {
+    const entity = byId.get(row.entity_id);
+    if (entity) entity.aliases.push(row.alias);
+  }
+  return entities;
+}
+
+function writeAliases(entityId, storyId, aliases) {
+  db.prepare('DELETE FROM story_entity_aliases WHERE entity_id = ?').run(entityId);
+  const insert = db.prepare(
+    'INSERT OR IGNORE INTO story_entity_aliases (entity_id, story_id, alias, alias_lower) VALUES (?, ?, ?, ?)'
+  );
+  for (const alias of aliases) insert.run(entityId, storyId, alias, alias.toLowerCase());
+}
+
+// A name the author has written down is a name the spellchecker should
+// stop underlining. Cheap to do here, and it is the thing everybody forgets
+// to do by hand.
+function teachDictionary(storyId, names, userId) {
+  for (const name of names) {
+    for (const word of String(name).split(/[^A-Za-z0-9'’-]+/)) {
+      if (word.length >= 3 && /[A-Za-z]/.test(word)) addStoryDictionaryWord(storyId, word, userId);
+    }
+  }
+}
+
+/** @param {{ storyId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], createdBy: number }} fields */
+function createStoryEntity({ storyId, kind, name, summary, description, secret, status, role, aliases, createdBy }) {
+  const clean = bible.cleanName(name);
+  if (!clean) return null;
+  const list = (aliases || []).map(bible.cleanName).filter(Boolean);
+  db.exec('BEGIN');
+  try {
+    const info = db.prepare(`
+      INSERT INTO story_entities (story_id, kind, name, name_lower, summary, description, secret, status, role, created_by)
+      VALUES (@storyId, @kind, @name, @nameLower, @summary, @description, @secret, @status, @role, @createdBy)
+    `).run({
+      storyId,
+      kind: bible.entityKind(kind),
+      name: clean,
+      nameLower: clean.toLowerCase(),
+      summary: String(summary || '').trim(),
+      description: String(description || ''),
+      secret: String(secret || ''),
+      status: bible.entityStatus(status),
+      role: bible.entityRole(role),
+      createdBy: createdBy || null,
+    });
+    const entityId = Number(info.lastInsertRowid);
+    writeAliases(entityId, storyId, list);
+    db.exec('COMMIT');
+    teachDictionary(storyId, [clean, ...list], createdBy);
+    rebuildStoryAppearances(storyId);
+    return getStoryEntity(entityId);
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+/** @param {{ entityId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], userId?: number }} fields */
+function updateStoryEntity({ entityId, kind, name, summary, description, secret, status, role, aliases, userId }) {
+  const current = db.prepare('SELECT id, story_id FROM story_entities WHERE id = ?').get(entityId);
+  if (!current) return null;
+  const clean = bible.cleanName(name);
+  if (!clean) return null;
+  const list = (aliases || []).map(bible.cleanName).filter(Boolean);
+  db.exec('BEGIN');
+  try {
+    db.prepare(`
+      UPDATE story_entities SET
+        kind = @kind, name = @name, name_lower = @nameLower, summary = @summary,
+        description = @description, secret = @secret, status = @status, role = @role,
+        updated_at = datetime('now')
+      WHERE id = @entityId
+    `).run({
+      entityId,
+      kind: bible.entityKind(kind),
+      name: clean,
+      nameLower: clean.toLowerCase(),
+      summary: String(summary || '').trim(),
+      description: String(description || ''),
+      secret: String(secret || ''),
+      status: bible.entityStatus(status),
+      role: bible.entityRole(role),
+    });
+    writeAliases(entityId, current.story_id, list);
+    db.exec('COMMIT');
+    teachDictionary(current.story_id, [clean, ...list], userId);
+    rebuildStoryAppearances(current.story_id);
+    return getStoryEntity(entityId);
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+// Deleting an entry takes its aliases, its half of every relation and its
+// appearances with it -- all four tables cascade from story_entities, so
+// this is one statement and no orphans.
+function deleteStoryEntity(entityId) {
+  const row = db.prepare('SELECT id, story_id, name FROM story_entities WHERE id = ?').get(entityId);
+  if (!row) return null;
+  db.prepare('DELETE FROM story_entities WHERE id = ?').run(entityId);
+  return row;
+}
+
+// ---------- relations ----------
+// Stored once, read from both ends. `label` is how the near end describes
+// it and `reverse_label` how the far end does; leaving the reverse blank
+// means the same word works both ways.
+/** @param {{ storyId: number, fromId: number, toId: number, label?: string, reverseLabel?: string }} fields */
+function setStoryEntityLink({ storyId, fromId, toId, label, reverseLabel }) {
+  if (!fromId || !toId || fromId === toId) return null;
+  const ends = db.prepare(
+    `SELECT id FROM story_entities WHERE story_id = ? AND id IN (?, ?)`
+  ).all(storyId, fromId, toId);
+  if (ends.length !== 2) return null;
+  // The pair is unique whichever way round it was typed, so re-linking two
+  // entries edits the relation that already exists instead of growing a
+  // mirror image of it that the two pages would then disagree about.
+  const existing = db.prepare(
+    'SELECT id, from_id FROM story_entity_links WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?)'
+  ).get(fromId, toId, toId, fromId);
+  const near = String(label || '').trim().slice(0, 80);
+  const far = String(reverseLabel || '').trim().slice(0, 80);
+  if (existing) {
+    const flipped = existing.from_id !== fromId;
+    db.prepare('UPDATE story_entity_links SET label = ?, reverse_label = ? WHERE id = ?')
+      .run(flipped ? far : near, flipped ? near : far, existing.id);
+    return existing.id;
+  }
+  const info = db.prepare(
+    'INSERT INTO story_entity_links (story_id, from_id, to_id, label, reverse_label) VALUES (?, ?, ?, ?, ?)'
+  ).run(storyId, fromId, toId, near, far);
+  return Number(info.lastInsertRowid);
+}
+
+function removeStoryEntityLink(linkId, storyId) {
+  db.prepare('DELETE FROM story_entity_links WHERE id = ? AND story_id = ?').run(linkId, storyId);
+}
+
+/** Both halves of every relation this entry is an end of, already turned round. */
+function listStoryEntityLinks(entityId) {
+  return db.prepare(`
+    SELECT l.id, l.label AS label, e.id AS other_id, e.name AS other_name, e.kind AS other_kind, e.summary AS other_summary
+      FROM story_entity_links l JOIN story_entities e ON e.id = l.to_id
+     WHERE l.from_id = @entityId
+    UNION ALL
+    SELECT l.id, l.reverse_label AS label, e.id AS other_id, e.name AS other_name, e.kind AS other_kind, e.summary AS other_summary
+      FROM story_entity_links l JOIN story_entities e ON e.id = l.from_id
+     WHERE l.to_id = @entityId
+    ORDER BY other_name COLLATE NOCASE
+  `).all({ entityId });
+}
+
+// ---------- appearances ----------
+// The cache is rebuilt, never patched: a rebuild is one regex pass over
+// the story's current text, and a patch is a chance to leave a stale row
+// behind after a rename.
+function rebuildStoryAppearances(storyId) {
+  const entities = entitiesWithAliases(storyId);
+  db.prepare('DELETE FROM story_entity_appearances WHERE story_id = ?').run(storyId);
+  if (!entities.length) return { rows: 0 };
+  const chapters = db.prepare(`
+    SELECT c.id, v.content FROM chapters c
+    JOIN chapter_versions v ON v.chapter_id = c.id
+    WHERE c.story_id = ?
+      AND v.version_number = (SELECT MAX(v2.version_number) FROM chapter_versions v2 WHERE v2.chapter_id = c.id)
+  `).all(storyId);
+  const { rows } = bible.scanStory(
+    chapters.map((c) => ({ id: Number(c.id), content: String(c.content) })), entities
+  );
+  const insert = db.prepare(
+    'INSERT OR REPLACE INTO story_entity_appearances (entity_id, chapter_id, story_id, mentions, first_name) VALUES (?, ?, ?, ?, ?)'
+  );
+  db.exec('BEGIN');
+  try {
+    for (const row of rows) insert.run(row.entityId, row.chapterId, storyId, row.mentions, row.firstName);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  return { rows: rows.length };
+}
+
+// One chapter changed, so only that chapter is rescanned. The whole-story
+// rebuild is for when the names themselves move.
+function rebuildChapterAppearances(chapterId) {
+  const chapter = db.prepare('SELECT id, story_id FROM chapters WHERE id = ?').get(chapterId);
+  if (!chapter) return;
+  const entities = entitiesWithAliases(chapter.story_id);
+  db.prepare('DELETE FROM story_entity_appearances WHERE chapter_id = ?').run(chapterId);
+  if (!entities.length) return;
+  const version = getLatestVersion(chapterId);
+  if (!version) return;
+  const { rows } = bible.scanStory([{ id: chapterId, content: version.content }], entities);
+  const insert = db.prepare(
+    'INSERT OR REPLACE INTO story_entity_appearances (entity_id, chapter_id, story_id, mentions, first_name) VALUES (?, ?, ?, ?, ?)'
+  );
+  for (const row of rows) insert.run(row.entityId, chapterId, chapter.story_id, row.mentions, row.firstName);
+}
+
+/** Which chapters one entry is in, scan and corrections already resolved. */
+const listEntityAppearances = (entityId) => db.prepare(`
+  SELECT ch.id AS chapter_id, ch.chapter_number, ch.title, ch.archived_at,
+         sc.mentions, sc.first_name, sc.source
+    FROM story_entity_chapters sc
+    JOIN chapters ch ON ch.id = sc.chapter_id
+   WHERE sc.entity_id = ?
+   ORDER BY ch.chapter_number
+`).all(entityId);
+
+/** Who is in one chapter -- the other way round the same view. */
+const listChapterEntities = (chapterId) => db.prepare(`
+  SELECT e.id, e.name, e.kind, e.summary, sc.mentions, sc.source
+    FROM story_entity_chapters sc
+    JOIN story_entities e ON e.id = sc.entity_id
+   WHERE sc.chapter_id = ?
+   ORDER BY sc.mentions DESC, e.name COLLATE NOCASE
+`).all(chapterId);
+
+/**
+ * The author overruling the scan for one chapter. 'auto' clears the
+ * override and lets the text speak again.
+ * @param {{ entityId: number, chapterId: number, state: string, userId?: number }} fields
+ */
+function setAppearanceOverride({ entityId, chapterId, state, userId }) {
+  if (state !== 'include' && state !== 'exclude') {
+    db.prepare('DELETE FROM story_entity_appearance_overrides WHERE entity_id = ? AND chapter_id = ?')
+      .run(entityId, chapterId);
+    return;
+  }
+  db.prepare(`
+    INSERT INTO story_entity_appearance_overrides (entity_id, chapter_id, state, set_by)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(entity_id, chapter_id) DO UPDATE SET state = excluded.state, set_by = excluded.set_by
+  `).run(entityId, chapterId, state, userId || null);
+}
+
+/** Chapters of a story, for the appearance editor's list of everything. */
+const listChapterStubs = (storyId) => db.prepare(
+  'SELECT id, chapter_number, title, archived_at FROM chapters WHERE story_id = ? ORDER BY chapter_number'
+).all(storyId);
+
 module.exports = {
+  createStoryEntity,
+  deleteStoryEntity,
+  getStoryEntity,
+  getStoryEntityByName,
+  listChapterEntities,
+  listChapterStubs,
+  listEntityAliases,
+  listEntityAppearances,
+  listStoryEntities,
+  listStoryEntityLinks,
+  rebuildChapterAppearances,
+  rebuildStoryAppearances,
+  removeStoryEntityLink,
+  setAppearanceOverride,
+  setStoryEntityLink,
+  storyBibleCounts,
+  storyBibleNameConflicts,
+  updateStoryEntity,
   userCount,
   getUserByUsername,
   getUserById,

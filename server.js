@@ -29,6 +29,7 @@ const { parseMarkdown, flattenLength, renderPlainText, renderHighlighted } = req
 const { markdownToDocxBuffer, docxBufferToMarkdown } = require('./lib/docx');
 const wiki = require('./lib/wiki');
 const taxonomy = require('./lib/glossary-taxonomy');
+const storyBible = require('./lib/story-bible');
 const diff = require('./lib/diff');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
@@ -672,6 +673,201 @@ async function handleGlossaryPage(req, res, user, title) {
   }));
 }
 
+// ---------- the story bible (per story: its people, places and things) ----------
+// Reading is open to everybody who can read the story; writing is the same
+// right as adding a chapter -- the owner and the coauthors -- so a reviewer
+// cannot quietly rewrite who somebody is.
+
+function bibleGuard(res, user, storyId, { write = false } = {}) {
+  const story = models.getStoryById(storyId);
+  if (!story) { sendError(res, 404, 'Story not found', user); return null; }
+  if (write && !models.canWriteInStory(story, user)) {
+    sendError(res, 403, "Only the story's authors can change its bible.", user);
+    return null;
+  }
+  return story;
+}
+
+// The entry, its story, and whether this person may change it -- the three
+// things every /bible/:id route needs before it can do anything.
+function entityGuard(res, user, entityId, { write = false } = {}) {
+  const entity = models.getStoryEntity(entityId);
+  if (!entity) { sendError(res, 404, 'Not in this bible', user); return null; }
+  const story = models.getStoryById(entity.story_id);
+  if (!story) { sendError(res, 404, 'Story not found', user); return null; }
+  const canWrite = models.canWriteInStory(story, user);
+  if (write && !canWrite) {
+    sendError(res, 403, "Only the story's authors can change its bible.", user);
+    return null;
+  }
+  return { entity, story, canWrite };
+}
+
+async function handleBibleIndex(req, res, user, storyId, query) {
+  const story = bibleGuard(res, user, storyId);
+  if (!story) return;
+  const kind = (query.get('kind') || '').trim();
+  const q = (query.get('q') || '').trim().toLowerCase();
+  const { counts, total } = models.storyBibleCounts(storyId);
+  let entities = models.listStoryEntities(storyId, kind ? { kind } : {});
+  // The filter box does this in the page without a round trip; this is the
+  // same filter for a browser with no JavaScript, and for a shared link.
+  if (q) {
+    entities = entities.filter((e) => `${e.name} ${e.summary} ${e.alias_list || ''}`.toLowerCase().includes(q));
+  }
+  sendHtml(res, 200, views.bibleIndexPage({
+    user, story, entities, counts, total, kind,
+    canWrite: models.canWriteInStory(story, user),
+    conflicts: models.storyBibleNameConflicts(storyId),
+    notice: query.get('notice') || '',
+  }));
+}
+
+async function handleNewEntityPage(req, res, user, storyId) {
+  const story = bibleGuard(res, user, storyId, { write: true });
+  if (!story) return;
+  sendHtml(res, 200, views.entityFormPage({ user, story }));
+}
+
+function entityFieldsFromBody(body) {
+  return {
+    kind: body.kind,
+    name: body.name,
+    summary: body.summary,
+    description: body.description,
+    secret: body.secret,
+    status: body.status,
+    role: body.role,
+    aliases: storyBible.parseAliases(body.aliases || '', body.name || ''),
+  };
+}
+
+async function handleNewEntitySubmit(req, res, user, storyId) {
+  const story = bibleGuard(res, user, storyId, { write: true });
+  if (!story) return;
+  const body = await parseBody(req);
+  const fields = entityFieldsFromBody(body);
+  if (!storyBible.cleanName(fields.name)) {
+    return sendHtml(res, 400, views.entityFormPage({ user, story, error: 'An entry needs a name.' }));
+  }
+  // Two entries with one name would each claim the other's appearances, so
+  // the uniqueness is the database's rule, not a nicety -- and this is the
+  // sentence that explains it instead of a constraint error.
+  if (models.getStoryEntityByName(storyId, fields.name)) {
+    return sendHtml(res, 400, views.entityFormPage({
+      user, story, error: `${storyBible.cleanName(fields.name)} is already in this bible.`,
+    }));
+  }
+  const entity = models.createStoryEntity({ ...fields, storyId, createdBy: user.id });
+  if (!entity) return sendError(res, 400, 'That entry could not be created.', user);
+  logEvent(user, 'bible-entry-added', { subject: `${entity.name} (${story.title})`, href: `/bible/${entity.id}`, storyId });
+  redirect(res, `/bible/${entity.id}`);
+}
+
+async function handleEntityPage(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId);
+  if (!guard) return;
+  const { entity, story, canWrite } = guard;
+  sendHtml(res, 200, views.entityPage({
+    user, story, entity, canWrite,
+    aliases: models.listEntityAliases(entityId),
+    links: models.listStoryEntityLinks(entityId),
+    appearances: models.listEntityAppearances(entityId),
+    chapters: models.listChapterStubs(story.id),
+    others: models.listStoryEntities(story.id).filter((e) => e.id !== entity.id),
+  }));
+}
+
+async function handleEditEntityPage(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  sendHtml(res, 200, views.entityFormPage({
+    user, story: guard.story, entity: guard.entity, aliases: models.listEntityAliases(entityId),
+  }));
+}
+
+async function handleEditEntitySubmit(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const { entity, story } = guard;
+  const body = await parseBody(req);
+  const fields = entityFieldsFromBody(body);
+  const aliases = models.listEntityAliases(entityId);
+  if (!storyBible.cleanName(fields.name)) {
+    return sendHtml(res, 400, views.entityFormPage({ user, story, entity, aliases, error: 'An entry needs a name.' }));
+  }
+  const clash = models.getStoryEntityByName(story.id, fields.name);
+  if (clash && clash.id !== entity.id) {
+    return sendHtml(res, 400, views.entityFormPage({
+      user, story, entity, aliases, error: `${storyBible.cleanName(fields.name)} is already in this bible.`,
+    }));
+  }
+  const saved = models.updateStoryEntity({ ...fields, entityId, userId: user.id });
+  if (!saved) return sendError(res, 400, 'That entry could not be saved.', user);
+  logEvent(user, 'bible-entry-edited', { subject: `${saved.name} (${story.title})`, href: `/bible/${saved.id}`, storyId: story.id });
+  redirect(res, `/bible/${saved.id}`);
+}
+
+async function handleDeleteEntity(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const { entity, story } = guard;
+  models.deleteStoryEntity(entityId);
+  logEvent(user, 'bible-entry-deleted', { subject: `${entity.name} (${story.title})`, href: `/stories/${story.id}/bible`, storyId: story.id });
+  redirect(res, `/stories/${story.id}/bible?notice=${encodeURIComponent(`${entity.name} is no longer in the bible.`)}`);
+}
+
+async function handleAddEntityLink(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const body = await parseBody(req);
+  models.setStoryEntityLink({
+    storyId: guard.story.id,
+    fromId: entityId,
+    toId: Number(body.to),
+    label: body.label,
+    reverseLabel: body.reverse_label,
+  });
+  redirect(res, `/bible/${entityId}`);
+}
+
+async function handleRemoveEntityLink(req, res, user, entityId, linkId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  models.removeStoryEntityLink(linkId, guard.story.id);
+  redirect(res, `/bible/${entityId}`);
+}
+
+// The ticked boxes are the whole answer: a chapter the author ticked that
+// the scan did not find is an 'include', one they unticked that it did
+// find is an 'exclude', and anything they left the way the scan had it
+// keeps no override at all -- so a later rewrite of that chapter is still
+// free to change its mind.
+async function handleSetEntityAppearances(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const body = await parseBody(req);
+  const ticked = new Set([].concat(body.chapter || []).map(Number).filter(Boolean));
+  const scanned = new Set(models.listEntityAppearances(entityId)
+    .filter((a) => a.source !== 'manual')
+    .map((a) => a.chapter_id));
+  for (const chapter of models.listChapterStubs(guard.story.id)) {
+    if (chapter.archived_at) continue;
+    const wanted = ticked.has(chapter.id);
+    const found = scanned.has(chapter.id);
+    const state = wanted === found ? 'auto' : (wanted ? 'include' : 'exclude');
+    models.setAppearanceOverride({ entityId, chapterId: chapter.id, state, userId: user.id });
+  }
+  redirect(res, `/bible/${entityId}`);
+}
+
+async function handleRescanBible(req, res, user, storyId) {
+  const story = bibleGuard(res, user, storyId, { write: true });
+  if (!story) return;
+  const { rows } = models.rebuildStoryAppearances(storyId);
+  redirect(res, `/stories/${storyId}/bible?notice=${encodeURIComponent(`Chapters rescanned -- ${rows} appearance${rows === 1 ? '' : 's'} found.`)}`);
+}
+
 async function handleStories(req, res, user, query) {
   const since = models.bumpLastSeen(user.id);
   // Two spellings on purpose: the filter form posts one `tag` per ticked
@@ -789,6 +985,7 @@ async function handleStoryPage(req, res, user, storyId, query) {
     stats: models.getStoryStats(storyId),
     readersByChapter,
     tags: models.getStoryTags(storyId),
+    bibleCount: models.storyBibleCounts(storyId).total,
     coauthors: models.listStoryCoauthors(storyId),
     addableCoauthors: isStoryAuthor ? models.listAddableCoauthors(story) : [],
   }));
@@ -998,6 +1195,7 @@ async function handleChapterPage(req, res, user, chapterId, query) {
     canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
     neighbours: models.getChapterNeighbours(chapter),
     readers: models.listChapterReaders(chapterId),
+    cast: models.listChapterEntities(chapterId),
   }));
 }
 
@@ -1447,6 +1645,39 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/authors\/(\d+)\/remove$/)) && req.method === 'POST') {
       return handleRemoveCoauthor(req, res, user, Number(m[1]), Number(m[2]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/bible$/)) && req.method === 'GET') {
+      return handleBibleIndex(req, res, user, Number(m[1]), url.searchParams);
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/bible$/)) && req.method === 'POST') {
+      return handleNewEntitySubmit(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/new$/)) && req.method === 'GET') {
+      return handleNewEntityPage(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/rescan$/)) && req.method === 'POST') {
+      return handleRescanBible(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/bible\/(\d+)$/)) && req.method === 'GET') {
+      return handleEntityPage(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/bible\/(\d+)$/)) && req.method === 'POST') {
+      return handleEditEntitySubmit(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/bible\/(\d+)\/edit$/)) && req.method === 'GET') {
+      return handleEditEntityPage(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/bible\/(\d+)\/delete$/)) && req.method === 'POST') {
+      return handleDeleteEntity(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/bible\/(\d+)\/links$/)) && req.method === 'POST') {
+      return handleAddEntityLink(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/bible\/(\d+)\/links\/(\d+)\/delete$/)) && req.method === 'POST') {
+      return handleRemoveEntityLink(req, res, user, Number(m[1]), Number(m[2]));
+    }
+    if ((m = pathname.match(/^\/bible\/(\d+)\/appearances$/)) && req.method === 'POST') {
+      return handleSetEntityAppearances(req, res, user, Number(m[1]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/dictionary$/)) && req.method === 'GET') {
       return handleGetStoryDictionary(req, res, user, Number(m[1]));

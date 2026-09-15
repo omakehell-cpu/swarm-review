@@ -10,6 +10,7 @@ const {
 } = require('./lib/story-state');
 const wiki = require('./lib/wiki');
 const taxonomy = require('./lib/glossary-taxonomy');
+const bible = require('./lib/story-bible');
 
 const MARKDOWN_HINT = `Markdown is supported: **bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - or 1. list items. Put a backslash before a character to keep it literal (\\* shows a real asterisk). Line breaks are kept as you type them.`;
 
@@ -782,6 +783,299 @@ function glossaryNotFoundPage({ user, title }) {
   });
 }
 
+// ---------- the story bible ----------
+// One per story: its people, places, groups, things and events. Not the
+// glossary -- that mirrors the shared wiki and is read-only here. This is
+// the author's own, and it is the only thing in the app that knows which
+// chapters a character is actually in (see lib/story-bible.js).
+
+const KIND_ORDER = bible.KINDS;
+
+function entityKindLabel(kind) {
+  return bible.KIND_LABELS[kind] || bible.KIND_LABELS[bible.DEFAULT_KIND];
+}
+
+function entityBadges(entity) {
+  const bits = [];
+  if (entity.role) bits.push(`<span class="ent-badge role-${entity.role}">${escapeHtml(bible.ROLE_LABELS[entity.role])}</span>`);
+  if (entity.status) bits.push(`<span class="ent-badge status-${entity.status}">${escapeHtml(bible.STATUS_LABELS[entity.status])}</span>`);
+  return bits.join('');
+}
+
+// "Chapters 3-11, 7 of them" says more in one line than either number
+// does alone: the span is where they live in the story, the count is how
+// much of it they are in.
+function appearanceSummary(entity) {
+  if (!entity.appearances) return '<span class="ent-none">Not named in any chapter</span>';
+  if (entity.appearances === 1) return `Chapter ${entity.first_chapter}`;
+  return `Chapters ${entity.first_chapter}&ndash;${entity.last_chapter} &middot; ${entity.appearances} of them`;
+}
+
+function entityRow(entity) {
+  const search = `${entity.name} ${entity.summary || ''} ${entity.alias_list || ''}`.toLowerCase();
+  return `
+    <a class="chapter-row glossary-row" href="/bible/${entity.id}" data-search="${escapeHtml(search)}">
+      <div class="chapter-row-main">
+        <h3>${escapeHtml(entity.name)} ${entityBadges(entity)}</h3>
+        ${entity.summary ? `<p class="muted">${escapeHtml(entity.summary)}</p>` : ''}
+        ${entity.alias_list ? `<p class="entry-categories">a.k.a. ${escapeHtml(entity.alias_list)}</p>` : ''}
+      </div>
+      <div class="chapter-row-meta">
+        <span>${appearanceSummary(entity)}</span>
+        ${entity.link_count ? `<span>${entity.link_count} relation${entity.link_count === 1 ? '' : 's'}</span>` : ''}
+      </div>
+    </a>`;
+}
+
+function bibleConflictNotice(conflicts) {
+  if (!conflicts.length) return '';
+  return `
+    <div class="bible-conflicts">
+      <p><strong>${conflicts.length} name${conflicts.length === 1 ? ' is' : 's are'} shared by more than one entry.</strong>
+      A shared name is counted for nobody, because guessing which of them a chapter meant would put people in scenes they are not in. Give one of them a distinguishing alias and the appearances come back.</p>
+      <ul>
+        ${conflicts.map((c) => `<li><strong>${escapeHtml(c.name)}</strong> &mdash; ${c.entities.map((e) => `<a href="/bible/${e.id}">${escapeHtml(e.name)}</a>`).join(', ')}</li>`).join('')}
+      </ul>
+    </div>`;
+}
+
+function bibleIndexPage({
+  user, story, entities = [], counts = {}, total = 0, kind = '', canWrite = false,
+  conflicts = [], notice = '',
+}) {
+  const door = (k) => `
+    <a class="glossary-door${k === kind ? ' current' : ''}" href="/stories/${story.id}/bible?kind=${k}">
+      <span class="door-count">${counts[k] || 0}</span>
+      <h2>${escapeHtml(bible.KIND_PLURALS[k])}</h2>
+      <p class="muted">${escapeHtml(bible.KIND_BLURBS[k])}</p>
+    </a>`;
+
+  const list = entities.length
+    ? `<div class="chapter-list" id="glossary-list">${entities.map(entityRow).join('')}</div>
+       <p class="no-matches" id="glossary-no-matches" hidden>Nothing here matches.</p>`
+    : emptyState({
+      art: 'sheets',
+      title: total ? 'Nothing of that kind yet' : 'The bible is empty',
+      body: total
+        ? 'Every entry is filed under one kind. Nothing has been filed under this one yet.'
+        : 'This is where the people, places and things of the story live -- who they are, who they know, and which chapters they turn up in. The chapters are worked out from the text itself, so an entry starts paying for itself the moment you write it down.',
+      action: canWrite ? `<a class="btn" href="/stories/${story.id}/bible/new">${ICONS.plus}Add the first entry</a>` : '',
+    });
+
+  return layout({
+    title: `Bible &middot; ${story.title}`,
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      <div class="page-head">
+        <div>
+          <h1>Story bible</h1>
+          <p class="muted">The people, places and things of <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> &mdash; ${total} entr${total === 1 ? 'y' : 'ies'}. Which chapters each one appears in is read out of the chapters themselves, every time they change.</p>
+        </div>
+        <div class="page-head-actions">
+          ${canWrite ? `<a class="btn" href="/stories/${story.id}/bible/new">${ICONS.plus}New entry</a>` : ''}
+          ${canWrite ? `
+            <form method="post" action="/stories/${story.id}/bible/rescan" class="inline-form">
+              <button class="btn ghost small" type="submit">Rescan chapters</button>
+            </form>` : ''}
+        </div>
+      </div>
+      ${notice ? `<p class="flash info">${escapeHtml(notice)}</p>` : ''}
+      ${bibleConflictNotice(conflicts)}
+      ${total ? `
+        <div class="glossary-doors bible-doors">${KIND_ORDER.map(door).join('')}</div>
+        <form method="get" action="/stories/${story.id}/bible" class="inline-form glossary-search">
+          <input type="search" id="glossary-filter" name="q" placeholder="Filter by name, alias or summary..." autocomplete="off">
+          ${kind ? `<input type="hidden" name="kind" value="${escapeHtml(kind)}">` : ''}
+          <button class="btn ghost small" type="submit">Filter</button>
+          ${kind ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Everything</a>` : ''}
+        </form>
+        <p class="muted"><span id="glossary-count">${entities.length} entr${entities.length === 1 ? 'y' : 'ies'}</span>${kind ? ` &middot; ${escapeHtml(bible.KIND_PLURALS[kind])}` : ''}.</p>` : ''}
+      ${list}`,
+  });
+}
+
+function entityAppearanceList(entity, appearances, chapters, canWrite) {
+  const shown = appearances.filter((a) => !a.archived_at);
+  const rows = shown.length ? shown.map((a) => `
+    <li>
+      <a href="/chapters/${a.chapter_id}">Chapter ${a.chapter_number}: ${escapeHtml(a.title)}</a>
+      <span class="ent-mentions">${a.source === 'manual'
+        ? 'added by hand'
+        : `${a.mentions} mention${a.mentions === 1 ? '' : 's'}${a.first_name && a.first_name.toLowerCase() !== entity.name.toLowerCase() ? ` as &ldquo;${escapeHtml(a.first_name)}&rdquo;` : ''}`}</span>
+    </li>`).join('') : '<li class="ent-none">Not named in any chapter yet.</li>';
+
+  const inChapter = new Set(shown.map((a) => a.chapter_id));
+  const editor = canWrite && chapters.length ? `
+    <details class="appearance-editor">
+      <summary>Correct this</summary>
+      <p class="muted">The scan only sees names. Somebody present but never named is missed; a name that is also a ship or a common word is found too often. Tick what the text got wrong -- your correction survives every rescan.</p>
+      <form method="post" action="/bible/${entity.id}/appearances">
+        <ul class="appearance-ticks">
+          ${chapters.filter((c) => !c.archived_at).map((c) => `
+            <li>
+              <label class="tick">
+                <input type="checkbox" name="chapter" value="${c.id}" ${inChapter.has(c.id) ? 'checked' : ''}>
+                <span>Chapter ${c.chapter_number}: ${escapeHtml(c.title)}</span>
+              </label>
+            </li>`).join('')}
+        </ul>
+        <button class="btn ghost small" type="submit">Save appearances</button>
+      </form>
+    </details>` : '';
+
+  return `<ul class="appearance-list">${rows}</ul>${editor}`;
+}
+
+function entityRelationBlock(entity, links, others, canWrite) {
+  const rows = links.length ? links.map((l) => `
+    <li>
+      <div class="rel-main">
+        <span class="rel-label">${l.label ? escapeHtml(l.label) : 'related to'}</span>
+        <a href="/bible/${l.other_id}">${escapeHtml(l.other_name)}</a>
+        <span class="rel-kind">${escapeHtml(entityKindLabel(l.other_kind))}</span>
+      </div>
+      ${canWrite ? `
+        <form method="post" action="/bible/${entity.id}/links/${l.id}/delete" class="inline-form rel-remove">
+          <button class="btn ghost tiny" type="submit">Remove</button>
+        </form>` : ''}
+    </li>`).join('') : '<li class="ent-none">Nobody yet.</li>';
+
+  const form = canWrite && others.length ? `
+    <form method="post" action="/bible/${entity.id}/links" class="relation-form">
+      <label>Relation
+        <input type="text" name="label" placeholder="sister of, serves under, owns..." maxlength="80">
+      </label>
+      <label>To
+        <select name="to">
+          ${others.map((o) => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('')}
+        </select>
+      </label>
+      <label>Called back the other way
+        <input type="text" name="reverse_label" placeholder="leave blank if it reads the same both ways" maxlength="80">
+      </label>
+      <button class="btn ghost small" type="submit">Add relation</button>
+    </form>` : '';
+
+  return `<ul class="relation-list">${rows}</ul>${form}`;
+}
+
+function entityPage({
+  user, story, entity, aliases = [], links = [], appearances = [], chapters = [],
+  others = [], canWrite = false,
+}) {
+  return layout({
+    title: entity.name,
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/stories/${story.id}/bible">&larr; ${escapeHtml(story.title)} bible</a></p>
+      <div class="page-head">
+        <div>
+          <h1>${escapeHtml(entity.name)} ${entityBadges(entity)}</h1>
+          <p class="muted">${escapeHtml(entityKindLabel(entity.kind))}${aliases.length ? ` &middot; also ${aliases.map((a) => escapeHtml(a)).join(', ')}` : ''}</p>
+          ${entity.summary ? `<p class="summary">${escapeHtml(entity.summary)}</p>` : ''}
+        </div>
+        <div class="page-head-actions">
+          ${canWrite ? `<a class="btn ghost small" href="/bible/${entity.id}/edit">Edit</a>` : ''}
+        </div>
+      </div>
+      <div class="entity-grid">
+        <div class="entity-main">
+          ${entity.description ? `<div class="reading-pane entity-description">${renderHighlighted(parseMarkdown(entity.description), [], null)}</div>`
+    : '<p class="muted">No description yet.</p>'}
+          ${entity.secret ? `
+            <details class="entity-secret">
+              <summary>Spoilers &mdash; what the reader does not know yet</summary>
+              <div class="reading-pane">${renderHighlighted(parseMarkdown(entity.secret), [], null)}</div>
+            </details>` : ''}
+        </div>
+        <aside class="entity-side">
+          <section>
+            <h2 class="side-head">Appears in</h2>
+            ${entityAppearanceList(entity, appearances, chapters, canWrite)}
+          </section>
+          <section>
+            <h2 class="side-head">Related</h2>
+            ${entityRelationBlock(entity, links, others, canWrite)}
+          </section>
+        </aside>
+      </div>
+      ${canWrite ? `
+        <form method="post" action="/bible/${entity.id}/delete" class="inline-form danger-form">
+          <button class="btn ghost small danger" type="submit">Delete this entry</button>
+        </form>` : ''}`,
+  });
+}
+
+function entityFormPage({ user, story, entity = null, aliases = [], error = '' }) {
+  const value = (field) => escapeHtml(entity ? entity[field] || '' : '');
+  const selected = (field, option) => ((entity ? entity[field] : '') === option ? ' selected' : '');
+  return layout({
+    title: entity ? `Edit ${entity.name}` : 'New bible entry',
+    user,
+    body: `
+      <p class="breadcrumb"><a href="${entity ? `/bible/${entity.id}` : `/stories/${story.id}/bible`}">&larr; Back</a></p>
+      <div class="writer-card">
+      <h1>${entity ? `Edit ${escapeHtml(entity.name)}` : 'New bible entry'}</h1>
+      <p class="muted writer-intro">An entry is for you, not the reader: who this is, who they know, and which chapters they turn up in. The chapters are worked out from the text -- you only write the rest.</p>
+      ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+      <form method="post" action="${entity ? `/bible/${entity.id}` : `/stories/${story.id}/bible`}" class="chapter-form entity-form">
+        <label>Name
+          <input type="text" name="name" value="${value('name')}" maxlength="${bible.MAX_NAME_LENGTH}" required autofocus>
+        </label>
+        <label>What is it
+          <select name="kind">
+            ${bible.KINDS.map((k) => `<option value="${k}"${selected('kind', k)}>${escapeHtml(bible.KIND_LABELS[k])}</option>`).join('')}
+          </select>
+        </label>
+        <label>Also called
+          <textarea name="aliases" rows="2" placeholder="One per line, or separated by commas. Ranks, nicknames, maiden names -- anything the prose calls them.">${escapeHtml(aliases.join('\n'))}</textarea>
+        </label>
+        <span class="hint">Aliases are how the chapter scan finds them: a chapter that only ever says "the Old Man" still counts as an appearance.</span>
+        <label>One line
+          <input type="text" name="summary" value="${value('summary')}" maxlength="240" placeholder="The sentence you would say if somebody asked who this was.">
+        </label>
+        <div class="entity-form-row">
+          <label>Role
+            <select name="role">
+              ${bible.ROLES.map((r) => `<option value="${r}"${selected('role', r)}>${escapeHtml(bible.ROLE_LABELS[r])}</option>`).join('')}
+            </select>
+          </label>
+          <label>Status
+            <select name="status">
+              ${bible.STATUSES.map((s2) => `<option value="${s2}"${selected('status', s2)}>${escapeHtml(bible.STATUS_LABELS[s2])}</option>`).join('')}
+            </select>
+          </label>
+        </div>
+        <label>Description
+          <textarea name="description" rows="14" placeholder="Who they are, what they want, how they talk, what they look like. Markdown works here, and so do links to other chapters.">${value('description')}</textarea>
+        </label>
+        <label>Spoilers
+          <textarea name="secret" rows="6" placeholder="What you know and the reader does not -- kept folded away on the entry page.">${value('secret')}</textarea>
+        </label>
+        <div class="writer-actions">
+          <button class="btn" type="submit">${entity ? 'Save' : 'Create entry'}</button>
+          <a class="btn ghost" href="${entity ? `/bible/${entity.id}` : `/stories/${story.id}/bible`}">Cancel</a>
+        </div>
+      </form>
+      </div>`,
+  });
+}
+
+// The cast of one chapter, shown on the chapter page. Reading a chapter
+// six months after writing it, this is the line that saves you.
+function chapterCastBlock(entities, storyId) {
+  if (!entities.length) return '';
+  return `
+    <section class="chapter-cast">
+      <h2 class="side-head">In this chapter</h2>
+      <ul class="cast-line">
+        ${entities.map((e) => `<li><a href="/bible/${e.id}">${escapeHtml(e.name)}</a>${e.summary ? `<span class="cast-note">${escapeHtml(e.summary)}</span>` : ''}</li>`).join('')}
+      </ul>
+      <p class="muted"><a href="/stories/${storyId}/bible">The whole bible &rarr;</a></p>
+    </section>`;
+}
+
 // ---------- archived stories ----------
 
 function archivedStoriesPage({ user, stories }) {
@@ -1215,7 +1509,7 @@ function arcHeading(group, position) {
     </div>`;
 }
 
-function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map() }) {
+function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0 }) {
   const chapterRow = (c, i) => `
     <div class="chapter-row-outer">
       <a class="chapter-row" href="/chapters/${c.id}">
@@ -1266,6 +1560,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
         </div>
         <div class="page-head-actions">
           ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
+          <a class="btn ghost small" href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}</a>
           ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
           ${isStoryAuthor ? `
             <form method="post" action="/stories/${story.id}/archive" class="inline-form">
@@ -1530,7 +1825,7 @@ function chapterFloatNav(chapter, neighbours) {
     </nav>`;
 }
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [] }) {
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [] }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -1682,6 +1977,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         </details>
       </aside>
     </div>
+    ${chapterCastBlock(cast, chapter.story_id)}
     ${chapterNav(chapter, neighbours, { canWrite })}
     ${chapterFloatNav(chapter, neighbours)}
     <button id="selection-toast" class="selection-toast hidden" type="button">+ Comment on selection</button>
@@ -1910,6 +2206,9 @@ const EVENT_SENTENCES = {
   'comment-edited': () => 'edited a comment',
   'comment-retracted': () => 'retracted a comment',
   'comment-reopened': (s) => `reopened a note on ${s}`,
+  'bible-entry-added': (s) => `added ${s} to the bible`,
+  'bible-entry-edited': (s) => `rewrote ${s} in the bible`,
+  'bible-entry-deleted': (s) => `took ${s} out of the bible`,
   'word-added': (s) => `taught the dictionary ${s}`,
   'word-removed': (s) => `took a word out of the dictionary of ${s}`,
   'invite-made': () => 'generated an invite code',
@@ -2369,6 +2668,10 @@ module.exports = {
   storyPage,
   archivedChaptersPage,
   chapterPage,
+  bibleIndexPage,
+  chapterCastBlock,
+  entityFormPage,
+  entityPage,
   glossaryDirectoryPage,
   glossaryListPage,
   glossaryPage,
