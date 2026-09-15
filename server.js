@@ -30,6 +30,7 @@ const { markdownToDocxBuffer, docxBufferToMarkdown } = require('./lib/docx');
 const wiki = require('./lib/wiki');
 const taxonomy = require('./lib/glossary-taxonomy');
 const storyBible = require('./lib/story-bible');
+const entityImages = require('./lib/entity-images');
 const diff = require('./lib/diff');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
@@ -719,6 +720,7 @@ async function handleBibleIndex(req, res, user, storyId, query) {
     user, story, entities, counts, total, kind,
     canWrite: models.canWriteInStory(story, user),
     conflicts: models.storyBibleNameConflicts(storyId),
+    covers: models.coverImagesFor(storyId),
     notice: query.get('notice') || '',
   }));
 }
@@ -764,18 +766,81 @@ async function handleNewEntitySubmit(req, res, user, storyId) {
   redirect(res, `/bible/${entity.id}`);
 }
 
-async function handleEntityPage(req, res, user, entityId) {
+function renderEntity(res, user, entityId, error = '', status = 200) {
   const guard = entityGuard(res, user, entityId);
   if (!guard) return;
   const { entity, story, canWrite } = guard;
-  sendHtml(res, 200, views.entityPage({
-    user, story, entity, canWrite,
+  sendHtml(res, status, views.entityPage({
+    user, story, entity, canWrite, error,
     aliases: models.listEntityAliases(entityId),
     links: models.listStoryEntityLinks(entityId),
     appearances: models.listEntityAppearances(entityId),
     chapters: models.listChapterStubs(story.id),
     others: models.listStoryEntities(story.id).filter((e) => e.id !== entity.id),
+    images: models.listEntityImages(entityId),
   }));
+}
+
+async function handleEntityPage(req, res, user, entityId) {
+  renderEntity(res, user, entityId);
+}
+
+// ---------- pictures of a bible entry ----------
+// The bytes live outside public/ and come back through this route, which
+// means a picture of somebody's cast needs a session the same way the
+// chapter they are in does.
+async function handleEntityImage(req, res, user, imageId) {
+  const image = models.getEntityImage(imageId);
+  if (!image) return sendError(res, 404, 'No such image', user);
+  const file = entityImages.imagePath(image.filename);
+  if (!fs.existsSync(file)) return sendError(res, 404, 'That image is no longer on disk', user);
+  res.writeHead(200, {
+    'Content-Type': image.content_type,
+    'Content-Length': fs.statSync(file).size,
+    // The row is never rewritten in place -- a different picture is a
+    // different row with a different id -- so this one can be cached hard.
+    // Private, because it is behind a session.
+    'Cache-Control': 'private, max-age=31536000, immutable',
+  });
+  fs.createReadStream(file).pipe(res);
+}
+
+async function handleAddEntityImage(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const { entity, story } = guard;
+  const { fields, files } = await parseMultipartBody(req, UPLOAD_LIMIT_BYTES);
+  const existing = models.listEntityImages(entityId);
+  if (existing.length >= entityImages.MAX_IMAGES_PER_ENTRY) {
+    return renderEntity(res, user, entityId, `An entry holds up to ${entityImages.MAX_IMAGES_PER_ENTRY} pictures.`);
+  }
+  let saved;
+  try {
+    saved = entityImages.saveImage(files.image);
+  } catch (err) {
+    if (!err.userFacing) throw err;
+    return renderEntity(res, user, entityId, err.message);
+  }
+  models.addEntityImage({
+    entityId, storyId: story.id, caption: fields.caption, uploadedBy: user.id, ...saved,
+  });
+  logEvent(user, 'bible-image-added', { subject: `${entity.name} (${story.title})`, href: `/bible/${entityId}`, storyId: story.id });
+  redirect(res, `/bible/${entityId}#pictures`);
+}
+
+async function handleEditEntityImage(req, res, user, entityId, imageId, action) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const image = models.getEntityImage(imageId);
+  // An image id from another entry's gallery is not this entry's to move.
+  if (!image || image.entity_id !== entityId) return sendError(res, 404, 'No such image', user);
+  if (action === 'delete') models.removeEntityImage(imageId);
+  else if (action === 'up' || action === 'down') models.moveEntityImage(imageId, action);
+  else {
+    const body = await parseBody(req);
+    models.setEntityImageCaption(imageId, body.caption);
+  }
+  redirect(res, `/bible/${entityId}#pictures`);
 }
 
 async function handleEditEntityPage(req, res, user, entityId) {
@@ -1675,6 +1740,15 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/bible\/(\d+)\/links\/(\d+)\/delete$/)) && req.method === 'POST') {
       return handleRemoveEntityLink(req, res, user, Number(m[1]), Number(m[2]));
+    }
+    if ((m = pathname.match(/^\/entity-images\/(\d+)$/)) && req.method === 'GET') {
+      return handleEntityImage(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/bible\/(\d+)\/images$/)) && req.method === 'POST') {
+      return handleAddEntityImage(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/bible\/(\d+)\/images\/(\d+)\/(delete|up|down|caption)$/)) && req.method === 'POST') {
+      return handleEditEntityImage(req, res, user, Number(m[1]), Number(m[2]), m[3]);
     }
     if ((m = pathname.match(/^\/bible\/(\d+)\/appearances$/)) && req.method === 'POST') {
       return handleSetEntityAppearances(req, res, user, Number(m[1]));

@@ -6,6 +6,7 @@ const auth = require('./auth');
 const { countWords } = require('./lib/markdown');
 const { CHOOSABLE_STORY_STATES, CHAPTER_STAGES } = require('./lib/story-state');
 const bible = require('./lib/story-bible');
+const entityImages = require('./lib/entity-images');
 
 const DELETED_USER_USERNAME = 'deleted-user';
 
@@ -1792,8 +1793,80 @@ function updateStoryEntity({ entityId, kind, name, summary, description, secret,
 function deleteStoryEntity(entityId) {
   const row = db.prepare('SELECT id, story_id, name FROM story_entities WHERE id = ?').get(entityId);
   if (!row) return null;
+  // The rows cascade; the files do not. Collect them before the row that
+  // names them is gone.
+  const files = listEntityImages(entityId).map((image) => image.filename);
   db.prepare('DELETE FROM story_entities WHERE id = ?').run(entityId);
+  for (const filename of files) entityImages.removeImage(filename);
   return row;
+}
+
+
+// ---------- pictures of an entry (see lib/entity-images.js) ----------
+const listEntityImages = (entityId) => db.prepare(
+  'SELECT * FROM story_entity_images WHERE entity_id = ? ORDER BY position, id'
+).all(entityId);
+
+const getEntityImage = (imageId) => db.prepare(`
+  SELECT i.*, e.story_id AS entity_story_id
+  FROM story_entity_images i JOIN story_entities e ON e.id = i.entity_id
+  WHERE i.id = ?
+`).get(imageId) || null;
+
+// The face of each entry in one query, so a listing of the whole cast does
+// not ask the database once per row.
+function coverImagesFor(storyId) {
+  const rows = db.prepare(`
+    SELECT i.entity_id, i.id, i.content_type
+    FROM story_entity_images i
+    WHERE i.story_id = ? AND i.position = (
+      SELECT MIN(i2.position) FROM story_entity_images i2 WHERE i2.entity_id = i.entity_id
+    )
+    GROUP BY i.entity_id
+  `).all(storyId);
+  return new Map(rows.map((r) => [r.entity_id, r.id]));
+}
+
+/** @param {{ entityId: number, storyId: number, filename: string, contentType: string, bytes: number, caption?: string, uploadedBy?: number }} fields */
+function addEntityImage({ entityId, storyId, filename, contentType, bytes, caption, uploadedBy }) {
+  const next = db.prepare(
+    'SELECT COALESCE(MAX(position), -1) + 1 AS n FROM story_entity_images WHERE entity_id = ?'
+  ).get(entityId).n;
+  const info = db.prepare(`
+    INSERT INTO story_entity_images (entity_id, story_id, filename, content_type, bytes, caption, position, uploaded_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(entityId, storyId, filename, contentType, bytes || 0, String(caption || '').trim().slice(0, 240), next, uploadedBy || null);
+  return Number(info.lastInsertRowid);
+}
+
+function setEntityImageCaption(imageId, caption) {
+  db.prepare('UPDATE story_entity_images SET caption = ? WHERE id = ?')
+    .run(String(caption || '').trim().slice(0, 240), imageId);
+}
+
+// Moving one picture is a swap with its neighbour, and the positions are
+// renumbered first so a gallery that has had things deleted out of it
+// still has neighbours to swap with.
+function moveEntityImage(imageId, direction) {
+  const image = getEntityImage(imageId);
+  if (!image) return;
+  const all = listEntityImages(image.entity_id);
+  const renumber = db.prepare('UPDATE story_entity_images SET position = ? WHERE id = ?');
+  all.forEach((row, i) => renumber.run(i, row.id));
+  const index = all.findIndex((row) => row.id === image.id);
+  const target = direction === 'up' ? index - 1 : index + 1;
+  if (index < 0 || target < 0 || target >= all.length) return;
+  renumber.run(target, all[index].id);
+  renumber.run(index, all[target].id);
+}
+
+// The row goes, and so does the file: an orphaned picture on disk is
+// invisible, permanent and somebody's face.
+function removeEntityImage(imageId) {
+  const image = getEntityImage(imageId);
+  if (!image) return;
+  db.prepare('DELETE FROM story_entity_images WHERE id = ?').run(imageId);
+  entityImages.removeImage(image.filename);
 }
 
 // ---------- relations ----------
@@ -1936,6 +2009,13 @@ const listChapterStubs = (storyId) => db.prepare(
 ).all(storyId);
 
 module.exports = {
+  addEntityImage,
+  coverImagesFor,
+  getEntityImage,
+  listEntityImages,
+  moveEntityImage,
+  removeEntityImage,
+  setEntityImageCaption,
   createStoryEntity,
   deleteStoryEntity,
   getStoryEntity,

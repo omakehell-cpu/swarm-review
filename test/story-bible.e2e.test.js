@@ -8,7 +8,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { startApp, makeClient, form, multipart } = require('./helpers/app');
+const { startApp, makeClient, form, multipart, multipartWithFile } = require('./helpers/app');
 
 let app;
 /** @type {any} */
@@ -262,4 +262,109 @@ test('deleting an entry takes its aliases, relations and appearances with it', a
 test('the story page offers the way in', async () => {
   const html = await (await owner.request(`/stories/${storyId}`)).text();
   assert.match(html, new RegExp(`href="/stories/${storyId}/bible"`));
+});
+
+// ---------- pictures ----------
+// A one-pixel PNG and a one-pixel GIF, written out by hand: enough for the
+// signature check to have something real to recognise, and small enough to
+// sit in the test file.
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64'
+);
+const GIF = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+
+test('a picture goes up, comes back, and is the entry\'s face', async () => {
+  const res = await owner.request(`/bible/${kesslerId}/images`, {
+    method: 'POST',
+    ...multipartWithFile([['caption', 'On the spine, 04:20']], { name: 'image', filename: 'kessler.png', body: PNG }),
+  });
+  assert.strictEqual(res.status, 302);
+
+  const images = models.listEntityImages(kesslerId);
+  assert.strictEqual(images.length, 1);
+  assert.strictEqual(images[0].content_type, 'image/png', 'recognised by its bytes, not its name');
+  assert.strictEqual(images[0].caption, 'On the spine, 04:20');
+
+  // It is served from outside public/, through a route, with its real type.
+  const shown = await owner.request(`/entity-images/${images[0].id}`);
+  assert.strictEqual(shown.status, 200);
+  assert.strictEqual(shown.headers.get('content-type'), 'image/png');
+  assert.strictEqual(Buffer.from(await shown.arrayBuffer()).length, PNG.length);
+
+  const page = await (await owner.request(`/bible/${kesslerId}`)).text();
+  assert.match(page, new RegExp(`class="entity-portrait" src="/entity-images/${images[0].id}"`));
+  const index = await (await owner.request(`/stories/${storyId}/bible`)).text();
+  assert.match(index, new RegExp(`class="row-cover" src="/entity-images/${images[0].id}"`));
+});
+
+test('the gallery reorders, and the first picture is the cover', async () => {
+  await owner.request(`/bible/${kesslerId}/images`, {
+    method: 'POST',
+    ...multipartWithFile([['caption', 'Later']], { name: 'image', filename: 'second.gif', body: GIF }),
+  });
+  let images = models.listEntityImages(kesslerId);
+  assert.deepStrictEqual(images.map((i) => i.caption), ['On the spine, 04:20', 'Later']);
+
+  await owner.request(`/bible/${kesslerId}/images/${images[1].id}/up`, { method: 'POST', ...form([]) });
+  images = models.listEntityImages(kesslerId);
+  assert.deepStrictEqual(images.map((i) => i.caption), ['Later', 'On the spine, 04:20']);
+  assert.strictEqual(models.coverImagesFor(storyId).get(kesslerId), images[0].id, 'the cover moved with it');
+
+  await owner.request(`/bible/${kesslerId}/images/${images[0].id}/caption`, {
+    method: 'POST', ...form([['caption', 'A sketch']]),
+  });
+  assert.strictEqual(models.listEntityImages(kesslerId)[0].caption, 'A sketch');
+});
+
+test('a file that is not one of the four formats is refused, SVG included', async () => {
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>', 'utf8');
+  const res = await owner.request(`/bible/${kesslerId}/images`, {
+    method: 'POST',
+    // Named and typed as a PNG; it is the bytes that give it away.
+    ...multipartWithFile([['caption', '']], { name: 'image', filename: 'portrait.png', body: svg }),
+  });
+  assert.strictEqual(res.status, 200, 'the page comes back with the reason, not a bare error');
+  assert.match(await res.text(), /not a PNG, JPEG, GIF or WebP/);
+  assert.strictEqual(models.listEntityImages(kesslerId).length, 2, 'and nothing was stored');
+});
+
+test('a reader cannot add or remove pictures', async () => {
+  const images = models.listEntityImages(kesslerId);
+  const upload = await reader.request(`/bible/${kesslerId}/images`, {
+    method: 'POST',
+    ...multipartWithFile([['caption', '']], { name: 'image', filename: 'x.png', body: PNG }),
+  });
+  assert.strictEqual(upload.status, 403);
+  const remove = await reader.request(`/bible/${kesslerId}/images/${images[0].id}/delete`, { method: 'POST', ...form([]) });
+  assert.strictEqual(remove.status, 403);
+  assert.strictEqual(models.listEntityImages(kesslerId).length, 2);
+
+  // Reading one, though, is the same right as reading the story.
+  assert.strictEqual((await reader.request(`/entity-images/${images[0].id}`)).status, 200);
+});
+
+test('deleting a picture takes the file with it, and so does deleting the entry', async () => {
+  const fs2 = require('node:fs');
+  const entityImages = require('../lib/entity-images');
+  const images = models.listEntityImages(kesslerId);
+  const first = entityImages.imagePath(images[0].filename);
+  const second = entityImages.imagePath(images[1].filename);
+  assert.ok(fs2.existsSync(first) && fs2.existsSync(second));
+
+  await owner.request(`/bible/${kesslerId}/images/${images[0].id}/delete`, { method: 'POST', ...form([]) });
+  assert.ok(!fs2.existsSync(first), 'the file went with the row');
+
+  // And an entry deleted whole leaves nothing on disk either.
+  const doomed = await owner.request(`/stories/${storyId}/bible`, {
+    method: 'POST', ...form([['name', 'Someone Else'], ['kind', 'person']]),
+  });
+  const id = Number(doomed.headers.get('location').split('/').pop());
+  await owner.request(`/bible/${id}/images`, {
+    method: 'POST', ...multipartWithFile([['caption', '']], { name: 'image', filename: 'p.png', body: PNG }),
+  });
+  const path2 = entityImages.imagePath(models.listEntityImages(id)[0].filename);
+  assert.ok(fs2.existsSync(path2));
+  await owner.request(`/bible/${id}/delete`, { method: 'POST', ...form([]) });
+  assert.ok(!fs2.existsSync(path2), 'no orphaned faces on disk');
 });

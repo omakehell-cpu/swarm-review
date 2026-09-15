@@ -2495,3 +2495,51 @@ main[data-reading="read"] .reading-pane {
   .entity-form-row { grid-template-columns: 1fr; }
   .bible-doors { grid-template-columns: 1fr; }
 }
+
+/* ---- pictures of a bible entry ----
+   A face at the top of the entry and a thumbnail in the list, because
+   half of what a cast list is for is recognising somebody at a glance. */
+.entity-head { align-items: start; }
+.entity-head-main { display: flex; gap: var(--s-7); align-items: start; min-width: 0; }
+.entity-portrait {
+  width: 120px; height: 120px; object-fit: cover; flex: 0 0 auto;
+  border: 1px solid var(--border-strong); background: var(--bg-sunken);
+}
+.row-cover {
+  width: 56px; height: 56px; object-fit: cover; flex: 0 0 auto;
+  margin-right: var(--s-6); border: 1px solid var(--border); background: var(--bg-sunken);
+}
+.chapter-row.has-cover { align-items: center; }
+
+.entity-pictures { margin-top: var(--s-10); }
+.entity-pictures .side-head { border-top: 2px solid var(--border-strong); }
+.figure-strip {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--s-7); margin: 0 0 var(--s-7);
+}
+.entity-figure { margin: 0; position: relative; }
+.entity-figure img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--border); background: var(--bg-sunken);
+}
+.cover-flag {
+  position: absolute; top: 0; left: 0;
+  background: var(--border-strong); color: var(--bg);
+  font-size: var(--t-2xs); font-weight: 700; letter-spacing: var(--label-tracking);
+  text-transform: uppercase; padding: var(--s-1) var(--s-3);
+}
+.entity-figure figcaption {
+  margin-top: var(--s-3); font-size: var(--t-xs); color: var(--text-muted);
+}
+.caption-form { display: flex; gap: var(--s-3); }
+.caption-form input { flex: 1 1 auto; min-width: 0; font-size: var(--t-xs); }
+.figure-actions { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-3); }
+.image-form { display: flex; flex-wrap: wrap; gap: var(--s-5); align-items: flex-end; }
+.image-form label { display: flex; flex-direction: column; gap: var(--s-2); }
+.image-form .hint { flex: 1 0 100%; }
+
+@media (max-width: 620px) {
+  .entity-head-main { flex-direction: column; gap: var(--s-5); }
+  .entity-portrait { width: 96px; height: 96px; }
+  .row-cover { width: 44px; height: 44px; margin-right: var(--s-5); }
+}
