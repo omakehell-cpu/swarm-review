@@ -7,6 +7,7 @@ const { countWords } = require('./lib/markdown');
 const { CHOOSABLE_STORY_STATES, CHAPTER_STAGES } = require('./lib/story-state');
 const bible = require('./lib/story-bible');
 const entityImages = require('./lib/entity-images');
+const castLinks = require('./lib/cast-links');
 
 const DELETED_USER_USERNAME = 'deleted-user';
 
@@ -882,6 +883,24 @@ function searchGlossary(query, limit) {
   `).all({ q: LIKE(query), limit });
 }
 
+
+// The bibles, in the site search. A cast of hundreds that only the bible
+// page can find is a cast of hundreds nobody looks at.
+function searchBible(query, limit) {
+  return db.prepare(`
+    SELECT e.id, e.name, e.kind, e.summary, e.story_id, s.title AS story_title,
+      (SELECT GROUP_CONCAT(a.alias, ', ') FROM story_entity_aliases a WHERE a.entity_id = e.id) AS alias_list
+    FROM story_entities e JOIN stories s ON s.id = e.story_id
+    WHERE s.archived_at IS NULL AND (
+      e.name LIKE @q ESCAPE '\\' OR e.summary LIKE @q ESCAPE '\\' OR e.description LIKE @q ESCAPE '\\'
+      OR EXISTS (SELECT 1 FROM story_entity_aliases a WHERE a.entity_id = e.id AND a.alias LIKE @q ESCAPE '\\')
+      OR EXISTS (SELECT 1 FROM story_entity_fields f WHERE f.entity_id = e.id AND f.value LIKE @q ESCAPE '\\')
+    )
+    ORDER BY e.name COLLATE NOCASE
+    LIMIT @limit
+  `).all({ q: LIKE(query), limit });
+}
+
 function searchEverything(query, { limit = 20 } = {}) {
   const clean = String(query || '').trim();
   if (clean.length < 2) return null;
@@ -891,6 +910,7 @@ function searchEverything(query, { limit = 20 } = {}) {
     chapters: searchChapters(clean, limit),
     passages: searchChapterText(clean, limit),
     glossary: searchGlossary(clean, limit),
+    bible: searchBible(clean, limit),
   };
 }
 
@@ -1620,17 +1640,29 @@ const ENTITY_COLUMNS = `
     WHERE sc.entity_id = e.id AND ch.archived_at IS NULL) AS last_chapter,
   (SELECT COUNT(*) FROM story_entity_links l WHERE l.from_id = e.id OR l.to_id = e.id) AS link_count`;
 
+const ENTITY_SORTS = {
+  name: 'e.name COLLATE NOCASE',
+  // Most-present first, and the ones nobody has named yet last -- that
+  // list is also a to-do list.
+  appearances: `${APPEARANCE_COUNT_SQL} DESC, e.name COLLATE NOCASE`,
+  // Main cast, then supporting, then the rest. The empty role sorts last
+  // rather than first, which is what CASE is for.
+  role: `CASE e.role WHEN 'main' THEN 0 WHEN 'supporting' THEN 1 WHEN 'minor' THEN 2 ELSE 3 END, e.name COLLATE NOCASE`,
+  recent: 'e.updated_at DESC, e.name COLLATE NOCASE',
+};
+
 /**
- * Everything in one story's bible, alphabetical.
+ * Everything in one story's bible.
  * @param {number} storyId
- * @param {{ kind?: string }} [opts]
+ * @param {{ kind?: string, sort?: string }} [opts]
  */
-function listStoryEntities(storyId, { kind } = {}) {
+function listStoryEntities(storyId, { kind, sort } = {}) {
+  const order = ENTITY_SORTS[sort] || ENTITY_SORTS.name;
   return db.prepare(`
     SELECT ${ENTITY_COLUMNS}
     FROM story_entities e LEFT JOIN users u ON u.id = e.created_by
     WHERE e.story_id = @storyId ${kind ? 'AND e.kind = @kind' : ''}
-    ORDER BY e.name COLLATE NOCASE
+    ORDER BY ${order}
   `).all(kind ? { storyId, kind } : { storyId });
 }
 
@@ -1743,6 +1775,7 @@ function createStoryEntity({ storyId, kind, name, summary, description, secret, 
     writeEntityFields(entityId, storyId, fields);
     db.exec('COMMIT');
     teachDictionary(storyId, [clean, ...list], createdBy);
+    castLinks.invalidate(storyId);
     rebuildStoryAppearances(storyId);
     return getStoryEntity(entityId);
   } catch (err) {
@@ -1781,6 +1814,7 @@ function updateStoryEntity({ entityId, kind, name, summary, description, secret,
     writeEntityFields(entityId, current.story_id, fields);
     db.exec('COMMIT');
     teachDictionary(current.story_id, [clean, ...list], userId);
+    castLinks.invalidate(current.story_id);
     rebuildStoryAppearances(current.story_id);
     return getStoryEntity(entityId);
   } catch (err) {
@@ -1799,11 +1833,41 @@ function deleteStoryEntity(entityId) {
   // names them is gone.
   const files = listEntityImages(entityId).map((image) => image.filename);
   db.prepare('DELETE FROM story_entities WHERE id = ?').run(entityId);
+  castLinks.invalidate(row.story_id);
   for (const filename of files) entityImages.removeImage(filename);
   return row;
 }
 
 
+
+
+// ---------- names the app already recognises ----------
+// The bible's own names and aliases, the glossary's page titles and the
+// story's spelling dictionary, folded down -- everything a proper name
+// found in a chapter might already be accounted for by.
+function knownNamesFor(storyId) {
+  const known = new Set();
+  for (const row of db.prepare('SELECT name_lower FROM story_entities WHERE story_id = ?').all(storyId)) known.add(row.name_lower);
+  for (const row of db.prepare('SELECT alias_lower FROM story_entity_aliases WHERE story_id = ?').all(storyId)) known.add(row.alias_lower);
+  for (const row of db.prepare('SELECT title_lower FROM wiki_pages').all()) known.add(row.title_lower);
+  for (const word of getStoryDictionary(storyId)) known.add(String(word).toLowerCase());
+  return known;
+}
+
+/**
+ * Proper names in one chapter's current text that nothing accounts for.
+ * A suggestion, never an action: the author clicks, or does not.
+ */
+function missingNamesInChapter(chapterId) {
+  const chapter = db.prepare('SELECT id, story_id FROM chapters WHERE id = ?').get(chapterId);
+  if (!chapter) return [];
+  const version = getLatestVersion(chapterId);
+  if (!version) return [];
+  return bible.findProperNames(version.content, knownNamesFor(chapter.story_id));
+}
+
+/** The same question about text that has not been saved yet. */
+const missingNamesInText = (storyId, text) => bible.findProperNames(text, knownNamesFor(storyId));
 
 // ---------- custom fields: the story's template, and what each entry says ----------
 const listFieldTemplate = (storyId, kind) => db.prepare(
@@ -2055,7 +2119,11 @@ const listEntityAppearances = (entityId) => db.prepare(`
 
 /** Who is in one chapter -- the other way round the same view. */
 const listChapterEntities = (chapterId) => db.prepare(`
-  SELECT e.id, e.name, e.kind, e.summary, sc.mentions, sc.source
+  SELECT e.id, e.name, e.kind, e.summary, sc.mentions, sc.source,
+    (SELECT MIN(ch.chapter_number) FROM story_entity_chapters sc2
+       JOIN chapters ch ON ch.id = sc2.chapter_id
+      WHERE sc2.entity_id = e.id AND ch.archived_at IS NULL) AS first_chapter,
+    (SELECT ch2.chapter_number FROM chapters ch2 WHERE ch2.id = sc.chapter_id) AS this_chapter
     FROM story_entity_chapters sc
     JOIN story_entities e ON e.id = sc.entity_id
    WHERE sc.chapter_id = ?
@@ -2086,6 +2154,11 @@ const listChapterStubs = (storyId) => db.prepare(
 ).all(storyId);
 
 module.exports = {
+  ENTITY_SORTS,
+  searchBible,
+  knownNamesFor,
+  missingNamesInChapter,
+  missingNamesInText,
   entityFieldsInOrder,
   fieldTemplatesByKind,
   listEntityFields,

@@ -437,3 +437,106 @@ test('only the story\'s authors can set the template', async () => {
   assert.strictEqual((await reader.request(`/stories/${storyId}/bible/fields`)).status, 403);
   assert.deepStrictEqual(models.listFieldTemplate(storyId, 'person'), ['Home world']);
 });
+
+// ---------- the cast in the prose ----------
+test('a name in a chapter links to its entry, and beats the wiki to it', async () => {
+  // The same name exists on the shared wiki. The author's own account of
+  // somebody is the one their reader should get.
+  models.replaceWikiPages([
+    { title: 'Kessler', summary: 'A wiki page about somebody else entirely.', categories: ['Story Characters'], contentHtml: '<p>.</p>' },
+    { title: 'Tampaad', summary: 'A reach.', categories: ['Systems'], contentHtml: '<p>.</p>' },
+  ]);
+  const html = await (await owner.request(`/chapters/${chapterOne}`)).text();
+  assert.match(html, new RegExp(`class="wiki-link cast-link" href="/bible/${kesslerId}"`));
+  assert.ok(!html.includes('href="/glossary/Kessler"'), 'the wiki did not get the name');
+});
+
+test('the chapter says who is new in it', async () => {
+  const html = await (await owner.request(`/chapters/${chapterOne}`)).text();
+  assert.match(html, /New here/);
+});
+
+test('names the bible has never heard of are offered, to writers only', async () => {
+  await owner.request(`/chapters/${chapterTwo}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['title', 'Seals and signatures'], ['summary', ''],
+      ['content', 'She signed the book, and Sergeant Iona Vell countersigned it. Iona Vell always did.'],
+      ['changelog', 'a new name'],
+    ]),
+  });
+  const html = await (await owner.request(`/chapters/${chapterTwo}`)).text();
+  assert.match(html, /not in the bible/);
+  assert.match(html, /Iona Vell/);
+  assert.match(html, new RegExp(`action="/stories/${storyId}/bible/quick"`));
+
+  // A reader is not offered somebody else's homework.
+  const readerHtml = await (await reader.request(`/chapters/${chapterTwo}`)).text();
+  assert.ok(!readerHtml.includes('not in the bible'));
+});
+
+test('one click writes the entry, and the name stops being offered', async () => {
+  const res = await owner.request(`/stories/${storyId}/bible/quick`, {
+    method: 'POST',
+    ...form([['name', 'Iona Vell'], ['kind', 'person'], ['returnTo', `/chapters/${chapterTwo}`]]),
+  });
+  assert.strictEqual(res.status, 302);
+  assert.strictEqual(res.headers.get('location'), `/chapters/${chapterTwo}`);
+  const made = models.getStoryEntityByName(storyId, 'Iona Vell');
+  assert.ok(made, 'the entry exists');
+  // And it immediately knows where she is, because the scan reran.
+  assert.deepStrictEqual(models.listEntityAppearances(made.id).map((a) => a.chapter_id), [chapterTwo]);
+
+  const html = await (await owner.request(`/chapters/${chapterTwo}`)).text();
+  assert.ok(!html.includes('class="missing-name">Iona Vell'), 'she is no longer a suggestion');
+  // She is in the chapter's cast instead, and linked in its prose.
+  assert.match(html, new RegExp(`class="wiki-link cast-link" href="/bible/${made.id}"`));
+});
+
+test('returnTo cannot be pointed off the site', async () => {
+  const res = await owner.request(`/stories/${storyId}/bible/quick`, {
+    method: 'POST',
+    ...form([['name', 'Somewhere'], ['kind', 'place'], ['returnTo', 'https://example.com/phish']]),
+  });
+  assert.strictEqual(res.status, 302);
+  assert.strictEqual(res.headers.get('location'), `/stories/${storyId}/bible`);
+});
+
+test('the editor can ask about a draft that has not been saved', async () => {
+  const res = await owner.request(`/stories/${storyId}/bible/unknown-names`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ text: 'The hatch stood open, and Yevgenia Bru was already through it.' }),
+  });
+  assert.strictEqual(res.status, 200);
+  const data = await res.json();
+  assert.deepStrictEqual(data.names.map((n) => n.name), ['Yevgenia Bru']);
+
+  const refused = await reader.request(`/stories/${storyId}/bible/unknown-names`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ text: 'Anything' }),
+  });
+  assert.strictEqual(refused.status, 403);
+});
+
+test('the bible is in the site search', async () => {
+  const html = await (await owner.request('/search?q=' + encodeURIComponent('Iona'))).text();
+  assert.match(html, /Bibles/);
+  assert.match(html, new RegExp(`href="/bible/${models.getStoryEntityByName(storyId, 'Iona Vell').id}"`));
+});
+
+test('the index can be ordered by something other than the alphabet', async () => {
+  const byName = await (await owner.request(`/stories/${storyId}/bible`)).text();
+  assert.match(byName, /class="tag-chip current"[^>]*>A to Z/);
+
+  const byPresence = await (await owner.request(`/stories/${storyId}/bible?sort=appearances`)).text();
+  const order = (html) => Array.from(html.matchAll(/class="chapter-row glossary-row[^"]*" href="\/bible\/(\d+)"/g)).map((m) => Number(m[1]));
+  assert.notDeepStrictEqual(order(byPresence), order(byName), 'the order actually changed');
+  assert.match(byPresence, /aria-current="true"[^>]*>Most present|Most present/);
+
+  // A sort nobody offered falls back to the alphabet rather than reaching
+  // the query builder.
+  const nonsense = await (await owner.request(`/stories/${storyId}/bible?sort=DROP+TABLE`)).text();
+  assert.deepStrictEqual(order(nonsense), order(byName));
+});

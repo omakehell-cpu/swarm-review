@@ -2573,3 +2573,39 @@ main[data-reading="read"] .reading-pane {
 @media (max-width: 620px) {
   .field-row, .field-pair { grid-template-columns: 1fr; gap: var(--s-2); }
 }
+
+/* A name from the story's own bible, as against one from the shared wiki:
+   the author's own account of somebody, so it is marked as theirs. */
+.wiki-link.cast-link {
+  text-decoration-style: solid; text-decoration-color: var(--border);
+  cursor: pointer;
+}
+.wiki-link.cast-link:hover { text-decoration-color: var(--accent); color: var(--accent); }
+
+/* ---- names the bible has not heard of ---- */
+.missing-names {
+  margin: var(--s-10) 0 0; border-top: 2px solid var(--accent); padding-top: var(--s-4);
+}
+.missing-names .side-head { border-top: 0; padding-top: 0; }
+.missing-list { list-style: none; margin: var(--s-5) 0 0; padding: 0; }
+.missing-list li {
+  display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: baseline;
+  padding: var(--s-3) 0; border-bottom: 1px solid var(--border); font-size: var(--t-sm);
+}
+.missing-list li.added { opacity: 0.5; }
+.missing-list form { display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: baseline; width: 100%; }
+.missing-name { font-weight: 700; }
+.missing-count { color: var(--text-muted); font-size: var(--t-xs); font-variant-numeric: tabular-nums; }
+.missing-list select { margin-left: auto; }
+
+.editor-bible {
+  margin-top: var(--s-10); border-top: 2px solid var(--border-strong); padding-top: var(--s-4);
+}
+.editor-bible .side-head { border-top: 0; padding-top: 0; }
+.quick-entry { display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: center; }
+.quick-entry input[name="name"] { flex: 0 1 18ch; }
+.quick-entry input[name="summary"] { flex: 1 1 24ch; min-width: 0; }
+.quick-result { margin: var(--s-4) 0 0; font-size: var(--t-sm); color: var(--text-muted); }
+.quick-result.error { color: var(--accent); }
+.editor-missing { margin-top: var(--s-6); }
+.ent-badge.first-here { color: var(--accent); border-color: var(--accent); }

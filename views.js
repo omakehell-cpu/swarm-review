@@ -841,9 +841,31 @@ function bibleConflictNotice(conflicts) {
     </div>`;
 }
 
+const SORT_LABELS = {
+  name: 'A to Z', appearances: 'Most present', role: 'By role', recent: 'Lately changed',
+};
+
+function bibleSortBar(story, kind, sort) {
+  const href = (value) => {
+    const qs = new URLSearchParams();
+    if (kind) qs.set('kind', kind);
+    if (value !== 'name') qs.set('sort', value);
+    const tail = qs.toString();
+    return `/stories/${story.id}/bible${tail ? `?${tail}` : ''}`;
+  };
+  return `
+    <div class="glossary-filters">
+      <span class="filter-label">Order</span>
+      <div class="tag-chips">
+        ${Object.keys(SORT_LABELS).map((value) => `
+          <a class="tag-chip${value === sort ? ' current' : ''}" href="${escapeHtml(href(value))}"${value === sort ? ' aria-current="true"' : ''}>${escapeHtml(SORT_LABELS[value])}</a>`).join('')}
+      </div>
+    </div>`;
+}
+
 function bibleIndexPage({
   user, story, entities = [], counts = {}, total = 0, kind = '', canWrite = false,
-  conflicts = [], notice = '', covers = new Map(),
+  conflicts = [], notice = '', covers = new Map(), sort = 'name',
 }) {
   const door = (k) => `
     <a class="glossary-door${k === kind ? ' current' : ''}" href="/stories/${story.id}/bible?kind=${k}">
@@ -892,6 +914,7 @@ function bibleIndexPage({
           <button class="btn ghost small" type="submit">Filter</button>
           ${kind ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Everything</a>` : ''}
         </form>
+        ${bibleSortBar(story, kind, sort)}
         <p class="muted"><span id="glossary-count">${entities.length} entr${entities.length === 1 ? 'y' : 'ies'}</span>${kind ? ` &middot; ${escapeHtml(bible.KIND_PLURALS[kind])}` : ''}.</p>` : ''}
       ${list}`,
   });
@@ -899,9 +922,11 @@ function bibleIndexPage({
 
 function entityAppearanceList(entity, appearances, chapters, canWrite) {
   const shown = appearances.filter((a) => !a.archived_at);
+  const first = shown.length ? shown[0].chapter_number : null;
   const rows = shown.length ? shown.map((a) => `
     <li>
       <a href="/chapters/${a.chapter_id}">Chapter ${a.chapter_number}: ${escapeHtml(a.title)}</a>
+      ${a.chapter_number === first ? '<span class="ent-badge first-here">First</span>' : ''}
       <span class="ent-mentions">${a.source === 'manual'
         ? 'added by hand'
         : `${a.mentions} mention${a.mentions === 1 ? '' : 's'}${a.first_name && a.first_name.toLowerCase() !== entity.name.toLowerCase() ? ` as &ldquo;${escapeHtml(a.first_name)}&rdquo;` : ''}`}</span>
@@ -1207,6 +1232,59 @@ function entityFormPage({ user, story, entity = null, aliases = [], fields = [],
   });
 }
 
+// Names the chapter uses that the bible has never heard of. A suggestion,
+// not a decision: one click writes the entry, and the entry is a stub with
+// the name in it, which is the part that was stopping anybody.
+function missingNamesBlock(names, storyId, returnTo) {
+  if (!names.length) return '';
+  return `
+    <section class="missing-names">
+      <h2 class="side-head">${names.length} name${names.length === 1 ? '' : 's'} here ${names.length === 1 ? 'is' : 'are'} not in the bible</h2>
+      <p class="muted">Proper names this chapter uses that no entry, glossary page or dictionary word accounts for. Guesswork, so some of it will be wrong -- take what is useful.</p>
+      <ul class="missing-list">
+        ${names.map((n) => `
+          <li>
+            <form method="post" action="/stories/${storyId}/bible/quick" class="inline-form">
+              <input type="hidden" name="name" value="${escapeHtml(n.name)}">
+              <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}">
+              <span class="missing-name">${escapeHtml(n.name)}</span>
+              <span class="missing-count">${n.count}&times;</span>
+              <select name="kind" aria-label="What ${escapeHtml(n.name)} is">
+                ${bible.KINDS.map((k) => `<option value="${k}">${escapeHtml(bible.KIND_LABELS[k])}</option>`).join('')}
+              </select>
+              <button class="btn ghost tiny" type="submit">Add</button>
+            </form>
+          </li>`).join('')}
+      </ul>
+    </section>`;
+}
+
+// The same thing inside the editor, where the text is not saved yet: the
+// panel asks the server about the draft in the textarea, so there is one
+// implementation of what counts as a name rather than a second one in
+// JavaScript drifting away from the first.
+function editorBiblePanel(chapter) {
+  return `
+    <aside class="editor-bible" id="editor-bible" data-story-id="${chapter.story_id}">
+      <h2 class="side-head">Bible</h2>
+      <p class="muted">Somebody new turned up mid-scene? Write them down here without leaving the chapter.</p>
+      <form class="quick-entry" data-quick-entry>
+        <input type="text" name="name" placeholder="Name" maxlength="${bible.MAX_NAME_LENGTH}" required>
+        <select name="kind">
+          ${bible.KINDS.map((k) => `<option value="${k}">${escapeHtml(bible.KIND_LABELS[k])}</option>`).join('')}
+        </select>
+        <input type="text" name="summary" placeholder="One line (optional)" maxlength="240">
+        <button class="btn ghost small" type="submit">Add to the bible</button>
+      </form>
+      <p class="quick-result" data-quick-result hidden></p>
+      <div class="editor-missing">
+        <button class="btn ghost small" type="button" data-scan-names>Names in this draft</button>
+        <div data-missing-list></div>
+      </div>
+      <p class="muted"><a href="/stories/${chapter.story_id}/bible" target="_blank" rel="noopener noreferrer">The whole bible &rarr;</a></p>
+    </aside>`;
+}
+
 // The cast of one chapter, shown on the chapter page. Reading a chapter
 // six months after writing it, this is the line that saves you.
 function chapterCastBlock(entities, storyId) {
@@ -1215,7 +1293,9 @@ function chapterCastBlock(entities, storyId) {
     <section class="chapter-cast">
       <h2 class="side-head">In this chapter</h2>
       <ul class="cast-line">
-        ${entities.map((e) => `<li><a href="/bible/${e.id}">${escapeHtml(e.name)}</a>${e.summary ? `<span class="cast-note">${escapeHtml(e.summary)}</span>` : ''}</li>`).join('')}
+        ${entities.map((e) => `<li><a href="/bible/${e.id}">${escapeHtml(e.name)}</a>${
+  e.first_chapter != null && e.first_chapter === e.this_chapter ? '<span class="ent-badge first-here">New here</span>' : ''
+}${e.summary ? `<span class="cast-note">${escapeHtml(e.summary)}</span>` : ''}</li>`).join('')}
       </ul>
       <p class="muted"><a href="/stories/${storyId}/bible">The whole bible &rarr;</a></p>
     </section>`;
@@ -1372,8 +1452,8 @@ function newChapterPage({ user, story, chapters = [], error, values = /** @type 
 
 // ---------- edit chapter (title, summary, and the text itself) ----------
 
-/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, values?: FormValues }} props */
-function editChapterPage({ user, chapter, latestContent, comments = [], error, values = /** @type {FormValues} */ ({}) }) {
+/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, values?: FormValues }} props */
+function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, values = /** @type {FormValues} */ ({}) }) {
   const topLevelComments = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -1413,6 +1493,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, v
           <button class="btn" type="submit">Save changes</button>
         </div>
       </form>
+      ${canWrite ? editorBiblePanel(chapter) : ''}
     </div>`;
 
   // The comments sidebar (and its "Comments" toggle, added client-side by
@@ -1970,7 +2051,7 @@ function chapterFloatNav(chapter, neighbours) {
     </nav>`;
 }
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [] }) {
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [] }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -2005,7 +2086,10 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     });
 
   const ast = parseMarkdown(currentVersion.content);
-  const highlighted = renderHighlighted(ast, comments, wiki.findWikiMatches);
+  // The story's own cast first, then whatever wiki names are left over
+  // (see lib/cast-links.js); falling back to the wiki alone for any caller
+  // that has not built the combined matcher.
+  const highlighted = renderHighlighted(ast, comments, findMatches || wiki.findWikiMatches);
 
   const body = `
     <div class="chapter-topline">
@@ -2123,6 +2207,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       </aside>
     </div>
     ${chapterCastBlock(cast, chapter.story_id)}
+    ${missingNamesBlock(missingNames, chapter.story_id, `/chapters/${chapter.id}`)}
     ${chapterNav(chapter, neighbours, { canWrite })}
     ${chapterFloatNav(chapter, neighbours)}
     <button id="selection-toast" class="selection-toast hidden" type="button">+ Comment on selection</button>
@@ -2264,7 +2349,8 @@ function searchPage({ user, results, query }) {
     });
   }
 
-  const total = results.stories.length + results.chapters.length + results.passages.length + results.glossary.length;
+  const total = results.stories.length + results.chapters.length + results.passages.length
+    + results.glossary.length + (results.bible ? results.bible.length : 0);
 
   const section = (title, items, render) => (items.length ? `
     <section class="search-group">
@@ -2296,6 +2382,11 @@ function searchPage({ user, results, query }) {
         <a class="search-result" href="/chapters/${p.id}">
           <span class="search-result-title">${escapeHtml(p.story_title)} &middot; Chapter ${p.chapter_number}: ${escapeHtml(p.title)}</span>
           <span class="search-result-snippet prose">${searchSnippet(p.content, results.query)}</span>
+        </a>`),
+      section('Bibles', results.bible || [], (e) => `
+        <a class="search-result" href="/bible/${e.id}">
+          <span class="search-result-title">${searchSnippet(e.name, results.query, { radius: 60 })} <span class="muted">&middot; ${escapeHtml(e.story_title)}</span></span>
+          <span class="search-result-snippet">${escapeHtml(entityKindLabel(e.kind))}${e.alias_list ? ` &middot; also ${escapeHtml(e.alias_list)}` : ''}${e.summary ? ` &mdash; ${searchSnippet(e.summary, results.query)}` : ''}</span>
         </a>`),
       section('Glossary', results.glossary, (g) => `
         <a class="search-result" href="/glossary/${encodeURIComponent(g.title)}">

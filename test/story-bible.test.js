@@ -90,3 +90,60 @@ test('kind, status and role never take a value they do not have', () => {
   assert.strictEqual(bible.entityRole('protagonist'), '');
   assert.strictEqual(bible.cleanName('  Kessler   Raye  '), 'Kessler Raye');
 });
+
+// ---------- names the bible has not heard of ----------
+// A heuristic, so these tests are the record of which mistakes it is
+// allowed to make: it may miss, it may not invent.
+
+test('a name in the middle of a sentence is a name', () => {
+  const found = bible.findProperNames('The hatch was open, because Prado had left it open again.');
+  assert.deepStrictEqual(found.map((c) => c.name), ['Prado']);
+});
+
+test('a word is not a name just because a sentence started with it', () => {
+  const found = bible.findProperNames('The station was cold. Suddenly the lights went. But nobody moved. Then nothing.');
+  assert.deepStrictEqual(found, []);
+});
+
+test('a sentence-starter glued to a real name does not swallow it', () => {
+  // "Suddenly the Kestrel Anchorage shook" -- the run of capitals must not
+  // reach across "the" and come back as one candidate.
+  const found = bible.findProperNames('Suddenly the Kestrel Anchorage shook.');
+  assert.deepStrictEqual(found.map((c) => c.name), ['Kestrel Anchorage']);
+});
+
+test('two capitals in a row are a name even at the start of a sentence', () => {
+  assert.deepStrictEqual(
+    bible.findProperNames('Marta Sein watched from the door.').map((c) => c.name), ['Marta Sein']
+  );
+  // And a leading sentence-starter is peeled off what follows it.
+  assert.deepStrictEqual(
+    bible.findProperNames('The Old Man said nothing.').map((c) => c.name), ['Old Man']
+  );
+});
+
+test('a name that is always at the start of a sentence needs to earn it', () => {
+  assert.deepStrictEqual(bible.findProperNames('Prado left. Prado returned.'), []);
+  assert.deepStrictEqual(
+    bible.findProperNames('Prado left. Prado returned. Prado left again.').map((c) => c.name), ['Prado']
+  );
+});
+
+test('what the app already knows about is not offered again', () => {
+  const text = 'Kessler and Prado went to Tampaad together.';
+  assert.deepStrictEqual(
+    bible.findProperNames(text, new Set(['kessler', 'tampaad'])).map((c) => c.name), ['Prado']
+  );
+});
+
+test('code, links and URLs are not prose', () => {
+  assert.deepStrictEqual(
+    bible.findProperNames('See `Kessler` and [the log](https://Example.com/Kessler) and https://Tampaad.example/A.'),
+    []
+  );
+});
+
+test('candidates come back commonest first, alphabetical on a tie', () => {
+  const found = bible.findProperNames('Ana saw Prado. Prado saw Ana and Sein. Prado shrugged. Ana left.');
+  assert.deepStrictEqual(found.map((c) => [c.name, c.count]), [['Ana', 3], ['Prado', 3], ['Sein', 1]]);
+});
