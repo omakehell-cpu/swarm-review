@@ -1177,9 +1177,10 @@ function renderCommentReadOnly(c, { replies }) {
 // Moving between chapters without going back to the story page. Absent
 // entirely for a one-chapter story, where "next" and "previous" are just
 // two dead controls.
-function chapterNav(chapter, neighbours, { compact = false } = {}) {
-  if (!neighbours || neighbours.total < 2) return '';
-  const { prev, next } = neighbours;
+function chapterNav(chapter, neighbours, { compact = false, canWrite = false } = {}) {
+  const total = neighbours ? neighbours.total : 1;
+  const prev = neighbours ? neighbours.prev : null;
+  const next = neighbours ? neighbours.next : null;
   const label = (c) => `Chapter ${c.chapter_number}: ${escapeHtml(c.title)}`;
 
   // The compact one rides on the breadcrumb line, where the breadcrumb
@@ -1188,6 +1189,7 @@ function chapterNav(chapter, neighbours, { compact = false } = {}) {
   // two arrows and nothing else. Saying "chapter 1 of 3" a third time
   // within four lines is not navigation, it is noise.
   if (compact) {
+    if (total < 2) return '';
     return `
       <nav class="chapter-nav compact" aria-label="Chapters">
         ${prev ? `<a class="chapter-nav-arrow" href="/chapters/${prev.id}" title="${label(prev)}" rel="prev">&larr; Previous</a>`
@@ -1199,6 +1201,20 @@ function chapterNav(chapter, neighbours, { compact = false } = {}) {
   // The one at the foot of the chapter carries the titles: by the time
   // you get there you've finished reading and the question is what comes
   // next, which a bare arrow doesn't answer.
+  //
+  // For whoever writes the story, the answer to that question at the end
+  // of the last chapter is "nothing yet" -- which is the moment to offer
+  // the next one, in the slot the next chapter would occupy. It is the
+  // one place on this page where adding a chapter is the obvious thing
+  // to do, and it is why the foot still renders for a story with a
+  // single chapter and no neighbours at all.
+  const writeNext = !next && canWrite
+    ? `<a class="chapter-nav-link next add" href="/stories/${chapter.story_id}/chapters/new">
+          <span class="chapter-nav-dir">Next &rarr;</span>
+          <span class="chapter-nav-title">${ICONS.plus}Write the next chapter</span>
+        </a>`
+    : '<span></span>';
+  if (total < 2 && !canWrite) return '';
   return `
     <nav class="chapter-nav foot" aria-label="Chapters">
       ${prev ? `<a class="chapter-nav-link prev" href="/chapters/${prev.id}" rel="prev">
@@ -1209,7 +1225,7 @@ function chapterNav(chapter, neighbours, { compact = false } = {}) {
       ${next ? `<a class="chapter-nav-link next" href="/chapters/${next.id}" rel="next">
           <span class="chapter-nav-dir">Next &rarr;</span>
           <span class="chapter-nav-title">${label(next)}</span>
-        </a>` : '<span></span>'}
+        </a>` : writeNext}
     </nav>`;
 }
 
@@ -1232,7 +1248,7 @@ function chapterFloatNav(chapter, neighbours) {
     </nav>`;
 }
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, neighbours = null, readers = [] }) {
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [] }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -1332,6 +1348,9 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
           <details class="menu">
             <summary class="btn ghost small">More</summary>
             <div class="menu-panel">
+              ${canWrite ? `
+                <p class="menu-heading">Story</p>
+                <a href="/stories/${chapter.story_id}/chapters/new">Add a chapter</a>` : ''}
               <p class="menu-heading">Download this version</p>
               <a href="/chapters/${chapter.id}/download.docx?v=${currentVersion.version_number}">Word (.docx)</a>
               <a href="/chapters/${chapter.id}/download.md?v=${currentVersion.version_number}">Markdown (.md)</a>
@@ -1381,7 +1400,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         </details>
       </aside>
     </div>
-    ${chapterNav(chapter, neighbours)}
+    ${chapterNav(chapter, neighbours, { canWrite })}
     ${chapterFloatNav(chapter, neighbours)}
     <button id="selection-toast" class="selection-toast hidden" type="button">+ Comment on selection</button>
     <script type="application/json" id="chapter-meta">${toScriptJson({ chapterId: chapter.id })}</script>

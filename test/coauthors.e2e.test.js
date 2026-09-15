@@ -127,6 +127,19 @@ test('a coauthor can add a chapter', async () => {
   assert.strictEqual(chapter.author_id, models.getUserByUsername('helper').id, 'and it is theirs');
 });
 
+test('the offer to write the next chapter follows who may write it', async () => {
+  const chapters = models.listChaptersForStory(storyId);
+  const last = chapters[chapters.length - 1];
+
+  const forHelper = await (await helper.request(`/chapters/${last.id}`)).text();
+  assert.match(forHelper, /Write the next chapter/, 'a coauthor is offered the next one');
+  assert.match(forHelper, /Add a chapter/, 'and the same thing from the menu');
+
+  const forStranger = await (await stranger.request(`/chapters/${last.id}`)).text();
+  assert.ok(!forStranger.includes('Write the next chapter'), 'somebody else is not');
+  assert.ok(!forStranger.includes('Add a chapter'), 'anywhere on the page');
+});
+
 test('a coauthor can edit their own chapter', async () => {
   const chapter = models.listChaptersForStory(storyId).find((c) => c.title === "Luis's chapter");
   const res = await helper.request(`/chapters/${chapter.id}/edit`, {

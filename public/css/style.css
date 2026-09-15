@@ -365,11 +365,11 @@ h1 { margin-top: 0; }
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 .btn:active { background: var(--accent-strong); border-color: var(--accent-strong); }
-/* Inline SVG, inheriting the button's own colour -- no icon font, no
+/* Inline SVG, inheriting whatever colour it sits in -- no icon font, no
    dependency. Only the verbs get one; a label with a picture beside every
    word is noise, not help. */
-.btn .ico { width: 1em; height: 1em; flex: 0 0 auto; }
-.btn .ico path, .btn .ico line, .btn .ico polyline {
+.ico { width: 1em; height: 1em; flex: 0 0 auto; }
+.ico path, .ico line, .ico polyline {
   stroke: currentColor; stroke-width: 2.2; fill: none;
   stroke-linecap: round; stroke-linejoin: round;
 }
@@ -1443,6 +1443,14 @@ main[data-reading="read"] .chapter-float { display: block; }
 }
 .chapter-nav-link:hover { border-top-color: var(--accent); text-decoration: none; }
 .chapter-nav-link.next { text-align: right; }
+/* The same shape as a chapter link, because it sits in the same slot and
+   answers the same question -- but it is an action, so it is the one in
+   the colour that means "do something". */
+.chapter-nav-link.add .chapter-nav-title {
+  display: flex; align-items: center; justify-content: flex-end; gap: var(--s-4);
+  color: var(--accent);
+}
+.chapter-nav-link.add:hover .chapter-nav-title { color: var(--accent-strong); }
 .chapter-nav-dir { font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--label-tracking); }
 .chapter-nav-title {
   font-family: var(--font-display); font-size: var(--t-base); line-height: 1.3;
