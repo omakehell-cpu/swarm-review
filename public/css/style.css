@@ -2607,3 +2607,42 @@ main[data-reading="read"] .reading-pane {
 .editor-missing { margin-top: var(--s-6); }
 .ent-badge.first-here { color: var(--accent); border-color: var(--accent); }
 .entity-form [data-add-field] { align-self: flex-start; justify-self: start; width: auto; }
+
+/* ---- help and the changelog ----
+   Two pages of writing about the app rather than in it, so they are set
+   like the writing: one measure, the prose typeface, nothing in a box. */
+.nav-dot {
+  display: inline-block; width: 6px; height: 6px; margin-left: var(--s-3);
+  background: var(--accent); vertical-align: 3px;
+}
+.doc-body {
+  border: 0; padding: 0; background: transparent; max-width: 68ch;
+}
+.doc-body h2 {
+  margin: var(--s-10) 0 var(--s-4); font-size: var(--t-xl);
+  padding-top: var(--s-4); border-top: 1px solid var(--border);
+}
+.doc-body h3 { margin: var(--s-8) 0 var(--s-3); font-size: var(--t-lg); }
+.doc-body ul, .doc-body ol { padding-left: var(--s-8); }
+.doc-body li { margin-bottom: var(--s-4); }
+.doc-nav {
+  display: flex; justify-content: space-between; gap: var(--s-7);
+  margin-top: var(--s-11); padding-top: var(--s-5);
+  border-top: 2px solid var(--border-strong);
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.changelog-row { border-top: 2px solid var(--border-strong); margin-top: var(--s-8); }
+
+.release { margin-top: var(--s-10); }
+.release-head {
+  display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: baseline;
+  margin: 0 0 var(--s-5); padding-top: var(--s-4);
+  border-top: 2px solid var(--border-strong);
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.release.unseen .release-head { border-top-color: var(--accent); }
+.release-date { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.release-title { color: var(--text); }
+.release .doc-body h2 { border-top: 0; padding-top: 0; margin-top: var(--s-7); }

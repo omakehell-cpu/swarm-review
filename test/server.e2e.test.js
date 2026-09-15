@@ -676,6 +676,60 @@ test('opening a chapter records that you read it, and the page says so', async (
   assert.match(html, /Read by A Reader/);
 });
 
+test('the help section is readable, and the changelog marks what is new', async () => {
+  const index = await (await request('/help')).text();
+  assert.match(index, /How to/);
+  assert.match(index, /href="\/help\/story-bible"/);
+  assert.match(index, /href="\/help\/changelog"/);
+
+  const topic = await request('/help/story-bible');
+  assert.strictEqual(topic.status, 200);
+  const html = await topic.text();
+  assert.match(html, /The story bible/);
+  // Rendered as prose, not printed as markdown source.
+  assert.match(html, /<h2[^>]*>/);
+  assert.ok(!html.includes('## '), 'the hashes did not survive');
+
+  // A how-to that does not exist is a page, not a crash -- and a slug is
+  // never turned into a path.
+  assert.strictEqual((await request('/help/no-such-page')).status, 404);
+  assert.strictEqual((await request('/help/..%2F..%2Fpackage')).status, 404);
+
+  // The short link people will try anyway.
+  const short = await request('/changelog');
+  assert.strictEqual(short.status, 302);
+  assert.strictEqual(short.headers.get('location'), '/help/changelog');
+});
+
+test('opening the changelog does not mark the stories read', async () => {
+  const before = models.getUserByUsername(USER.username);
+  const lastSeen = before.last_seen_at;
+
+  const first = await (await request('/help/changelog')).text();
+  // Never opened before, so every batch is marked.
+  assert.match(first, /New to you/);
+
+  const after = models.getUserByUsername(USER.username);
+  assert.ok(after.changelog_seen_at, 'it remembered the visit');
+  assert.strictEqual(after.last_seen_at, lastSeen, 'and left the stories alone');
+
+  // Second visit: nothing is new any more.
+  const second = await (await request('/help/changelog')).text();
+  assert.ok(!second.includes('New to you'));
+});
+
+test('the nav carries a dot only while there is something unread', async () => {
+  // The visit above cleared it.
+  assert.ok(!(await (await request('/')).text()).includes('nav-dot'));
+
+  // Wind their marker back to before the changelog existed. The same
+  // database file the server is using, opened through the same module.
+  const db = require('../db');
+  const user = models.getUserByUsername(USER.username);
+  db.prepare("UPDATE users SET changelog_seen_at = '2000-01-01 00:00:00' WHERE id = ?").run(user.id);
+  assert.match(await (await request('/')).text(), /nav-dot/);
+});
+
 test('logging out invalidates the session', async () => {
   const res = await request('/logout', { method: 'POST', ...form([]) });
   assert.strictEqual(res.status, 302);

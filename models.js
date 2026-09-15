@@ -118,6 +118,13 @@ function bumpLastSeen(userId) {
   return previous;
 }
 
+// Reading the changelog is its own kind of "seen": bumpLastSeen above is
+// what marks chapters as read, and opening the help section must not do
+// that to somebody's story.
+function markChangelogSeen(userId) {
+  db.prepare("UPDATE users SET changelog_seen_at = datetime('now') WHERE id = ?").run(userId);
+}
+
 // ---------- login lockout ----------
 // After ACCOUNT_LOCKOUT_THRESHOLD (3) consecutive wrong passwords, the
 // account is locked (locked_at set) and can't log in -- even with the
@@ -2154,6 +2161,7 @@ const listChapterStubs = (storyId) => db.prepare(
 ).all(storyId);
 
 module.exports = {
+  markChangelogSeen,
   ENTITY_SORTS,
   searchBible,
   knownNamesFor,
