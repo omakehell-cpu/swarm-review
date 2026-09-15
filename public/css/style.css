@@ -969,8 +969,6 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
    A chip is the same object as a story tag's, because it is the same
    thing: a word the vocabulary was filed under, and a way to see
    everything else filed the same way. */
-.glossary-categories { margin: var(--s-7) 0 var(--s-8); }
-.glossary-categories .tag-chips { margin-top: 0; }
 .tag-chip.current {
   border-color: var(--accent); color: var(--accent);
 }
@@ -979,25 +977,129 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   font-variant-numeric: tabular-nums; margin-left: var(--s-2);
 }
 .tag-chip.current .tag-chip-count { color: var(--accent); }
-.more-categories { margin-top: var(--s-5); }
-.more-categories > summary {
-  cursor: pointer; list-style: none; padding: var(--s-2) 0;
-  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
-  text-transform: uppercase; letter-spacing: var(--label-tracking);
+.tag-chip.state-chip {
+  border-style: dashed; color: var(--text-muted); cursor: default;
 }
-.more-categories > summary::-webkit-details-marker { display: none; }
-.more-categories > summary::before {
-  content: "\25b8"; display: inline-block; margin-right: var(--s-4);
-  transition: transform 0.12s ease;
-}
-.more-categories[open] > summary::before { transform: rotate(90deg); }
-.more-categories > summary:hover { color: var(--accent); }
 .entry-categories {
   margin: var(--s-3) 0 0; color: var(--text-muted);
   font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
 .entry-chips { margin-bottom: var(--s-7); }
+
+/* ---- the glossary front page ----
+   Three doors, then the subjects as a printed directory. The wiki has 84
+   categories and half of them hold five pages or fewer; as a row of chips
+   that is noise, but set as a directory in columns the small ones cost
+   almost nothing and the shape of the setting is visible at a glance. */
+.glossary-doors {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 0; margin: var(--s-8) 0 var(--s-10);
+  border-top: 2px solid var(--border-strong); border-bottom: 1px solid var(--border);
+}
+.glossary-door {
+  display: block; padding: var(--s-7) var(--s-7) var(--s-8) 0;
+  color: inherit; text-decoration: none;
+  border-right: 1px solid var(--border);
+}
+.glossary-door:last-child { border-right: 0; }
+.glossary-door + .glossary-door { padding-left: var(--s-7); }
+.glossary-door .door-count {
+  display: block; font-size: var(--t-3xl); font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--text);
+}
+.glossary-door h2 {
+  margin: var(--s-4) 0 var(--s-3); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.glossary-door p { margin: 0; font-size: var(--t-sm); }
+.glossary-door:hover .door-count,
+.glossary-door:hover h2 { color: var(--accent); }
+
+.directory-head, .glossary-directory > .muted { margin: 0 0 var(--s-3); }
+.directory-head {
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.family-grid {
+  margin-top: var(--s-8);
+  columns: 3; column-gap: var(--s-11);
+}
+.family {
+  break-inside: avoid; margin: 0 0 var(--s-8);
+  border-top: 1px solid var(--border-strong); padding-top: var(--s-4);
+}
+.family-head {
+  margin: 0 0 var(--s-4); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-4);
+}
+.family-count { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.family-list { list-style: none; margin: 0; padding: 0; }
+.family-list li {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: var(--s-4); padding: var(--s-2) 0; font-size: var(--t-sm);
+}
+.family-list a { color: var(--text); text-decoration: none; }
+.family-list a:hover { color: var(--accent); text-decoration: underline; }
+.family-n { color: var(--text-muted); font-variant-numeric: tabular-nums; font-size: var(--t-xs); }
+.directory-foot {
+  margin-top: var(--s-6); padding-top: var(--s-5);
+  border-top: 2px solid var(--border-strong);
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+
+/* ---- a glossary listing: state filter, A-Z bar, letter sections ---- */
+.glossary-filters {
+  display: flex; align-items: baseline; gap: var(--s-6);
+  margin: 0 0 var(--s-7); flex-wrap: wrap;
+}
+.filter-label {
+  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.glossary-filters .tag-chips { margin-top: 0; }
+.az-bar {
+  display: flex; flex-wrap: wrap; gap: 0;
+  position: sticky; top: 0; z-index: 3;
+  background: var(--bg);
+  border-top: 2px solid var(--border-strong);
+  border-bottom: 1px solid var(--border);
+  padding: var(--s-3) 0; margin-bottom: var(--s-8);
+}
+.az-bar a, .az-bar span {
+  flex: 1 1 auto; text-align: center; min-width: 22px;
+  padding: var(--s-2) 0; font-size: var(--t-xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  text-decoration: none; color: var(--text);
+}
+.az-bar span, .az-bar a.spent { color: var(--border); }
+.az-bar a:hover { color: var(--accent); }
+.letter-block { display: grid; grid-template-columns: 4ch 1fr; gap: var(--s-7); }
+.letter-block + .letter-block { margin-top: var(--s-8); }
+.letter-mark {
+  margin: 0; font-size: var(--t-2xl); font-weight: 700; line-height: 1;
+  color: var(--text-muted); position: sticky; top: var(--s-12); align-self: start;
+}
+.letter-block .chapter-list { min-width: 0; }
+.no-matches { margin-top: var(--s-8); color: var(--text-muted); }
+
+@media (max-width: 900px) {
+  .family-grid { columns: 2; }
+  .glossary-doors { grid-template-columns: 1fr; border-bottom: 0; }
+  .glossary-door {
+    border-right: 0; border-bottom: 1px solid var(--border);
+    padding: var(--s-6) 0;
+  }
+  .glossary-door + .glossary-door { padding-left: 0; }
+}
+@media (max-width: 620px) {
+  .family-grid { columns: 1; }
+  .letter-block { grid-template-columns: 1fr; gap: var(--s-3); }
+  .letter-mark { position: static; font-size: var(--t-lg); }
+  .az-bar a, .az-bar span { min-width: 18px; }
+}
 
 /* The previews. The text stops at its measure and the rest of the window
    is empty, so what the links are about goes there, level with the line
