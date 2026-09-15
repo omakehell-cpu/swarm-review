@@ -620,18 +620,39 @@ async function handleHiddenTagsSubmit(req, res, user) {
 // wiki -- see lib/wiki.js) ----------
 async function handleGlossaryIndex(req, res, user, query) {
   const q = (query.get('q') || '').trim();
-  let pages = models.listWikiPagesForGlossary();
+  const category = (query.get('category') || '').trim();
+  const all = models.listWikiPagesForGlossary();
+  let pages = category ? models.listWikiPagesInCategory(category) : all;
   if (q) {
     const needle = q.toLowerCase();
     pages = pages.filter((p) => p.title.toLowerCase().includes(needle) || p.summary.toLowerCase().includes(needle));
   }
-  sendHtml(res, 200, views.glossaryIndexPage({ user, pages, q }));
+  sendHtml(res, 200, views.glossaryIndexPage({
+    user, pages, q, category,
+    categories: models.listWikiCategories(),
+    categoriesByPage: models.categoriesByPage(),
+    totalPages: all.length,
+  }));
 }
 
 async function handleGlossaryPage(req, res, user, title) {
   const page = models.getWikiPageByTitleLower(title.toLowerCase());
   if (!page) return sendHtml(res, 404, views.glossaryNotFoundPage({ user, title }));
-  sendHtml(res, 200, views.glossaryPage({ user, page }));
+  // The summaries of everything this page links to, for the previews in
+  // its margin. Read from the same local copy as the page itself -- the
+  // glossary never reaches out to the wiki to render anything.
+  const linked = (String(page.content_html || '').match(/<a href="\/glossary\/([^"]+)"/g) || [])
+    .map((tag) => {
+      const m = tag.match(/\/glossary\/([^"]+)/);
+      try { return m ? decodeURIComponent(m[1]) : null; } catch (e) { return null; }
+    })
+    .filter(Boolean);
+  sendHtml(res, 200, views.glossaryPage({
+    user,
+    page,
+    summaries: models.summariesForTitles(linked),
+    categories: models.categoriesByPage().get(page.title_lower) || [],
+  }));
 }
 
 async function handleStories(req, res, user, query) {

@@ -339,6 +339,21 @@ ensureColumn('chapters', 'stage', "TEXT NOT NULL DEFAULT 'notes'");
 // belongs to two of them. Empty on every chapter that does not start one.
 ensureColumn('chapters', 'arc_title', "TEXT NOT NULL DEFAULT ''");
 
+// Which of the wiki's own categories each mirrored page is filed under.
+// A separate table rather than a column because a page is usually in
+// several, and because the glossary's index counts and filters by them --
+// both of which want a row per pairing. Rewritten wholesale by the same
+// transaction that replaces the pages themselves (see replaceWikiPages),
+// so it can never disagree with them.
+db.exec(`
+CREATE TABLE IF NOT EXISTS wiki_page_categories (
+  title_lower TEXT NOT NULL,
+  category    TEXT NOT NULL,
+  PRIMARY KEY (title_lower, category)
+);
+CREATE INDEX IF NOT EXISTS idx_wiki_categories ON wiki_page_categories(category);
+`);
+
 // Who has opened which chapter. Recorded automatically when somebody loads
 // a chapter page rather than by a button: the question an author actually
 // has is "has anybody looked at this yet", and asking people to tick a box

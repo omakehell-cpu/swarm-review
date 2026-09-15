@@ -965,6 +965,72 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 }
 .log-what { min-width: 0; }
 
+/* ---- the glossary: its categories, and what its links are about ----
+   A chip is the same object as a story tag's, because it is the same
+   thing: a word the vocabulary was filed under, and a way to see
+   everything else filed the same way. */
+.glossary-categories { margin: var(--s-7) 0 var(--s-8); }
+.glossary-categories .tag-chips { margin-top: 0; }
+.tag-chip.current {
+  border-color: var(--accent); color: var(--accent);
+}
+.tag-chip-count {
+  color: var(--text-muted); font-weight: 700;
+  font-variant-numeric: tabular-nums; margin-left: var(--s-2);
+}
+.tag-chip.current .tag-chip-count { color: var(--accent); }
+.more-categories { margin-top: var(--s-5); }
+.more-categories > summary {
+  cursor: pointer; list-style: none; padding: var(--s-2) 0;
+  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.more-categories > summary::-webkit-details-marker { display: none; }
+.more-categories > summary::before {
+  content: "\25b8"; display: inline-block; margin-right: var(--s-4);
+  transition: transform 0.12s ease;
+}
+.more-categories[open] > summary::before { transform: rotate(90deg); }
+.more-categories > summary:hover { color: var(--accent); }
+.entry-categories {
+  margin: var(--s-3) 0 0; color: var(--text-muted);
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.entry-chips { margin-bottom: var(--s-7); }
+
+/* The previews. The text stops at its measure and the rest of the window
+   is empty, so what the links are about goes there, level with the line
+   that mentions them. Hidden until glossary-margin.js has measured the
+   room -- with no JavaScript there is no column, and the page reads as it
+   always did. */
+.glossary-body { position: relative; }
+.glossary-margin { display: none; }
+.glossary-body.with-previews .glossary-margin {
+  display: block; position: absolute; top: 0;
+}
+.glossary-preview {
+  position: absolute; left: 0; right: 0;
+  border-top: 1px solid var(--border);
+  padding: var(--s-4) 0 var(--s-5);
+  transition: border-color 0.12s ease;
+}
+.glossary-preview h3 {
+  margin: 0 0 var(--s-3); font-size: var(--t-md);
+  letter-spacing: -0.02em;
+}
+.glossary-preview h3 a { color: var(--text); }
+.glossary-preview:hover { border-top-color: var(--accent); }
+.glossary-preview:hover h3 a { color: var(--accent); }
+.glossary-preview p {
+  margin: 0; font-size: var(--t-sm); line-height: 1.5; color: var(--text-muted);
+}
+/* A link that has a card beside it is marked in the text the same way a
+   commented passage is: underscored, not painted. */
+.glossary-body.with-previews .glossary-content a[data-preview] {
+  box-shadow: inset 0 -1px 0 var(--border-strong);
+}
+
 /* ---- where a story is, what a chapter wants ----
    Same object as a .badge and for the same reason: a status is not a
    control. The colour is the whole of the meaning -- red is the one that

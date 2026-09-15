@@ -537,16 +537,50 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, values = /*
 
 // ---------- glossary (a local, offline mirror of the shared-universe
 // wiki -- see lib/wiki.js for how it's kept in sync) ----------
-function glossaryIndexPage({ user, pages, q }) {
-  const rows = pages.length ? pages.map((p) => `
+// The categories the wiki files its own pages under. Twelve of them
+// inline -- the biggest, which are also the ones anybody is looking for --
+// and the long tail of two-page and bookkeeping categories behind one
+// line, the same way the tag index folds the tags nothing is using.
+const CATEGORY_CHIPS_SHOWN = 12;
+
+function categoryChips(categories, active, total) {
+  if (!categories.length) return '';
+  const chip = (label, count, href, current) => `
+    <a class="tag-chip${current ? ' current' : ''}" href="${href}"${current ? ' aria-current="true"' : ''}>
+      ${escapeHtml(label)} <span class="tag-chip-count">${count}</span>
+    </a>`;
+  const shown = categories.slice(0, CATEGORY_CHIPS_SHOWN);
+  const rest = categories.slice(CATEGORY_CHIPS_SHOWN);
+  return `
+    <div class="glossary-categories">
+      <div class="tag-chips">
+        ${chip('Everything', total, '/glossary', !active)}
+        ${shown.map((c) => chip(c.category, c.n, `/glossary?category=${encodeURIComponent(c.category)}`, c.category === active)).join('')}
+      </div>
+      ${rest.length ? `
+        <details class="more-categories"${rest.some((c) => c.category === active) ? ' open' : ''}>
+          <summary>${rest.length} smaller categories</summary>
+          <div class="tag-chips">
+            ${rest.map((c) => chip(c.category, c.n, `/glossary?category=${encodeURIComponent(c.category)}`, c.category === active)).join('')}
+          </div>
+        </details>` : ''}
+    </div>`;
+}
+
+function glossaryIndexPage({ user, pages, q, categories = [], category = '', totalPages = 0, categoriesByPage = new Map() }) {
+  const rows = pages.length ? pages.map((p) => {
+    const own = categoriesByPage.get(p.title_lower) || [];
+    return `
     <a class="chapter-row" href="/glossary/${encodeURIComponent(p.title)}">
       <div class="chapter-row-main">
         <h3>${escapeHtml(p.title)}</h3>
         ${p.summary ? `<p class="muted">${escapeHtml(p.summary)}</p>` : ''}
+        ${own.length ? `<p class="entry-categories">${own.map((c) => escapeHtml(c)).join(' &middot; ')}</p>` : ''}
       </div>
     </a>
-  `).join('') : `<p class="muted">${q
-    ? 'No glossary entries match your search.'
+  `;
+  }).join('') : `<p class="muted">${q || category
+    ? 'Nothing here matches.'
     : 'The glossary is empty -- an admin needs to sync the wiki from the admin page first.'}</p>`;
 
   return layout({
@@ -557,23 +591,57 @@ function glossaryIndexPage({ user, pages, q }) {
       <div class="page-head">
         <h1>Glossary</h1>
       </div>
-      <p class="muted">A local, offline copy of <a href="${escapeHtml(wiki.WIKI_BASE_URL)}" target="_blank" rel="noopener noreferrer">the shared-universe wiki</a> -- ${pages.length} page${pages.length === 1 ? '' : 's'}${q ? ' matching your search' : ''}. Pages link to each other the same way they do on the wiki itself.</p>
+      <p class="muted">A local, offline copy of <a href="${escapeHtml(wiki.WIKI_BASE_URL)}" target="_blank" rel="noopener noreferrer">the shared-universe wiki</a> -- ${pages.length} page${pages.length === 1 ? '' : 's'}${category ? ` in ${escapeHtml(category)}` : ''}${q ? ' matching your search' : ''}. Pages link to each other the same way they do on the wiki itself, and are filed under the wiki's own categories.</p>
       <form method="get" action="/glossary" class="inline-form glossary-search">
         <input type="search" name="q" placeholder="Search the glossary..." value="${escapeHtml(q)}">
+        ${category ? `<input type="hidden" name="category" value="${escapeHtml(category)}">` : ''}
         <button class="btn ghost small" type="submit">Search</button>
-        ${q ? '<a class="btn ghost small" href="/glossary">Clear</a>' : ''}
+        ${q || category ? '<a class="btn ghost small" href="/glossary">Clear</a>' : ''}
       </form>
+      ${categoryChips(categories, category, totalPages)}
       <div class="chapter-list">${rows}</div>`,
   });
 }
 
-function glossaryPage({ user, page }) {
+// Every internal link in a glossary entry points at another entry this
+// app already has a summary of. The first time each one appears it gets
+// marked, and the marked link is what the margin preview hangs off --
+// later mentions of the same page are left alone, because eight cards
+// saying the same thing about "Akarge" is not eight times the help.
+function markFirstGlossaryLinks(html) {
+  const seen = new Set();
+  const marked = String(html || '').replace(/<a href="\/glossary\/([^"]+)"/g, (whole, encoded) => {
+    let title;
+    try { title = decodeURIComponent(encoded); } catch (e) { return whole; }
+    const key = title.toLowerCase();
+    if (seen.has(key)) return whole;
+    seen.add(key);
+    return `${whole} data-preview="${escapeHtml(key)}"`;
+  });
+  return { html: marked, titles: Array.from(seen) };
+}
+
+function glossaryPreviewCards(titles, summaries) {
+  const cards = titles
+    .map((key) => ({ key, entry: summaries.get(key) }))
+    .filter((c) => c.entry && c.entry.summary)
+    .map(({ key, entry }) => `
+      <article class="glossary-preview" data-preview-for="${escapeHtml(key)}">
+        <h3><a href="/glossary/${encodeURIComponent(entry.title)}">${escapeHtml(entry.title)}</a></h3>
+        <p>${escapeHtml(entry.summary)}</p>
+      </article>`);
+  if (!cards.length) return '';
+  return `<aside class="glossary-margin" aria-label="What the linked pages say">${cards.join('')}</aside>`;
+}
+
+function glossaryPage({ user, page, summaries = new Map(), categories = [] }) {
   // A page can be in the index (title + summary, from an older sync) with
   // no body yet, if the sync that stored it predates full-content syncing
   // or the most recent sync failed. Say so plainly instead of rendering an
   // empty sheet that reads like a broken page.
+  const marked = markFirstGlossaryLinks(page.content_html);
   const body = page.content_html
-    ? `<div class="glossary-content">${page.content_html}</div>`
+    ? `<div class="glossary-content">${marked.html}</div>`
     : `<div class="glossary-empty">
          <p><strong>This entry hasn't been copied across yet.</strong></p>
          <p class="muted">The glossary knows this page exists and what it's about, but not its full text -- that arrives with the next wiki sync. ${user.is_admin ? 'You can run one now from the <a href="/admin">admin page</a>.' : 'An admin can run one from the admin page.'}</p>
@@ -590,8 +658,13 @@ function glossaryPage({ user, page }) {
         <a class="btn ghost small" href="${escapeHtml(wiki.pageUrl(page.title))}" target="_blank" rel="noopener noreferrer">Open on the wiki &#8599;</a>
       </div>
       <p class="muted glossary-meta">A local copy${page.fetched_at ? `, last synced ${timeHtml(page.fetched_at)}` : ''}.</p>
-      <div class="reading-pane">
-        ${body}
+      ${categories.length ? `<div class="tag-chips entry-chips">${categories.map((c) => `
+        <a class="tag-chip" href="/glossary?category=${encodeURIComponent(c)}">${escapeHtml(c)}</a>`).join('')}</div>` : ''}
+      <div class="glossary-body">
+        <div class="reading-pane">
+          ${body}
+        </div>
+        ${glossaryPreviewCards(marked.titles, summaries)}
       </div>`,
   });
 }
