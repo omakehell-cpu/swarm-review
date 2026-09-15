@@ -35,6 +35,7 @@
 
   function applyMode() {
     main.dataset.reading = mode;
+    placeFloat();
     for (const el of bar.querySelectorAll('[data-mode]')) {
       const btn = /** @type {HTMLElement} */ (el);
       btn.setAttribute('aria-pressed', String(btn.dataset.mode === mode));
@@ -77,8 +78,66 @@
     if (!pref) return;
     store.set(pref.key, btn.dataset.value);
     applyPref(pref);
+    placeFloat();
   });
+
+  // ---- the floating arrows -------------------------------------------
+  // They hang either side of the text column, which moves whenever the
+  // type size or the line length changes, so their offsets are measured
+  // rather than guessed. CSS does the rest (see .chapter-float-arrow).
+  const float = /** @type {HTMLElement|null} */ (document.querySelector('.chapter-float'));
+
+  function placeFloat() {
+    if (!float) return;
+    // Left from the pane, which starts at the rule the chapter hangs
+    // from; right from the text, since the pane itself runs on to the
+    // end of the column and the measure is what you can see.
+    const pane = text.closest('.reading-pane') || text;
+    float.style.setProperty('--float-left', `${Math.round(pane.getBoundingClientRect().left)}px`);
+    float.style.setProperty('--float-right', `${Math.round(window.innerWidth - text.getBoundingClientRect().right)}px`);
+  }
+
+  window.addEventListener('resize', placeFloat);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeFloat);
 
   applyMode();
   PREFS.forEach(applyPref);
+  placeFloat();
+})();
+
+// ---- turning the page with the keyboard -------------------------------
+// Left and right move between chapters, the way they do in anything else
+// you read a chapter at a time in. Only when the arrow is not already
+// doing something, though: not while the caret is in a field, not with a
+// modifier held (those belong to the browser -- back, forward, word
+// jumps), and not while anything is selected, since extending a
+// selection is the other thing arrows are for.
+//
+// The destinations are read off the foot navigation rather than passed
+// in: it is on the page already, it is rendered from the same data, and
+// a chapter with nowhere to go doesn't render it at all.
+(function () {
+  'use strict';
+
+  const foot = document.querySelector('.chapter-nav.foot');
+  if (!foot) return;
+
+  function destination(rel) {
+    const a = foot.querySelector(`a[rel="${rel}"]`);
+    return a instanceof HTMLAnchorElement ? a.href : null;
+  }
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey || ev.shiftKey) return;
+    const el = document.activeElement;
+    if (el instanceof HTMLElement && el.isContentEditable) return;
+    if (el && /^(?:INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed) return;
+    const href = destination(ev.key === 'ArrowLeft' ? 'prev' : 'next');
+    if (!href) return;
+    ev.preventDefault();
+    window.location.href = href;
+  });
 })();

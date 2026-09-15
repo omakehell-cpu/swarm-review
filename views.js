@@ -1179,16 +1179,19 @@ function renderCommentReadOnly(c, { replies }) {
 // two dead controls.
 function chapterNav(chapter, neighbours, { compact = false } = {}) {
   if (!neighbours || neighbours.total < 2) return '';
-  const { prev, next, position, total } = neighbours;
+  const { prev, next } = neighbours;
   const label = (c) => `Chapter ${c.chapter_number}: ${escapeHtml(c.title)}`;
-  const here = position ? `Chapter ${position} of ${total}` : `${total} chapters`;
 
+  // The compact one rides on the breadcrumb line, where the breadcrumb
+  // itself is already the link back to the story and the byline under it
+  // already says which chapter of how many this is -- so it carries the
+  // two arrows and nothing else. Saying "chapter 1 of 3" a third time
+  // within four lines is not navigation, it is noise.
   if (compact) {
     return `
       <nav class="chapter-nav compact" aria-label="Chapters">
         ${prev ? `<a class="chapter-nav-arrow" href="/chapters/${prev.id}" title="${label(prev)}" rel="prev">&larr; Previous</a>`
                : '<span class="chapter-nav-arrow disabled">&larr; Previous</span>'}
-        <a class="chapter-nav-here" href="/stories/${chapter.story_id}">${here}</a>
         ${next ? `<a class="chapter-nav-arrow" href="/chapters/${next.id}" title="${label(next)}" rel="next">Next &rarr;</a>`
                : '<span class="chapter-nav-arrow disabled">Next &rarr;</span>'}
       </nav>`;
@@ -1207,6 +1210,25 @@ function chapterNav(chapter, neighbours, { compact = false } = {}) {
           <span class="chapter-nav-dir">Next &rarr;</span>
           <span class="chapter-nav-title">${label(next)}</span>
         </a>` : '<span></span>'}
+    </nav>`;
+}
+
+// Two arrows pinned to the edges of the window, and only while the
+// chapter is being read rather than reviewed: in read mode there is
+// nothing else on screen to click, and what you want next is almost
+// always the next chapter. They stay out of the way -- half-faded until
+// pointed at -- and they are gone entirely on any window too narrow to
+// have margins to spare, where they would sit on top of the prose.
+function chapterFloatNav(chapter, neighbours) {
+  if (!neighbours || neighbours.total < 2) return '';
+  const { prev, next } = neighbours;
+  const label = (c) => `Chapter ${c.chapter_number}: ${escapeHtml(c.title)}`;
+  return `
+    <nav class="chapter-float" aria-label="Chapters, while reading">
+      ${prev ? `<a class="chapter-float-arrow prev" href="/chapters/${prev.id}" rel="prev"
+          title="${label(prev)}" aria-label="Previous chapter" aria-keyshortcuts="ArrowLeft">&larr;</a>` : ''}
+      ${next ? `<a class="chapter-float-arrow next" href="/chapters/${next.id}" rel="next"
+          title="${label(next)}" aria-label="Next chapter" aria-keyshortcuts="ArrowRight">&rarr;</a>` : ''}
     </nav>`;
 }
 
@@ -1248,7 +1270,10 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
   const highlighted = renderHighlighted(ast, comments, wiki.findWikiMatches);
 
   const body = `
-    <p class="breadcrumb"><a href="/stories/${chapter.story_id}">&larr; ${escapeHtml(chapter.story_title)}</a></p>
+    <div class="chapter-topline">
+      <p class="breadcrumb"><a href="/stories/${chapter.story_id}">&larr; ${escapeHtml(chapter.story_title)}</a></p>
+      ${chapterNav(chapter, neighbours, { compact: true })}
+    </div>
     <div class="chapter-header">
       <h1>Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</h1>
       <p class="muted byline">by ${escapeHtml(chapter.author_name)} &middot; ${timeHtml(chapter.created_at)}${
@@ -1357,6 +1382,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       </aside>
     </div>
     ${chapterNav(chapter, neighbours)}
+    ${chapterFloatNav(chapter, neighbours)}
     <button id="selection-toast" class="selection-toast hidden" type="button">+ Comment on selection</button>
     <script type="application/json" id="chapter-meta">${toScriptJson({ chapterId: chapter.id })}</script>
     <script src="/js/nspell.bundle.js"></script>

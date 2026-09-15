@@ -1372,17 +1372,63 @@ mark.wa-word { border-radius: 2px; padding: 0; cursor: pointer; background: tran
 
 
 /* --- moving between chapters (see chapterNav in views.js) ------------
-   Two of these on a chapter page: a quiet strip under the header, and a
-   fuller one at the foot carrying the next chapter's title. Both are
-   absent when the story only has one chapter. */
+   Three of these on a chapter page: two arrows riding on the breadcrumb
+   line, a fuller one at the foot carrying the next chapter's title, and
+   -- only while reading -- a pair pinned to the edges of the window. All
+   three are absent when the story only has one chapter. */
+.chapter-topline {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--s-5) var(--s-8); flex-wrap: wrap;
+}
+/* On the breadcrumb line the arrows are the same size and colour as the
+   breadcrumb itself: a row of small print over the title, not a second
+   control bar. */
 .chapter-nav.compact {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--s-5);
-  margin-top: var(--s-6); padding-top: var(--s-5); border-top: 1px solid var(--border);
-  font-size: var(--t-sm);
+  display: flex; align-items: baseline; gap: var(--s-7);
+  margin: 0 0 var(--s-6); padding: 0; border: 0;
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
 .chapter-nav-arrow { color: var(--text-muted); white-space: nowrap; }
-.chapter-nav-arrow:hover { color: var(--accent-strong); text-decoration: none; }
-.chapter-nav-arrow.disabled { color: var(--text-muted); opacity: 0.35; }
+.chapter-nav-arrow:hover { color: var(--accent); text-decoration: none; }
+.chapter-nav-arrow.disabled { color: var(--text-muted); opacity: 0.3; }
+
+/* Read mode only (see reading.js): two arrows on the window's own edges,
+   half-faded until pointed at. Fixed, so they stay put through the whole
+   chapter -- the point is not having to go and find the foot of the page
+   to turn it. */
+.chapter-float { display: none; }
+main[data-reading="read"] .chapter-float { display: block; }
+.chapter-float-arrow {
+  position: fixed; top: 50%; transform: translateY(-50%); z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 72px;
+  background: var(--bg); border: 1px solid var(--border); color: var(--text-muted);
+  font-size: var(--t-lg); line-height: 1; opacity: 0.4;
+  transition: opacity 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.chapter-float-arrow:hover,
+.chapter-float-arrow:focus-visible {
+  opacity: 1; color: var(--accent); border-color: var(--border-strong); text-decoration: none;
+}
+/* Beside the text, not at the edges of the window. In read mode the
+   column stays where it always was -- flush left, so the Read/Review
+   switch above it does not move when you press it -- which leaves the
+   right-hand half of a wide screen empty; an arrow parked out there
+   reads as a stray box rather than as the edge of the page you are
+   reading. reading.js measures the text and hands the two offsets over;
+   the max() is for a narrow window with no room on the left, where the
+   arrow simply stops at the edge. */
+.chapter-float-arrow.prev { left: max(0px, calc(var(--float-left, 0px) - 52px)); }
+.chapter-float-arrow.next { right: max(0px, calc(var(--float-right, 0px) - 52px)); }
+/* No window wide enough to spare the margins, no arrows: on a laptop at
+   1100px they would be sitting on the prose. */
+@media (max-width: 1100px) {
+  main[data-reading="read"] .chapter-float { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chapter-float-arrow { transition: none; }
+}
 .chapter-nav-here { color: var(--text-muted); font-size: var(--t-sm); white-space: nowrap; }
 
 .chapter-nav.foot {
@@ -1977,10 +2023,14 @@ main[data-reading="read"] #chapter-text mark.wa-sentence {
   text-decoration: none !important;
   color: inherit !important;
 }
+/* Read mode gives the text room above and below and takes the apparatus
+   away -- and leaves it exactly where it was. Centring the column here
+   (which is what this rule used to do, back when the chapter sat on a
+   card) slid the whole chapter sideways the moment you pressed Read,
+   while the title and the controls above it stayed put. Nothing moves
+   now: the comments simply stop being there. */
 main[data-reading="read"] .reading-pane {
-  max-width: calc(var(--read-measure, 72ch) + var(--s-11) * 2);
-  margin-inline: auto;
-  padding-block: var(--s-11);
+  padding-block: var(--s-10) var(--s-11);
 }
 
 /* The three controls, in a fold next to the switch. */
