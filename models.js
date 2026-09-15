@@ -1716,8 +1716,8 @@ function teachDictionary(storyId, names, userId) {
   }
 }
 
-/** @param {{ storyId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], createdBy: number }} fields */
-function createStoryEntity({ storyId, kind, name, summary, description, secret, status, role, aliases, createdBy }) {
+/** @param {{ storyId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], createdBy: number }} entry */
+function createStoryEntity({ storyId, kind, name, summary, description, secret, status, role, aliases, fields, createdBy }) {
   const clean = bible.cleanName(name);
   if (!clean) return null;
   const list = (aliases || []).map(bible.cleanName).filter(Boolean);
@@ -1740,6 +1740,7 @@ function createStoryEntity({ storyId, kind, name, summary, description, secret, 
     });
     const entityId = Number(info.lastInsertRowid);
     writeAliases(entityId, storyId, list);
+    writeEntityFields(entityId, storyId, fields);
     db.exec('COMMIT');
     teachDictionary(storyId, [clean, ...list], createdBy);
     rebuildStoryAppearances(storyId);
@@ -1750,8 +1751,8 @@ function createStoryEntity({ storyId, kind, name, summary, description, secret, 
   }
 }
 
-/** @param {{ entityId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], userId?: number }} fields */
-function updateStoryEntity({ entityId, kind, name, summary, description, secret, status, role, aliases, userId }) {
+/** @param {{ entityId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], userId?: number }} entry */
+function updateStoryEntity({ entityId, kind, name, summary, description, secret, status, role, aliases, fields, userId }) {
   const current = db.prepare('SELECT id, story_id FROM story_entities WHERE id = ?').get(entityId);
   if (!current) return null;
   const clean = bible.cleanName(name);
@@ -1777,6 +1778,7 @@ function updateStoryEntity({ entityId, kind, name, summary, description, secret,
       role: bible.entityRole(role),
     });
     writeAliases(entityId, current.story_id, list);
+    writeEntityFields(entityId, current.story_id, fields);
     db.exec('COMMIT');
     teachDictionary(current.story_id, [clean, ...list], userId);
     rebuildStoryAppearances(current.story_id);
@@ -1801,6 +1803,81 @@ function deleteStoryEntity(entityId) {
   return row;
 }
 
+
+
+// ---------- custom fields: the story's template, and what each entry says ----------
+const listFieldTemplate = (storyId, kind) => db.prepare(
+  'SELECT label FROM story_field_templates WHERE story_id = ? AND kind = ? ORDER BY position, id'
+).all(storyId, kind).map((r) => r.label);
+
+/** The whole template, by kind, for the editor that sets it. */
+function fieldTemplatesByKind(storyId) {
+  const out = Object.fromEntries(bible.KINDS.map((k) => [k, []]));
+  for (const row of db.prepare(
+    'SELECT kind, label FROM story_field_templates WHERE story_id = ? ORDER BY kind, position, id'
+  ).all(storyId)) {
+    if (out[row.kind]) out[row.kind].push(row.label);
+  }
+  return out;
+}
+
+// The template is replaced wholesale rather than diffed: it is a short
+// ordered list, and rewriting it is how a reordering is expressed. What
+// entries already say is untouched -- a label dropped from the template
+// becomes an extra on the entries that answered it, rather than deleting
+// what somebody wrote.
+function setFieldTemplate(storyId, kind, labels) {
+  db.exec('BEGIN');
+  try {
+    db.prepare('DELETE FROM story_field_templates WHERE story_id = ? AND kind = ?').run(storyId, bible.entityKind(kind));
+    const insert = db.prepare(
+      'INSERT OR IGNORE INTO story_field_templates (story_id, kind, label, label_lower, position) VALUES (?, ?, ?, ?, ?)'
+    );
+    labels.forEach((label, i) => insert.run(storyId, bible.entityKind(kind), label, label.toLowerCase(), i));
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
+const listEntityFields = (entityId) => db.prepare(
+  'SELECT label, value FROM story_entity_fields WHERE entity_id = ? ORDER BY position, id'
+).all(entityId);
+
+/**
+ * What an entry says, in the order the template asks for it, then its own
+ * extras. Empty template slots are left out: the entry page shows what is
+ * known, and the form is where the blanks live.
+ */
+function entityFieldsInOrder(entityId, storyId, kind) {
+  const template = listFieldTemplate(storyId, kind);
+  const fields = listEntityFields(entityId);
+  const byLabel = new Map(fields.map((f) => [f.label.toLowerCase(), f]));
+  const ordered = [];
+  for (const label of template) {
+    const field = byLabel.get(label.toLowerCase());
+    if (field) { ordered.push(field); byLabel.delete(label.toLowerCase()); }
+  }
+  for (const field of fields) if (byLabel.has(field.label.toLowerCase())) ordered.push(field);
+  return ordered;
+}
+
+function writeEntityFields(entityId, storyId, fields) {
+  db.prepare('DELETE FROM story_entity_fields WHERE entity_id = ?').run(entityId);
+  const insert = db.prepare(
+    'INSERT OR IGNORE INTO story_entity_fields (entity_id, story_id, label, label_lower, value, position) VALUES (?, ?, ?, ?, ?, ?)'
+  );
+  (fields || []).forEach((field, i) => insert.run(entityId, storyId, field.label, field.label.toLowerCase(), field.value, i));
+}
+
+// Every label anybody in this story has used, commonest first -- the
+// suggestions behind the label box, so "Rank" gets reused instead of
+// reinvented as "Grade".
+const listUsedFieldLabels = (storyId) => db.prepare(`
+  SELECT label, COUNT(*) AS n FROM story_entity_fields WHERE story_id = ?
+  GROUP BY label_lower ORDER BY n DESC, label COLLATE NOCASE LIMIT 60
+`).all(storyId).map((r) => r.label);
 
 // ---------- pictures of an entry (see lib/entity-images.js) ----------
 const listEntityImages = (entityId) => db.prepare(
@@ -2009,6 +2086,12 @@ const listChapterStubs = (storyId) => db.prepare(
 ).all(storyId);
 
 module.exports = {
+  entityFieldsInOrder,
+  fieldTemplatesByKind,
+  listEntityFields,
+  listFieldTemplate,
+  listUsedFieldLabels,
+  setFieldTemplate,
   addEntityImage,
   coverImagesFor,
   getEntityImage,

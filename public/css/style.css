@@ -2543,3 +2543,33 @@ main[data-reading="read"] .reading-pane {
   .entity-portrait { width: 96px; height: 96px; }
   .row-cover { width: 44px; height: 44px; margin-right: var(--s-5); }
 }
+
+/* ---- custom fields ---- */
+.entity-fields { margin-bottom: var(--s-9); }
+.field-list { margin: 0; }
+.field-list > div {
+  display: flex; gap: var(--s-4); align-items: baseline;
+  padding: var(--s-3) 0; border-bottom: 1px solid var(--border);
+  font-size: var(--t-sm);
+}
+.field-list dt {
+  flex: 0 0 auto; font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
+.field-list dd { margin: 0; margin-left: auto; text-align: right; }
+.field-row {
+  display: grid; grid-template-columns: 14ch 1fr; gap: var(--s-5);
+  align-items: baseline; margin-bottom: var(--s-4);
+}
+.field-name {
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.field-pair {
+  display: grid; grid-template-columns: 14ch 1fr; gap: var(--s-5);
+  margin-bottom: var(--s-4);
+}
+.field-extras { margin-top: var(--s-6); }
+@media (max-width: 620px) {
+  .field-row, .field-pair { grid-template-columns: 1fr; gap: var(--s-2); }
+}

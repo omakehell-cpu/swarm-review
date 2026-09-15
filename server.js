@@ -728,7 +728,7 @@ async function handleBibleIndex(req, res, user, storyId, query) {
 async function handleNewEntityPage(req, res, user, storyId) {
   const story = bibleGuard(res, user, storyId, { write: true });
   if (!story) return;
-  sendHtml(res, 200, views.entityFormPage({ user, story }));
+  sendHtml(res, 200, views.entityFormPage({ user, story, ...entityFormExtras(storyId, null) }));
 }
 
 function entityFieldsFromBody(body) {
@@ -741,7 +741,39 @@ function entityFieldsFromBody(body) {
     status: body.status,
     role: body.role,
     aliases: storyBible.parseAliases(body.aliases || '', body.name || ''),
+    // Template slots and free extras post the same pair of inputs, so
+    // there is one code path and one set of rules for both.
+    fields: storyBible.parseFields(body.fieldLabel, body.fieldValue),
   };
+}
+
+// Everything the entry form needs besides the entry itself.
+function entityFormExtras(storyId, entity) {
+  return {
+    templates: models.fieldTemplatesByKind(storyId),
+    usedLabels: models.listUsedFieldLabels(storyId),
+    fields: entity ? models.listEntityFields(entity.id) : [],
+  };
+}
+
+async function handleFieldTemplatePage(req, res, user, storyId) {
+  const story = bibleGuard(res, user, storyId, { write: true });
+  if (!story) return;
+  sendHtml(res, 200, views.fieldTemplatePage({
+    user, story, templates: models.fieldTemplatesByKind(storyId), notice: '',
+  }));
+}
+
+async function handleFieldTemplateSubmit(req, res, user, storyId) {
+  const story = bibleGuard(res, user, storyId, { write: true });
+  if (!story) return;
+  const body = await parseBody(req);
+  for (const kind of storyBible.KINDS) {
+    models.setFieldTemplate(storyId, kind, storyBible.parseFieldTemplate(body[kind] || ''));
+  }
+  sendHtml(res, 200, views.fieldTemplatePage({
+    user, story, templates: models.fieldTemplatesByKind(storyId), notice: 'Saved.',
+  }));
 }
 
 async function handleNewEntitySubmit(req, res, user, storyId) {
@@ -750,14 +782,15 @@ async function handleNewEntitySubmit(req, res, user, storyId) {
   const body = await parseBody(req);
   const fields = entityFieldsFromBody(body);
   if (!storyBible.cleanName(fields.name)) {
-    return sendHtml(res, 400, views.entityFormPage({ user, story, error: 'An entry needs a name.' }));
+    return sendHtml(res, 400, views.entityFormPage({ user, story, ...entityFormExtras(storyId, null), error: 'An entry needs a name.' }));
   }
   // Two entries with one name would each claim the other's appearances, so
   // the uniqueness is the database's rule, not a nicety -- and this is the
   // sentence that explains it instead of a constraint error.
   if (models.getStoryEntityByName(storyId, fields.name)) {
     return sendHtml(res, 400, views.entityFormPage({
-      user, story, error: `${storyBible.cleanName(fields.name)} is already in this bible.`,
+      user, story, ...entityFormExtras(storyId, null),
+      error: `${storyBible.cleanName(fields.name)} is already in this bible.`,
     }));
   }
   const entity = models.createStoryEntity({ ...fields, storyId, createdBy: user.id });
@@ -778,6 +811,7 @@ function renderEntity(res, user, entityId, error = '', status = 200) {
     chapters: models.listChapterStubs(story.id),
     others: models.listStoryEntities(story.id).filter((e) => e.id !== entity.id),
     images: models.listEntityImages(entityId),
+    fields: models.entityFieldsInOrder(entityId, story.id, entity.kind),
   }));
 }
 
@@ -848,6 +882,7 @@ async function handleEditEntityPage(req, res, user, entityId) {
   if (!guard) return;
   sendHtml(res, 200, views.entityFormPage({
     user, story: guard.story, entity: guard.entity, aliases: models.listEntityAliases(entityId),
+    ...entityFormExtras(guard.story.id, guard.entity),
   }));
 }
 
@@ -859,12 +894,15 @@ async function handleEditEntitySubmit(req, res, user, entityId) {
   const fields = entityFieldsFromBody(body);
   const aliases = models.listEntityAliases(entityId);
   if (!storyBible.cleanName(fields.name)) {
-    return sendHtml(res, 400, views.entityFormPage({ user, story, entity, aliases, error: 'An entry needs a name.' }));
+    return sendHtml(res, 400, views.entityFormPage({
+      user, story, entity, aliases, ...entityFormExtras(story.id, entity), error: 'An entry needs a name.',
+    }));
   }
   const clash = models.getStoryEntityByName(story.id, fields.name);
   if (clash && clash.id !== entity.id) {
     return sendHtml(res, 400, views.entityFormPage({
-      user, story, entity, aliases, error: `${storyBible.cleanName(fields.name)} is already in this bible.`,
+      user, story, entity, aliases, ...entityFormExtras(story.id, entity),
+      error: `${storyBible.cleanName(fields.name)} is already in this bible.`,
     }));
   }
   const saved = models.updateStoryEntity({ ...fields, entityId, userId: user.id });
@@ -1719,6 +1757,12 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/new$/)) && req.method === 'GET') {
       return handleNewEntityPage(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/fields$/)) && req.method === 'GET') {
+      return handleFieldTemplatePage(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/fields$/)) && req.method === 'POST') {
+      return handleFieldTemplateSubmit(req, res, user, Number(m[1]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/rescan$/)) && req.method === 'POST') {
       return handleRescanBible(req, res, user, Number(m[1]));
