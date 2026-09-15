@@ -18,6 +18,8 @@ not exist yet and **propose** it, and an admin either approves it or merges
 it into the one that already meant that. Free tags turn into six spellings
 of the same idea within a month.
 
+@figure tag-vocabulary.png | The vocabulary at Tags, grouped the way the codes are.
+
 ## Tags you would rather not see
 
 On your **account** page there is a list of tags to hide. Stories carrying
@@ -33,6 +35,8 @@ glossary, and every story's bible**.
 Only the current text of a chapter is searched, not its history. A phrase
 that appeared in three drafts would otherwise bury one real result under
 three copies of itself.
+
+@figure search-results.png | One search, across stories, chapters, the text itself, the glossary and the bibles.
 
 ## What is waiting for you
 

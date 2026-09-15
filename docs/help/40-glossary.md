@@ -27,11 +27,15 @@ alphabetical run.
 Under them, the wiki's own subject categories gathered into families: fleet
 and ships, military, factions, worlds, society, technology.
 
+@figure glossary-directory.png | The glossary front page: three doors, then the wiki's subjects gathered into families.
+
 Every listing is cut into **A–Z sections** with a jump bar down the top, and
 the search box **narrows the list as you type** without reloading anything.
 
 **State** — Canon, In progress, Stub, Temporary — is its own row of filters,
 kept off the subject row where it was only ever competing for attention.
+
+@figure glossary-listing.png | A listing: the state filters, the A–Z bar, and the pages under their letter.
 
 ## Inside an entry
 
@@ -41,6 +45,8 @@ level with the line that mentions it, so you can find out who somebody is
 without leaving the page. Later mentions of the same term are left alone.
 Below about 1200 pixels of window the margin disappears and the page reads
 as plain prose.
+
+@figure glossary-margin.png | Inside an entry, what its links are about, level with the line that mentions them.
 
 Every entry carries a link out to the real wiki page for whoever wants the
 source.

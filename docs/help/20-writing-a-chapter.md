@@ -18,6 +18,8 @@ The text box takes **markdown**: `**bold**`, `*italic*`, `> quote`, `-` or
 `[link](https://...)`. Line breaks are kept exactly as you type them. A
 backslash makes a character literal, so `\*` shows a real asterisk.
 
+@figure chapter-editor.png | The editor: the text, the markdown reminder, and the writing checks down the side.
+
 If the chapter already exists as a file, **upload it instead** — `.md`,
 `.txt` or `.docx` — and it replaces the text in the box. Word documents keep
 their bold, italics, headings and blockquotes.
@@ -34,6 +36,8 @@ things worth setting:
 
 **What changed?** is one line for the version history. Future you will want
 it.
+
+@figure optional-details.png | Optional details: the summary, what the chapter is asking for, and the arc it opens.
 
 ## The writing checks
 

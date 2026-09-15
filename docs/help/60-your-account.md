@@ -15,6 +15,8 @@ admins touch.
 - **Tags you would rather not see** — see [tags](/help/tags-and-search).
 - A link to **your page as the group sees it**.
 
+@figure account-page.png | The account page: your name, your password, and the tags you would rather not see.
+
 ## Your page
 
 Everyone has one, at their name wherever it appears. It shows the stories
@@ -24,6 +26,8 @@ on other people's work.
 
 It is visible to everyone who can log in, and to nobody else. There is no
 public web out there looking at this site.
+
+@figure your-page.png | Your page: what you have written, and what you have been doing.
 
 ## The theme
 

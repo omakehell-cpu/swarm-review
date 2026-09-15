@@ -12,6 +12,7 @@ const wiki = require('./lib/wiki');
 const taxonomy = require('./lib/glossary-taxonomy');
 const bible = require('./lib/story-bible');
 const bibleImages = require('./lib/entity-images');
+const docs = require('./lib/docs');
 
 const MARKDOWN_HINT = `Markdown is supported: **bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - or 1. list items. Put a backslash before a character to keep it literal (\\* shows a real asterisk). Line breaks are kept as you type them.`;
 
@@ -863,9 +864,30 @@ function bibleSortBar(story, kind, sort) {
     </div>`;
 }
 
+// Who can read this bible, said plainly, with the switch beside it for
+// whoever gets to decide. A coauthor sees the state and not the switch:
+// they write in the bible, but whether it is anybody else's business is
+// the story's to say, and the story has one owner.
+function biblePrivacyBlock(story, isOwner) {
+  const isPrivate = !!story.bible_private;
+  const line = isPrivate
+    ? 'Only the people who write this story can see it, and its names do not link in the chapters.'
+    : 'Anyone who can read the story can read its bible.';
+  if (!isOwner) {
+    return `<p class="bible-privacy muted"><span class="ent-badge${isPrivate ? ' status-private' : ''}">${isPrivate ? 'Private' : 'Open'}</span> ${line}</p>`;
+  }
+  return `
+    <form method="post" action="/stories/${story.id}/bible/privacy" class="bible-privacy inline-form">
+      <span class="ent-badge${isPrivate ? ' status-private' : ''}">${isPrivate ? 'Private' : 'Open'}</span>
+      <span class="muted">${line}</span>
+      <input type="hidden" name="visibility" value="${isPrivate ? 'open' : 'private'}">
+      <button class="btn ghost small" type="submit">${isPrivate ? 'Open it to readers' : 'Make it private'}</button>
+    </form>`;
+}
+
 function bibleIndexPage({
   user, story, entities = [], counts = {}, total = 0, kind = '', canWrite = false,
-  conflicts = [], notice = '', covers = new Map(), sort = 'name',
+  conflicts = [], notice = '', covers = new Map(), sort = 'name', isOwner = false,
 }) {
   const door = (k) => `
     <a class="glossary-door${k === kind ? ' current' : ''}" href="/stories/${story.id}/bible?kind=${k}">
@@ -905,6 +927,7 @@ function bibleIndexPage({
         </div>
       </div>
       ${notice ? `<p class="flash info">${escapeHtml(notice)}</p>` : ''}
+      ${canWrite ? biblePrivacyBlock(story, isOwner) : ''}
       ${bibleConflictNotice(conflicts)}
       ${total ? `
         <div class="glossary-doors bible-doors">${KIND_ORDER.map(door).join('')}</div>
@@ -1318,8 +1341,16 @@ function releaseDate(iso) {
   return `${MONTH_NAMES[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}`;
 }
 
+// Prose and pictures alternate; the prose goes through the same renderer
+// chapters use, and the pictures never touch it (see lib/docs.js for why).
 function docBody(markdown) {
-  return `<div class="reading-pane doc-body">${renderHighlighted(parseMarkdown(markdown), [], null)}</div>`;
+  const parts = docs.splitFigures(markdown).map((part) => (part.type === 'figure'
+    ? `<figure class="doc-figure">
+         <img src="${escapeHtml(part.src)}" alt="${escapeHtml(part.caption)}" loading="lazy">
+         ${part.caption ? `<figcaption>${escapeHtml(part.caption)}</figcaption>` : ''}
+       </figure>`
+    : renderHighlighted(parseMarkdown(part.value), [], null))).join('');
+  return `<div class="reading-pane doc-body">${parts}</div>`;
 }
 
 function helpIndexPage({ user, topics = [], releases = [], unread = false }) {
@@ -1361,7 +1392,7 @@ function helpTopicPage({ user, topic, topics = [] }) {
     body: `
       <p class="breadcrumb"><a href="/help">&larr; How to</a></p>
       <div class="page-head"><h1>${escapeHtml(topic.title)}</h1></div>
-      ${docBody(topic.markdown)}
+      ${docBody(topic.body || topic.markdown)}
       <nav class="doc-nav">
         ${previous ? `<a href="/help/${escapeHtml(previous.slug)}">&larr; ${escapeHtml(previous.title)}</a>` : '<span></span>'}
         ${next ? `<a href="/help/${escapeHtml(next.slug)}">${escapeHtml(next.title)} &rarr;</a>` : '<span></span>'}
@@ -1828,7 +1859,7 @@ function arcHeading(group, position) {
     </div>`;
 }
 
-function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0 }) {
+function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0, bibleVisible = true }) {
   const chapterRow = (c, i) => `
     <div class="chapter-row-outer">
       <a class="chapter-row" href="/chapters/${c.id}">
@@ -1879,7 +1910,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
         </div>
         <div class="page-head-actions">
           ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
-          <a class="btn ghost small" href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}</a>
+          ${bibleVisible ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
           ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
           ${isStoryAuthor ? `
             <form method="post" action="/stories/${story.id}/archive" class="inline-form">
@@ -2535,6 +2566,8 @@ const EVENT_SENTENCES = {
   'comment-edited': () => 'edited a comment',
   'comment-retracted': () => 'retracted a comment',
   'comment-reopened': (s) => `reopened a note on ${s}`,
+  'bible-closed': (s) => `made the bible of ${s} private`,
+  'bible-opened': (s) => `opened the bible of ${s} to readers`,
   'bible-entry-added': (s) => `added ${s} to the bible`,
   'bible-image-added': (s) => `added a picture to ${s}`,
   'bible-entry-edited': (s) => `rewrote ${s} in the bible`,

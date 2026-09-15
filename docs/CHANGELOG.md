@@ -4,6 +4,12 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-15 — Help, and a bible you can close
+
+- **A Help section**, from the top bar: six how-tos, one per part of the site, with screenshots.
+- **This changelog**, inside it, marking anything published since you last looked.
+- **A story bible can be made private.** The owner's switch, at the top of the bible page. Closed, only the people who write the story can see it -- and the chapters stop linking names or listing who is in them, so nothing leaks through the back.
+
 ## 2026-09-15 — The story bible
 
 - **Every story now has a bible**: the people, places, groups, things and events it is made of, at *Bible* on the story page. Each entry takes a name, other names it answers to, a one-line summary, a role and a status, a description, and a spoiler section that stays folded.

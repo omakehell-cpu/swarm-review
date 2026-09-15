@@ -540,3 +540,63 @@ test('the index can be ordered by something other than the alphabet', async () =
   const nonsense = await (await owner.request(`/stories/${storyId}/bible?sort=DROP+TABLE`)).text();
   assert.deepStrictEqual(order(nonsense), order(byName));
 });
+
+// ---------- a bible somebody keeps to themselves ----------
+test('a private bible closes to readers, and stays open to its writers', async () => {
+  // Only the owner decides.
+  const refused = await reader.request(`/stories/${storyId}/bible/privacy`, {
+    method: 'POST', ...form([['visibility', 'private']]),
+  });
+  assert.strictEqual(refused.status, 403);
+  assert.strictEqual(models.getStoryById(storyId).bible_private, 0);
+
+  const closed = await owner.request(`/stories/${storyId}/bible/privacy`, {
+    method: 'POST', ...form([['visibility', 'private']]),
+  });
+  assert.strictEqual(closed.status, 302);
+  assert.strictEqual(models.getStoryById(storyId).bible_private, 1);
+
+  // The author still has all of it.
+  assert.strictEqual((await owner.request(`/stories/${storyId}/bible`)).status, 200);
+  assert.strictEqual((await owner.request(`/bible/${kesslerId}`)).status, 200);
+
+  // The reader has none of it, and is told why rather than told it is gone.
+  for (const path of [`/stories/${storyId}/bible`, `/bible/${kesslerId}`]) {
+    const res = await reader.request(path);
+    assert.strictEqual(res.status, 403, path);
+    assert.match(await res.text(), /private to the people who write it/);
+  }
+  const images = models.listEntityImages(kesslerId);
+  assert.strictEqual((await reader.request(`/entity-images/${images[0].id}`)).status, 403);
+});
+
+test('a private bible does not leak through the chapter it is about', async () => {
+  const authorSees = await (await owner.request(`/chapters/${chapterOne}`)).text();
+  assert.match(authorSees, /In this chapter/);
+  assert.match(authorSees, /class="wiki-link cast-link"/);
+
+  // For the reader the chapter is what it was before any of this existed:
+  // no cast list, no links into a bible they cannot open, no names.
+  const readerSees = await (await reader.request(`/chapters/${chapterOne}`)).text();
+  assert.strictEqual((await reader.request(`/chapters/${chapterOne}`)).status, 200);
+  assert.ok(!readerSees.includes('In this chapter'), 'no cast list');
+  assert.ok(!readerSees.includes('cast-link'), 'no links into the bible');
+  assert.ok(!readerSees.includes(`/bible/${kesslerId}`), 'and no way in by hand');
+
+  // Nor through the story page's button, nor the search.
+  const storyPage = await (await reader.request(`/stories/${storyId}`)).text();
+  assert.ok(!storyPage.includes(`/stories/${storyId}/bible`), 'no button to a shut door');
+  const found = await (await reader.request('/search?q=' + encodeURIComponent('Kessler'))).text();
+  assert.ok(!found.includes(`href="/bible/${kesslerId}"`), 'and nothing in the search');
+  // The author still finds it.
+  assert.match(await (await owner.request('/search?q=' + encodeURIComponent('Kessler'))).text(), new RegExp(`href="/bible/${kesslerId}"`));
+});
+
+test('opening it again gives everything back', async () => {
+  await owner.request(`/stories/${storyId}/bible/privacy`, {
+    method: 'POST', ...form([['visibility', 'open']]),
+  });
+  assert.strictEqual(models.getStoryById(storyId).bible_private, 0);
+  assert.strictEqual((await reader.request(`/stories/${storyId}/bible`)).status, 200);
+  assert.match(await (await reader.request(`/chapters/${chapterOne}`)).text(), /In this chapter/);
+});

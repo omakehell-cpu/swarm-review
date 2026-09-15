@@ -2646,3 +2646,25 @@ main[data-reading="read"] .reading-pane {
 .release-date { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .release-title { color: var(--text); }
 .release .doc-body h2 { border-top: 0; padding-top: 0; margin-top: var(--s-7); }
+.ent-badge.status-private { color: var(--accent); border-color: var(--accent); }
+.bible-privacy {
+  display: flex; flex-wrap: wrap; gap: var(--s-5); align-items: baseline;
+  margin: var(--s-6) 0 0; padding: var(--s-4) 0;
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  font-size: var(--t-sm);
+}
+.bible-privacy .ent-badge { margin-left: 0; }
+.bible-privacy .muted { flex: 1 1 22ch; min-width: 0; }
+
+/* A screenshot in a how-to: full measure of the prose, its own rule above
+   the caption, and never wider than the column it explains. */
+.doc-figure { margin: var(--s-8) 0; max-width: 100%; }
+.doc-figure img {
+  display: block; width: 100%; height: auto;
+  border: 1px solid var(--border); background: var(--bg-sunken);
+}
+.doc-figure figcaption {
+  margin-top: var(--s-3); padding-top: var(--s-3);
+  border-top: 1px solid var(--border);
+  font-size: var(--t-xs); color: var(--text-muted);
+}
