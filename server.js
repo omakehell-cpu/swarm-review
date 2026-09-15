@@ -499,7 +499,7 @@ async function handleAdminBackup(req, res, user) {
 
 async function handleSearch(req, res, user, query) {
   const q = (query.get('q') || '').trim();
-  sendHtml(res, 200, views.searchPage({ user, query: q, results: models.searchEverything(q) }));
+  sendHtml(res, 200, views.searchPage({ user, query: q, results: models.searchEverything(q, { userId: user.id }) }));
 }
 
 // ---------- story tags (vocabulary curated on /admin, see models.js) ----------
@@ -690,7 +690,7 @@ async function handleChangelog(req, res, user) {
   // What they had seen before this visit is what the marks are about, so
   // it is read first and the column moved on afterwards.
   const seenAt = user.changelog_seen_at || null;
-  models.markChangelogSeen(user.id);
+  models.markChangelogSeen(user.id, docs.latestReleaseDate());
   sendHtml(res, 200, views.changelogPage({ user, releases: docs.listReleases(), seenAt }));
 }
 
@@ -712,6 +712,12 @@ function bibleGuard(res, user, storyId, { write = false } = {}) {
     sendError(res, 403, "Only the story's authors can change its bible.", user);
     return null;
   }
+  // A private bible is not a 404 -- pretending it does not exist would be
+  // a lie about a button its story page does not show anyway.
+  if (!models.canReadBible(story, user)) {
+    sendError(res, 403, "This story's bible is private to the people who write it.", user);
+    return null;
+  }
   return story;
 }
 
@@ -725,6 +731,10 @@ function entityGuard(res, user, entityId, { write = false } = {}) {
   const canWrite = models.canWriteInStory(story, user);
   if (write && !canWrite) {
     sendError(res, 403, "Only the story's authors can change its bible.", user);
+    return null;
+  }
+  if (!models.canReadBible(story, user)) {
+    sendError(res, 403, "This story's bible is private to the people who write it.", user);
     return null;
   }
   return { entity, story, canWrite };
@@ -747,6 +757,7 @@ async function handleBibleIndex(req, res, user, storyId, query) {
   sendHtml(res, 200, views.bibleIndexPage({
     user, story, entities, counts, total, kind, sort,
     canWrite: models.canWriteInStory(story, user),
+    isOwner: story.author_id === user.id,
     conflicts: models.storyBibleNameConflicts(storyId),
     covers: models.coverImagesFor(storyId),
     notice: query.get('notice') || '',
@@ -900,6 +911,10 @@ async function handleEntityPage(req, res, user, entityId) {
 async function handleEntityImage(req, res, user, imageId) {
   const image = models.getEntityImage(imageId);
   if (!image) return sendError(res, 404, 'No such image', user);
+  // A picture is part of the bible it belongs to, and behind the same door.
+  if (!models.canReadBible(models.getStoryById(image.entity_story_id), user)) {
+    return sendError(res, 403, "This story's bible is private to the people who write it.", user);
+  }
   const file = entityImages.imagePath(image.filename);
   if (!fs.existsSync(file)) return sendError(res, 404, 'That image is no longer on disk', user);
   res.writeHead(200, {
@@ -1038,6 +1053,26 @@ async function handleSetEntityAppearances(req, res, user, entityId) {
   redirect(res, `/bible/${entityId}`);
 }
 
+// Whose call it is: the owner's. A coauthor writes in the bible, but
+// whether it is anybody else's business is the story's to say, and the
+// story has one owner.
+async function handleBiblePrivacy(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (story.author_id !== user.id) {
+    return sendError(res, 403, "Only the story's owner can change who sees its bible.", user);
+  }
+  const body = await parseBody(req);
+  const isPrivate = body.visibility === 'private';
+  models.setBiblePrivate(storyId, isPrivate);
+  logEvent(user, isPrivate ? 'bible-closed' : 'bible-opened', {
+    subject: story.title, href: `/stories/${storyId}/bible`, storyId,
+  });
+  redirect(res, `/stories/${storyId}/bible?notice=${encodeURIComponent(isPrivate
+    ? 'The bible is now private to the people who write this story.'
+    : 'The bible is now readable by everyone who can read the story.')}`);
+}
+
 async function handleRescanBible(req, res, user, storyId) {
   const story = bibleGuard(res, user, storyId, { write: true });
   if (!story) return;
@@ -1163,6 +1198,7 @@ async function handleStoryPage(req, res, user, storyId, query) {
     readersByChapter,
     tags: models.getStoryTags(storyId),
     bibleCount: models.storyBibleCounts(storyId).total,
+    bibleVisible: models.canReadBible(story, user),
     coauthors: models.listStoryCoauthors(storyId),
     addableCoauthors: isStoryAuthor ? models.listAddableCoauthors(story) : [],
   }));
@@ -1364,18 +1400,25 @@ async function handleChapterPage(req, res, user, chapterId, query) {
     });
   }
 
+  const story = models.getStoryById(chapter.story_id);
+  const bibleVisible = models.canReadBible(story, user);
   sendHtml(res, 200, views.chapterPage({
     user, chapter, versions, currentVersion, comments, isChapterAuthor,
     // Writing the next chapter is a story-level right, not a chapter-level
     // one: a coauthor can add chapters to a story whose other chapters
     // they cannot touch.
-    canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
+    canWrite: models.canWriteInStory(story, user),
     neighbours: models.getChapterNeighbours(chapter),
     readers: models.listChapterReaders(chapterId),
-    cast: models.listChapterEntities(chapterId),
-    findMatches: castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches),
-    missingNames: models.canWriteInStory(models.getStoryById(chapter.story_id), user)
-      ? models.missingNamesInChapter(chapterId) : [],
+    // A private bible leaks through its chapter just as easily: the names
+    // in the margin, the links in the prose, and what each one is. So when
+    // it is private, a reader gets the chapter the way they did before any
+    // of this existed.
+    cast: bibleVisible ? models.listChapterEntities(chapterId) : [],
+    findMatches: bibleVisible
+      ? castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches)
+      : wiki.findWikiMatches,
+    missingNames: models.canWriteInStory(story, user) ? models.missingNamesInChapter(chapterId) : [],
   }));
 }
 
@@ -1854,6 +1897,9 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/fields$/)) && req.method === 'POST') {
       return handleFieldTemplateSubmit(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/privacy$/)) && req.method === 'POST') {
+      return handleBiblePrivacy(req, res, user, Number(m[1]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/bible\/rescan$/)) && req.method === 'POST') {
       return handleRescanBible(req, res, user, Number(m[1]));

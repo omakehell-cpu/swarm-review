@@ -4,8 +4,35 @@ Keeping a cast of hundreds straight: who they are, who they know, and which
 chapters they turn up in.
 
 Every story has one, from the **Bible** button on the story page. Anyone who
-can read the story can read its bible; only the author and coauthors can
-change it.
+can read the story can read its bible, and only the author and coauthors can
+change it -- unless the owner has closed it, which is the next section.
+
+@figure bible-index.png | The bible front page: a door per kind, a filter that narrows as you type, and the cast underneath.
+
+## Open or private
+
+A bible holds working notes, and some of them are not things you want your
+readers holding while they read: who is secretly whose father, who does not
+survive book two, which of them is lying in chapter four.
+
+So the story's owner can close it. The switch is at the top of the bible
+page, and it says which way round things currently are.
+
+**Open** -- the state a bible starts in -- means anyone who can read the
+story can read its bible. **Private** means only the people who write the
+story can: the button disappears from the story page, the pages answer with
+a plain refusal rather than pretending not to exist, the entries drop out of
+everyone else's search, and the chapters stop linking names or listing who
+is in them. A reader gets the chapter exactly as it was before any of this
+existed.
+
+It is the owner's switch, not a coauthor's: a coauthor writes in the bible,
+but whether it is anybody else's business is the story's to say, and a story
+has one owner. Either way it can be turned back, and nothing is lost by
+closing it.
+
+If what you want to hide is one fact rather than the whole notebook, every
+entry already has a **Spoilers** section that stays folded.
 
 ## Writing an entry
 
@@ -21,6 +48,8 @@ than they look:
 
 Every name you write down also joins the story's spelling dictionary, so the
 editor stops underlining your cast.
+
+@figure bible-form.png | Also called is what makes the scan honest; the fields under it come from the story's template.
 
 ## You do not tag appearances
 
@@ -38,6 +67,8 @@ One rule worth knowing: **if two entries answer to the same name, it counts
 for neither.** Guessing would put people in scenes they are not in. The
 index says which names are contested and who is fighting over them — give
 one of them a distinguishing alias and the appearances come back.
+
+@figure bible-entry.png | An entry: the portrait and the details, the chapters it is named in, and who it knows.
 
 ## Relations
 
@@ -86,3 +117,5 @@ A chapter page lists **who is in it** and marks who is **new here**. Names in
 the prose are **links to their entries**, with the one-line summary on hover;
 where a name is also a wiki page, your own entry wins. And the editor has a
 box for writing somebody down without leaving the chapter.
+
+@figure bible-in-a-chapter.png | In a chapter: names linked to their entries, who is in it, and the names it has never heard of.

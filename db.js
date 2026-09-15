@@ -267,6 +267,12 @@ ensureColumn('users', 'last_seen_at', 'TEXT');
 // last_seen_at is what marks chapters as new, and reading about the app
 // must not mark the writing as read.
 ensureColumn('users', 'changelog_seen_at', 'TEXT');
+// A story bible can be kept to the people who write the story. Some of
+// what goes in one -- who is secretly whose father, who does not survive
+// book two -- is not something an author wants their readers holding
+// while they read. Off by default: the bible is a shared-workings tool
+// first, and a private notebook when its author says so.
+ensureColumn('stories', 'bible_private', 'INTEGER NOT NULL DEFAULT 0');
 db.exec("UPDATE users SET last_seen_at = datetime('now') WHERE last_seen_at IS NULL");
 
 // Login lockout tracking. failed_login_attempts uses a constant default

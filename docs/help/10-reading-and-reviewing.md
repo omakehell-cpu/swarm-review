@@ -18,6 +18,8 @@ spacing, and **Fill screen** takes the rest of the page away. All of that is
 yours alone — it follows you around the site and changes nothing for anybody
 else.
 
+@figure read-review-switch.png | The bar above the chapter: the Read/Review switch, the type controls behind Aa, and Fill screen.
+
 ## Leaving a note
 
 **Select the words you mean** and a comment box opens on them. That is the
@@ -40,6 +42,8 @@ decided, so that a note stops being a thing hanging over them. Accepted and
 rejected notes stay on the page, in a quieter colour, because the
 conversation is part of the record. A note can be **Reopen**ed later.
 
+@figure note-in-margin.png | A note sits beside the passage it is about, joined to it by a line. Accept and Reject are the author's.
+
 The chapter's own heading shows how many notes are still **pending**, and
 the story index shows the same, so nobody has to open ten chapters to find
 out where the work is.
@@ -53,6 +57,8 @@ sentence you actually wrote it about.
 The **Version** dropdown moves between them, and **What changed?** shows the
 difference in prose — the words that went and the words that came, not a
 screen of markdown. A chapter nobody has revised yet just says so.
+
+@figure version-and-diff.png | What changed, shown in prose rather than in markdown source.
 
 ## Who has read what
 

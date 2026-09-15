@@ -121,8 +121,17 @@ function bumpLastSeen(userId) {
 // Reading the changelog is its own kind of "seen": bumpLastSeen above is
 // what marks chapters as read, and opening the help section must not do
 // that to somebody's story.
-function markChangelogSeen(userId) {
-  db.prepare("UPDATE users SET changelog_seen_at = datetime('now') WHERE id = ?").run(userId);
+// `upTo` is the newest batch on the page they just looked at. Marking the
+// visit with the clock alone would leave a batch dated later than the
+// server's idea of today permanently unread -- and "I have read this page"
+// means all of it, whatever its dates say.
+function markChangelogSeen(userId, upTo) {
+  const floor = upTo && /^\d{4}-\d{2}-\d{2}$/.test(String(upTo)) ? `${upTo} 23:59:59` : null;
+  db.prepare(`
+    UPDATE users SET changelog_seen_at =
+      CASE WHEN @floor IS NOT NULL AND @floor > datetime('now') THEN @floor ELSE datetime('now') END
+    WHERE id = @userId
+  `).run({ userId, floor });
 }
 
 // ---------- login lockout ----------
@@ -893,22 +902,27 @@ function searchGlossary(query, limit) {
 
 // The bibles, in the site search. A cast of hundreds that only the bible
 // page can find is a cast of hundreds nobody looks at.
-function searchBible(query, limit) {
+function searchBible(query, limit, userId) {
   return db.prepare(`
     SELECT e.id, e.name, e.kind, e.summary, e.story_id, s.title AS story_title,
       (SELECT GROUP_CONCAT(a.alias, ', ') FROM story_entity_aliases a WHERE a.entity_id = e.id) AS alias_list
     FROM story_entities e JOIN stories s ON s.id = e.story_id
-    WHERE s.archived_at IS NULL AND (
+    WHERE s.archived_at IS NULL
+      AND (
+        s.bible_private = 0 OR s.author_id = @userId
+        OR EXISTS (SELECT 1 FROM story_authors sa WHERE sa.story_id = s.id AND sa.user_id = @userId)
+      )
+      AND (
       e.name LIKE @q ESCAPE '\\' OR e.summary LIKE @q ESCAPE '\\' OR e.description LIKE @q ESCAPE '\\'
       OR EXISTS (SELECT 1 FROM story_entity_aliases a WHERE a.entity_id = e.id AND a.alias LIKE @q ESCAPE '\\')
       OR EXISTS (SELECT 1 FROM story_entity_fields f WHERE f.entity_id = e.id AND f.value LIKE @q ESCAPE '\\')
     )
     ORDER BY e.name COLLATE NOCASE
     LIMIT @limit
-  `).all({ q: LIKE(query), limit });
+  `).all({ q: LIKE(query), limit, userId: userId || 0 });
 }
 
-function searchEverything(query, { limit = 20 } = {}) {
+function searchEverything(query, { limit = 20, userId = 0 } = {}) {
   const clean = String(query || '').trim();
   if (clean.length < 2) return null;
   return {
@@ -917,7 +931,7 @@ function searchEverything(query, { limit = 20 } = {}) {
     chapters: searchChapters(clean, limit),
     passages: searchChapterText(clean, limit),
     glossary: searchGlossary(clean, limit),
-    bible: searchBible(clean, limit),
+    bible: searchBible(clean, limit, userId),
   };
 }
 
@@ -1480,6 +1494,23 @@ function canWriteInStory(story, user) {
   if (!story || !user) return false;
   if (story.author_id === user.id) return true;
   return isStoryCoauthor(story.id, user.id);
+}
+
+/**
+ * Can this person read this story's bible? Everyone, unless its author has
+ * made it private, in which case only the people who write the story --
+ * admins included in nothing: being an admin is not a key to somebody
+ * else's notebook any more than it is to their chapters.
+ * @param {Row} story
+ * @param {Row} user
+ */
+function canReadBible(story, user) {
+  if (!story) return false;
+  return !story.bible_private || canWriteInStory(story, user);
+}
+
+function setBiblePrivate(storyId, isPrivate) {
+  db.prepare('UPDATE stories SET bible_private = ? WHERE id = ?').run(isPrivate ? 1 : 0, storyId);
 }
 
 // Returns the coauthor row, or null when there was nothing to do: the
@@ -2161,6 +2192,8 @@ const listChapterStubs = (storyId) => db.prepare(
 ).all(storyId);
 
 module.exports = {
+  canReadBible,
+  setBiblePrivate,
   markChangelogSeen,
   ENTITY_SORTS,
   searchBible,

@@ -60,3 +60,59 @@ test('what counts as unread is the newest batch against your own column', () => 
   assert.strictEqual(docs.hasUnreadReleases({ changelog_seen_at: `${latest} 23:59:00` }), false);
   assert.strictEqual(docs.hasUnreadReleases(null), false);
 });
+
+// ---------- figures ----------
+// Markdown images are off in this app's parser on purpose, so a how-to's
+// screenshots come through a syntax only these files use. The rules it
+// follows are the whole of its safety.
+
+test('a figure names a file this repository shipped, and nothing else', () => {
+  const parts = docs.splitFigures([
+    'Before.',
+    '@figure bible-index.png | A caption.',
+    'After.',
+  ].join('\n\n'));
+  assert.deepStrictEqual(parts.map((p) => p.type), ['markdown', 'figure', 'markdown']);
+  const figure = /** @type {{type: 'figure', src: string, caption: string}} */ (parts[1]);
+  assert.strictEqual(figure.src, '/img/help/bible-index.png');
+  assert.strictEqual(figure.caption, 'A caption.');
+
+  // Anything that is not a plain filename is not a figure -- it stays as
+  // the literal text somebody typed, which is visible and obvious, rather
+  // than becoming a request leaving this server.
+  for (const bad of [
+    '@figure ../../etc/passwd',
+    '@figure /img/help/a.png',
+    '@figure https://example.com/pixel.png',
+    '@figure a.png.svg',
+    '@figure A.PNG',
+    '@figure evil.png; rm -rf',
+  ]) {
+    const parts2 = docs.splitFigures(bad);
+    assert.ok(!parts2.some((p) => p.type === 'figure'), `${bad} is not a figure`);
+  }
+});
+
+test('every figure a shipped how-to asks for actually exists', () => {
+  const fs2 = require('node:fs');
+  const path2 = require('node:path');
+  const root = path2.join(__dirname, '..', 'public', 'img', 'help');
+  let used = 0;
+  for (const topic of docs.listHelpTopics()) {
+    const full = docs.getHelpTopic(topic.slug);
+    for (const raw of docs.splitFigures(full.markdown)) {
+      if (raw.type !== 'figure') continue;
+      const part = /** @type {{type: 'figure', src: string, caption: string}} */ (raw);
+      used += 1;
+      const file = path2.join(root, part.src.replace(docs.FIGURE_URL_BASE, ''));
+      assert.ok(fs2.existsSync(file), `${part.src} is on disk (used by ${topic.slug})`);
+      assert.ok(part.caption, `${part.src} has a caption, for the alt text`);
+    }
+  }
+  assert.ok(used >= 10, 'the how-tos are illustrated');
+});
+
+test('a figure line never gets mistaken for the summary', () => {
+  const head = docs.readHead('# A title\n\n@figure a.png | A caption.\n\nThe real first paragraph.\n');
+  assert.strictEqual(head.summary, '');
+});
