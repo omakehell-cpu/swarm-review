@@ -163,6 +163,37 @@ test('the chapter page renders and a second chapter unlocks the diff', async () 
   assert.match(await none.text(), /Nothing to compare yet/);
 });
 
+test('a chapter in the middle of a story offers three ways to the next one', async () => {
+  const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
+  for (const title of ['Second', 'Third']) {
+    const res = await request(`/stories/${story.id}/chapters/new`, {
+      method: 'POST',
+      ...multipart([['title', title], ['summary', ''], ['content', `The ${title} chapter.`]]),
+    });
+    assert.strictEqual(res.status, 302, (await res.text()).slice(0, 300));
+  }
+  const chapters = models.listChaptersForStory(story.id);
+  assert.strictEqual(chapters.length, 3);
+
+  const middle = await (await request(`/chapters/${chapters[1].id}`)).text();
+  // The two arrows on the breadcrumb line, the pair pinned to the window
+  // while reading, and the full links at the foot -- all from the same
+  // neighbours, all pointing at the same two chapters.
+  assert.match(middle, /class="chapter-nav compact"/, 'the arrows over the title');
+  assert.match(middle, /class="chapter-float"/, 'the floating pair');
+  assert.match(middle, /class="chapter-nav foot"/, 'the links at the foot');
+  const prevHref = `href="/chapters/${chapters[0].id}"`;
+  const nextHref = `href="/chapters/${chapters[2].id}"`;
+  assert.strictEqual(middle.split(prevHref).length - 1, 3, 'three ways back');
+  assert.strictEqual(middle.split(nextHref).length - 1, 3, 'three ways on');
+
+  // The first chapter has nowhere back: the arrow is there and dead, not
+  // a link to somewhere else.
+  const first = await (await request(`/chapters/${chapters[0].id}`)).text();
+  assert.match(first, /chapter-nav-arrow disabled/, 'the way back is spelled out and dead');
+  assert.ok(!first.includes('chapter-float-arrow prev'), 'and nothing floats towards it');
+});
+
 test('editing a chapter creates a second version, and the diff shows the edit', async () => {
   const story = models.listStories().find((s) => s.title === 'A Story With Many Tags');
   const chapterId = models.listChaptersForStory(story.id)[0].id;
