@@ -9,6 +9,7 @@ const {
   CHAPTER_STAGES, DEFAULT_CHAPTER_STAGE, CHAPTER_STAGE_META,
 } = require('./lib/story-state');
 const wiki = require('./lib/wiki');
+const taxonomy = require('./lib/glossary-taxonomy');
 
 const MARKDOWN_HINT = `Markdown is supported: **bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - or 1. list items. Put a backslash before a character to keep it literal (\\* shows a real asterisk). Line breaks are kept as you type them.`;
 
@@ -537,69 +538,157 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, values = /*
 
 // ---------- glossary (a local, offline mirror of the shared-universe
 // wiki -- see lib/wiki.js for how it's kept in sync) ----------
-// The categories the wiki files its own pages under. Twelve of them
-// inline -- the biggest, which are also the ones anybody is looking for --
-// and the long tail of two-page and bookkeeping categories behind one
-// line, the same way the tag index folds the tags nothing is using.
-const CATEGORY_CHIPS_SHOWN = 12;
+// The wiki's own categories are three different things at once -- what a
+// page is, what it is about, what state its text is in -- so the index
+// splits them apart instead of showing one 691-line list behind one row of
+// chips. lib/glossary-taxonomy.js is where that split is decided; this file
+// only draws it.
 
-function categoryChips(categories, active, total) {
-  if (!categories.length) return '';
-  const chip = (label, count, href, current) => `
-    <a class="tag-chip${current ? ' current' : ''}" href="${href}"${current ? ' aria-current="true"' : ''}>
-      ${escapeHtml(label)} <span class="tag-chip-count">${count}</span>
-    </a>`;
-  const shown = categories.slice(0, CATEGORY_CHIPS_SHOWN);
-  const rest = categories.slice(CATEGORY_CHIPS_SHOWN);
-  return `
-    <div class="glossary-categories">
-      <div class="tag-chips">
-        ${chip('Everything', total, '/glossary', !active)}
-        ${shown.map((c) => chip(c.category, c.n, `/glossary?category=${encodeURIComponent(c.category)}`, c.category === active)).join('')}
-      </div>
-      ${rest.length ? `
-        <details class="more-categories"${rest.some((c) => c.category === active) ? ' open' : ''}>
-          <summary>${rest.length} smaller categories</summary>
-          <div class="tag-chips">
-            ${rest.map((c) => chip(c.category, c.n, `/glossary?category=${encodeURIComponent(c.category)}`, c.category === active)).join('')}
-          </div>
-        </details>` : ''}
-    </div>`;
+function glossaryIntro(totalPages) {
+  return `<p class="muted">A local, offline copy of <a href="${escapeHtml(wiki.WIKI_BASE_URL)}" target="_blank" rel="noopener noreferrer">the shared-universe wiki</a> -- ${totalPages} page${totalPages === 1 ? '' : 's'}, kept here so nothing in this app has to reach out to the wiki to render a link.</p>`;
 }
 
-function glossaryIndexPage({ user, pages, q, categories = [], category = '', totalPages = 0, categoriesByPage = new Map() }) {
-  const rows = pages.length ? pages.map((p) => {
-    const own = categoriesByPage.get(p.title_lower) || [];
-    return `
-    <a class="chapter-row" href="/glossary/${encodeURIComponent(p.title)}">
-      <div class="chapter-row-main">
-        <h3>${escapeHtml(p.title)}</h3>
-        ${p.summary ? `<p class="muted">${escapeHtml(p.summary)}</p>` : ''}
-        ${own.length ? `<p class="entry-categories">${own.map((c) => escapeHtml(c)).join(' &middot; ')}</p>` : ''}
-      </div>
-    </a>
-  `;
-  }).join('') : `<p class="muted">${q || category
-    ? 'Nothing here matches.'
-    : 'The glossary is empty -- an admin needs to sync the wiki from the admin page first.'}</p>`;
+function glossarySearchForm(q, hidden = {}) {
+  const fields = Object.entries(hidden)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `<input type="hidden" name="${escapeHtml(k)}" value="${escapeHtml(String(v))}">`)
+    .join('');
+  return `
+    <form method="get" action="/glossary" class="inline-form glossary-search">
+      <input type="search" name="q" id="glossary-filter" placeholder="Search the glossary..." value="${escapeHtml(q || '')}" autocomplete="off">
+      ${fields}
+      <button class="btn ghost small" type="submit">Search</button>
+      ${q ? '<a class="btn ghost small" href="/glossary">Clear</a>' : ''}
+    </form>`;
+}
+
+// The front page of the glossary: three doors for the three kinds of page,
+// then the world's subjects as a printed directory rather than a chip
+// soup. Nobody has to scroll 691 rows to find out what is in here.
+function glossaryDirectoryPage({ user, totalPages = 0, kinds = { world: 0, stories: 0, authors: 0 }, families = [] }) {
+  if (!totalPages) {
+    return layout({
+      title: 'Glossary',
+      user,
+      current: 'glossary',
+      body: `
+        <div class="page-head"><h1>Glossary</h1></div>
+        <p class="muted">The glossary is empty -- an admin needs to sync the wiki from the ${user.is_admin ? '<a href="/admin">admin page</a>' : 'admin page'} first.</p>`,
+    });
+  }
+
+  const door = (kind) => `
+    <a class="glossary-door" href="/glossary?kind=${kind}">
+      <span class="door-count">${kinds[kind] || 0}</span>
+      <h2>${escapeHtml(taxonomy.KIND_LABELS[kind])}</h2>
+      <p class="muted">${escapeHtml(taxonomy.KIND_BLURBS[kind])}</p>
+    </a>`;
+
+  const directory = families.map((family) => `
+    <section class="family">
+      <h3 class="family-head">${escapeHtml(family.name)} <span class="family-count">${family.total}</span></h3>
+      <ul class="family-list">
+        ${family.categories.map((c) => `
+          <li><a href="/glossary?category=${encodeURIComponent(c.category)}">${escapeHtml(c.category)}</a> <span class="family-n">${c.n}</span></li>`).join('')}
+      </ul>
+    </section>`).join('');
 
   return layout({
     title: 'Glossary',
     user,
     current: 'glossary',
     body: `
-      <div class="page-head">
-        <h1>Glossary</h1>
+      <div class="page-head"><h1>Glossary</h1></div>
+      ${glossaryIntro(totalPages)}
+      ${glossarySearchForm('')}
+      <div class="glossary-doors">
+        ${taxonomy.KINDS.map(door).join('')}
       </div>
-      <p class="muted">A local, offline copy of <a href="${escapeHtml(wiki.WIKI_BASE_URL)}" target="_blank" rel="noopener noreferrer">the shared-universe wiki</a> -- ${pages.length} page${pages.length === 1 ? '' : 's'}${category ? ` in ${escapeHtml(category)}` : ''}${q ? ' matching your search' : ''}. Pages link to each other the same way they do on the wiki itself, and are filed under the wiki's own categories.</p>
-      <form method="get" action="/glossary" class="inline-form glossary-search">
-        <input type="search" name="q" placeholder="Search the glossary..." value="${escapeHtml(q)}">
-        ${category ? `<input type="hidden" name="category" value="${escapeHtml(category)}">` : ''}
-        <button class="btn ghost small" type="submit">Search</button>
-        ${q || category ? '<a class="btn ghost small" href="/glossary">Clear</a>' : ''}
-      </form>
-      ${categoryChips(categories, category, totalPages)}
-      <div class="chapter-list">${rows}</div>`,
+      ${families.length ? `
+        <section class="glossary-directory">
+          <h2 class="directory-head">By subject</h2>
+          <p class="muted">The wiki's own subject categories, gathered. A page can sit under several.</p>
+          <div class="family-grid">${directory}</div>
+        </section>` : ''}
+      <p class="directory-foot"><a href="/glossary?view=all">Every page, A to Z (${totalPages})</a></p>`,
+  });
+}
+
+function glossaryStatusFilters(counts, active, params) {
+  if (!counts.length) return '';
+  const href = (status) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v) qs.set(k, String(v));
+    if (status) qs.set('status', status); else qs.delete('status');
+    return `/glossary?${qs.toString()}`;
+  };
+  const chip = (label, n, target, current) => `
+    <a class="tag-chip${current ? ' current' : ''}" href="${escapeHtml(href(target))}"${current ? ' aria-current="true"' : ''}>
+      ${escapeHtml(label)}${n === null ? '' : ` <span class="tag-chip-count">${n}</span>`}
+    </a>`;
+  return `
+    <div class="glossary-filters">
+      <span class="filter-label">State</span>
+      <div class="tag-chips">
+        ${chip('Any', null, '', !active)}
+        ${counts.map((c) => chip(c.category, c.n, c.category, c.category === active)).join('')}
+      </div>
+    </div>`;
+}
+
+// One listing -- a kind, a subject, a search or the lot -- always cut into
+// A-Z sections with a jump bar, because 300 rows in one run is the thing
+// that made the old index unreadable.
+function glossaryListPage({
+  user, pages = [], byPage = new Map(), heading = 'Glossary', q = '',
+  kind = '', category = '', status = '', view = '', statusCounts = [], totalPages = 0,
+}) {
+  const letters = taxonomy.groupByLetter(pages);
+  const present = new Set(letters.map((l) => l.letter));
+  const jump = taxonomy.ALPHABET.map((letter) => (present.has(letter)
+    ? `<a href="#letter-${letter === '#' ? 'num' : letter}" data-letter="${letter}">${letter}</a>`
+    : `<span data-letter="${letter}">${letter}</span>`)).join('');
+
+  const row = (p) => {
+    const own = byPage.get(p.title_lower) || [];
+    const topics = taxonomy.topicalCategories(own);
+    const search = `${p.title} ${p.summary || ''}`.toLowerCase();
+    return `
+      <a class="chapter-row glossary-row" href="/glossary/${encodeURIComponent(p.title)}" data-search="${escapeHtml(search)}">
+        <div class="chapter-row-main">
+          <h3>${escapeHtml(p.title)}</h3>
+          ${p.summary ? `<p class="muted">${escapeHtml(p.summary)}</p>` : ''}
+          ${topics.length ? `<p class="entry-categories">${topics.map((c) => escapeHtml(c)).join(' &middot; ')}</p>` : ''}
+        </div>
+      </a>`;
+  };
+
+  const sections = letters.map((block) => `
+    <section class="letter-block" id="letter-${block.letter === '#' ? 'num' : block.letter}" data-letter="${block.letter}">
+      <h2 class="letter-mark" aria-hidden="true">${block.letter}</h2>
+      <div class="chapter-list">${block.pages.map(row).join('')}</div>
+    </section>`).join('');
+
+  const count = `${pages.length} page${pages.length === 1 ? '' : 's'}`;
+  const describe = category ? `filed under ${escapeHtml(category)}`
+    : kind ? escapeHtml(String(taxonomy.KIND_LABELS[kind] || '').toLowerCase())
+      : view === 'all' ? 'in the glossary' : '';
+
+  return layout({
+    title: heading,
+    user,
+    current: 'glossary',
+    body: `
+      <p class="breadcrumb"><a href="/glossary">&larr; Glossary</a></p>
+      <div class="page-head"><h1>${escapeHtml(heading)}</h1></div>
+      <p class="muted"><span id="glossary-count">${count}</span>${describe ? ` ${describe}` : ''}${q ? ` matching &ldquo;${escapeHtml(q)}&rdquo;` : ''}${totalPages && pages.length !== totalPages ? ` &middot; <a href="/glossary?view=all">all ${totalPages}</a>` : ''}.</p>
+      ${glossarySearchForm(q, { kind, category, status, view })}
+      ${glossaryStatusFilters(statusCounts, status, { kind, category, view, q })}
+      ${pages.length ? `
+        <nav class="az-bar" aria-label="Jump to a letter">${jump}</nav>
+        <div class="glossary-letters" id="glossary-list">${sections}</div>
+        <p class="no-matches" id="glossary-no-matches" hidden>Nothing here matches.</p>`
+    : '<p class="muted">Nothing here matches.</p>'}`,
   });
 }
 
@@ -634,6 +723,20 @@ function glossaryPreviewCards(titles, summaries) {
   return `<aside class="glossary-margin" aria-label="What the linked pages say">${cards.join('')}</aside>`;
 }
 
+// What a page is filed under, split the same way the index splits it: the
+// subjects are links out to the rest of the glossary, the state of the page
+// is a flat badge, and the wiki's housekeeping categories stay out of the
+// reader's way entirely.
+function entryChips(categories) {
+  const topics = taxonomy.topicalCategories(categories);
+  const states = taxonomy.statusCategories(categories);
+  if (!topics.length && !states.length) return '';
+  return `<div class="tag-chips entry-chips">
+    ${topics.map((c) => `<a class="tag-chip" href="/glossary?category=${encodeURIComponent(c)}">${escapeHtml(c)}</a>`).join('')}
+    ${states.map((c) => `<span class="tag-chip state-chip">${escapeHtml(c)}</span>`).join('')}
+  </div>`;
+}
+
 function glossaryPage({ user, page, summaries = new Map(), categories = [] }) {
   // A page can be in the index (title + summary, from an older sync) with
   // no body yet, if the sync that stored it predates full-content syncing
@@ -658,8 +761,7 @@ function glossaryPage({ user, page, summaries = new Map(), categories = [] }) {
         <a class="btn ghost small" href="${escapeHtml(wiki.pageUrl(page.title))}" target="_blank" rel="noopener noreferrer">Open on the wiki &#8599;</a>
       </div>
       <p class="muted glossary-meta">A local copy${page.fetched_at ? `, last synced ${timeHtml(page.fetched_at)}` : ''}.</p>
-      ${categories.length ? `<div class="tag-chips entry-chips">${categories.map((c) => `
-        <a class="tag-chip" href="/glossary?category=${encodeURIComponent(c)}">${escapeHtml(c)}</a>`).join('')}</div>` : ''}
+      ${entryChips(categories)}
       <div class="glossary-body">
         <div class="reading-pane">
           ${body}
@@ -2267,7 +2369,8 @@ module.exports = {
   storyPage,
   archivedChaptersPage,
   chapterPage,
-  glossaryIndexPage,
+  glossaryDirectoryPage,
+  glossaryListPage,
   glossaryPage,
   glossaryNotFoundPage,
   chapterDiffPage,

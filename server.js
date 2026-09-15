@@ -28,6 +28,7 @@ const views = require('./views');
 const { parseMarkdown, flattenLength, renderPlainText, renderHighlighted } = require('./lib/markdown');
 const { markdownToDocxBuffer, docxBufferToMarkdown } = require('./lib/docx');
 const wiki = require('./lib/wiki');
+const taxonomy = require('./lib/glossary-taxonomy');
 const diff = require('./lib/diff');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
@@ -621,16 +622,32 @@ async function handleHiddenTagsSubmit(req, res, user) {
 async function handleGlossaryIndex(req, res, user, query) {
   const q = (query.get('q') || '').trim();
   const category = (query.get('category') || '').trim();
+  const kind = (query.get('kind') || '').trim();
+  const status = (query.get('status') || '').trim();
+  const view = (query.get('view') || '').trim();
   const all = models.listWikiPagesForGlossary();
-  let pages = category ? models.listWikiPagesInCategory(category) : all;
-  if (q) {
-    const needle = q.toLowerCase();
-    pages = pages.filter((p) => p.title.toLowerCase().includes(needle) || p.summary.toLowerCase().includes(needle));
+  const byPage = models.categoriesByPage();
+
+  // No filter of any sort means the front page: three doors and a printed
+  // directory, rather than dropping the reader into 691 rows.
+  if (!q && !category && !kind && !status && view !== 'all') {
+    return sendHtml(res, 200, views.glossaryDirectoryPage({
+      user,
+      totalPages: all.length,
+      kinds: taxonomy.countKinds(all, byPage),
+      families: taxonomy.groupIntoFamilies(models.listWikiCategories()),
+    }));
   }
-  sendHtml(res, 200, views.glossaryIndexPage({
-    user, pages, q, category,
-    categories: models.listWikiCategories(),
-    categoriesByPage: models.categoriesByPage(),
+
+  const pages = taxonomy.selectPages(all, byPage, { kind, category, status, q });
+  const heading = category || (kind && taxonomy.KIND_LABELS[kind])
+    || (q ? `Search: ${q}` : 'Every page');
+  // The state chips are counted before the state filter is applied, so
+  // picking one does not make the others vanish from under the cursor.
+  const beforeStatus = taxonomy.selectPages(all, byPage, { kind, category, q });
+  sendHtml(res, 200, views.glossaryListPage({
+    user, pages, byPage, heading, q, kind, category, status, view,
+    statusCounts: taxonomy.statusCounts(beforeStatus, byPage),
     totalPages: all.length,
   }));
 }

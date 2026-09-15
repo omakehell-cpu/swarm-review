@@ -437,20 +437,71 @@ test('the glossary is filed under the wiki\'s own categories', async () => {
     { title: 'A20', summary: 'An interface craft.', categories: ['Ships', 'Technology'], contentHtml: '<p>The A20.</p>' },
   ]);
 
+  // The front page is a directory, not a list: three doors for the three
+  // kinds of page, and the wiki's subjects gathered into families.
   const index = await (await request('/glossary')).text();
-  assert.match(index, /class="glossary-categories"/, 'the categories are on the index');
-  assert.match(index, /Colonies/);
-  assert.match(index, /Technology/);
+  assert.match(index, /class="glossary-doors"/, 'the three doors are there');
+  assert.match(index, /href="\/glossary\?kind=world"/);
+  assert.match(index, /href="\/glossary\?kind=stories"/);
+  assert.match(index, /class="family-grid"/, 'and the subject directory');
+  assert.match(index, /Worlds and places/, 'Colonies is filed under its family');
+  assert.match(index, /Fleet and ships/, 'and Ships under its own');
+  assert.ok(!index.includes('>All <'), 'the wiki\'s catch-all category is not offered as a filter');
+  assert.ok(!index.includes('class="chapter-row"'), 'and no 691-row list on the way in');
 
   const ships = await (await request('/glossary?category=Ships')).text();
   assert.match(ships, /A20/, 'the category holds what it should');
   assert.ok(!ships.includes('>Kestrel Anchorage<'), 'and nothing it should not');
-  assert.match(ships, /aria-current="true"/, 'and says which one you are in');
+  assert.match(ships, /class="az-bar"/, 'a listing is cut into letters');
+  assert.match(ships, /id="letter-A"/);
+
+  // Kind is the axis the old flat list could not express: a story page and
+  // a world term look identical in a list sorted by title.
+  const world = await (await request('/glossary?kind=world')).text();
+  assert.match(world, />Kestrel Anchorage</);
+  assert.match(world, />A20</);
 
   // A category nobody filed anything under is simply empty, not an error.
   const none = await request('/glossary?category=Does%20Not%20Exist');
   assert.strictEqual(none.status, 200);
   assert.match(await none.text(), /Nothing here matches/);
+});
+
+test('the glossary keeps the state of a page off the subject axis', async () => {
+  models.replaceWikiPages([
+    { title: 'Kestrel Anchorage', summary: 'An anchorage.', categories: ['Colonies', 'Systems', 'Canon'],
+      contentHtml: '<p>Built for <a href="/glossary/Akarge">Akarge</a>, supplied by an <a href="/glossary/A20">A20</a>. The <a href="/glossary/Akarge">Akarge</a> contraction ended it.</p>' },
+    { title: 'Akarge', summary: 'A trading concern.', categories: ['Economy', 'Stubs'], contentHtml: '<p>Akarge.</p>' },
+    { title: 'A20', summary: 'An interface craft.', categories: ['Ships', 'Technology', 'Canon'], contentHtml: '<p>The A20.</p>' },
+    { title: 'Housekeeping', summary: 'Bookkeeping.', categories: ['Wiki Maintenance'], contentHtml: '<p>.</p>' },
+  ]);
+
+  // Canon/Stubs are how finished a page is, not what it is about, so they
+  // get their own row rather than competing with Ships and Colonies.
+  const index = await (await request('/glossary')).text();
+  assert.ok(!index.includes('href="/glossary?category=Canon"'), 'state is not a subject');
+  assert.ok(!index.includes('Wiki Maintenance'), 'and housekeeping is not on the front page');
+
+  const listing = await (await request('/glossary?kind=world')).text();
+  assert.match(listing, /class="glossary-filters"/);
+  assert.match(listing, /href="[^"]*status=Canon"/);
+
+  const canon = await (await request('/glossary?kind=world&status=Canon')).text();
+  assert.match(canon, />A20</);
+  assert.ok(!canon.includes('>Akarge<'), 'a stub is not canon');
+
+  // Picking a state keeps the other states on offer -- they are counted
+  // before the filter runs, not after.
+  assert.match(canon, /href="[^"]*status=Stubs"/);
+});
+
+test('every glossary listing can be filtered without a round trip', async () => {
+  const listing = await (await request('/glossary?view=all')).text();
+  // The rows carry what the in-page filter matches against, so the filter
+  // never has to ask the server anything.
+  assert.match(listing, /data-search="[^"]*kestrel anchorage/);
+  assert.match(listing, /id="glossary-filter"/);
+  assert.match(listing, /id="glossary-list"/);
 });
 
 test('a glossary entry explains its links once each, in the margin', async () => {
