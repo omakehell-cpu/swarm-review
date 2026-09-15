@@ -1467,8 +1467,18 @@
     // sitting at its right edge. Keeping the overlay's width locked to the
     // textarea's actual rendered width is what keeps them wrapping (and
     // scrolling) identically.
+    // The textarea's own vertical scrollbar, when the platform draws a
+    // classic one that takes space rather than an overlay one that does
+    // not, eats into the textarea's content width and not the overlay's --
+    // so the overlay would keep wrapping at the old, wider column. Same
+    // failure as a mismatched width: the two drift a line apart and the
+    // caret stops being where the text says it is. offsetWidth minus
+    // clientWidth is that scrollbar (the textarea has no border), and it
+    // is 0 on a platform that overlays them.
     function syncOverlayWidth() {
-      overlay.style.width = previewOn ? '' : `${textarea.getBoundingClientRect().width}px`;
+      if (previewOn) { overlay.style.width = ''; return; }
+      const scrollbar = textarea.offsetWidth - textarea.clientWidth;
+      overlay.style.width = `${textarea.getBoundingClientRect().width - scrollbar}px`;
     }
 
     function applyPreviewState() {
@@ -1570,6 +1580,11 @@
       overlay.innerHTML = html + (textarea.value.endsWith('\n') ? '&nbsp;' : '');
       currentRanges = ranges;
       summary.innerHTML = summaryHtml(stats, textarea.value);
+      // Text that has just grown past the bottom of the box gives the
+      // textarea a scrollbar it did not have a keystroke ago, which
+      // changes its content width -- nothing resizes, so the
+      // ResizeObserver never fires for it.
+      syncOverlayWidth();
       syncScroll();
     }
 
