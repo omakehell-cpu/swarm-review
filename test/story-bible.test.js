@@ -124,9 +124,33 @@ test('two capitals in a row are a name even at the start of a sentence', () => {
 
 test('a name that is always at the start of a sentence needs to earn it', () => {
   assert.deepStrictEqual(bible.findProperNames('Prado left. Prado returned.'), []);
+  // The threshold is high on purpose: this is the only way an ordinary
+  // word can get in, and on a real chapter a low one lets through every
+  // "Good" and "People" that ever opened a paragraph.
+  assert.deepStrictEqual(bible.findProperNames('Prado left. Prado returned. Prado went.'), []);
   assert.deepStrictEqual(
-    bible.findProperNames('Prado left. Prado returned. Prado left again.').map((c) => c.name), ['Prado']
+    bible.findProperNames('Prado left. Prado returned. Prado went. Prado waited. Prado swore.').map((c) => c.name),
+    ['Prado']
   );
+});
+
+test('a possessive is the same person, and a contraction is nobody', () => {
+  // Found on seventy thousand words of real prose: "Jack" and "Jack's"
+  // were being offered as two different characters, and "Don't", "I'm",
+  // "You're" and "That's" were being offered as four more.
+  const found = bible.findProperNames(
+    "She took Jack's boots. Then she took Jack again. Don't, said Riley, and Riley meant it. You're late. That's that."
+  );
+  assert.deepStrictEqual(found.map((c) => [c.name, c.count]), [['Jack', 2], ['Riley', 2]]);
+
+  // A name that simply contains an apostrophe keeps it.
+  assert.deepStrictEqual(
+    bible.findProperNames("Later, O'Brien found the Sa'arm.").map((c) => c.name),
+    ["O'Brien", "Sa'arm"]
+  );
+  assert.strictEqual(bible.unpossess("Jack's"), 'Jack');
+  assert.strictEqual(bible.unpossess("Don't"), null);
+  assert.strictEqual(bible.unpossess("Sa'arm"), "Sa'arm");
 });
 
 test('what the app already knows about is not offered again', () => {
