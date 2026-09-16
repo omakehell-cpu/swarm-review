@@ -1,5 +1,6 @@
 'use strict';
 
+const { HIT_OPEN, HIT_CLOSE } = require('../lib/search-query');
 const { layout } = require('../lib/layout');
 const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
@@ -8,23 +9,21 @@ const { emptyState, hiddenTagsSection, wordCount, writingBlock } = require('./sh
 // A window of text around the first occurrence, with the term marked.
 // Works on plain text, so anything HTML (a glossary body) has to be
 // flattened before it gets here.
-function searchSnippet(text, query, { radius = 110 } = {}) {
-  const source = String(text || '').replace(/\s+/g, ' ').trim();
-  if (!source) return '';
-  const at = source.toLowerCase().indexOf(query.toLowerCase());
-  if (at === -1) return escapeHtml(source.slice(0, radius * 2)) + (source.length > radius * 2 ? '&hellip;' : '');
-  const from = Math.max(0, at - radius);
-  const to = Math.min(source.length, at + query.length + radius);
-  // Don't cut a word in half at either end.
-  const start = from === 0 ? 0 : source.indexOf(' ', from) + 1;
-  const end = to === source.length ? source.length : source.lastIndexOf(' ', to);
-  const before = source.slice(start, at);
-  const match = source.slice(at, at + query.length);
-  const after = source.slice(at + query.length, end);
-  return `${start > 0 ? '&hellip;' : ''}${escapeHtml(before)}<mark class="search-hit">${escapeHtml(match)}</mark>${escapeHtml(after)}${end < source.length ? '&hellip;' : ''}`;
+// The index marks its own hits. It wrapped them in two control
+// characters -- see lib/search-query.js -- which cannot occur in anybody's
+// prose, so the whole snippet is escaped as text first and only then do
+// exactly those two become markup. A chapter cannot smuggle a tag through
+// this.
+function searchSnippet(snippet) {
+  const text = String(snippet || '');
+  if (!text) return '';
+  return escapeHtml(text)
+    .split(HIT_OPEN).join('<mark class="search-hit">')
+    .split(HIT_CLOSE).join('</mark>');
 }
 
-const stripTags = (html) => String(html || '').replace(/<[^>]*>/g, ' ');
+// The title, with the hit marked if that is where it was.
+const searchTitle = (row, fallback) => (row.titleSnippet ? searchSnippet(row.titleSnippet) : escapeHtml(fallback));
 
 function searchPage({ user, results, query }) {
   const box = `
@@ -64,30 +63,30 @@ function searchPage({ user, results, query }) {
     : [
       section('Stories', results.stories, (s) => `
         <a class="search-result" href="/stories/${s.id}">
-          <span class="search-result-title">${searchSnippet(s.title, results.query, { radius: 60 })}</span>
+          <span class="search-result-title">${searchTitle(s, s.title)}</span>
           <span class="search-result-where">by ${escapeHtml(s.author_name)}</span>
-          ${s.description ? `<span class="search-result-snippet">${searchSnippet(s.description, results.query)}</span>` : ''}
+          ${s.snippet ? `<span class="search-result-snippet">${searchSnippet(s.snippet)}</span>` : ''}
         </a>`),
       section('Chapters', results.chapters, (c) => `
         <a class="search-result" href="/chapters/${c.id}">
-          <span class="search-result-title">${searchSnippet(`Chapter ${c.chapter_number}: ${c.title}`, results.query, { radius: 60 })}</span>
+          <span class="search-result-title">Chapter ${c.chapter_number}: ${searchTitle(c, c.title)}</span>
           <span class="search-result-where">${escapeHtml(c.story_title)}</span>
-          ${c.summary ? `<span class="search-result-snippet">${searchSnippet(c.summary, results.query)}</span>` : ''}
+          ${c.snippet ? `<span class="search-result-snippet">${searchSnippet(c.snippet)}</span>` : ''}
         </a>`),
       section('In the text', results.passages, (p) => `
         <a class="search-result" href="/chapters/${p.id}">
           <span class="search-result-title">${escapeHtml(p.story_title)} &middot; Chapter ${p.chapter_number}: ${escapeHtml(p.title)}</span>
-          <span class="search-result-snippet prose">${searchSnippet(p.content, results.query)}</span>
+          <span class="search-result-snippet prose">${searchSnippet(p.snippet)}</span>
         </a>`),
       section('Bibles', results.bible || [], (e) => `
         <a class="search-result" href="/bible/${e.id}">
-          <span class="search-result-title">${searchSnippet(e.name, results.query, { radius: 60 })} <span class="muted">&middot; ${escapeHtml(e.story_title)}</span></span>
-          <span class="search-result-snippet">${escapeHtml(entityKindLabel(e.kind))}${e.alias_list ? ` &middot; also ${escapeHtml(e.alias_list)}` : ''}${e.summary ? ` &mdash; ${searchSnippet(e.summary, results.query)}` : ''}</span>
+          <span class="search-result-title">${searchTitle(e, e.name)} <span class="muted">&middot; ${escapeHtml(e.story_title)}</span></span>
+          <span class="search-result-snippet">${escapeHtml(entityKindLabel(e.kind))}${e.alias_list ? ` &middot; also ${escapeHtml(e.alias_list)}` : ''}${e.snippet ? ` &mdash; ${searchSnippet(e.snippet)}` : ''}</span>
         </a>`),
       section('Glossary', results.glossary, (g) => `
         <a class="search-result" href="/glossary/${encodeURIComponent(g.title)}">
-          <span class="search-result-title">${searchSnippet(g.title, results.query, { radius: 60 })}</span>
-          <span class="search-result-snippet">${searchSnippet(stripTags(g.content_html) || g.summary, results.query)}</span>
+          <span class="search-result-title">${searchTitle(g, g.title)}</span>
+          <span class="search-result-snippet">${g.snippet ? searchSnippet(g.snippet) : escapeHtml(g.summary || '')}</span>
         </a>`),
     ].join('');
 
@@ -342,5 +341,4 @@ module.exports = {
   profilePage,
   searchPage,
   searchSnippet,
-  stripTags,
 };

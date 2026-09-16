@@ -766,4 +766,163 @@ if (!deletedUserRow) {
   ).run(DELETED_USER_USERNAME, 'Deleted user', unusablePasswordHash);
 }
 
+// Everything the triggers would have written, written from scratch. Used
+// once on an old database, and by test/search.test.js, which rebuilds
+// after a battery of edits and asserts the result matches what the
+// triggers left -- the check that keeps "a trigger cannot be forgotten"
+// honest.
+function rebuildSearchIndex() {
+  db.exec('DELETE FROM search_index');
+  db.exec(`
+    INSERT INTO search_index (title, body, kind, ref, story_id)
+      SELECT title, description, 'story', id, id FROM stories;
+    INSERT INTO search_index (title, body, kind, ref, story_id)
+      SELECT title, summary, 'chapter', id, story_id FROM chapters;
+    INSERT INTO search_index (title, body, kind, ref, story_id)
+      SELECT c.title, v.content, 'passage', c.id, c.story_id
+        FROM chapters c JOIN chapter_versions v ON v.chapter_id = c.id
+       WHERE v.version_number = (SELECT MAX(v2.version_number) FROM chapter_versions v2 WHERE v2.chapter_id = c.id);
+    INSERT INTO search_index (title, body, kind, ref, story_id)
+      SELECT name, summary || ' ' || description, 'entity', id, story_id FROM story_entities;
+    INSERT INTO search_index (title, body, kind, ref, story_id)
+      SELECT title, COALESCE(summary, '') || ' ' || COALESCE(content_text, ''), 'glossary', id, NULL FROM wiki_pages;
+  `);
+}
+
+ensureColumn('wiki_pages', 'content_text', 'TEXT');
+// Pages synced before the search index existed have HTML and no text.
+// Filling it here rather than waiting for the next sync means the
+// glossary is searchable the moment this version starts.
+{
+  const stale = db.prepare(
+    'SELECT id, content_html FROM wiki_pages WHERE content_text IS NULL AND content_html IS NOT NULL'
+  ).all();
+  if (stale.length) {
+    const { htmlToText } = require('./lib/util');
+    const update = db.prepare('UPDATE wiki_pages SET content_text = ? WHERE id = ?');
+    for (const row of stale) update.run(htmlToText(row.content_html), row.id);
+  }
+}
+
+db.exec(`
+-- ---------- the search index ----------
+-- One FTS5 table for everything searchable, rather than a LIKE scan per
+-- table. What it buys is not speed -- a scan of this archive costs under
+-- a millisecond -- but three things a LIKE cannot do at any size:
+--
+--   * words, not substrings. "art" stops matching "start" and "heart",
+--     which is the one that actually bites every day.
+--   * phrases and prefixes, spelled the way a reader expects: "held its
+--     breath", or anch*.
+--   * order by how well a row matches instead of alphabetically, which is
+--     what makes a long results page worth reading at all.
+--
+-- It is kept in step by triggers rather than by remembering to call
+-- something from each write path. A trigger cannot be forgotten in a
+-- feature written next year; a function call can. test/search.test.js
+-- rebuilds the index from scratch after a battery of edits and asserts it
+-- matches what the triggers left, which is what makes that claim checkable
+-- rather than hopeful.
+--
+-- remove_diacritics 2 folds accents, so a search for "Tampaad" finds
+-- "Tampáad" and a Spanish-speaking writer does not have to guess.
+CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
+  title,
+  body,
+  kind UNINDEXED,
+  ref UNINDEXED,
+  story_id UNINDEXED,
+  tokenize = 'unicode61 remove_diacritics 2'
+);
+
+-- Stories.
+CREATE TRIGGER IF NOT EXISTS search_story_ai AFTER INSERT ON stories BEGIN
+  INSERT INTO search_index (title, body, kind, ref, story_id)
+  VALUES (new.title, new.description, 'story', new.id, new.id);
+END;
+CREATE TRIGGER IF NOT EXISTS search_story_au AFTER UPDATE ON stories BEGIN
+  DELETE FROM search_index WHERE kind = 'story' AND ref = old.id;
+  INSERT INTO search_index (title, body, kind, ref, story_id)
+  VALUES (new.title, new.description, 'story', new.id, new.id);
+END;
+CREATE TRIGGER IF NOT EXISTS search_story_ad AFTER DELETE ON stories BEGIN
+  DELETE FROM search_index WHERE story_id = old.id;
+END;
+
+-- Chapters: the title and summary here, the prose below.
+CREATE TRIGGER IF NOT EXISTS search_chapter_ai AFTER INSERT ON chapters BEGIN
+  INSERT INTO search_index (title, body, kind, ref, story_id)
+  VALUES (new.title, new.summary, 'chapter', new.id, new.story_id);
+END;
+CREATE TRIGGER IF NOT EXISTS search_chapter_au AFTER UPDATE ON chapters BEGIN
+  DELETE FROM search_index WHERE kind = 'chapter' AND ref = old.id;
+  INSERT INTO search_index (title, body, kind, ref, story_id)
+  VALUES (new.title, new.summary, 'chapter', new.id, new.story_id);
+END;
+CREATE TRIGGER IF NOT EXISTS search_chapter_ad AFTER DELETE ON chapters BEGIN
+  DELETE FROM search_index WHERE kind IN ('chapter', 'passage') AND ref = old.id;
+END;
+
+-- The prose, and only the version that is current. Searching every
+-- version would bury one real hit under a copy of it from every draft the
+-- chapter has been through.
+CREATE TRIGGER IF NOT EXISTS search_version_ai AFTER INSERT ON chapter_versions BEGIN
+  DELETE FROM search_index WHERE kind = 'passage' AND ref = new.chapter_id;
+  INSERT INTO search_index (title, body, kind, ref, story_id)
+  SELECT c.title, new.content, 'passage', c.id, c.story_id FROM chapters c WHERE c.id = new.chapter_id;
+END;
+CREATE TRIGGER IF NOT EXISTS search_version_ad AFTER DELETE ON chapter_versions BEGIN
+  DELETE FROM search_index WHERE kind = 'passage' AND ref = old.chapter_id;
+  INSERT INTO search_index (title, body, kind, ref, story_id)
+  SELECT c.title, v.content, 'passage', c.id, c.story_id
+    FROM chapters c JOIN chapter_versions v ON v.chapter_id = c.id
+   WHERE c.id = old.chapter_id
+     AND v.version_number = (SELECT MAX(v2.version_number) FROM chapter_versions v2 WHERE v2.chapter_id = c.id);
+END;
+
+-- Bible entries, with their aliases and custom fields folded in, because
+-- "the Old Man" is how the prose says it and how somebody will search.
+CREATE TRIGGER IF NOT EXISTS search_entity_ai AFTER INSERT ON story_entities BEGIN
+  INSERT INTO search_index (title, body, kind, ref, story_id)
+  VALUES (new.name, new.summary || ' ' || new.description, 'entity', new.id, new.story_id);
+END;
+CREATE TRIGGER IF NOT EXISTS search_entity_au AFTER UPDATE ON story_entities BEGIN
+  DELETE FROM search_index WHERE kind = 'entity' AND ref = old.id;
+  INSERT INTO search_index (title, body, kind, ref, story_id)
+  VALUES (new.name, new.summary || ' ' || new.description, 'entity', new.id, new.story_id);
+END;
+CREATE TRIGGER IF NOT EXISTS search_entity_ad AFTER DELETE ON story_entities BEGIN
+  DELETE FROM search_index WHERE kind = 'entity' AND ref = old.id;
+END;
+
+-- The glossary. content_text is the wiki's HTML with the tags taken out,
+-- written at sync time (lib/wiki.js): indexing the HTML itself would make
+-- every page a match for "span".
+CREATE TRIGGER IF NOT EXISTS search_wiki_ai AFTER INSERT ON wiki_pages BEGIN
+  INSERT INTO search_index (title, body, kind, ref, story_id)
+  VALUES (new.title, COALESCE(new.summary, '') || ' ' || COALESCE(new.content_text, ''), 'glossary', new.id, NULL);
+END;
+CREATE TRIGGER IF NOT EXISTS search_wiki_au AFTER UPDATE ON wiki_pages BEGIN
+  DELETE FROM search_index WHERE kind = 'glossary' AND ref = old.id;
+  INSERT INTO search_index (title, body, kind, ref, story_id)
+  VALUES (new.title, COALESCE(new.summary, '') || ' ' || COALESCE(new.content_text, ''), 'glossary', new.id, NULL);
+END;
+CREATE TRIGGER IF NOT EXISTS search_wiki_ad AFTER DELETE ON wiki_pages BEGIN
+  DELETE FROM search_index WHERE kind = 'glossary' AND ref = old.id;
+END;
+`);
+
+// If the index is empty and there is anything to index, the triggers were
+// added after the writing was. Fill it once; the triggers keep it from
+// there. This also means a restart is a repair: an index that has somehow
+// drifted can be dropped and will come back correct.
+{
+  const indexed = db.prepare('SELECT COUNT(*) AS n FROM search_index').get().n;
+  const written = db.prepare('SELECT COUNT(*) AS n FROM chapters').get().n;
+  if (!indexed && written) rebuildSearchIndex();
+}
+
+// The database itself, with the one maintenance function that belongs to
+// the schema rather than to any query: see rebuildSearchIndex above.
+db.rebuildSearchIndex = rebuildSearchIndex;
 module.exports = db;

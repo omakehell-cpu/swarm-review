@@ -87,9 +87,6 @@ comments and the editor. Not worth starting until it is clear you need it
 
 # Background debt
 
-- **The search is a `LIKE`.** Four milliseconds today (measured, not
-  guessed) -- and a problem at ten times the text. SQLite has FTS5 built
-  in: fast, ranked, and able to handle a phrase.
 - **An accessibility pass**, beyond the urgent part at the top of this
   file.
 - **Restoring a backup from the web.** They are taken daily and kept for a
