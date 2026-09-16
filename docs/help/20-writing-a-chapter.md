@@ -141,6 +141,11 @@ different documents:
   left-hand page before them where that is what it takes, the story's title
   in the running head. Scene breaks come out as `* * *`.
 
+In the book layout the straight quotes off your keyboard become
+typographic ones -- “like this”, and the apostrophe in *don’t* with them.
+The manuscript layout leaves them alone: that file is your text as you
+typed it.
+
 The layout applies to the PDF, which is a real typeset document rather than
 a printed web page. The **EPUB** ignores most of it on purpose: an e-reader
 decides its own typeface, size and margins, and a book that fights that

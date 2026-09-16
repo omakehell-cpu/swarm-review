@@ -184,18 +184,89 @@ test('the PDF is a PDF, and says what it is of', async () => {
   assert.ok(buf.length > 1000, 'with something in it');
 });
 
-test('both layouts render, and the book one is longer', async () => {
-  // A book opens every chapter on a right-hand page, so it spends paper
-  // that a manuscript does not. If they came out the same length, the
-  // preset was not being read.
-  const asManuscript = await renderPdf(typesetStory(STORY, CHAPTERS, { layout: 'manuscript' }));
-  const asBook = await renderPdf(typesetStory(STORY, CHAPTERS, { layout: 'book' }));
-  const pages = (buf) => (buf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
-  assert.ok(pages(asBook) > pages(asManuscript), `book ${pages(asBook)} pages, manuscript ${pages(asManuscript)}`);
+const pagesIn = (buf) => Number((buf.toString('latin1').match(/\/Count\s+(\d+)/) || [])[1] || 0);
+
+// A few thousand words, because the two layouts differ by how much text
+// they fit on a page and a three-line fixture cannot show that.
+const LONG = [{
+  id: 1, chapter_number: 1, title: 'One', arc_title: '',
+  content: Array.from({ length: 60 }, (_, i) =>
+    `Paragraph ${i} of a chapter that goes on for a while, long enough that the `
+    + 'lines wrap several times and the page has to decide where to break, which '
+    + 'is the whole of what a layout is for.').join('\n\n'),
+}, {
+  id: 2, chapter_number: 2, title: 'Two', arc_title: '',
+  content: Array.from({ length: 60 }, (_, i) =>
+    `Another paragraph, number ${i}, with enough words in it to wrap more than `
+    + 'once so that leading and measure both matter to where it ends.').join('\n\n'),
+}];
+
+test('the book layout fits more on a page than the manuscript one', async () => {
+  // Manuscript is double-spaced with an inch of margin; book is single
+  // spaced, smaller and tighter. Same words, so the book must be shorter.
+  // It was not: a folio written below the bottom margin made pdfkit start
+  // a fresh page for every page it stamped, and the book came out twice
+  // its own length.
+  const asManuscript = await renderPdf(typesetStory(STORY, LONG, { layout: 'manuscript' }));
+  const asBook = await renderPdf(typesetStory(STORY, LONG, { layout: 'book' }));
+  const m = pagesIn(asManuscript);
+  const b = pagesIn(asBook);
+  assert.ok(m > 4, `the fixture is long enough to paginate, got ${m} pages`);
+  assert.ok(b < m, `book ${b} pages, manuscript ${m} -- the book must be the shorter one`);
+});
+
+test('a folio does not cost a page', async () => {
+  // The same bug from the other side, and the reason for the number: a
+  // book page holds roughly twice what a double-spaced manuscript page
+  // holds, and the recto rule spends one blank page per chapter against
+  // that. Three quarters is the loosest bound that still fails the day
+  // something starts a page it should not.
+  const m = pagesIn(await renderPdf(typesetStory(STORY, LONG, { layout: 'manuscript' })));
+  const b = pagesIn(await renderPdf(typesetStory(STORY, LONG, { layout: 'book' })));
+  assert.ok(b <= m * 0.75, `book ${b} pages against manuscript ${m}: not tight enough to be set`);
 });
 
 test('a story with nothing in it does not take the compiler down with it', async () => {
   const empty = typesetStory({ title: 'Nothing', author_name: '' }, [], {});
   assert.ok((await renderPdf(empty)).length > 500);
   assert.ok(renderEpub(empty).length > 500);
+});
+
+// --- typographic quotes ---
+
+const QUOTED = [{
+  chapter_number: 1, title: 'Quoted', arc_title: '', word_count: 20,
+  content: '"That\'s mine," she said. The girls\' room. Then `git commit -m "x"` ran.',
+}];
+
+test('the book curls its quotes and the manuscript leaves them alone', () => {
+  const body = (layout) => typesetStory(STORY, QUOTED, { layout, frontMatter: false })
+    .blocks.filter((b) => b.type === 'paragraph').map((b) => plainText(b.inline)).join('');
+
+  const book = body('book');
+  assert.ok(book.includes('“That’s mine,”'), `quotes and apostrophe curled: ${book}`);
+  assert.ok(book.includes('girls’ room'), 'a plural possessive closes rather than opens');
+  // The code span is the only straight pair left, and it is left on purpose.
+  assert.strictEqual(book.replace('git commit -m "x"', '').indexOf('"'), -1,
+    'nothing straight is left in the prose');
+
+  const manuscript = body('manuscript');
+  assert.ok(manuscript.includes('"That\'s mine," she said'),
+    'a manuscript is the text as it was typed');
+});
+
+test('a code span keeps its straight quotes, and does not confuse the next one', () => {
+  const doc = typesetStory(STORY, QUOTED, { layout: 'book', frontMatter: false });
+  const runs = doc.blocks.filter((b) => b.type === 'paragraph')
+    .flatMap((b) => Array.from(runsOf(b.inline)));
+  const code = runs.find((r) => r.mono);
+  assert.ok(code && code.text.includes('"x"'), `a quote in code is a character: ${code && code.text}`);
+});
+
+test('a quote around an italic word is still one pair', () => {
+  const doc = typesetStory(STORY, [{
+    chapter_number: 1, title: 'x', arc_title: '', content: 'He said "*now*" and left.',
+  }], { layout: 'book', frontMatter: false });
+  const text = doc.blocks.filter((b) => b.type === 'paragraph').map((b) => plainText(b.inline)).join('');
+  assert.ok(text.includes('“now”'), `open then close across the italic: ${text}`);
 });
