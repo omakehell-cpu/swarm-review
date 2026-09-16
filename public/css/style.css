@@ -3011,11 +3011,13 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
   font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
-.compile-layout { display: flex; gap: var(--s-4); align-items: flex-start; cursor: pointer; }
+/* flex-direction: row overrides the generic `label { flex-direction:
+   column }` above, which would otherwise put the radio on its own line. */
+.compile-layout { display: flex; flex-direction: row; gap: var(--s-4); align-items: flex-start; cursor: pointer; }
 .compile-layout input { margin-top: 0.25em; flex: 0 0 auto; }
 .compile-layout > span { display: flex; flex-direction: column; gap: 1px; }
 .compile-layout .muted { font-size: var(--t-sm); }
-.compile-option { display: flex; gap: var(--s-4); align-items: center; font-size: var(--t-md); }
+.compile-option { display: flex; flex-direction: row; gap: var(--s-4); align-items: center; font-size: var(--t-md); }
 .compile-option input { flex: 0 0 auto; }
 .compile-form .hint { margin: 0; }
 
