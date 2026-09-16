@@ -27,7 +27,13 @@ test('every script the app ships can be reached by some page', () => {
     // before the first paint, so it is neither deferred nor in the table.
     const inTable = layoutSource.includes(`'${name}'`) || layoutSource.includes(`/js/${file}`);
     const inAView = viewSource.includes(`/js/${file}`);
-    assert.ok(inTable || inAView, `${file} is loaded by the layout or by a view -- otherwise nothing ever runs it`);
+    // And one more honest way in: a script that starts another one. The
+    // worker is named by the analyzer, not by a page.
+    const startedByAScript = fs.readdirSync(path.join(ROOT, 'public', 'js'))
+      .filter((f) => f !== file)
+      .some((f) => fs.readFileSync(path.join(ROOT, 'public', 'js', f), 'utf8').includes(`/js/${file}`));
+    assert.ok(inTable || inAView || startedByAScript,
+      `${file} is loaded by the layout, by a view or by another script -- otherwise nothing ever runs it`);
   }
 });
 

@@ -87,3 +87,7 @@ interface Window {
    */
   __writingAnalyzer?: any;
 }
+
+// public/js/wa-worker.js runs in a Worker, not in a page: the DOM lib the
+// rest of the browser code is checked against has no importScripts.
+declare function importScripts(...urls: string[]): void;

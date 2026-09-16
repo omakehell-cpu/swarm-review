@@ -1253,6 +1253,60 @@
   // carries action buttons and stays open until you click elsewhere), so a
   // stray mouse pass over one mark can't fight with a popover already open
   // for another. Shared by both the editor and the reading view.
+  // The analysis, off the main thread when the browser will have it.
+  //
+  // Everything degrades in one direction: no Worker, a blocked worker
+  // script, or a worker that throws, and `run` falls back to calling
+  // analyze() here exactly as this file always did. Nothing the page does
+  // depends on which of the two answered.
+  function createAnalyzer() {
+    let worker = null;
+    try {
+      if (typeof Worker === 'function') worker = new Worker('/js/wa-worker.js');
+    } catch (err) {
+      worker = null;
+    }
+    let nextId = 0;
+    const pending = new Map();
+    if (worker) {
+      worker.onmessage = (event) => {
+        const { id, ok, error, html, ranges, stats } = event.data || {};
+        const waiting = pending.get(id);
+        if (!waiting) return; // an answer to a question already replaced
+        pending.delete(id);
+        if (ok) waiting.resolve({ html, ranges, stats });
+        else waiting.reject(new Error(error));
+      };
+      worker.onerror = () => {
+        // One failure is enough: fall back for the rest of the session
+        // rather than waiting on a thread that has already given up.
+        const dead = worker;
+        worker = null;
+        for (const [, waiting] of pending) waiting.reject(new Error('worker failed'));
+        pending.clear();
+        try { dead.terminate(); } catch (err) { /* already gone */ }
+      };
+    }
+
+    return {
+      get inWorker() { return Boolean(worker); },
+      /** @returns {Promise<{html: string, ranges: any[], stats: any}>} */
+      run(text, storyWords, settings, commentRanges) {
+        if (!worker) {
+          return Promise.resolve(analyze(text, storyWords, settings, commentRanges));
+        }
+        const id = (nextId += 1);
+        // Only the newest question matters: a render two keystrokes old
+        // would paint the overlay out of step with the textarea.
+        for (const [oldId, waiting] of pending) { waiting.stale = true; pending.delete(oldId); }
+        return new Promise((resolve, reject) => {
+          pending.set(id, { resolve, reject });
+          worker.postMessage({ id, text, storyWords: Array.from(storyWords || []), settings, commentRanges });
+        }).catch(() => analyze(text, storyWords, settings, commentRanges));
+      },
+    };
+  }
+
   function createHoverTip() {
     // On a touch device there's no real "hover" -- the closest equivalent
     // is a finger already down on the screen, at which point showing a
@@ -1575,11 +1629,18 @@
       render();
     });
 
-    function render() {
-      const { html, ranges, stats } = analyze(textarea.value, storyWords, settings, resolveCommentRanges());
-      overlay.innerHTML = html + (textarea.value.endsWith('\n') ? '&nbsp;' : '');
+    const analyzer = createAnalyzer();
+    let renderToken = 0;
+
+    async function render() {
+      const token = (renderToken += 1);
+      const text = textarea.value;
+      const { html, ranges, stats } = await analyzer.run(text, storyWords, settings, resolveCommentRanges());
+      // The answer to a question the typist has already moved on from.
+      if (token !== renderToken) return;
+      overlay.innerHTML = html + (text.endsWith('\n') ? '&nbsp;' : '');
       currentRanges = ranges;
-      summary.innerHTML = summaryHtml(stats, textarea.value);
+      summary.innerHTML = summaryHtml(stats, text);
       // Text that has just grown past the bottom of the box gives the
       // textarea a scrollbar it did not have a keystroke ago, which
       // changes its content width -- nothing resizes, so the
@@ -1926,11 +1987,18 @@
       container.normalize();
     }
 
-    function render() {
+    const analyzer = createAnalyzer();
+    let renderToken = 0;
+
+    async function render() {
+      const token = (renderToken += 1);
+      const text = flattenText(container);
+      const { ranges, stats } = await analyzer.run(text, storyWords, settings, null);
+      // Settings can change while the worker is thinking, and a second
+      // render is already on its way; this one would mark the text twice.
+      if (token !== renderToken) return;
       clearMarks();
       hidePopover();
-      const text = flattenText(container);
-      const { ranges, stats } = analyze(text, storyWords, settings);
       applyRangesToDom(container, ranges);
       summary.innerHTML = summaryHtml(stats, text);
     }
@@ -2045,12 +2113,19 @@
   // so test/writing-checks.test.js can assert what each check actually
   // finds in a paragraph instead of guessing from a screenshot. Nothing
   // in the app reads this.
+  //
+  // public/js/wa-worker.js uses the same seam, for the same reason: it
+  // loads this file in a worker, where there is no DOM and so none of the
+  // drawing half starts. That the tests can do it is what says the
+  // analysis half stands on its own.
   window.__writingAnalyzer = {
     analyze,
     splitSentences,
     findWordHighlights,
     findEchoes,
     findRepeatedOpenings,
+    loadDictionary,
+    loadStoryWords,
     CHECK_META,
     CHECK_ORDER,
   };

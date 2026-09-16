@@ -105,7 +105,10 @@ function setSecurityHeaders(res) {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+    // worker-src is spelled out rather than left to fall back through
+    // child-src to default-src: the fallback chain has changed between
+    // browser versions, and the writing checks run in a worker.
+    "default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
   );
 }
