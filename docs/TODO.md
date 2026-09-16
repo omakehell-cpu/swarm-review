@@ -20,12 +20,14 @@ What needs doing, roughly in the order it would hurt:
 - **A real pass with a screen reader**, on the four things a writer does
   every day: read a chapter, leave a note in the margin, write and save a
   chapter, and find something. Not a checklist run over the markup -- the
-  actual paths, listened to.
-- **The margin notes.** Selecting text and hanging a note off it is the
-  heart of this app and the most mouse-shaped thing in it. There has to be
-  a way to quote a passage and comment on it from the keyboard alone, and
-  a way to hear which passage a note belongs to when the notes are read
-  out in a column of their own.
+  actual paths, listened to. **Still the first thing to do**: everything
+  below, and everything already done, was worked out by somebody looking
+  at a screen.
+- ~~**The margin notes.**~~ Done on 2026-09-16: a passage can be selected
+  with the keyboard and commented on with C, the offer announces itself,
+  and answering a note happens in place with focus kept and one sentence
+  spoken instead of the whole page read again. What is left of this one is
+  hearing it done, not doing it.
 - **The writing checks in the editor.** They mark passages by colour and
   underline. Announced badly, forty passive-voice marks are forty
   interruptions; announced well they are a list you can walk. Probably
