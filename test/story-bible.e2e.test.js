@@ -309,12 +309,48 @@ test('the gallery reorders, and the first picture is the cover', async () => {
   await owner.request(`/bible/${kesslerId}/images/${images[1].id}/up`, { method: 'POST', ...form([]) });
   images = models.listEntityImages(kesslerId);
   assert.deepStrictEqual(images.map((i) => i.caption), ['Later', 'On the spine, 04:20']);
-  assert.strictEqual(models.coverImagesFor(storyId).get(kesslerId), images[0].id, 'the cover moved with it');
+  assert.strictEqual(models.coverImagesFor(storyId).get(kesslerId).id, images[0].id, 'the cover moved with it');
 
   await owner.request(`/bible/${kesslerId}/images/${images[0].id}/caption`, {
     method: 'POST', ...form([['caption', 'A sketch']]),
   });
   assert.strictEqual(models.listEntityImages(kesslerId)[0].caption, 'A sketch');
+});
+
+test('the crop point is chosen, saved, and used in both places', async () => {
+  const image = models.listEntityImages(kesslerId)[0];
+  await owner.request(`/bible/${kesslerId}/images/${image.id}/focus`, {
+    method: 'POST', ...form([['focusX', '30'], ['focusY', '18']]),
+  });
+  const saved = models.getEntityImage(image.id);
+  assert.strictEqual(saved.focus_x, 30);
+  assert.strictEqual(saved.focus_y, 18);
+
+  // The entry's own page and the index are cut the same way, or the face
+  // you framed is not the face in the list.
+  const page = await (await owner.request(`/bible/${kesslerId}`)).text();
+  assert.match(page, /class="entity-portrait"[^>]*object-position: 30% 18%/);
+  const index = await (await owner.request(`/stories/${storyId}/bible`)).text();
+  assert.match(index, /class="row-cover"[^>]*object-position: 30% 18%/);
+
+  // Nonsense is not a correction. Off the picture, or not a number at
+  // all, goes back to the middle rather than to the edge.
+  await owner.request(`/bible/${kesslerId}/images/${image.id}/focus`, {
+    method: 'POST', ...form([['focusX', '900'], ['focusY', 'left a bit']]),
+  });
+  const fixed = models.getEntityImage(image.id);
+  assert.strictEqual(fixed.focus_x, 100);
+  assert.strictEqual(fixed.focus_y, 50);
+});
+
+test('an entry with no picture still has the box, so the list does not go ragged', async () => {
+  const index = await (await owner.request(`/stories/${storyId}/bible`)).text();
+  // Every row in the cast list is built the same way, with or without a
+  // picture: one has an <img>, the other an initial in the same box.
+  const rows = index.match(/class="chapter-row glossary-row[^"]*"/g) || [];
+  assert.ok(rows.length > 1, 'more than one entry to compare');
+  assert.ok(rows.every((row) => row.includes('has-cover')), 'no row is missing the picture column');
+  assert.match(index, /class="row-cover row-cover-empty"/);
 });
 
 test('a file that is not one of the four formats is refused, SVG included', async () => {

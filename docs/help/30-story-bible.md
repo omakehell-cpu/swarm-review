@@ -87,6 +87,19 @@ portrait means moving a picture to the front.
 PNG, JPEG, GIF and WebP. Large pictures are shrunk in your browser before
 they are sent, so you are not waiting on an upload.
 
+**You choose what the thumbnail keeps.** A portrait is rarely square and a
+face is rarely in the middle of one, so every picture has a crop point:
+click the spot on the picture and the little square underneath shows you
+the result at the size it will actually be used. The two numbers beside it
+are the same setting typed out, and they work on their own if you would
+rather type than click. *Save crop* keeps it, and the entry's page and the
+cast list are both cut the same way.
+
+@figure entry-crop.png | Pointing at the face: the pin on the picture, the crop beside it, and the two numbers that are what gets saved.
+
+Entries without a picture keep the same box in the list, with their initial
+in it, so a half-illustrated cast still reads as one column of names.
+
 ## Custom fields
 
 Two kinds, and you can use both.

@@ -4,6 +4,12 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — Two things the cast list was doing badly
+
+- **You choose what a thumbnail keeps.** A picture is rarely square and a face is rarely in the middle of one, so the crop was cutting people's heads off. Click the spot on the picture; the square underneath shows the result at the size it is actually used. The two numbers beside it are the same setting typed out, for anybody who would rather type, and they are what gets saved. The entry's own page and the cast list are cut the same way.
+- **Entries without a picture keep the box.** An initial in it, the same size and place as a thumbnail, so a half-illustrated cast reads as one column of names instead of two ragged ones. The names line up as well now, which they did not: the middle of each row was sized to fit and so started wherever that row's own meta line left off.
+- On a phone the cast list keeps the picture beside the name instead of stacking it on top and centring everything.
+
 ## 2026-09-16 — Targets, and the story counted
 
 - **A story can have a word target.** Set it on *Edit details* and a bar appears on the story page and on the analysis, saying where the draft is against it. No target, no bar: nothing nags at you unless you asked it to.

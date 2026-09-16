@@ -591,6 +591,14 @@ CREATE VIEW IF NOT EXISTS story_entity_chapters AS
      );
 `);
 
+// Where in a picture the face is. A thumbnail is a square cut out of a
+// picture that is rarely square, and the middle of the frame is a guess:
+// these two percentages are the writer telling it which part to keep.
+// 50/50 is the middle, which is where every picture starts.
+ensureColumn('story_entity_images', 'focus_x', 'INTEGER NOT NULL DEFAULT 50');
+ensureColumn('story_entity_images', 'focus_y', 'INTEGER NOT NULL DEFAULT 50');
+
+
 // One-time migration: older versions of this app gated registration with a
 // single static code stored in data/invite-code.txt (valid forever, for
 // anyone). If that file exists and the new invite_codes table is still

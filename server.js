@@ -1082,7 +1082,10 @@ async function handleEditEntityImage(req, res, user, entityId, imageId, action) 
   if (!image || image.entity_id !== entityId) return sendError(res, 404, 'No such image', user);
   if (action === 'delete') models.removeEntityImage(imageId);
   else if (action === 'up' || action === 'down') models.moveEntityImage(imageId, action);
-  else {
+  else if (action === 'focus') {
+    const body = await parseBody(req);
+    models.setEntityImageFocus(imageId, body.focusX, body.focusY);
+  } else {
     const body = await parseBody(req);
     models.setEntityImageCaption(imageId, body.caption);
   }
@@ -2118,7 +2121,7 @@ async function router(req, res) {
     if ((m = pathname.match(/^\/bible\/(\d+)\/images$/)) && req.method === 'POST') {
       return handleAddEntityImage(req, res, user, Number(m[1]));
     }
-    if ((m = pathname.match(/^\/bible\/(\d+)\/images\/(\d+)\/(delete|up|down|caption)$/)) && req.method === 'POST') {
+    if ((m = pathname.match(/^\/bible\/(\d+)\/images\/(\d+)\/(delete|up|down|caption|focus)$/)) && req.method === 'POST') {
       return handleEditEntityImage(req, res, user, Number(m[1]), Number(m[2]), m[3]);
     }
     if ((m = pathname.match(/^\/bible\/(\d+)\/appearances$/)) && req.method === 'POST') {

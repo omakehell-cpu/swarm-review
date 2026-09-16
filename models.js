@@ -2259,14 +2259,14 @@ const getEntityImage = (imageId) => db.prepare(`
 // not ask the database once per row.
 function coverImagesFor(storyId) {
   const rows = db.prepare(`
-    SELECT i.entity_id, i.id, i.content_type
+    SELECT i.entity_id, i.id, i.content_type, i.focus_x, i.focus_y
     FROM story_entity_images i
     WHERE i.story_id = ? AND i.position = (
       SELECT MIN(i2.position) FROM story_entity_images i2 WHERE i2.entity_id = i.entity_id
     )
     GROUP BY i.entity_id
   `).all(storyId);
-  return new Map(rows.map((r) => [r.entity_id, r.id]));
+  return new Map(rows.map((r) => [r.entity_id, { id: r.id, focusX: r.focus_x, focusY: r.focus_y }]));
 }
 
 /** @param {{ entityId: number, storyId: number, filename: string, contentType: string, bytes: number, caption?: string, uploadedBy?: number }} fields */
@@ -2279,6 +2279,19 @@ function addEntityImage({ entityId, storyId, filename, contentType, bytes, capti
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(entityId, storyId, filename, contentType, bytes || 0, String(caption || '').trim().slice(0, 240), next, uploadedBy || null);
   return Number(info.lastInsertRowid);
+}
+
+// The crop point, as two percentages. Anything that is not a number, or
+// is outside the picture, is not a correction -- it is a mistake, and the
+// middle is a better answer than the edge.
+function setEntityImageFocus(imageId, x, y) {
+  const clamp = (value) => {
+    const n = Math.round(Number(value));
+    if (!Number.isFinite(n)) return 50;
+    return Math.min(100, Math.max(0, n));
+  };
+  db.prepare('UPDATE story_entity_images SET focus_x = ?, focus_y = ? WHERE id = ?')
+    .run(clamp(x), clamp(y), imageId);
 }
 
 function setEntityImageCaption(imageId, caption) {
@@ -2487,6 +2500,7 @@ module.exports = {
   moveEntityImage,
   removeEntityImage,
   setEntityImageCaption,
+  setEntityImageFocus,
   createStoryEntity,
   deleteStoryEntity,
   getStoryEntity,

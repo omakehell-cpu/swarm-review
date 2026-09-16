@@ -817,11 +817,32 @@ function appearanceSummary(entity) {
   return `Chapters ${entity.first_chapter}&ndash;${entity.last_chapter} &middot; ${entity.appearances} of them`;
 }
 
-function entityRow(entity, coverId) {
+// Where the crop keeps, written the way CSS wants it. A picture row and a
+// cover row spell the two numbers differently, so this takes either.
+function focusPosition(image) {
+  const pick = (a, b) => {
+    const n = Number(a !== undefined && a !== null ? a : b);
+    return Number.isFinite(n) ? Math.min(100, Math.max(0, Math.round(n))) : 50;
+  };
+  return `${pick(image.focus_x, image.focusX)}% ${pick(image.focus_y, image.focusY)}%`;
+}
+
+// The initial stands in for a picture that is not there. The box is the
+// same box either way: a cast list where half the rows are indented and
+// half are not reads as two lists, and the eye spends its time on the
+// ragged edge instead of on the names.
+function entityMonogram(entity) {
+  const letter = String(entity.name || '').trim().charAt(0).toUpperCase();
+  return `<span class="row-cover row-cover-empty" aria-hidden="true">${escapeHtml(letter || '?')}</span>`;
+}
+
+function entityRow(entity, cover) {
   const search = `${entity.name} ${entity.summary || ''} ${entity.alias_list || ''}`.toLowerCase();
   return `
-    <a class="chapter-row glossary-row${coverId ? ' has-cover' : ''}" href="/bible/${entity.id}" data-search="${escapeHtml(search)}">
-      ${coverId ? `<img class="row-cover" src="/entity-images/${coverId}" alt="" loading="lazy">` : ''}
+    <a class="chapter-row glossary-row has-cover" href="/bible/${entity.id}" data-search="${escapeHtml(search)}">
+      ${cover
+    ? `<img class="row-cover" src="/entity-images/${cover.id}" alt="" loading="lazy" style="object-position: ${focusPosition(cover)}">`
+    : entityMonogram(entity)}
       <div class="chapter-row-main">
         <h3>${escapeHtml(entity.name)} ${entityBadges(entity)}</h3>
         ${entity.summary ? `<p class="muted">${escapeHtml(entity.summary)}</p>` : ''}
@@ -1015,18 +1036,49 @@ function entityRelationBlock(entity, links, others, canWrite) {
   return `<ul class="relation-list">${rows}</ul>${form}`;
 }
 
+// Choosing what a square cut out of this picture keeps. The two numbers
+// are the control: they work with nothing switched on, they are what gets
+// saved, and clicking the picture is only a faster way of typing them.
+// The square beside them is the actual crop at the actual size, because
+// the only honest preview of a thumbnail is a thumbnail.
+function cropForm(entity, image, isCover) {
+  const id = `${entity.id}-${image.id}`;
+  return `
+    <form method="post" action="/bible/${entity.id}/images/${image.id}/focus" class="crop-form" data-focus-form="${id}">
+      <span class="crop-preview">
+        <img src="/entity-images/${image.id}" alt="" style="object-position: ${focusPosition(image)}" data-focus-preview>
+      </span>
+      <span class="crop-fields">
+        <span class="crop-label">${isCover ? 'What the thumbnail keeps' : 'If this becomes the cover'}</span>
+        <span class="crop-numbers">
+          <label>Across <input type="number" name="focusX" value="${focusPosition(image).split(' ')[0].replace('%', '')}" min="0" max="100" step="1" data-focus-x></label>
+          <label>Down <input type="number" name="focusY" value="${focusPosition(image).split(' ')[1].replace('%', '')}" min="0" max="100" step="1" data-focus-y></label>
+          <button class="btn ghost tiny" type="submit">Save crop</button>
+        </span>
+      </span>
+    </form>`;
+}
+
 // The gallery. The first picture is the entry's face -- in the index, at
 // the top of its own page -- so "make this the portrait" is just "move it
 // to the front", and there is no second concept to keep in step.
 function entityImageBlock(entity, images, canWrite) {
   const figures = images.map((image, i) => `
     <figure class="entity-figure">
-      <a href="/entity-images/${image.id}" target="_blank" rel="noopener noreferrer">
-        <img src="/entity-images/${image.id}" alt="${escapeHtml(image.caption || entity.name)}" loading="lazy">
-      </a>
+      ${canWrite ? `
+        <a class="figure-shot" href="/entity-images/${image.id}" target="_blank" rel="noopener noreferrer"
+           data-focus-picker="${entity.id}-${image.id}">
+          <img src="/entity-images/${image.id}" alt="${escapeHtml(image.caption || entity.name)}" loading="lazy">
+          <span class="focus-pin" style="left: ${focusPosition(image).split(' ')[0]}; top: ${focusPosition(image).split(' ')[1]}"></span>
+        </a>`
+    : `
+        <a class="figure-shot" href="/entity-images/${image.id}" target="_blank" rel="noopener noreferrer">
+          <img src="/entity-images/${image.id}" alt="${escapeHtml(image.caption || entity.name)}" loading="lazy">
+        </a>`}
       ${i === 0 ? '<span class="cover-flag">Cover</span>' : ''}
       <figcaption>
         ${canWrite ? `
+          ${cropForm(entity, image, i === 0)}
           <form method="post" action="/bible/${entity.id}/images/${image.id}/caption" class="caption-form">
             <input type="text" name="caption" value="${escapeHtml(image.caption)}" placeholder="Caption" maxlength="240">
             <button class="btn ghost tiny" type="submit">Save</button>
@@ -1159,7 +1211,9 @@ function entityPage({
       ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
       <div class="page-head entity-head">
         <div class="entity-head-main">
-          ${images.length ? `<img class="entity-portrait" src="/entity-images/${images[0].id}" alt="${escapeHtml(images[0].caption || entity.name)}">` : ''}
+          ${images.length
+    ? `<img class="entity-portrait" src="/entity-images/${images[0].id}" alt="${escapeHtml(images[0].caption || entity.name)}" style="object-position: ${focusPosition(images[0])}">`
+    : ''}
           <div>
           <h1>${escapeHtml(entity.name)} ${entityBadges(entity)}</h1>
           <p class="muted">${escapeHtml(entityKindLabel(entity.kind))}${aliases.length ? ` &middot; also ${aliases.map((a) => escapeHtml(a)).join(', ')}` : ''}</p>
