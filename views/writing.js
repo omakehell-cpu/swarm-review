@@ -5,7 +5,7 @@ const { escapeHtml, toScriptJson } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
 const { besidePanel, editorBiblePanel } = require('./bible');
-const { arcField, fileUploadField, markdownHint, positionField, povAndStrandFields, renderCommentReadOnly, stageField, tagPicker, whenFields } = require('./shared');
+const { arcField, fileUploadField, markdownHint, positionField, povAndStrandFields, renderCommentReadOnly, stageField, tagPicker, uploadVersionField, whenFields } = require('./shared');
 function archivedStoriesPage({ user, stories }) {
   const rows = stories.length ? stories.map((s) => `
     <div class="chapter-row archived-row">
@@ -174,10 +174,10 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
         <label class="main-field">Chapter text<textarea name="content" rows="24" data-story-id="${chapter.story_id}">${escapeHtml(values.content ?? latestContent)}</textarea>
           ${markdownHint()}
         </label>
+        ${uploadVersionField()}
         <details class="writer-section" data-fold-on-phone open>
           <summary class="writer-section-label">Optional details</summary>
           <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary ?? chapter.summary ?? '')}</textarea></label>
-          ${fileUploadField()}
           ${stageField(values.stage ?? chapter.stage)}
           ${arcField(values.arcTitle ?? chapter.arc_title)}
           ${povAndStrandFields(values.pov ?? chapter.pov, values.strand ?? chapter.strand, vocabulary)}

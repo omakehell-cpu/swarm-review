@@ -24,6 +24,24 @@ If the chapter already exists as a file, **upload it instead** — `.md`,
 `.txt` or `.docx` — and it replaces the text in the box. Word documents keep
 their bold, italics, headings and blockquotes.
 
+## Replacing a chapter with a file
+
+Under the text box when you are editing: **Replace this chapter with a
+file**. Choose a `.md`, `.txt` or `.docx`, press **Upload and publish**, and
+that file is the chapter — a new version, published there and then. It asks
+first, because it does something Save does not: whatever is in the box at
+that moment is not saved.
+
+Nothing is lost. A new version never overwrites the one before it: the
+version you replaced is still in the **Version** dropdown on the chapter
+page, with its notes still attached to it, and you can read the difference
+between any two of them.
+
+It is for the case where the writing happened somewhere else — the draft
+that lives in a folder, the chapter that came back from somebody's Word, the
+version you wrote on a train. If you only want to see what is in the file,
+open it yourself and paste: this button does not show you the text first.
+
 **Optional details** is where the chapter summary lives, along with two
 things worth setting:
 

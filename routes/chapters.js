@@ -276,11 +276,22 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
   // is not a stale one, so it is let through rather than blocked.
   const baseVersion = Number(body.baseVersion || 0);
 
+  // "Upload and publish" is its own button, so pressing it with nothing
+  // chosen is a question, not a save: without this the form would go
+  // through as an ordinary save of a chapter nobody meant to save.
+  const askedToUpload = body.upload === '1';
+  const sameAgain = (message) => sendHtml(res, 400, views.editChapterPage({
+    user, chapter, latestContent: latest ? latest.content : '', error: message, values,
+    latestVersionNumber: baseVersion || (latest ? latest.version_number : 0),
+    vocabulary: storyVocabulary(chapter.story_id),
+  }));
+
   try {
     const uploaded = await extractUploadedText(files.file);
     if (uploaded !== null) { content = uploaded; values.content = content; }
+    else if (askedToUpload) return sameAgain('Choose a .md, .txt or .docx file first -- nothing was uploaded, so nothing was saved.');
   } catch (err) {
-    return sendHtml(res, 400, views.editChapterPage({ user, chapter, latestContent: latest ? latest.content : '', error: err.message, values, latestVersionNumber: baseVersion || (latest ? latest.version_number : 0) }));
+    return sameAgain(err.message);
   }
 
   if (!title) {
