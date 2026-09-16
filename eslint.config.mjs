@@ -39,9 +39,22 @@ export default [
   },
 
   {
+    // The one file that runs in a worker rather than in the page: no
+    // document, no window of its own, and importScripts instead of a
+    // <script> tag.
+    files: ['public/js/wa-worker.js'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'script',
+      globals: { ...globals.worker },
+    },
+  },
+
+  {
     // Everything shipped to the browser. No bundler, no modules: these are
     // plain <script> files, each wrapped in its own IIFE.
     files: ['public/js/**/*.js'],
+    ignores: ['public/js/wa-worker.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'script',

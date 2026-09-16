@@ -4,6 +4,12 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — Typing stopped waiting for the checks
+
+- **The writing checks and the spellchecker moved off the thread that draws the page.** On a four-thousand-word chapter they were taking about 48 milliseconds of it every time you paused -- on a desktop. On a phone that is the stutter you have felt. It is 0.08 now: the work is the same, it just happens somewhere else.
+- Nothing about the checks changed, and there is no second copy of them. The same file runs in both places; in the new one there is simply no page for it to draw on.
+- If the browser will not have a worker, or the worker fails, it goes back to doing the work in the page exactly as before. Nothing on the page knows which of the two answered.
+
 ## 2026-09-16 — Writing from a phone
 
 - **Save is reachable.** It was at the bottom of a page three screens tall; now it rides along the bottom of the screen while you are in the form, as two buttons big enough to hit.
