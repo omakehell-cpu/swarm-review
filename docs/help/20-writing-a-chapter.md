@@ -43,6 +43,18 @@ it.
 
 @figure optional-details.png | Optional details: the summary, what the chapter is asking for, and the arc it opens.
 
+## On a phone
+
+The editor is built to get out of the way on a small screen. The page is
+the title, the text, and a **Save** bar that rides along the bottom, so
+saving is never a scroll away from wherever you have got to.
+
+@figure editor-phone.png | The editor on a phone: the text, and a save bar that stays put.
+
+**Markdown is supported** and **Optional details** are folded shut and one
+tap from open. On a screen with room for them they are open, as before --
+nothing was taken away, it was put where it fits.
+
 ## Writing with something open beside it
 
 **Open something beside this**, under the editor, puts a second column

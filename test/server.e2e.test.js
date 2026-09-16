@@ -957,6 +957,18 @@ test('the analysis counts what is there and invents nothing', async () => {
   assert.match(html, /<table class="bars">/);
 });
 
+test('the editor folds away everything that is not the chapter', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const mine = models.listChaptersForStory(story.id)
+    .find((c) => c.author_id === models.getUserByUsername(USER.username).id);
+  const html = await (await request(`/chapters/${mine.id}/edit`)).text();
+  // Open in the markup, so a screen with room for them shows them and a
+  // browser with no JavaScript never hides anything.
+  assert.match(html, /<details class="writer-section" data-fold-on-phone open>/);
+  assert.match(html, /<details class="md-hint hint" data-fold-on-phone open>/);
+  assert.match(html, /<summary class="writer-section-label">Optional details<\/summary>/);
+});
+
 test('the beside panel offers real links and loads the same page as a fragment', async () => {
   const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
   const chapters = models.listChaptersForStory(story.id);
