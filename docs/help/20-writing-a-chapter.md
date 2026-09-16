@@ -43,6 +43,20 @@ it.
 
 @figure optional-details.png | Optional details: the summary, what the chapter is asking for, and the arc it opens.
 
+## Writing with something open beside it
+
+**Open something beside this**, under the editor, puts a second column
+next to the text: the chapter before this one, or whichever bible entry
+you keep having to check. It is read-only, and it does not touch what you
+are writing.
+
+@figure beside.png | The chapter before, open in the column beside the one being written.
+
+Everything in the list is an ordinary link, so with JavaScript off it
+opens in a new tab instead and your draft stays where it is. On a chapter
+that already has notes down the side, the panel shares that column rather
+than opening a third one.
+
 ## The writing checks
 
 The editor marks passive voice, adverbs propping up a verb, sentences that

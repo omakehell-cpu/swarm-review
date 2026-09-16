@@ -2609,6 +2609,66 @@ main[data-reading="read"] .reading-pane {
   .row-cover-empty { font-size: var(--t-md); }
 }
 
+/* ---- writing with something open beside you ----
+   Closed, it is one line under the editor and the text keeps the whole
+   width. Opened, the card and the pane become two columns -- which is
+   why the pane is moved out of the card by the script rather than being
+   nested in it: two columns cannot be a parent and its child. */
+.beside { margin-top: var(--s-9); border-top: 1px solid var(--border); padding-top: var(--s-5); }
+.beside > summary {
+  cursor: pointer; font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
+.beside > summary:hover { color: var(--accent); }
+.beside-body { margin-top: var(--s-5); }
+.beside-body .writer-section-label { margin-top: var(--s-6); }
+.beside-filter { width: 100%; max-width: 24rem; margin-bottom: var(--s-4); }
+.beside-picks { list-style: none; margin: 0; padding: 0; }
+.beside-picks li { border-bottom: 1px solid var(--border); }
+.beside-picks a {
+  display: flex; gap: var(--s-5); align-items: baseline; justify-content: space-between;
+  padding: var(--s-4) 0; color: var(--text); text-decoration: none;
+}
+.beside-picks a:hover { color: var(--accent); }
+.beside-note {
+  flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--t-xs); color: var(--text-muted);
+}
+
+.editor-split { display: block; }
+.editor-split.is-split {
+  display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
+  gap: var(--s-10); align-items: start;
+}
+.beside-pane { min-width: 0; }
+/* The column a chapter with comments already has: the pane sits above
+   them rather than opening a third column beside them. */
+.editor-side { min-width: 0; display: flex; flex-direction: column; gap: var(--s-9); }
+.editor-side .beside-pane {
+  border-top: 2px solid var(--border-strong); padding-top: var(--s-4);
+  max-height: 60vh; overflow-y: auto;
+}
+.editor-split.is-split .beside-pane {
+  position: sticky; top: var(--s-6);
+  max-height: calc(100vh - 6rem); overflow-y: auto;
+  border-top: 2px solid var(--border-strong); padding-top: var(--s-4);
+}
+.beside-pane-head {
+  display: flex; gap: var(--s-5); align-items: baseline; justify-content: space-between;
+  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+  position: sticky; top: 0; background: var(--bg); padding-bottom: var(--s-4);
+}
+.beside-pane-body h3 { margin: 0 0 var(--s-3); font-size: var(--t-lg); }
+/* Beside the thing you are writing, not instead of it: smaller, and
+   without the reading page's wide margin. */
+.beside-reading { padding-left: var(--s-6); font-size: var(--t-sm); }
+.beside-reading p { margin: 0 0 var(--s-5); }
+@media (max-width: 900px) {
+  .editor-split.is-split { grid-template-columns: 1fr; }
+  .editor-split.is-split .beside-pane { position: static; max-height: 60vh; }
+}
+
 /* ---- the timeline ----
    A single column with the day hanging off the left, and the distance
    between two rows written in the space between them. The gap is the

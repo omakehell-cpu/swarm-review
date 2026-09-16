@@ -4,6 +4,13 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — Writing with something open beside it
+
+- **Open something beside this**, under the chapter editor: the chapter before this one, or a bible entry, in a column next to the text. Scrivener's split, in the shape this app is already in.
+- Everything in the picker is an ordinary link. With JavaScript off it opens in a new tab and your draft stays put; with it on, the same page is fetched into the column instead.
+- On a chapter that already has notes down the side, the panel shares that column rather than opening a third one.
+- A closed bible is closed here too. The panel is a shortcut to pages, not a way round the rules on them.
+
 ## 2026-09-16 — A timeline, for when things actually happen
 
 - **Chapters and bible entries can say when they happen**, in the story's own calendar: a few words for what the story calls the moment, and a number to put it in line. Both optional, on the chapter editor and on the entry form.

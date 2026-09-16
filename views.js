@@ -1342,6 +1342,73 @@ function missingNamesBlock(names, storyId, returnTo) {
     </section>`;
 }
 
+// Writing with something open beside you: the chapter before this one, or
+// whichever entry in the bible you keep having to check.
+//
+// The links are real links to real pages, opening in a new tab, so this
+// works with nothing switched on -- and with JavaScript the page is
+// fetched into the column instead, which is the same thing without losing
+// the draft. Nothing here is a second copy of a page: the panel asks the
+// server for the one that already exists.
+function besidePanel({ chapter = null, story, chapters = [], entities = [] }) {
+  const others = chapters.filter((c) => !chapter || c.id !== chapter.id);
+  const near = chapter
+    ? others.filter((c) => Math.abs(c.chapter_number - chapter.chapter_number) <= 2)
+    : others.slice(-3);
+  const pick = (href, src, label, note = '') => `
+    <li><a href="${href}" target="_blank" rel="noopener noreferrer" data-beside-src="${src}"
+           data-search="${escapeHtml(`${label} ${note}`.toLowerCase())}">
+      <span>${escapeHtml(label)}</span>${note ? `<span class="beside-note">${escapeHtml(note)}</span>` : ''}
+    </a></li>`;
+
+  return `
+    <details class="beside" id="beside" data-beside>
+      <summary>Open something beside this</summary>
+      <div class="beside-body">
+        <p class="hint">The chapter before, or whoever you keep having to look up. It opens in the column beside the text; with JavaScript off, in a new tab.</p>
+        ${near.length ? `
+          <p class="writer-section-label">Chapters</p>
+          <ul class="beside-picks">
+            ${near.map((c) => pick(`/chapters/${c.id}`, `/chapters/${c.id}/beside`,
+    `${c.chapter_number}. ${c.title}`, c.pov || '')).join('')}
+          </ul>` : ''}
+        ${entities.length ? `
+          <p class="writer-section-label">The bible</p>
+          ${entities.length > 8 ? '<input type="search" class="beside-filter" placeholder="Filter" data-beside-filter aria-label="Filter the bible">' : ''}
+          <ul class="beside-picks" data-beside-list>
+            ${entities.map((e) => pick(`/bible/${e.id}`, `/bible/${e.id}/beside`, e.name, e.summary || '')).join('')}
+          </ul>` : `
+          <p class="muted">Nothing in <a href="/stories/${story.id}/bible" target="_blank" rel="noopener noreferrer">the bible</a> yet.</p>`}
+      </div>
+    </details>
+    <aside class="beside-pane" data-beside-pane hidden aria-live="polite">
+      <div class="beside-pane-head">
+        <span data-beside-title></span>
+        <button class="btn ghost tiny" type="button" data-beside-close>Close</button>
+      </div>
+      <div class="beside-pane-body" data-beside-body></div>
+    </aside>`;
+}
+
+// What the panel puts in that column: the page that already exists, with
+// nothing around it. Not a second rendering of a chapter -- the same one.
+function besideChapterFragment(chapter, content) {
+  return `
+    <h3>${chapter.chapter_number}. ${escapeHtml(chapter.title)}</h3>
+    ${chapter.summary ? `<p class="muted">${escapeHtml(chapter.summary)}</p>` : ''}
+    <div class="reading-pane beside-reading">${content}</div>`;
+}
+
+function besideEntityFragment(entity, { aliases = [], links = [], description = '' }) {
+  return `
+    <h3>${escapeHtml(entity.name)}</h3>
+    <p class="muted">${escapeHtml(entityKindLabel(entity.kind))}${aliases.length ? ` &middot; also ${aliases.map((a) => escapeHtml(a)).join(', ')}` : ''}</p>
+    ${entity.summary ? `<p class="summary">${escapeHtml(entity.summary)}</p>` : ''}
+    ${links.length ? `<ul class="relation-list">${links.map((l) => `
+      <li><span class="rel-label">${escapeHtml(l.label || 'related to')}</span> <a href="/bible/${l.other_id}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.other_name)}</a></li>`).join('')}</ul>` : ''}
+    ${description ? `<div class="reading-pane beside-reading">${description}</div>` : '<p class="muted">No description yet.</p>'}`;
+}
+
 // The same thing inside the editor, where the text is not saved yet: the
 // panel asks the server about the draft in the textarea, so there is one
 // implementation of what counts as a name rather than a second one in
@@ -1968,8 +2035,8 @@ function positionField(chapters, selectedValue) {
     </label>`;
 }
 
-/** @param {{ user: Row, story: Row, chapters?: Row[], error?: string|null, vocabulary?: any, values?: FormValues }} props */
-function newChapterPage({ user, story, chapters = [], error, vocabulary = {}, values = /** @type {FormValues} */ ({}) }) {
+/** @param {{ user: Row, story: Row, chapters?: Row[], castList?: Row[], error?: string|null, vocabulary?: any, values?: FormValues }} props */
+function newChapterPage({ user, story, chapters = [], castList = [], error, vocabulary = {}, values = /** @type {FormValues} */ ({}) }) {
   return layout({
     title: `New chapter - ${story.title}`,
     user,
@@ -1999,6 +2066,7 @@ function newChapterPage({ user, story, chapters = [], error, vocabulary = {}, va
             <button class="btn" type="submit">Publish chapter</button>
           </div>
         </form>
+        ${besidePanel({ story, chapters, entities: castList })}
       </div>
       <script src="/js/nspell.bundle.js"></script>
       <script src="/js/writing-analyzer.js" defer></script>`,
@@ -2028,8 +2096,8 @@ function conflictNotice(chapter, conflict) {
 
 
 
-/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, conflict?: any, latestVersionNumber?: number, vocabulary?: any, values?: FormValues }} props */
-function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, conflict = null, latestVersionNumber = 0, vocabulary = {}, values = /** @type {FormValues} */ ({}) }) {
+/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, conflict?: any, latestVersionNumber?: number, vocabulary?: any, siblings?: Row[], castList?: Row[], values?: FormValues }} props */
+function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, conflict = null, latestVersionNumber = 0, vocabulary = {}, siblings = [], castList = [], values = /** @type {FormValues} */ ({}) }) {
   const topLevelComments = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -2074,6 +2142,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
         </div>
       </form>
       ${canWrite ? editorBiblePanel(chapter) : ''}
+      ${canWrite ? besidePanel({ chapter, story: { id: chapter.story_id }, chapters: siblings, entities: castList }) : ''}
     </div>`;
 
   // The comments sidebar (and its "Comments" toggle, added client-side by
@@ -3584,6 +3653,8 @@ module.exports = {
   archivedChaptersPage,
   chapterPage,
   analysisPage,
+  besideChapterFragment,
+  besideEntityFragment,
   bibleIndexPage,
   outlinePage,
   timelinePage,
