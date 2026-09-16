@@ -411,7 +411,7 @@ function handleBesideEntity(req, res, user, entityId) {
   if (!story || !models.canReadBible(story, user)) return sendError(res, 403, 'This bible is private.', user);
   const html = views.besideEntityFragment(entity, {
     aliases: models.listEntityAliases(entityId),
-    links: models.listEntityLinks(entityId),
+    links: models.listStoryEntityLinks(entityId),
     // The spoiler section is folded on the entry's own page and is left
     // out here entirely: this is a thing to glance at while writing, and
     // a glance is exactly how you spoil yourself.
