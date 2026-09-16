@@ -957,6 +957,54 @@ test('the analysis counts what is there and invents nothing', async () => {
   assert.match(html, /<table class="bars">/);
 });
 
+test('the beside panel offers real links and loads the same page as a fragment', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const chapters = models.listChaptersForStory(story.id);
+  const mine = chapters.find((c) => c.author_id === models.getUserByUsername(USER.username).id);
+  assert.ok(mine, 'a chapter of my own to edit');
+
+  const editor = await (await request(`/chapters/${mine.id}/edit`)).text();
+  assert.match(editor, /data-beside/);
+  // Every pick is a real link to a real page, opening in a tab: with
+  // JavaScript off this still works, which is the whole design.
+  const other = chapters.find((c) => c.id !== mine.id);
+  if (other) {
+    assert.match(editor, new RegExp(`href="/chapters/${other.id}" target="_blank"[^>]*data-beside-src="/chapters/${other.id}/beside"`));
+  }
+
+  const res = await request(`/chapters/${mine.id}/beside`);
+  assert.strictEqual(res.status, 200);
+  const fragment = await res.text();
+  // A fragment, not a page: no layout around it.
+  assert.ok(!fragment.includes('<html'), 'no document');
+  assert.ok(!fragment.includes('<nav'), 'no navigation');
+  assert.match(fragment, new RegExp(`${mine.chapter_number}\\. `));
+  assert.strictEqual(res.headers.get('x-frame-options'), 'DENY');
+});
+
+test('the beside panel is not a way round a private bible', async () => {
+  const story = models.listStories().find((s2) => s2.author_id === models.getUserByUsername(USER.username).id);
+  const entity = models.createStoryEntity({
+    storyId: story.id, kind: 'person', name: 'Somebody Private', createdBy: models.getUserByUsername(USER.username).id,
+  });
+  models.setBiblePrivate(story.id, true);
+
+  const auth = require('../auth');
+  models.createUser({ username: 'besidestranger', displayName: 'Beside Stranger', passwordHash: auth.hashPassword(USER.password), isAdmin: false });
+  const stranger = makeClient(app.base);
+  await stranger.login('besidestranger', USER.password);
+  const refused = await stranger.request(`/bible/${entity.id}/beside`);
+  assert.strictEqual(refused.status, 403);
+  // And the picker does not name what it will not show.
+  const chapters = models.listChaptersForStory(story.id);
+  const mine = chapters[0];
+  const editor = await (await request(`/chapters/${mine.id}/edit`)).text();
+  assert.ok(editor.includes('Somebody Private'), "the owner's own panel still lists them");
+
+  models.setBiblePrivate(story.id, false);
+  models.deleteStoryEntity(entity.id);
+});
+
 test('the timeline reads the story calendar and marks a flashback', async () => {
   const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
   const chapters = models.listChaptersForStory(story.id);

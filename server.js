@@ -1531,7 +1531,10 @@ async function handleNewChapterPage(req, res, user, storyId) {
   if (!story) return sendError(res, 404, 'Story not found', user);
   if (!models.canWriteInStory(story, user)) return sendError(res, 403, "Only the story's authors can add chapters.", user);
   const chapters = models.listChaptersForStory(storyId);
-  sendHtml(res, 200, views.newChapterPage({ user, story, chapters, values: {}, vocabulary: storyVocabulary(storyId) }));
+  sendHtml(res, 200, views.newChapterPage({
+    user, story, chapters, values: {}, vocabulary: storyVocabulary(storyId),
+    castList: besideCast(story, user),
+  }));
 }
 
 async function handleNewChapterSubmit(req, res, user, storyId) {
@@ -1682,7 +1685,64 @@ async function handleEditChapterPage(req, res, user, chapterId) {
     canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
     latestVersionNumber: latest ? latest.version_number : 0,
     vocabulary: storyVocabulary(chapter.story_id),
+    siblings: models.listChaptersForStory(chapter.story_id),
+    castList: besideCast(models.getStoryById(chapter.story_id), user),
   }));
+}
+
+// What the beside panel is allowed to offer. A bible somebody has closed
+// is closed here too: the panel is a shortcut to pages, not a way round
+// the rules on them.
+function besideCast(story, user) {
+  if (!story || !models.canReadBible(story, user)) return [];
+  return models.listStoryEntities(story.id);
+}
+
+// The two fragments the panel loads. Each one is the page that already
+// exists with the furniture taken off, behind the same guard as the page
+// itself -- so there is nothing here that a plain link would not give.
+function handleBesideChapter(req, res, user, chapterId) {
+  const chapter = models.getChapterById(chapterId);
+  if (!chapter || chapter.archived_at) return sendError(res, 404, 'Chapter not found', user);
+  const latest = models.getLatestVersion(chapterId);
+  const story = models.getStoryById(chapter.story_id);
+  // The matcher is the third argument, not something applied to the AST
+  // first -- and a closed bible is closed here too, so the names in the
+  // prose stop linking the way they do on the chapter page itself.
+  const bibleVisible = models.canReadBible(story, user);
+  const html = renderHighlighted(
+    parseMarkdown(latest ? latest.content : ''),
+    [],
+    bibleVisible ? castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches) : wiki.findWikiMatches
+  );
+  sendFragment(res, views.besideChapterFragment(chapter, html), story ? `${chapter.chapter_number}. ${chapter.title}` : chapter.title);
+}
+
+function handleBesideEntity(req, res, user, entityId) {
+  const entity = models.getStoryEntity(entityId);
+  if (!entity) return sendError(res, 404, 'Entry not found', user);
+  const story = models.getStoryById(entity.story_id);
+  if (!story || !models.canReadBible(story, user)) return sendError(res, 403, 'This bible is private.', user);
+  const html = views.besideEntityFragment(entity, {
+    aliases: models.listEntityAliases(entityId),
+    links: models.listEntityLinks(entityId),
+    // The spoiler section is folded on the entry's own page and is left
+    // out here entirely: this is a thing to glance at while writing, and
+    // a glance is exactly how you spoil yourself.
+    description: entity.description ? renderHighlighted(parseMarkdown(entity.description), [], null) : '',
+  });
+  sendFragment(res, html, entity.name);
+}
+
+// A fragment is not a page: no layout, no chrome, and marked so that a
+// browser asked to open one directly does not treat it as one.
+function sendFragment(res, html, title) {
+  res.writeHead(200, {
+    'content-type': 'text/html; charset=utf-8',
+    'x-frame-options': 'DENY',
+    'x-beside-title': encodeURIComponent(title || ''),
+  });
+  res.end(html);
 }
 
 // What this story has called things before, for the fields that offer it
@@ -2156,6 +2216,12 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/analysis$/)) && req.method === 'GET') {
       return handleAnalysis(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/chapters\/(\d+)\/beside$/)) && req.method === 'GET') {
+      return handleBesideChapter(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/bible\/(\d+)\/beside$/)) && req.method === 'GET') {
+      return handleBesideEntity(req, res, user, Number(m[1]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/timeline$/)) && req.method === 'GET') {
       return handleTimeline(req, res, user, Number(m[1]));
