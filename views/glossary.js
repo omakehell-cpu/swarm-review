@@ -253,9 +253,26 @@ function glossaryNotFoundPage({ user, title }) {
   });
 }
 
+// A glossary page as a card, for the column beside a chapter: the same
+// shape as a bible entry's card (see besideEntityFragment) so a reader
+// clicking a name gets one kind of thing, whether the name belongs to
+// this story's bible or to the shared wiki.
+function besideGlossaryFragment(page, { lead = '', categories = [] } = {}) {
+  const topics = taxonomy.topicalCategories(categories).slice(0, 4);
+  return `
+    <h3>${escapeHtml(page.title)}</h3>
+    <p class="muted">From the glossary${topics.length ? ` &middot; ${topics.map((c) => escapeHtml(c)).join(', ')}` : ''}</p>
+    ${page.summary ? `<p class="summary">${escapeHtml(page.summary)}</p>` : ''}
+    ${lead
+    ? `<div class="reading-pane beside-reading">${lead}</div>`
+    : '<p class="muted">This page has not been copied across from the wiki yet.</p>'}`;
+}
+
+
 // ---------- the story bible ----------
 
 module.exports = {
+  besideGlossaryFragment,
   entryChips,
   glossaryDirectoryPage,
   glossaryIntro,

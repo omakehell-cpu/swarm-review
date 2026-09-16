@@ -13,6 +13,25 @@ const { DatabaseSync } = require('node:sqlite');
 // directory. Nothing in production sets it, and the default below is the
 // only path the app itself ever uses.
 const DB_PATH = process.env.SWARM_DB_PATH || path.join(__dirname, 'data', 'swarm-review.sqlite');
+
+// A test that reaches this file without a path of its own is about to
+// open the real archive and write to it. That is not a hypothetical: a
+// test file required a library at the top that pulled this one in before
+// its own setup ran, and the suite emptied the live glossary.
+//
+// node --test sets NODE_TEST_CONTEXT in every test process, and the
+// helper that hands a test its own database sets SWARM_DB_PATH before
+// anything requires this file. One of the two is always true in a test;
+// neither is ever true in the running app.
+if (process.env.NODE_TEST_CONTEXT && !process.env.SWARM_DB_PATH) {
+  throw new Error(
+    'This test is about to open the real database. Put '
+    + "require('./helpers/tmpdb').useTempDatabase() at the very top of the "
+    + 'file, above every other require -- db.js reads its path once, when '
+    + 'it loads, and anything that requires it first decides for you.'
+  );
+}
+
 const DATA_DIR = path.dirname(DB_PATH);
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 // The cast is for the type-checker only (see types.d.ts): node:sqlite

@@ -4,12 +4,22 @@
 // `models` and gets what it always got. These tests are what makes the
 // split safe to repeat -- they fail the moment a name goes missing or two
 // modules start fighting over one.
+//
+// Requiring the models is requiring db.js, and db.js decides which
+// database it is when it loads, so this comes first: a test that only
+// ever reads has no business opening the archive either.
+const { useTempDatabase } = require('./helpers/tmpdb');
+
+const tmp = useTempDatabase();
+
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.join(__dirname, '..');
+
+test.after(() => tmp.cleanup());
 
 for (const area of ['views', 'models']) {
   test(`${area} is one door onto many files`, () => {
