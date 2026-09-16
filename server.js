@@ -35,6 +35,7 @@ const castLinks = require('./lib/cast-links');
 const docs = require('./lib/docs');
 const backups = require('./lib/backup');
 const { compileStory } = require('./lib/compile');
+const feeds = require('./lib/feed');
 const diff = require('./lib/diff');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
@@ -261,6 +262,7 @@ async function handleAccountPage(req, res, user, query) {
     groups: models.listTagsGrouped(),
     hiddenTagIds: models.listUserHiddenTagIds(user.id),
     streak: models.writingStreak(user.id, user.daily_goal),
+    origin: siteOrigin(req),
   }));
 }
 
@@ -270,6 +272,62 @@ async function handleAccountGoalSubmit(req, res, user) {
   redirect(res, `/account?notice=${encodeURIComponent(goal
     ? `Aiming at ${goal} words a day.`
     : 'No daily goal. The count will just say which days you wrote.')}`);
+}
+
+// The origin this app is being reached at. A feed has to carry absolute
+// URLs, and the app has no idea what it is called from the outside except
+// by what the request says it is.
+function siteOrigin(req) {
+  const proto = SECURE_COOKIES ? 'https' : 'http';
+  return `${proto}://${req.headers.host || `localhost:${PORT}`}`;
+}
+
+async function handleAccountFeedSubmit(req, res, user, action) {
+  if (action === 'off') {
+    models.clearFeedToken(user.id);
+    return redirect(res, '/account?notice=Feed turned off. The old link stops working now.');
+  }
+  const existed = Boolean(user.feed_token);
+  models.createFeedToken(user.id);
+  return redirect(res, `/account?notice=${encodeURIComponent(existed
+    ? 'New feed link. The old one stops working now, so put the new one in your reader.'
+    : 'Your feed link is ready. Paste it into whatever you read feeds in.')}`);
+}
+
+// No session, no cookie, no redirect to the login page: a feed reader gets
+// either the feed or a flat 404. A wrong token is not told that it is a
+// wrong token, because that is one bit more than it needs.
+function handleFeed(req, res, token) {
+  const user = models.getUserByFeedToken(token);
+  if (!user || user.locked_at) {
+    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    return res.end('No such feed\n');
+  }
+  const origin = siteOrigin(req);
+  const selfUrl = `${origin}/feed/${token}.atom`;
+  const items = models.feedItemsFor(user.id);
+  const xml = feeds.buildAtom({
+    origin,
+    selfUrl,
+    title: 'The Swarm Review',
+    subtitle: `What is waiting on ${user.display_name}`,
+    entries: items.map((item) => ({
+      id: feeds.tagUri(req.headers.host, item.kind, item.key),
+      title: item.title,
+      url: `${origin}${item.url}`,
+      updated: item.at,
+      summary: feeds.excerpt(item.summary),
+      authorName: item.author || '',
+    })),
+  });
+  res.writeHead(200, {
+    'content-type': 'application/atom+xml; charset=utf-8',
+    // A private URL that a reader might be tempted to share with a
+    // crawler. Say no on the way out.
+    'x-robots-tag': 'noindex, nofollow',
+    'cache-control': 'private, max-age=300',
+  });
+  return res.end(req.method === 'HEAD' ? '' : xml);
 }
 
 async function handleAccountPasswordSubmit(req, res, user) {
@@ -1909,6 +1967,17 @@ async function router(req, res) {
     if (tryServeStatic(req, res, pathname)) return;
   }
 
+  // A person's private feed. Above the login check because a feed reader
+  // has no session and never will: the secret in the URL is the whole
+  // credential, which is why it is long, why it is only created on
+  // request, and why rotating it is one button.
+  {
+    const feedMatch = pathname.match(/^\/feed\/([A-Za-z0-9_-]{16,128})\.atom$/);
+    if (feedMatch && (req.method === 'GET' || req.method === 'HEAD')) {
+      return handleFeed(req, res, feedMatch[1]);
+    }
+  }
+
   let user = getCurrentUser(req);
   const PUBLIC_ROUTES = new Set(['/login', '/register']);
   // Reachable with or without a session (an admin-generated link, not tied
@@ -1960,6 +2029,9 @@ async function router(req, res) {
     if (pathname === '/account/hidden-tags' && req.method === 'POST') return handleHiddenTagsSubmit(req, res, user);
     if (pathname === '/account/name' && req.method === 'POST') return handleAccountNameSubmit(req, res, user);
     if (pathname === '/account/goal' && req.method === 'POST') return handleAccountGoalSubmit(req, res, user);
+    if ((m = pathname.match(/^\/account\/feed\/(new|off)$/)) && req.method === 'POST') {
+      return handleAccountFeedSubmit(req, res, user, m[1]);
+    }
     if ((m = pathname.match(/^\/users\/([A-Za-z0-9_.-]+)$/)) && req.method === 'GET') {
       return handleProfilePage(req, res, user, m[1]);
     }

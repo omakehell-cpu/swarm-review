@@ -4,6 +4,12 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — A feed, so a note stops waiting in silence
+
+- **You can be told that something is waiting**, without this app ever reaching out to the network. Your account page will make you a private feed: notes waiting on your chapters, replies to notes you left, and chapters you have not opened. Paste the address into whatever you read feeds in.
+- It is a feed rather than an email on purpose. An email would mean a mail server and would make this the only part of the app that talks to the outside world; a feed sits still until your reader comes and asks for it.
+- **The address is the password.** Anyone holding it can read your feed without logging in -- which is exactly what makes it work in a reader. It is not created until you ask for one, *Make a new link* replaces it the moment you think it has got out, and *Turn it off* removes it.
+
 ## 2026-09-16 — Two things the cast list was doing badly
 
 - **You choose what a thumbnail keeps.** A picture is rarely square and a face is rarely in the middle of one, so the crop was cutting people's heads off. Click the spot on the picture; the square underneath shows the result at the size it is actually used. The two numbers beside it are the same setting typed out, for anybody who would rather type, and they are what gets saved. The entry's own page and the cast list are cut the same way.

@@ -283,6 +283,10 @@ ensureColumn('chapters', 'strand', "TEXT NOT NULL DEFAULT ''");
 // day. Zero means nobody has said, which is not the same as zero words.
 ensureColumn('stories', 'word_goal', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'daily_goal', 'INTEGER NOT NULL DEFAULT 0');
+// The secret in a person's feed URL. Null until they ask for one: a
+// capability nobody has created is a capability nobody can leak.
+ensureColumn('users', 'feed_token', 'TEXT');
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_feed_token ON users(feed_token) WHERE feed_token IS NOT NULL');
 db.exec("UPDATE users SET last_seen_at = datetime('now') WHERE last_seen_at IS NULL");
 
 // Login lockout tracking. failed_login_attempts uses a constant default

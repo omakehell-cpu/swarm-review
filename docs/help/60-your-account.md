@@ -17,6 +17,32 @@ admins touch.
 
 @figure account-page.png | The account page: your name, your password, and the tags you would rather not see.
 
+## Being told there is something waiting
+
+This is a review site, and the awkward part of one is that a note can sit
+on your chapter for a week without you knowing. The index puts what is
+waiting on you at the top, but you have to be here to see it.
+
+So: **a feed, one per person**, from *Being told there is something
+waiting* on your account page. Press the button, copy the address, paste
+it into whatever you read feeds in. It carries three things:
+
+- notes waiting on a chapter of yours, still unanswered,
+- replies to notes you left,
+- chapters you have not opened yet.
+
+@figure feed-link.png | The feed block once a link has been made, with the two buttons that rotate it or turn it off.
+
+**Nothing is sent from here.** That is the point of a feed rather than an
+email: this app never reaches out to the network, and the feed just sits
+there until your reader comes and asks for it.
+
+The other half of that bargain is that **the address is the password**.
+Anyone holding it can read your feed without logging in, which is what
+makes it work in a reader at all. Keep it to yourself; if it gets out,
+*Make a new link* replaces it and the old one stops working on the spot.
+*Turn it off* removes it entirely.
+
 ## Your page
 
 Everyone has one, at their name wherever it appears. It shows the stories

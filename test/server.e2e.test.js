@@ -957,6 +957,65 @@ test('the analysis counts what is there and invents nothing', async () => {
   assert.match(html, /<table class="bars">/);
 });
 
+test('a feed link is made on request, works without a session, and rotates', async () => {
+  // Nothing exists until somebody asks: a capability nobody has created
+  // is a capability nobody can leak.
+  const me = models.getUserByUsername(USER.username);
+  assert.strictEqual(me.feed_token, null);
+
+  await request('/account/feed/new', { method: 'POST', ...form([]) });
+  const token = models.getUserByUsername(USER.username).feed_token;
+  assert.ok(token && token.length >= 16, 'a long token');
+
+  const page = await (await request('/account')).text();
+  assert.ok(page.includes(`/feed/${token}.atom`), 'the account page shows the address');
+
+  // A feed reader has no cookie. This is the whole point of the token.
+  const res = await fetch(`${app.base}/feed/${token}.atom`);
+  assert.strictEqual(res.status, 200);
+  assert.match(res.headers.get('content-type') || '', /application\/atom\+xml/);
+  assert.match(res.headers.get('x-robots-tag') || '', /noindex/);
+  const xml = await res.text();
+  assert.match(xml, /<feed xmlns="http:\/\/www\.w3\.org\/2005\/Atom">/);
+  assert.match(xml, /<link rel="self"/);
+
+  // A wrong token is a flat 404 -- not a redirect to the login page,
+  // which would tell a guesser that the app is even here.
+  const wrong = await fetch(`${app.base}/feed/${'z'.repeat(40)}.atom`);
+  assert.strictEqual(wrong.status, 404);
+
+  // Rotating invalidates the old one in the same breath.
+  await request('/account/feed/new', { method: 'POST', ...form([]) });
+  const rotated = models.getUserByUsername(USER.username).feed_token;
+  assert.notStrictEqual(rotated, token);
+  assert.strictEqual((await fetch(`${app.base}/feed/${token}.atom`)).status, 404);
+  assert.strictEqual((await fetch(`${app.base}/feed/${rotated}.atom`)).status, 200);
+
+  // And turning it off is turning it off.
+  await request('/account/feed/off', { method: 'POST', ...form([]) });
+  assert.strictEqual(models.getUserByUsername(USER.username).feed_token, null);
+  assert.strictEqual((await fetch(`${app.base}/feed/${rotated}.atom`)).status, 404);
+});
+
+test('the feed carries what is waiting, and not your own chapters', async () => {
+  await request('/account/feed/new', { method: 'POST', ...form([]) });
+  const token = models.getUserByUsername(USER.username).feed_token;
+  const items = models.feedItemsFor(models.getUserByUsername(USER.username).id);
+  const xml = await (await fetch(`${app.base}/feed/${token}.atom`)).text();
+  for (const item of items.slice(0, 3)) {
+    // The link is absolute, because a feed is read somewhere that has no
+    // idea what this app's root is.
+    assert.ok(xml.includes(`${app.base}${item.url}`), `${item.url} is linked absolutely`);
+  }
+  // Chapters this person wrote are not news to them.
+  const mine = models.listStories().flatMap((s2) => models.listChaptersForStory(s2.id))
+    .filter((c) => c.author_id === models.getUserByUsername(USER.username).id);
+  assert.ok(mine.length, 'this person has written something');
+  assert.ok(!items.some((i) => i.kind === 'chapter' && mine.some((c) => i.url === `/chapters/${c.id}`)),
+    'your own chapters are never offered to you as unread');
+  await request('/account/feed/off', { method: 'POST', ...form([]) });
+});
+
 test('the analysis is reachable from the story and from the outline', async () => {
   const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
   const link = new RegExp(`href="/stories/${story.id}/analysis"`);

@@ -3091,8 +3091,34 @@ function profilePage({ user, person, stats, stories, chapters }) {
 
 // ---------- account settings ----------
 
-/** @param {{ user: Row, error?: string|null, notice?: string|null, groups?: any[], hiddenTagIds?: number[], streak?: any }} props */
-function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], streak = null }) {
+// Being told that something is waiting, without this app ever reaching
+// out to the network itself. The URL is the whole credential, so the page
+// says so plainly rather than presenting it as a harmless link.
+function feedBlock(user, origin) {
+  if (!user.feed_token) {
+    return `
+      <p class="muted">Nothing is sent from here. A feed sits still until your reader comes and asks for it, which is why this is a feed and not an email.</p>
+      <form method="post" action="/account/feed/new">
+        <button class="btn" type="submit">Make me a feed link</button>
+      </form>`;
+  }
+  const url = `${origin}/feed/${user.feed_token}.atom`;
+  return `
+    <p class="muted">Paste this into whatever you read feeds in. It updates when a note is waiting on one of your chapters, when somebody replies to a note of yours, and when a chapter you have not opened appears.</p>
+    <p class="feed-url"><input type="text" class="feed-url-input" value="${escapeHtml(url)}" readonly aria-label="Your feed address" data-copy-target></p>
+    <p class="hint"><strong>Anyone with this address can read it</strong>, without logging in. It is yours alone -- do not paste it anywhere public, and if it gets out, make a new one below.</p>
+    <div class="figure-actions">
+      <form method="post" action="/account/feed/new" class="inline-form" data-confirm="Make a new feed link? The old one stops working, and you will have to update your reader.">
+        <button class="btn ghost small" type="submit">Make a new link</button>
+      </form>
+      <form method="post" action="/account/feed/off" class="inline-form" data-confirm="Turn the feed off? The link stops working straight away.">
+        <button class="btn ghost small danger" type="submit">Turn it off</button>
+      </form>
+    </div>`;
+}
+
+/** @param {{ user: Row, error?: string|null, notice?: string|null, groups?: any[], hiddenTagIds?: number[], streak?: any, origin?: string }} props */
+function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], streak = null, origin = '' }) {
   return layout({
     title: 'Account',
     user,
@@ -3118,6 +3144,10 @@ function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], stre
           <button class="btn" type="submit">Save goal</button>
         </form>
         <p class="muted">Leave it empty and the count just says which days you wrote.</p>
+      </div>
+      <div class="auth-card">
+        <h2>Being told there is something waiting</h2>
+        ${feedBlock(user, origin)}
       </div>
       <div class="auth-card">
         <h2>Change password</h2>
