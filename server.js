@@ -33,6 +33,7 @@ const storyBible = require('./lib/story-bible');
 const entityImages = require('./lib/entity-images');
 const castLinks = require('./lib/cast-links');
 const docs = require('./lib/docs');
+const backups = require('./lib/backup');
 const diff = require('./lib/diff');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
@@ -338,6 +339,7 @@ async function handleAdminPage(req, res, user, query) {
   }));
   sendHtml(res, 200, views.adminPage({
     user, users: usersWithLog, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice,
+    backups: { list: backups.listBackups(), dir: backups.backupDir(), keep: backups.KEEP },
     tagGroups: models.listTagsGrouped(),
     proposedTags: models.listProposedTags(),
   }));
@@ -477,6 +479,16 @@ async function handleResetPasswordSubmit(req, res, token) {
   }
   models.consumePasswordResetToken(resetToken.id, resetToken.user_id, auth.hashPassword(password));
   redirect(res, '/login?notice=Password changed. Log in with your new password.');
+}
+
+async function handleAdminBackupNow(req, res, user) {
+  try {
+    const made = backups.takeBackup(models.backupDatabaseTo);
+    logEvent(user, 'backup-taken', { subject: made.name, href: '/admin' });
+    redirect(res, `/admin?notice=${encodeURIComponent(`Copy taken: ${made.name}.`)}`);
+  } catch (err) {
+    redirect(res, `/admin?notice=${encodeURIComponent(`The copy failed: ${err.message}`)}`);
+  }
 }
 
 async function handleAdminBackup(req, res, user) {
@@ -1473,6 +1485,7 @@ async function handleEditChapterPage(req, res, user, chapterId) {
   sendHtml(res, 200, views.editChapterPage({
     user, chapter, latestContent: latest ? latest.content : '', comments, values: {},
     canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
+    latestVersionNumber: latest ? latest.version_number : 0,
   }));
 }
 
@@ -1490,19 +1503,49 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
   const arcTitle = (body.arcTitle || '').trim();
   const values = { title, summary, content, changelog, stage, arcTitle };
   const latest = models.getLatestVersion(chapterId);
+  // The version this editor was opened on. A form from before this field
+  // existed, or one a script posted, sends nothing -- and an absent answer
+  // is not a stale one, so it is let through rather than blocked.
+  const baseVersion = Number(body.baseVersion || 0);
 
   try {
     const uploaded = await extractUploadedText(files.file);
     if (uploaded !== null) { content = uploaded; values.content = content; }
   } catch (err) {
-    return sendHtml(res, 400, views.editChapterPage({ user, chapter, latestContent: latest ? latest.content : '', error: err.message, values }));
+    return sendHtml(res, 400, views.editChapterPage({ user, chapter, latestContent: latest ? latest.content : '', error: err.message, values, latestVersionNumber: baseVersion || (latest ? latest.version_number : 0) }));
   }
 
   if (!title) {
-    return sendHtml(res, 400, views.editChapterPage({ user, chapter, latestContent: latest ? latest.content : '', error: 'Missing title.', values }));
+    return sendHtml(res, 400, views.editChapterPage({ user, chapter, latestContent: latest ? latest.content : '', error: 'Missing title.', values, latestVersionNumber: baseVersion || (latest ? latest.version_number : 0) }));
   }
   if (!content.trim()) {
-    return sendHtml(res, 400, views.editChapterPage({ user, chapter, latestContent: latest ? latest.content : '', error: 'The chapter text cannot be empty. Paste some text or upload a .md/.txt/.docx file.', values }));
+    return sendHtml(res, 400, views.editChapterPage({
+      user, chapter, latestContent: latest ? latest.content : '', values,
+      error: 'The chapter text cannot be empty. Paste some text or upload a .md/.txt/.docx file.',
+      latestVersionNumber: baseVersion || (latest ? latest.version_number : 0),
+    }));
+  }
+
+  // Somebody else saved while this editor was open (or you did, in
+  // another tab). Their work is in the database and yours is in your
+  // hands, and writing yours over theirs without a word is the one thing
+  // that must not happen. So: refuse once, show what arrived, and keep
+  // every character of what was typed here. The hidden field moves on to
+  // their version, so pressing save again is a decision rather than an
+  // accident.
+  const stale = baseVersion && latest && latest.version_number !== baseVersion
+    && content.trim() !== String(latest.content || '').trim();
+  if (stale) {
+    return sendHtml(res, 409, views.editChapterPage({
+      user, chapter, latestContent: latest.content, values,
+      canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
+      conflict: {
+        version: latest.version_number,
+        at: latest.created_at,
+        changelog: latest.changelog,
+        content: latest.content,
+      },
+    }));
   }
 
   const { version } = models.editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle });
@@ -1835,6 +1878,7 @@ async function router(req, res) {
     }
     if (pathname === '/admin/wiki/sync' && req.method === 'POST') return handleAdminSyncWiki(req, res, user);
     if (pathname === '/admin/backup' && req.method === 'GET') return handleAdminBackup(req, res, user);
+    if (pathname === '/admin/backup/now' && req.method === 'POST') return handleAdminBackupNow(req, res, user);
 
     if (pathname === '/search' && req.method === 'GET') return handleSearch(req, res, user, url.searchParams);
     if (pathname === '/tags' && req.method === 'GET') return handleTagsIndex(req, res, user);
@@ -2022,6 +2066,13 @@ const server = http.createServer((req, res) => {
     if (!res.headersSent) sendError(res, 500, 'Something went wrong at our end. The error has been logged.');
   });
 });
+
+// A copy of the database, daily, without anybody having to remember. Not
+// started under test: a suite that spawns thirty servers does not want
+// thirty backups of thirty throwaway databases.
+if (process.env.NODE_ENV !== 'test') {
+  backups.startBackups(models.backupDatabaseTo, (err) => console.error('backup failed:', err.message));
+}
 
 server.listen(PORT, () => {
   console.log(`Swarm Review listening on http://localhost:${PORT}`);

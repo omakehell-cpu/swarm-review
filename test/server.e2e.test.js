@@ -740,6 +740,66 @@ test('the nav carries a dot only while there is something unread', async () => {
   assert.match(await (await request('/')).text(), /nav-dot/);
 });
 
+
+test('a save cannot quietly land on top of somebody else\'s', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const chapterId = models.listChaptersForStory(story.id)[0].id;
+
+  // Open the editor: the form carries the version it was opened on.
+  const editor = await (await request(`/chapters/${chapterId}/edit`)).text();
+  const opened = Number(/name="baseVersion" value="(\d+)"/.exec(editor)[1]);
+  assert.ok(opened > 0, 'the editor says which version it is editing');
+
+  // Meanwhile that chapter gains a version (another tab, another person).
+  models.editChapter({
+    chapterId, title: 'Chapter One', summary: '',
+    content: 'Somebody else got here first.', changelog: 'from another tab',
+  });
+  const theirs = models.getLatestVersion(chapterId);
+  assert.strictEqual(theirs.version_number, opened + 1);
+
+  // Now the stale editor saves. It is refused, and nothing is lost.
+  const clash = await request(`/chapters/${chapterId}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['baseVersion', String(opened)], ['title', 'Chapter One'], ['summary', ''],
+      ['content', 'What I was writing all along.'], ['changelog', ''],
+    ]),
+  });
+  assert.strictEqual(clash.status, 409);
+  const page = await clash.text();
+  assert.match(page, /Somebody saved version \d+ of this chapter while you had it open/);
+  assert.match(page, /What I was writing all along\./, 'my text is still in the box');
+  assert.match(page, /Somebody else got here first\./, 'and theirs is shown');
+  assert.strictEqual(models.getLatestVersion(chapterId).content, 'Somebody else got here first.',
+    'the database still has theirs');
+
+  // The refused page moves the marker on, so saving again is deliberate.
+  const now = Number(/name="baseVersion" value="(\d+)"/.exec(page)[1]);
+  assert.strictEqual(now, theirs.version_number);
+  const second = await request(`/chapters/${chapterId}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['baseVersion', String(now)], ['title', 'Chapter One'], ['summary', ''],
+      ['content', 'What I was writing all along.'], ['changelog', 'mine after all'],
+    ]),
+  });
+  assert.strictEqual(second.status, 302);
+  assert.strictEqual(models.getLatestVersion(chapterId).content, 'What I was writing all along.');
+  // And theirs is still in the history, which is the whole point.
+  assert.ok(models.listVersions(chapterId).some((v) => v.content === 'Somebody else got here first.'));
+});
+
+test('an editor with no version to compare is let through, not blocked', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const chapterId = models.listChaptersForStory(story.id)[0].id;
+  const res = await request(`/chapters/${chapterId}/edit`, {
+    method: 'POST',
+    ...multipart([['title', 'Chapter One'], ['summary', ''], ['content', 'Posted without a baseVersion.'], ['changelog', '']]),
+  });
+  assert.strictEqual(res.status, 302, 'an absent answer is not a stale one');
+});
+
 test('logging out invalidates the session', async () => {
   const res = await request('/logout', { method: 'POST', ...form([]) });
   assert.strictEqual(res.status, 302);

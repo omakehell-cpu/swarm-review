@@ -1577,8 +1577,29 @@ function newChapterPage({ user, story, chapters = [], error, values = /** @type 
 
 // ---------- edit chapter (title, summary, and the text itself) ----------
 
-/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, values?: FormValues }} props */
-function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, values = /** @type {FormValues} */ ({}) }) {
+// Somebody saved while this editor was open. Nothing of theirs and
+// nothing of yours is thrown away here: their version is in the database
+// and shown below, yours is still in the box above, and the next save is
+// yours to make on purpose.
+function conflictNotice(chapter, conflict) {
+  return `
+    <div class="conflict-notice">
+      <p><strong>Somebody saved version ${conflict.version} of this chapter while you had it open.</strong>
+      Nothing has been lost and nothing has been overwritten: your text is still in the box below, and theirs is in the chapter.</p>
+      <p class="muted">Saved ${timeHtml(conflict.at)}${conflict.changelog ? ` &middot; &ldquo;${escapeHtml(conflict.changelog)}&rdquo;` : ''}.
+      <a href="/chapters/${chapter.id}/diff" target="_blank" rel="noopener noreferrer">See what changed &#8599;</a></p>
+      <details class="conflict-theirs">
+        <summary>What version ${conflict.version} says</summary>
+        <div class="reading-pane">${renderHighlighted(parseMarkdown(conflict.content), [], null)}</div>
+      </details>
+      <p>Take anything of theirs you want into your own text, then save again. Saving now publishes your version on top of theirs, which is a thing you can do, but the version history keeps both either way.</p>
+    </div>`;
+}
+
+
+
+/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, conflict?: any, latestVersionNumber?: number, values?: FormValues }} props */
+function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, conflict = null, latestVersionNumber = 0, values = /** @type {FormValues} */ ({}) }) {
   const topLevelComments = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -1600,7 +1621,9 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
       <h1>Edit chapter</h1>
       <p class="muted writer-intro">Saving publishes a new version automatically if you changed the text, so any existing comments stay anchored to the passage they were originally made about. The version history is still available from the "Version" dropdown on the chapter page.</p>
       ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+      ${conflict ? conflictNotice(chapter, conflict) : ''}
       <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" enctype="multipart/form-data">
+        <input type="hidden" name="baseVersion" value="${conflict ? conflict.version : (latestVersionNumber || '')}">
         <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
         <label class="main-field">Chapter text<textarea name="content" rows="24" data-story-id="${chapter.story_id}">${escapeHtml(values.content ?? latestContent)}</textarea>
           <span class="hint">${MARKDOWN_HINT}</span>
@@ -2567,6 +2590,7 @@ const EVENT_SENTENCES = {
   'comment-edited': () => 'edited a comment',
   'comment-retracted': () => 'retracted a comment',
   'comment-reopened': (s) => `reopened a note on ${s}`,
+  'backup-taken': (s) => `took a backup (${s})`,
   'bible-closed': (s) => `made the bible of ${s} private`,
   'bible-opened': (s) => `opened the bible of ${s} to readers`,
   'bible-entry-added': (s) => `added ${s} to the bible`,
@@ -2845,7 +2869,7 @@ function adminUserRow(u, { currentUserId }) {
     </div>`;
 }
 
-function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [], proposedTags = [] }) {
+function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [], proposedTags = [], backups = { list: [], dir: '', keep: 0 } }) {
   const userRows = users.map((u) => adminUserRow(u, { currentUserId: user.id })).join('');
   return layout({
     title: 'Admin',
@@ -2857,7 +2881,18 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
 
       <section class="admin-section">
         <h2>Backup</h2>
-        <p class="muted">A complete, self-contained snapshot of the database -- every user, story, chapter, version, comment, and invite code -- as a single .sqlite file, safe to download even while the server is running. This is the only copy of everyone's writing outside this machine, so keep one somewhere else.</p>
+        <p class="muted">A complete, self-contained snapshot of the database -- every user, story, chapter, version, comment, and invite code -- as a single .sqlite file, safe to take while the server is running.</p>
+        <p class="muted">The server now takes one every day by itself and keeps the last ${backups.keep}, in <code>${escapeHtml(backups.dir)}</code>. That protects against a mistake; it does not protect against this machine. Point a cloud folder or a second disk at that directory and it becomes a real backup.</p>
+        ${backups.list.length ? `
+          <ul class="backup-list">
+            ${backups.list.slice(0, 5).map((b) => `
+              <li><span>${escapeHtml(b.name)}</span> <span class="muted">${(b.bytes / 1048576).toFixed(1)} MB &middot; ${timeHtml(b.at.replace('T', ' ').slice(0, 19))}</span></li>`).join('')}
+          </ul>
+          ${backups.list.length > 5 ? `<p class="muted">${backups.list.length} in all.</p>` : ''}`
+    : '<p class="muted">No automatic copy has been taken yet. One is taken when the server starts and every day after that.</p>'}
+        <form method="post" action="/admin/backup/now" class="inline-form">
+          <button class="btn ghost small" type="submit">Take one now</button>
+        </form>
         <a class="btn ghost" href="/admin/backup">Download backup (.sqlite)</a>
       </section>
 
