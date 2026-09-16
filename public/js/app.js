@@ -137,31 +137,87 @@
   }
 
   document.addEventListener('mouseup', (ev) => {
-    if (commentsCurrentlyHidden()) return;
     if (box && box.contains(/** @type {Node} */ (ev.target))) return;
-    const result = getSelectionOffsets();
-    if (!result) {
-      toast.classList.add('hidden');
-      return;
-    }
-    pendingSelection = result;
-    const top = window.scrollY + result.rect.top - 40;
-    const left = window.scrollX + result.rect.left;
-    toast.style.top = `${Math.max(top, window.scrollY + 8)}px`;
-    toast.style.left = `${left}px`;
-    toast.classList.remove('hidden');
+    offerOnSelection();
   });
 
-  toast.addEventListener('click', () => {
-    if (!pendingSelection) return;
+  // Opening the box on the selection that is there now, however it was
+  // made. The toast calls this on a click; the keyboard path below calls
+  // it without one.
+  function openCommentBox() {
+    if (!pendingSelection) return false;
     startInput.value = String(pendingSelection.start);
     endInput.value = String(pendingSelection.end);
     quotedInput.value = pendingSelection.text;
-    previewEl.textContent = `"${pendingSelection.text.length > 200 ? pendingSelection.text.slice(0, 200) + '...' : pendingSelection.text}"`;
+    const shown = pendingSelection.text.length > 200
+      ? pendingSelection.text.slice(0, 200) + '...'
+      : pendingSelection.text;
+    previewEl.textContent = `"${shown}"`;
     box.classList.remove('hidden');
     toast.classList.add('hidden');
+    // The passage is the context for what is about to be typed, so it is
+    // the label of the box rather than a line of decoration above it.
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', `Comment on: ${shown}`);
     bodyInput.focus();
     box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return true;
+  }
+
+  toast.addEventListener('click', openCommentBox);
+
+  // ---- the same thing, from the keyboard ----
+  //
+  // Selecting a passage and commenting on it was the heart of this app and
+  // the one thing in it that could only be done with a mouse: the offer
+  // appeared on mouseup and nowhere else. A selection made with shift and
+  // the arrow keys is the same selection as far as the browser is
+  // concerned, so all that was missing was noticing it and saying so.
+  const selectionSay = document.createElement('div');
+  selectionSay.className = 'sr-only';
+  selectionSay.setAttribute('aria-live', 'polite');
+  document.body.appendChild(selectionSay);
+
+  let lastAnnounced = '';
+  function offerOnSelection() {
+    if (commentsCurrentlyHidden()) return;
+    const result = getSelectionOffsets();
+    if (!result) {
+      toast.classList.add('hidden');
+      lastAnnounced = '';
+      return;
+    }
+    pendingSelection = result;
+    // Placed for the eye, and announced for everybody else.
+    const top = window.scrollY + result.rect.top - 40;
+    toast.style.top = `${Math.max(top, window.scrollY + 8)}px`;
+    toast.style.left = `${window.scrollX + result.rect.left}px`;
+    toast.classList.remove('hidden');
+    if (result.text !== lastAnnounced) {
+      lastAnnounced = result.text;
+      selectionSay.textContent = `${result.text.trim().split(/\s+/).length} words selected. Press C to comment on them.`;
+    }
+  }
+
+  document.addEventListener('keyup', (ev) => {
+    // Only the keys that can move a selection edge, so this does not run
+    // on every keystroke somewhere else on the page. Anything that is not
+    // a selection inside the chapter falls out of offerOnSelection
+    // anyway, which is the one place that decides.
+    if (!/^(Arrow|Home|End|Page)/.test(ev.key) && !(ev.key === 'a' && (ev.ctrlKey || ev.metaKey))) return;
+    offerOnSelection();
+  });
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'c' && ev.key !== 'C') return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    const active = document.activeElement;
+    const tag = active ? active.tagName : '';
+    // Never steal a letter somebody is typing.
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+      || (active && /** @type {HTMLElement} */ (active).isContentEditable)) return;
+    if (!pendingSelection) return;
+    if (openCommentBox()) ev.preventDefault();
   });
 
   if (cancelBtn) {

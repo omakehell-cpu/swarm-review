@@ -5,7 +5,41 @@
 const { parseMarkdown, flattenLength } = require('../lib/markdown');
 const { parseBody, redirect } = require('../lib/util');
 const models = require('../models');
+const views = require('../views');
 const { logEvent, sendError } = require('./shared');
+// One note, re-rendered, for a page that asked to change it in place
+// instead of reloading.
+//
+// The same handler answers both: it does the same permission checks, the
+// same writes and the same logging, and only the last line differs. A
+// second code path for "the same thing, but with JavaScript" is how the
+// two drift until one of them lets somebody do what the other does not.
+function replyWithComment(req, res, user, commentId, announcement) {
+  if (!wantsFragment(req)) return null;
+  const comment = models.getCommentById(commentId);
+  if (!comment) return sendError(res, 404, 'Comment not found', user);
+  const version = models.getVersion(comment.version_id);
+  const chapter = models.getChapterById(version.chapter_id);
+  const all = models.listCommentsForVersion(comment.version_id);
+  const replies = all.filter((c) => c.parent_id === comment.id);
+  const html = views.renderComment(comment, {
+    isChapterAuthor: chapter.author_id === user.id,
+    currentUserId: user.id,
+    replies,
+  });
+  res.writeHead(200, {
+    'content-type': 'text/html; charset=utf-8',
+    // What a screen reader should say once the swap has happened. A
+    // header rather than markup, so the page decides where to put it.
+    'x-announce': encodeURIComponent(announcement || ''),
+    'x-frame-options': 'DENY',
+  });
+  res.end(html);
+  return true;
+}
+
+const wantsFragment = (req) => String(req.headers['x-fragment'] || '') === 'comment';
+
 async function handleCreateComment(req, res, user, chapterId) {
   const chapter = models.getChapterById(chapterId);
   if (!chapter) return sendError(res, 404, 'Chapter not found', user);
@@ -54,6 +88,7 @@ async function handleCommentReply(req, res, user, commentId) {
       storyId: chapter ? chapter.story_id : null, chapterId: version.chapter_id,
     });
   }
+  if (replyWithComment(req, res, user, parent.id, 'Reply posted.')) return;
   redirect(res, `/chapters/${version.chapter_id}?v=${version.version_number}`);
 }
 
@@ -73,6 +108,7 @@ async function handleCommentStatus(req, res, user, commentId) {
       storyId: chapter.story_id, chapterId: chapter.id,
     });
   }
+  if (replyWithComment(req, res, user, commentId, status === 'accepted' ? 'Note accepted.' : 'Note turned down.')) return;
   redirect(res, `/chapters/${chapter.id}?v=${version.version_number}`);
 }
 
@@ -88,6 +124,7 @@ async function handleCommentEdit(req, res, user, commentId) {
     models.editComment({ commentId, body: text.slice(0, 4000) });
     logEvent(user, 'comment-edited', { href: `/chapters/${version.chapter_id}#comment-${commentId}`, chapterId: version.chapter_id });
   }
+  if (replyWithComment(req, res, user, commentId, 'Note saved.')) return;
   redirect(res, `/chapters/${version.chapter_id}?v=${version.version_number}#comment-${commentId}`);
 }
 
@@ -100,6 +137,7 @@ async function handleCommentRetract(req, res, user, commentId) {
     models.retractComment(commentId);
     logEvent(user, 'comment-retracted', { href: `/chapters/${version.chapter_id}`, chapterId: version.chapter_id });
   }
+  if (replyWithComment(req, res, user, commentId, 'Note retracted.')) return;
   redirect(res, `/chapters/${version.chapter_id}?v=${version.version_number}`);
 }
 
@@ -116,6 +154,7 @@ async function handleCommentReopen(req, res, user, commentId) {
       storyId: chapter.story_id, chapterId: chapter.id,
     });
   }
+  if (replyWithComment(req, res, user, commentId, 'Note reopened.')) return;
   redirect(res, `/chapters/${chapter.id}?v=${version.version_number}#comment-${commentId}`);
 }
 

@@ -4,6 +4,13 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — Notes you can answer without losing your place
+
+- **Accept, turn down, retract, reopen and reply happen in place.** On a chapter with forty notes, answering the eleventh used to send you back to the top of the page to find the twelfth.
+- **Leaving a note on a passage now works from the keyboard.** Select it with shift and the arrow keys, then press **C**. It was the heart of this app and the one thing in it that could only be done with a mouse -- the offer appeared when you let go of the button and nowhere else.
+- **And it says what it did.** The selection announces itself, and answering a note announces the answer, instead of a reload reading the whole page out again from the title down. This is the first of the accessibility work, and the part that was most in the way.
+- All of it still works with JavaScript off, exactly as before: every control is a real form posting to a real address, and the page reloads.
+
 ## 2026-09-16 — A search that matches words
 
 - **Searching for a word now finds that word.** It used to look for the letters anywhere: on this archive, a search for "art" returned **355 of the 691 glossary pages** -- part, start, particular, Martin. It returns 8.

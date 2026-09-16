@@ -27,6 +27,11 @@ whole gesture. The note then sits in the margin beside the passage it is
 about, joined to it by a line, and the passage is underlined so the author
 can see at a glance where the notes fall.
 
+**From the keyboard**, it is the same gesture: select the passage with
+shift and the arrow keys, and then press **C**. The offer is announced
+when the selection is made, so you do not have to know it is there. There
+is nothing in this app that can only be done by pointing at it.
+
 If what you want to say is not about one passage, use **General comment (no
 text selected)** at the foot of the notes.
 
@@ -36,6 +41,12 @@ be **Retract**ed.
 ## What the author does with it
 
 The author sees **Accept** and **Reject** on each note.
+
+Answering a note does not reload the page. On a chapter with forty of
+them, dealing with the eleventh used to put you back at the top to find
+the twelfth; now the note changes where it stands, your place is kept, and
+what happened is announced in one sentence rather than by re-reading the
+whole chapter aloud.
 
 Neither one edits the chapter — they are the author saying what they have
 decided, so that a note stops being a thing hanging over them. Accepted and
