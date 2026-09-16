@@ -51,18 +51,27 @@ What needs doing, roughly in the order it would hurt:
 
 # Medium -- two or three days each
 
-All four of these shipped on 2026-09-16; see the changelog. What is left
-of this group is the half of the notification question that was never a
-coding problem:
+All four shipped on 2026-09-16; see the changelog. The one thing left in
+this group is not work, it is a decision that has been taken:
 
-## Email, if a feed is not enough
+## Email: decided against, for now
 
-The feed covers somebody who reads feeds. Somebody who does not still
-finds out only by coming to look. A digest by email would reach them, and
-would need an SMTP server -- which would make this the only part of the
-app that reaches out to the network. That is the decision, and it has not
-changed by having built the feed: it is about how the group wants to be
-interrupted, not about what is easy.
+**Not doing it.** The feed reaches the people who will be reached, and
+email would make this the only part of the app that opens a connection to
+somebody else's machine. Running our own mail server is not the
+alternative: this one lives on a Mac behind a Cloudflare tunnel that
+carries HTTP only, on a home IP with no reverse DNS of its own, which
+means the mail would not be rejected -- it would silently land in spam,
+which is worse.
+
+If it ever comes back, it comes back for **password resets**, not for
+notifications. That is the one case where somebody is locked out and
+waiting, and where an admin generating a link by hand is the current
+answer. The shape it would take, so nobody has to work it out twice: a
+relay (Resend, Brevo, SMTP2GO -- all free far past this group's volume),
+three DNS records on the domain, credentials in `.env`, and no
+`SMTP_HOST` meaning no mail at all and the app behaving exactly as it
+does today.
 
 # Large -- a week or more
 
