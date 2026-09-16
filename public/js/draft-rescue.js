@@ -92,7 +92,9 @@
   // The save is a normal form post, so the page is about to go away. If it
   // fails, or the server refuses it, the draft is still here when the
   // page comes back.
+  let saving = false;
   form.addEventListener('submit', () => {
+    saving = true;
     clearTimeout(timer);
     keep();
     // The next page load is the one that knows whether it worked: the
@@ -100,7 +102,18 @@
     // check at the top of this file clears the draft by itself.
   });
 
+  // Coming back to this page from the browser's history does not reload
+  // it: without this, a Save followed by Back would leave the page
+  // convinced it was still on its way out, and the next attempt to leave
+  // would go through with no warning at all.
+  window.addEventListener('pageshow', () => { saving = false; });
+
+  // "Are you sure you want to leave? You may lose changes." Worth asking
+  // when somebody closes the tab on top of an hour's writing, and an
+  // insult when they have just pressed Save: pressing Save IS leaving the
+  // page, on purpose, and the text is on its way to the server.
   window.addEventListener('beforeunload', (e) => {
+    if (saving) return;
     if (text.value === original) return;
     keep();
     e.preventDefault();
