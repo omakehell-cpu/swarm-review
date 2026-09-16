@@ -21,6 +21,7 @@ export default [
       // Throwaway renderings of the app's own pages, used to look at the
       // design; they are copies of files already linted where they live.
       '_review-snapshots/**',
+      '.snap/**',
       // Vendored, minified, and not ours to fix.
       'public/js/nspell.bundle.js',
     ],
