@@ -44,6 +44,15 @@
     if (!block) return;
 
     event.preventDefault();
+    // Accept and Reject are one form and two buttons -- the answer is the
+    // button's own name and value, and a FormData built without the
+    // submitter does not contain it. Posted that way, both buttons say
+    // nothing and the server, correctly, does nothing.
+    const submitter = /** @type {any} */ (event).submitter
+      || form.querySelector('button[type="submit"], button:not([type])');
+    const fields = new FormData(form);
+    if (submitter && submitter.name) fields.append(submitter.name, submitter.value);
+
     const buttons = Array.from(form.querySelectorAll('button'));
     for (const b of buttons) b.disabled = true;
 
@@ -51,7 +60,7 @@
       const res = await fetch(form.action, {
         method: 'POST',
         headers: { 'x-fragment': 'comment' },
-        body: new URLSearchParams(/** @type {any} */ (new FormData(form))),
+        body: new URLSearchParams(/** @type {any} */ (fields)),
       });
       if (!res.ok) throw new Error(String(res.status));
       const html = await res.text();

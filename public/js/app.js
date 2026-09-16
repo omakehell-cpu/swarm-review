@@ -195,7 +195,10 @@
     toast.classList.remove('hidden');
     if (result.text !== lastAnnounced) {
       lastAnnounced = result.text;
-      selectionSay.textContent = `${result.text.trim().split(/\s+/).length} words selected. Press C to comment on them.`;
+      const words = result.text.trim().split(/\s+/).length;
+      selectionSay.textContent = words === 1
+        ? `One word selected: ${result.text.trim()}. Press C to comment on it.`
+        : `${words} words selected. Press C to comment on them.`;
     }
   }
 
