@@ -49,10 +49,43 @@ for (const area of ['views', 'models']) {
 // still over it, each with a reason. Taking one off this list is progress;
 // adding one needs an argument.
 const ALLOWED_LONG = {
-  'server.js': 'a hundred routes and their handlers, not split yet',
   'public/js/writing-analyzer.js': 'the editor, next to be taken apart',
   'test/server.e2e.test.js': 'a test file grows with the app, which is the point of it',
 };
+
+test('every route in the app is reachable from the table server.js walks', () => {
+  const files = fs.readdirSync(path.join(ROOT, 'routes')).filter((f) => f.endsWith('.js'));
+  const server = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+  let total = 0;
+  for (const file of files) {
+    const mod = require(path.join(ROOT, 'routes', file));
+    if (!mod.routes) continue;
+    total += mod.routes.length;
+    // A table nothing walks is a set of pages nobody can reach.
+    assert.ok(server.includes(`require('./routes/${file.replace(/\.js$/, '')}')`),
+      `server.js walks routes/${file}`);
+    for (const [method, matcher, run] of mod.routes) {
+      assert.match(method, /^(GET|POST|HEAD|PUT|DELETE)$/, `${file}: ${method} is a method`);
+      assert.ok(typeof matcher === 'string' || matcher instanceof RegExp, `${file}: ${matcher} matches a path`);
+      assert.strictEqual(typeof run, 'function', `${file}: ${matcher} has something to run`);
+    }
+  }
+  assert.ok(total > 100, `all ${total} routes are in a table`);
+});
+
+test('no two routes claim the same address and method', () => {
+  const seen = new Map();
+  for (const file of fs.readdirSync(path.join(ROOT, 'routes')).filter((f) => f.endsWith('.js'))) {
+    const mod = require(path.join(ROOT, 'routes', file));
+    for (const [method, matcher] of mod.routes || []) {
+      const key = `${method} ${String(matcher)}`;
+      // The first match wins, so a duplicate is a page that silently
+      // never runs.
+      assert.ok(!seen.has(key), `${key} is claimed by ${file} and by ${seen.get(key)}`);
+      seen.set(key, file);
+    }
+  }
+});
 
 test('no file in the app is longer than a thousand lines', () => {
   const skip = new Set(['nspell.bundle.js']);
