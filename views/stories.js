@@ -1,0 +1,331 @@
+'use strict';
+
+const { layout } = require('../lib/layout');
+const { escapeHtml } = require('../lib/util');
+const { timeHtml } = require('../lib/time');
+const { storyState, STORY_STATES, CHOOSABLE_STORY_STATES } = require('../lib/story-state');
+const { bylineWith, emptyState, storyStateBadge, tagChips, tagPicker, wordCount } = require('./shared');
+
+// One story as it appears in any list -- the front page, a tag's page, a
+// search result. `hiddenBy` is the reader's own hidden tags that this
+// story tripped (see handleStories); it only ever arrives set from a list
+// that has already decided to fold the story away.
+function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } = {}) {
+  // Not an <a> wrapping the whole row, which is what every other list
+  // here does: the tag chips are links themselves, and an anchor inside
+  // an anchor is invalid -- the parser closes the outer one early and the
+  // row falls apart. The title carries the link and stretches an overlay
+  // across the row instead (see .story-row in style.css), so the row is
+  // still clickable everywhere the chips aren't.
+  return `
+    <div class="chapter-row story-row">
+      <div class="chapter-row-main">
+        <h3><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a> ${s.has_new_chapters ? '<span class="badge new">New</span>' : ''}</h3>
+        <p class="muted">${escapeHtml(s.description || '')}</p>
+        ${hiddenBy.length
+          ? `<p class="hidden-by">Hidden by your tag settings: ${hiddenBy.map((t) => escapeHtml(t.name)).join(', ')}</p>`
+          : tagChips(tags)}
+      </div>
+      <div class="chapter-row-meta">
+        <span>${bylineWith(s.author_name, coauthors)}</span>
+        ${storyState(s) === 'ongoing' ? '' : storyStateBadge(s)}
+        <span>${s.chapter_count} chapter${s.chapter_count === 1 ? '' : 's'}${s.word_count ? ` &middot; ${wordCount(s.word_count)}` : ''}</span>
+        ${timeHtml(s.last_chapter_at || s.created_at)}
+        ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} pending</span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+
+// A short quote of a comment, enough to recognise which one it is without
+// reproducing the whole thing where it can't be replied to.
+function commentGist(body, max = 120) {
+  const text = String(body || '').replace(/\s+/g, ' ').trim();
+  return escapeHtml(text.length > max ? `${text.slice(0, max - 1).trimEnd()}\u2026` : text);
+}
+
+
+// What's waiting for this reader, above the list of everything. Renders
+// nothing at all when there is nothing -- an empty "you're all caught up"
+// box every single day is furniture, not information.
+function inboxSection(inbox) {
+  if (!inbox || inbox.empty) return '';
+
+  const pending = inbox.pending.length ? `
+    <section class="inbox-group">
+      <h3>Waiting on you</h3>
+      <ul class="inbox-list">
+        ${inbox.pending.map((row) => `
+          <li>
+            <a href="/chapters/${row.chapter_id}">
+              <span class="inbox-count">${row.pending}</span>
+              <span class="inbox-what">comment${row.pending === 1 ? '' : 's'} to accept or reject</span>
+              <span class="inbox-where">${escapeHtml(row.story_title)} &middot; chapter ${row.chapter_number}: ${escapeHtml(row.chapter_title)}</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+    </section>` : '';
+
+  const replies = inbox.replies.length ? `
+    <section class="inbox-group">
+      <h3>Replies to you</h3>
+      <ul class="inbox-list">
+        ${inbox.replies.map((r) => `
+          <li>
+            <a href="/chapters/${r.chapter_id}#comment-${r.id}">
+              <span class="inbox-what"><strong>${escapeHtml(r.author_name)}</strong> ${commentGist(r.body)}</span>
+              <span class="inbox-where">${escapeHtml(r.story_title)} &middot; chapter ${r.chapter_number}: ${escapeHtml(r.chapter_title)}</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+    </section>` : '';
+
+  const fresh = inbox.newChapters.length ? `
+    <section class="inbox-group">
+      <h3>New to read</h3>
+      <ul class="inbox-list">
+        ${inbox.newChapters.map((c) => `
+          <li>
+            <a href="/chapters/${c.id}">
+              <span class="inbox-what">Chapter ${c.chapter_number}: ${escapeHtml(c.title)}</span>
+              <span class="inbox-where">${escapeHtml(c.story_title)} &middot; by ${escapeHtml(c.author_name)}${c.word_count ? ` &middot; ${wordCount(c.word_count)}` : ''}</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+    </section>` : '';
+
+  return `<div class="inbox">${pending}${replies}${fresh}</div>`;
+}
+
+function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null }) {
+  const sinceQs = since ? `?since=${encodeURIComponent(since)}` : '';
+  const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
+  const rows = stories.length
+    ? stories.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, coauthors: coauthorsByStory.get(s.id) || [] })).join('')
+    : (activeTags.length
+      ? emptyState({
+        art: 'label',
+        title: 'Nothing carries every tag you picked',
+        body: `A story has to have <em>all</em> of them, not any. Try taking one off: ${activeTags.map((t) => escapeHtml(t.name)).join(', ')}.`,
+        action: '<a class="btn ghost small" href="/">Clear the filter</a>',
+      })
+      : emptyState({
+        art: 'sheets',
+        title: 'No stories yet',
+        body: 'A story is a set of chapters with one author and, if they want, coauthors. You write the first chapter as you create it.',
+        action: '<a class="btn" href="/stories/new">Start the first one</a>',
+      }));
+
+  // The filter is a form of checkboxes rather than a list of links, so
+  // picking several tags is one action instead of one page load each.
+  const activeSlugs = new Set(activeTags.map((t) => t.slug));
+  const filter = allGroups.length ? `
+    <details class="tag-filter"${activeTags.length ? ' open' : ''}>
+      <summary>${activeTags.length
+        ? `Filtered by ${activeTags.map((t) => escapeHtml(t.name)).join(', ')}`
+        : 'Filter by tag'}</summary>
+      <form method="get" action="/" class="tag-filter-form">
+        ${allGroups.map((g) => `
+          <fieldset class="tag-group">
+            <legend>${escapeHtml(g.group)}</legend>
+            <div class="tag-group-options">${g.tags.map((t) => `
+              <label class="tag-pick${activeSlugs.has(t.slug) ? ' checked' : ''}">
+                <input type="checkbox" name="tag" value="${escapeHtml(t.slug)}"${activeSlugs.has(t.slug) ? ' checked' : ''}>
+                <span>${escapeHtml(t.name)}</span>
+              </label>`).join('')}</div>
+          </fieldset>`).join('')}
+        <div class="tag-filter-actions">
+          <button class="btn small" type="submit">Apply</button>
+          ${activeTags.length ? '<a class="btn ghost small" href="/">Clear</a>' : ''}
+          <span class="hint">A story has to carry every tag you pick.</span>
+        </div>
+      </form>
+    </details>` : '';
+
+  // Stories folded away by this reader's own hidden tags (see /account) --
+  // out of the way, but never silently gone.
+  const foldedBlock = folded.length ? `
+    <details class="folded-stories">
+      <summary>${folded.length} stor${folded.length === 1 ? 'y' : 'ies'} hidden by your tag settings</summary>
+      <div class="chapter-list">${folded.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, hiddenBy: s.hiddenBy, coauthors: coauthorsByStory.get(s.id) || [] })).join('')}</div>
+    </details>` : '';
+
+  return layout({
+    title: 'Stories',
+    user,
+    current: 'stories',
+    body: `
+      <div class="page-head">
+        <h1>The Swarm stories</h1>
+        <a class="btn" href="/stories/new">New story</a>
+      </div>
+      ${activeTags.length ? '' : inboxSection(inbox)}
+      ${filter}
+      <div class="chapter-list">${rows}</div>
+      ${foldedBlock}
+      <p class="muted archive-link"><a href="/archived-stories">View archived stories &rarr;</a></p>`,
+  });
+}
+
+// ---------- story tags ----------
+
+function tagsIndexPage({ user, groups }) {
+  const total = groups.reduce((n, g) => n + g.tags.length, 0);
+  const chip = (t) => `
+    <a class="tag-chip${t.story_count ? '' : ' unused'}" href="/tags/${encodeURIComponent(t.slug)}"${
+      t.description ? ` title="${escapeHtml(t.description)}"` : ''}>
+      ${escapeHtml(t.name)}<span class="tag-count">${t.story_count}</span>
+    </a>`;
+
+  // Most of the vocabulary is unused most of the time -- a starting list
+  // of sixty-odd against an archive of a handful of stories. Showing all
+  // of it at once made the page read as a catalogue of nothing: rows and
+  // rows of "0". What somebody wants first is the tags that would
+  // actually take them somewhere.
+  const used = groups.map((g) => ({ ...g, tags: g.tags.filter((t) => t.story_count > 0) }))
+    .filter((g) => g.tags.length);
+  const unusedCount = total - used.reduce((n, g) => n + g.tags.length, 0);
+
+  const section = (g) => `
+    <section class="tag-index-group">
+      <h2>${escapeHtml(g.group)}</h2>
+      <div class="tag-chips">${g.tags.map(chip).join('')}</div>
+    </section>`;
+
+  let body;
+  if (!groups.length) {
+    body = emptyState({
+      art: 'label',
+      title: 'No tags have been set up',
+      body: 'Tags are the vocabulary the whole group shares. An admin adds them from the admin page.',
+      action: user.is_admin ? '<a class="btn ghost small" href="/admin#tags">Set them up</a>' : '',
+    });
+  } else if (!used.length) {
+    body = emptyState({
+      art: 'label',
+      title: 'Nothing is tagged yet',
+      body: `The vocabulary is there \u2014 ${total} tag${total === 1 ? '' : 's'} \u2014 but no story carries one. They go on a story from its own page, under &ldquo;Edit details&rdquo;.`,
+    }) + `
+      <details class="tag-vocabulary">
+        <summary>See the whole vocabulary</summary>
+        ${groups.map(section).join('')}
+      </details>`;
+  } else {
+    body = `
+      ${used.map(section).join('')}
+      ${unusedCount ? `
+        <details class="tag-vocabulary">
+          <summary>${unusedCount} more tag${unusedCount === 1 ? '' : 's'} nothing is using yet</summary>
+          ${groups.map((g) => ({ ...g, tags: g.tags.filter((t) => !t.story_count) }))
+            .filter((g) => g.tags.length).map(section).join('')}
+        </details>` : ''}`;
+  }
+
+  return layout({
+    title: 'Tags',
+    user,
+    current: 'tags',
+    body: `
+      <div class="page-head"><h1>Tags</h1></div>
+      <p class="muted">${total} tag${total === 1 ? '' : 's'} in the group's shared vocabulary. The number on each is how many stories carry it.</p>
+      ${body}`,
+  });
+}
+
+function tagPage({ user, tag, stories, tagsByStory }) {
+  const rows = stories.length
+    ? stories.map((s) => storyRow(s, { tags: tagsByStory.get(s.id) || [] })).join('')
+    : emptyState({
+      art: 'label',
+      title: 'No stories carry this tag yet',
+      body: 'Tags go on a story from its own page, under &ldquo;Edit details&rdquo;.',
+    });
+  return layout({
+    title: tag.name,
+    user,
+    current: 'tags',
+    body: `
+      <p class="breadcrumb"><a href="/tags">&larr; All tags</a></p>
+      <div class="page-head"><h1>${escapeHtml(tag.name)}</h1></div>
+      <p class="muted">${tag.description ? `${escapeHtml(tag.description)} ` : ''}${escapeHtml(tag.tag_group)} tag &middot; ${stories.length} stor${stories.length === 1 ? 'y' : 'ies'}.</p>
+      <div class="chapter-list">${rows}</div>`,
+  });
+}
+
+function tagNotFoundPage({ user, slug }) {
+  return layout({
+    title: 'Tag not found',
+    user,
+    current: 'tags',
+    body: `
+      <p class="breadcrumb"><a href="/tags">&larr; All tags</a></p>
+      <h1>No such tag</h1>
+      <p class="muted">Nothing here is tagged "${escapeHtml(slug)}" -- it may have been renamed or removed since that link was made.</p>`,
+  });
+}
+
+
+/** @param {{ user: Row, story: Row, groups: any[], selectedTagIds: number[], error?: string|null, values?: FormValues }} props */
+function editStoryPage({ user, story, groups, selectedTagIds, error, values = /** @type {FormValues} */ ({}) }) {
+  const title = values.title !== undefined ? values.title : story.title;
+  const description = values.description !== undefined ? values.description : story.description;
+  const synopsis = values.synopsis !== undefined ? values.synopsis : (story.synopsis || '');
+  const status = values.status !== undefined ? values.status : (story.status || 'ongoing');
+  return layout({
+    title: `Edit - ${story.title}`,
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      <div class="writer-card">
+        <h1>Story details</h1>
+        <p class="muted writer-intro">The title, the blurb, and the tags that tell everyone what they're walking into. Editing these doesn't touch a single chapter.</p>
+        ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+        <form method="post" action="/stories/${story.id}/edit" class="chapter-form">
+          <label class="main-field">Title
+            <input type="text" name="title" value="${escapeHtml(title)}" required>
+          </label>
+          <label>Description
+            <textarea name="description" rows="3">${escapeHtml(description || '')}</textarea>
+            <span class="hint">A couple of lines on what this story is, shown wherever it's listed.</span>
+          </label>
+          <label>Synopsis
+            <textarea name="synopsis" rows="6">${escapeHtml(synopsis)}</textarea>
+            <span class="hint">What actually happens, for somebody coming back to chapter nine after a month away. Spoilers are fine &mdash; it stays folded on the story page.</span>
+          </label>
+          <label>Where it stands
+            <select name="status">
+              ${CHOOSABLE_STORY_STATES.map((key) => `
+                <option value="${key}"${key === status ? ' selected' : ''}>${escapeHtml(STORY_STATES[key].label)} &mdash; ${escapeHtml(STORY_STATES[key].hint)}</option>`).join('')}
+            </select>
+            <span class="hint">There is no &ldquo;on hiatus&rdquo; to pick: a story that has been ongoing with nothing new for six months says so on its own, and stops saying it the day you add a chapter.</span>
+          </label>
+          <label>Word goal (optional)
+            <input type="number" name="wordGoal" value="${story.word_goal || ''}" min="0" step="1000" placeholder="e.g. 90000">
+            <span class="hint">What the finished thing is aiming at. The story page draws how far along it is. Leave it empty and nothing is drawn: a number nobody set is not a target anybody missed.</span>
+          </label>
+          <div class="writer-section">
+            <p class="writer-section-label">Tags</p>
+            ${tagPicker(groups, selectedTagIds, { allowPropose: true })}
+          </div>
+          <div class="writer-actions">
+            <a class="btn ghost" href="/stories/${story.id}">Cancel</a>
+            <button class="btn" type="submit">Save details</button>
+          </div>
+        </form>
+      </div>`,
+  });
+}
+
+// ---------- glossary (a local, offline mirror of the shared-universe
+
+module.exports = {
+  commentGist,
+  editStoryPage,
+  inboxSection,
+  storiesPage,
+  storyRow,
+  tagNotFoundPage,
+  tagPage,
+  tagsIndexPage,
+};

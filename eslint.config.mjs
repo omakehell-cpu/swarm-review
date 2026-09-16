@@ -30,7 +30,7 @@ export default [
 
   {
     // Everything that runs under node: the server, lib/, the tests.
-    files: ['*.js', 'lib/**/*.js', 'test/**/*.js', 'scripts/**/*.js'],
+    files: ['*.js', 'lib/**/*.js', 'views/**/*.js', 'models/**/*.js', 'routes/**/*.js', 'test/**/*.js', 'scripts/**/*.js'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'commonjs',
