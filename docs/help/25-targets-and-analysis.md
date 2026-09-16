@@ -71,3 +71,32 @@ needed to notice.
 
 Every chart on the page is a table underneath, so the numbers are there
 whether or not the picture is any use to you.
+
+## The timeline
+
+The order a story is told in and the order things happen in are two
+different orders, and the gap between them is where a long book with a lot
+of people in it quietly goes wrong. **Timeline**, next to *Outline* and
+*Analysis*, puts the second one on a line.
+
+Two fields feed it, both optional, on chapters (*Optional details* in the
+editor) and on bible entries (*When this happens*):
+
+- **When this happens** -- what the story calls the moment. "Day 412",
+  "Third of Marrow, 1123", "the morning after". Words, for reading.
+- **Day number** -- the number that puts it in line, on whatever scale you
+  pick: days, years, winters of a war. It is only ever used for sorting
+  and for the distance between two rows, which is why the gaps are written
+  as `+407` rather than as days.
+
+@figure timeline.png | The timeline: chapters and dated bible entries in one line, with the distance between them, and a chapter marked as told out of order.
+
+Leaving the number empty means **nobody has said**, which is not the same
+as day zero: an undated chapter stays off the line rather than being
+dragged to the front of it. Anything with words but no number is listed
+underneath, waiting for one.
+
+A chapter marked **told out of order** is one that goes backwards: it
+happens before a chapter the reader has already been through. That is a
+flashback, which is a decision rather than a mistake, so the page marks it
+and leaves it alone.

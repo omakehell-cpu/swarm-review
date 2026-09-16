@@ -34,8 +34,9 @@ things worth setting:
   next named chapter under it. Leave it empty on every chapter that just
   carries on.
 
-**Point of view** and **strand** live there too, and both are free text --
-see [targets and analysis](/help/targets-and-analysis) for what they feed.
+**Point of view**, **strand**, and **when this happens** live there too --
+see [targets and analysis](/help/targets-and-analysis) for what they feed,
+which is the outline, the analysis and the timeline.
 
 **What changed?** is one line for the version history. Future you will want
 it.

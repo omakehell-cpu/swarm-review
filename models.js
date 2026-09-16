@@ -525,10 +525,10 @@ function refreshChapterAppearances(chapterId) {
   try { rebuildChapterAppearances(chapterId); } catch (err) { /* rebuilt on the next edit, or from the bible page */ }
 }
 
-/** @param {{ storyId: number, title: string, summary?: string, authorId: number, content: string, changelog?: string, stage?: string, arcTitle?: string, pov?: string, strand?: string }} fields */
-function createChapter({ storyId, title, summary, authorId, content, changelog, stage, arcTitle, pov, strand }) {
+/** @param {{ storyId: number, title: string, summary?: string, authorId: number, content: string, changelog?: string, stage?: string, arcTitle?: string, pov?: string, strand?: string , storyWhen?: string, storyDay?: string|number|null }} fields */
+function createChapter({ storyId, title, summary, authorId, content, changelog, stage, arcTitle, pov, strand, storyWhen, storyDay }) {
   const insertChapter = db.prepare(
-    'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id, stage, arc_title, pov, strand) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id, stage, arc_title, pov, strand, story_when, story_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
   );
   const insertVersion = db.prepare(
     'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, 1, ?, ?, ?)'
@@ -539,7 +539,7 @@ function createChapter({ storyId, title, summary, authorId, content, changelog, 
 
   db.exec('BEGIN');
   try {
-    const info = insertChapter.run(storyId, nextNumber, title, summary || '', authorId, chapterStage(stage), arcName(arcTitle), cleanLabel(pov), cleanLabel(strand));
+    const info = insertChapter.run(storyId, nextNumber, title, summary || '', authorId, chapterStage(stage), arcName(arcTitle), cleanLabel(pov), cleanLabel(strand), cleanLabel(storyWhen), cleanDay(storyDay));
     const chapterId = Number(info.lastInsertRowid);
     insertVersion.run(chapterId, content, changelog || 'Initial version', countWords(content));
     db.exec('COMMIT');
@@ -557,8 +557,8 @@ function createChapter({ storyId, title, summary, authorId, content, changelog, 
 // since they still hold a slot under UNIQUE(story_id, chapter_number) --
 // is shifted up by one, highest number first so no single UPDATE ever
 // collides with another chapter's current number.
-/** @param {{ storyId: number, position: number, title: string, summary?: string, authorId: number, content: string, changelog?: string, stage?: string, arcTitle?: string, pov?: string, strand?: string }} fields */
-function insertChapterAt({ storyId, position, title, summary, authorId, content, changelog, stage, arcTitle, pov, strand }) {
+/** @param {{ storyId: number, position: number, title: string, summary?: string, authorId: number, content: string, changelog?: string, stage?: string, arcTitle?: string, pov?: string, strand?: string , storyWhen?: string, storyDay?: string|number|null }} fields */
+function insertChapterAt({ storyId, position, title, summary, authorId, content, changelog, stage, arcTitle, pov, strand, storyWhen, storyDay }) {
   db.exec('BEGIN');
   try {
     const toShift = db.prepare(
@@ -568,8 +568,8 @@ function insertChapterAt({ storyId, position, title, summary, authorId, content,
     for (const row of toShift) bump.run(row.id);
 
     const info = db.prepare(
-      'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id, stage, arc_title, pov, strand) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(storyId, position, title, summary || '', authorId, chapterStage(stage), arcName(arcTitle), cleanLabel(pov), cleanLabel(strand));
+      'INSERT INTO chapters (story_id, chapter_number, title, summary, author_id, stage, arc_title, pov, strand, story_when, story_day) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(storyId, position, title, summary || '', authorId, chapterStage(stage), arcName(arcTitle), cleanLabel(pov), cleanLabel(strand), cleanLabel(storyWhen), cleanDay(storyDay));
     const chapterId = Number(info.lastInsertRowid);
     db.prepare(
       'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, 1, ?, ?, ?)'
@@ -591,14 +591,14 @@ function updateChapter({ chapterId, title, summary }) {
 
 /**
  * @param {{ chapterId: number, title: string, summary?: string, content: string,
- *   changelog?: string, stage?: string, arcTitle?: string, pov?: string, strand?: string }} fields
+ *   changelog?: string, stage?: string, arcTitle?: string, pov?: string, strand?: string , storyWhen?: string, storyDay?: string|number|null }} fields
  */
 // Edits a chapter "as a document": updates title/summary in place, and if
 // the text itself changed, publishes it as a new version (rather than
 // rewriting the current version's row) so any comments already anchored to
 // the previous text keep pointing at the passage they were actually made
 // about. If the text is unchanged, no new version is created.
-function editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle, pov, strand }) {
+function editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle, pov, strand, storyWhen, storyDay }) {
   const latest = getLatestVersion(chapterId);
   db.exec('BEGIN');
   try {
@@ -614,6 +614,8 @@ function editChapter({ chapterId, title, summary, content, changelog, stage, arc
     if (arcTitle !== undefined) { sets.push('arc_title = @arcTitle'); params.arcTitle = arcName(arcTitle); }
     if (pov !== undefined) { sets.push('pov = @pov'); params.pov = cleanLabel(pov); }
     if (strand !== undefined) { sets.push('strand = @strand'); params.strand = cleanLabel(strand); }
+    if (storyWhen !== undefined) { sets.push('story_when = @storyWhen'); params.storyWhen = cleanLabel(storyWhen); }
+    if (storyDay !== undefined) { sets.push('story_day = @storyDay'); params.storyDay = cleanDay(storyDay); }
     db.prepare(`UPDATE chapters SET ${sets.join(', ')} WHERE id = @chapterId`).run(params);
 
     let newVersion = null;
@@ -913,7 +915,9 @@ function addStoryDictionaryWord(storyId, word, addedBy) {
   if (!normalized) return;
   db.prepare(
     'INSERT OR IGNORE INTO story_dictionary_words (story_id, word, added_by) VALUES (?, ?, ?)'
-  ).run(storyId, normalized, addedBy);
+  // node:sqlite refuses undefined outright, so a caller that does not
+  // know who is asking says so in the one way the column accepts.
+  ).run(storyId, normalized, addedBy === undefined ? null : addedBy);
 }
 
 function removeStoryDictionaryWord(storyId, id) {
@@ -1524,6 +1528,106 @@ function inboxFor(userId, { since = null, limit = 8 } = {}) {
   };
 }
 
+// ---------- the story's own calendar ----------
+// The order chapters are told in and the order things happen in are two
+// different orders, and the gap between them is where a long book with a
+// lot of people in it goes wrong. This reads both and puts them side by
+// side; it decides nothing.
+//
+// Nothing here is stored: it is the chapters and the bible entries that
+// have been given a day, sorted. A story where nobody has dated anything
+// gets an empty timeline and a sentence saying so, not an error.
+function storyTimeline(storyId) {
+  const chapters = db.prepare(`
+    SELECT id, chapter_number, title, story_when, story_day, arc_title
+      FROM chapters
+     WHERE story_id = ? AND archived_at IS NULL
+     ORDER BY chapter_number
+  `).all(storyId);
+  const entities = db.prepare(`
+    SELECT id, name, kind, summary, story_when, story_day
+      FROM story_entities
+     WHERE story_id = ?
+     ORDER BY name COLLATE NOCASE
+  `).all(storyId);
+
+  const placed = [];
+  const undated = [];
+  for (const c of chapters) {
+    const item = {
+      type: 'chapter',
+      id: c.id,
+      day: c.story_day,
+      when: c.story_when,
+      title: `${c.chapter_number}. ${c.title}`,
+      note: c.arc_title || '',
+      url: `/chapters/${c.id}`,
+      order: c.chapter_number,
+    };
+    (item.day === null || item.day === undefined ? undated : placed).push(item);
+  }
+  for (const e of entities) {
+    if (e.story_day === null || e.story_day === undefined) {
+      // An entry with a date written out but no number can be shown; one
+      // with neither is just an entry, and does not belong on a timeline.
+      if (String(e.story_when || '').trim()) {
+        undated.push({ type: 'entry', id: e.id, day: null, when: e.story_when, title: e.name, note: e.kind, url: `/bible/${e.id}`, order: null });
+      }
+      continue;
+    }
+    placed.push({
+      type: 'entry', id: e.id, day: e.story_day, when: e.story_when,
+      title: e.name, note: e.summary || e.kind, url: `/bible/${e.id}`, order: null,
+    });
+  }
+
+  // Same day: chapters before entries, then by the order they are told
+  // in, so a day with three chapters on it still reads forwards.
+  placed.sort((a, b) => a.day - b.day
+    || String(a.type).localeCompare(String(b.type))
+    || (a.order || 0) - (b.order || 0));
+
+  let previousDay = null;
+  for (const item of placed) {
+    item.gap = previousDay === null ? null : item.day - previousDay;
+    previousDay = item.day;
+  }
+
+  // Told out of order is judged in reading order, not in this list's
+  // order: a reader meets the chapters by number, and the jump happens at
+  // the chapter that goes back -- which is the flashback itself, not the
+  // chapter it flashes back from. It is a choice, so it is marked rather
+  // than corrected.
+  let highestDay = -Infinity;
+  for (const item of placed.slice().sort((a, b) => (a.order || 0) - (b.order || 0))) {
+    if (item.type !== 'chapter') continue;
+    item.outOfOrder = item.day < highestDay;
+    if (item.day > highestDay) highestDay = item.day;
+  }
+
+  return {
+    placed,
+    undated,
+    chapters: chapters.length,
+    dated: placed.filter((i) => i.type === 'chapter').length,
+    span: placed.length ? { from: placed[0].day, to: placed[placed.length - 1].day } : null,
+    outOfOrder: placed.filter((i) => i.outOfOrder).length,
+  };
+}
+
+/** Every date label this story has used, so they settle into one shape. */
+const listStoryWhens = (storyId) => db.prepare(`
+  SELECT value, SUM(n) AS n FROM (
+    SELECT story_when AS value, COUNT(*) AS n FROM chapters
+     WHERE story_id = @storyId AND archived_at IS NULL AND TRIM(story_when) != ''
+     GROUP BY story_when COLLATE NOCASE
+    UNION ALL
+    SELECT story_when AS value, COUNT(*) AS n FROM story_entities
+     WHERE story_id = @storyId AND TRIM(story_when) != ''
+     GROUP BY story_when COLLATE NOCASE
+  ) GROUP BY value COLLATE NOCASE ORDER BY n DESC, value COLLATE NOCASE LIMIT 60
+`).all({ storyId }).map((r) => r.value);
+
 // ---------- the feed ----------
 // The one way this app tells somebody that a note is waiting without
 // reaching out to the network itself: a private Atom feed per person,
@@ -1826,6 +1930,17 @@ const POV_MAX = 80;
 
 const cleanLabel = (value) => String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, POV_MAX);
 
+// A day on the story's own scale. Empty means nobody has said, which is
+// not day zero: a chapter with no date has to stay undated rather than
+// being dragged to the front of the timeline.
+function cleanDay(value) {
+  const text = String(value == null ? '' : value).trim();
+  if (!text) return null;
+  const n = Number(text);
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n);
+}
+
 /** Every point of view this story has used, commonest first. */
 const listPovs = (storyId) => db.prepare(`
   SELECT pov AS value, COUNT(*) AS n FROM chapters
@@ -2126,16 +2241,17 @@ function teachDictionary(storyId, names, userId) {
   }
 }
 
-/** @param {{ storyId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], createdBy: number }} entry */
-function createStoryEntity({ storyId, kind, name, summary, description, secret, status, role, aliases, fields, createdBy }) {
+/** @param {{ storyId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], createdBy: number , storyWhen?: string, storyDay?: string|number|null }} entry */
+function createStoryEntity({ storyId, kind, name, summary, description, secret, status, role, aliases, fields, createdBy, storyWhen, storyDay }) {
   const clean = bible.cleanName(name);
   if (!clean) return null;
   const list = (aliases || []).map(bible.cleanName).filter(Boolean);
+  let entityId;
   db.exec('BEGIN');
   try {
     const info = db.prepare(`
-      INSERT INTO story_entities (story_id, kind, name, name_lower, summary, description, secret, status, role, created_by)
-      VALUES (@storyId, @kind, @name, @nameLower, @summary, @description, @secret, @status, @role, @createdBy)
+      INSERT INTO story_entities (story_id, kind, name, name_lower, summary, description, secret, status, role, created_by, story_when, story_day)
+      VALUES (@storyId, @kind, @name, @nameLower, @summary, @description, @secret, @status, @role, @createdBy, @storyWhen, @storyDay)
     `).run({
       storyId,
       kind: bible.entityKind(kind),
@@ -2147,23 +2263,27 @@ function createStoryEntity({ storyId, kind, name, summary, description, secret, 
       status: bible.entityStatus(status),
       role: bible.entityRole(role),
       createdBy: createdBy || null,
+      storyWhen: cleanLabel(storyWhen),
+      storyDay: cleanDay(storyDay),
     });
-    const entityId = Number(info.lastInsertRowid);
+    entityId = Number(info.lastInsertRowid);
     writeAliases(entityId, storyId, list);
     writeEntityFields(entityId, storyId, fields);
     db.exec('COMMIT');
-    teachDictionary(storyId, [clean, ...list], createdBy);
-    castLinks.invalidate(storyId);
-    rebuildStoryAppearances(storyId);
-    return getStoryEntity(entityId);
   } catch (err) {
     db.exec('ROLLBACK');
     throw err;
   }
+  // Same as the update below: after the commit there is nothing to roll
+  // back, so these stay outside the try.
+  teachDictionary(storyId, [clean, ...list], createdBy);
+  castLinks.invalidate(storyId);
+  rebuildStoryAppearances(storyId);
+  return getStoryEntity(entityId);
 }
 
-/** @param {{ entityId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], userId?: number }} entry */
-function updateStoryEntity({ entityId, kind, name, summary, description, secret, status, role, aliases, fields, userId }) {
+/** @param {{ entityId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], userId?: number , storyWhen?: string, storyDay?: string|number|null }} entry */
+function updateStoryEntity({ entityId, kind, name, summary, description, secret, status, role, aliases, fields, userId, storyWhen, storyDay }) {
   const current = db.prepare('SELECT id, story_id FROM story_entities WHERE id = ?').get(entityId);
   if (!current) return null;
   const clean = bible.cleanName(name);
@@ -2175,6 +2295,7 @@ function updateStoryEntity({ entityId, kind, name, summary, description, secret,
       UPDATE story_entities SET
         kind = @kind, name = @name, name_lower = @nameLower, summary = @summary,
         description = @description, secret = @secret, status = @status, role = @role,
+        story_when = @storyWhen, story_day = @storyDay,
         updated_at = datetime('now')
       WHERE id = @entityId
     `).run({
@@ -2187,18 +2308,24 @@ function updateStoryEntity({ entityId, kind, name, summary, description, secret,
       secret: String(secret || ''),
       status: bible.entityStatus(status),
       role: bible.entityRole(role),
+      storyWhen: cleanLabel(storyWhen),
+      storyDay: cleanDay(storyDay),
     });
     writeAliases(entityId, current.story_id, list);
     writeEntityFields(entityId, current.story_id, fields);
     db.exec('COMMIT');
-    teachDictionary(current.story_id, [clean, ...list], userId);
-    castLinks.invalidate(current.story_id);
-    rebuildStoryAppearances(current.story_id);
-    return getStoryEntity(entityId);
   } catch (err) {
     db.exec('ROLLBACK');
     throw err;
   }
+  // Outside the try on purpose. These run after the commit, so a failure
+  // here has nothing to roll back -- and a ROLLBACK with no transaction
+  // open throws a second error on top of the first, which is how a real
+  // one goes missing.
+  teachDictionary(current.story_id, [clean, ...list], userId);
+  castLinks.invalidate(current.story_id);
+  rebuildStoryAppearances(current.story_id);
+  return getStoryEntity(entityId);
 }
 
 // Deleting an entry takes its aliases, its half of every relation and its
@@ -2577,6 +2704,8 @@ module.exports = {
   moveEntityImage,
   removeEntityImage,
   clearFeedToken,
+  listStoryWhens,
+  storyTimeline,
   createFeedToken,
   feedItemsFor,
   getUserByFeedToken,

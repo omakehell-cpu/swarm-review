@@ -4,6 +4,14 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — A timeline, for when things actually happen
+
+- **Chapters and bible entries can say when they happen**, in the story's own calendar: a few words for what the story calls the moment, and a number to put it in line. Both optional, on the chapter editor and on the entry form.
+- **Timeline**, next to *Outline* and *Analysis*: everything that has been given a day, in order, with the distance between one row and the next. The number is only ever used for sorting and for that distance, so the scale is yours -- days, years, winters of a war.
+- **A chapter that goes backwards is marked "told out of order".** That is a flashback, which is a decision and not a mistake, so the page says so and leaves it alone.
+- Undated is not day zero. A chapter nobody has dated stays off the line rather than being dragged to the front of it; one with words but no number is listed underneath, waiting for one.
+- Fixed while in there: editing a bible entry without saying who was asking would fail inside the story dictionary, and then have that failure replaced by "cannot rollback" -- a much less useful sentence. The work that happens after the commit is outside the transaction now, where it belongs.
+
 ## 2026-09-16 — A feed, so a note stops waiting in silence
 
 - **You can be told that something is waiting**, without this app ever reaching out to the network. Your account page will make you a private feed: notes waiting on your chapters, replies to notes you left, and chapters you have not opened. Paste the address into whatever you read feeds in.
