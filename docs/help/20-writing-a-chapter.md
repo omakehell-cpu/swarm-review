@@ -34,6 +34,9 @@ things worth setting:
   next named chapter under it. Leave it empty on every chapter that just
   carries on.
 
+**Point of view** and **strand** live there too, and both are free text --
+see [targets and analysis](/help/targets-and-analysis) for what they feed.
+
 **What changed?** is one line for the version history. Future you will want
 it.
 
@@ -75,6 +78,9 @@ you would rather, or if JavaScript is off), and **write a summary straight
 into the table** -- it saves when you click away. A chapter with no summary
 is counted at the top, because a summary you never wrote is the one you
 will want in six months.
+
+Next to it is **Analysis**, which counts the same draft instead of listing
+it -- [what that page shows](/help/targets-and-analysis).
 
 ## The whole story in one file
 

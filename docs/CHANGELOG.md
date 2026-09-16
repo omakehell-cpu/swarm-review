@@ -4,6 +4,13 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — Targets, and the story counted
+
+- **A story can have a word target.** Set it on *Edit details* and a bar appears on the story page and on the analysis, saying where the draft is against it. No target, no bar: nothing nags at you unless you asked it to.
+- **A daily target of your own**, on your account page, with what you have written today, this week, and how many days in a row you have hit it. It counts words added, so a day spent cutting is an honest zero rather than a negative.
+- **Analysis**, next to *Outline* on the story page: the length of every chapter, the weight of each arc, who the story is told through, what each strand carries, which notes are still waiting, and a grid of who is named in what. Nothing on that page is set by hand -- it is the chapters, the bible and the notes, added up.
+- **Chapters can say whose point of view they are, and which strand they belong to.** Both optional, both free text, both offered back to you from what the story has used before, so a vocabulary settles on its own. They show up on the outline, and they are what the point of view and strand charts are counting.
+
 ## 2026-09-16 — An outline, and the whole story in one file
 
 - **Every story has an outline**, from the story page: all its chapters on one line each, with what happens, who is in it, how long it is and what notes are still waiting. **Drag a row** to move a chapter, and **edit a summary where it sits**.

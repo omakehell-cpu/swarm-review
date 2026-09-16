@@ -273,6 +273,16 @@ ensureColumn('users', 'changelog_seen_at', 'TEXT');
 // while they read. Off by default: the bible is a shared-workings tool
 // first, and a private notebook when its author says so.
 ensureColumn('stories', 'bible_private', 'INTEGER NOT NULL DEFAULT 0');
+// Whose eyes a chapter is behind, and which thread of the story it
+// belongs to. Free text with the story's own past answers offered back,
+// the same bargain the bible's custom fields strike: a vocabulary that
+// settles by being reused rather than by being configured first.
+ensureColumn('chapters', 'pov', "TEXT NOT NULL DEFAULT ''");
+ensureColumn('chapters', 'strand', "TEXT NOT NULL DEFAULT ''");
+// What this story is aiming at, and what one person is aiming at in a
+// day. Zero means nobody has said, which is not the same as zero words.
+ensureColumn('stories', 'word_goal', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('users', 'daily_goal', 'INTEGER NOT NULL DEFAULT 0');
 db.exec("UPDATE users SET last_seen_at = datetime('now') WHERE last_seen_at IS NULL");
 
 // Login lockout tracking. failed_login_attempts uses a constant default

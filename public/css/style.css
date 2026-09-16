@@ -2079,17 +2079,19 @@ mark.search-hit {
    column with the blurb -- the actions take the other half of the head --
    and six of them never fit across it, so they are set three by two on
    purpose instead of five and an orphan. */
+/* Three across at full width, and fewer when the column it sits in is
+   narrow -- which is not the same as the window being narrow: this block
+   shares the head with the actions, so it can be 300px wide on a desktop.
+   auto-fit measures the space actually available; a viewport breakpoint
+   could not, and the labels used to run over each other. */
 .story-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   gap: var(--s-6) var(--s-5);
   margin-top: var(--s-6);
   padding-top: var(--s-5);
   border-top: 1px solid var(--border);
   max-width: 520px;
-}
-@media (max-width: 560px) {
-  .story-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .story-stat { display: flex; flex-direction: column; gap: 1px; }
 /* Six numbers in a row under the blurb: set big and tight, with the
@@ -2782,3 +2784,112 @@ main[data-reading="read"] .reading-pane {
 .compile .side-head { border-top: 2px solid var(--border-strong); }
 .compile p { margin: 0 0 var(--s-5); max-width: 60ch; }
 .compile-links { display: flex; flex-wrap: wrap; gap: var(--s-4); }
+
+/* ---- a goal somebody set ----
+   One measure, so one bar and one colour: no ramp, nothing stacked, and
+   the numbers said in words beside it so the bar is not the only way to
+   read it. */
+.goal { margin: var(--s-6) 0 0; max-width: 46ch; }
+.goal-line {
+  display: flex; align-items: baseline; gap: var(--s-4); margin: 0 0 var(--s-3);
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.goal-figure { font-variant-numeric: tabular-nums; }
+.goal-track { height: 6px; background: var(--bg-sunken); border: 1px solid var(--border); }
+.goal-fill { height: 100%; background: var(--text); }
+.goal-fill.over { background: var(--accent); }
+
+/* ---- the analysis ----
+   Every chart is one series, so every chart is one colour: no ramp across
+   bars re-saying what the bar length already says, and the accent kept
+   for the one chart that means somebody is waiting. Each chart is a
+   table, so the numbers are readable without the picture. */
+.chart-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: var(--s-11) var(--s-12); margin-top: var(--s-9);
+}
+.chart { min-width: 0; }
+.chart .side-head { border-top: 2px solid var(--border-strong); }
+.chart-note { margin: 0 0 var(--s-5); font-size: var(--t-sm); max-width: 52ch; }
+.chart-wide { margin-top: var(--s-11); }
+
+.bars { width: 100%; border-collapse: collapse; }
+.bars th[scope="row"] {
+  text-align: left; font-weight: 400; font-size: var(--t-sm);
+  padding: var(--s-3) var(--s-5) var(--s-3) 0;
+  max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bars th a { color: var(--text); text-decoration: none; }
+.bars th a:hover { color: var(--accent); }
+.bar-note {
+  display: block; font-size: var(--t-2xs); color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking); font-weight: 700;
+}
+.bar-cell { width: 100%; padding: var(--s-3) var(--s-5) var(--s-3) 0; }
+.bar {
+  display: block; height: 8px; min-width: 2px;
+  background: var(--text);
+}
+.bar.accent { background: var(--accent); }
+.bar-value {
+  text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums;
+  font-size: var(--t-xs); color: var(--text-muted); padding: var(--s-3) 0;
+}
+
+/* The one place a scale earns its keep: cells ordered by how much
+   somebody is in a chapter. One hue, four steps, a legend, and the count
+   in the cell for anybody who cannot see the shade. */
+.grid-wrap { overflow-x: auto; }
+.presence { border-collapse: separate; border-spacing: 2px; }
+.presence th {
+  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+  padding: var(--s-2) var(--s-3); white-space: nowrap;
+}
+.presence th[scope="row"] { text-align: left; text-transform: none; letter-spacing: normal; font-size: var(--t-sm); color: var(--text); }
+.presence th[scope="row"] a { color: inherit; text-decoration: none; }
+.presence th[scope="row"] a:hover { color: var(--accent); }
+.cell {
+  display: inline-block; width: 16px; height: 16px;
+  background: var(--bg-sunken); border: 1px solid var(--border);
+}
+/* The swatch lives in a span inside the cell, so it stays 16x16 whatever
+   height the row takes from the name beside it. */
+.presence td.cell-cell { padding: 0; line-height: 0; text-align: center; }
+.cell.step-1 { background: #d9d9d4; border-color: #cfcfc9; }
+.cell.step-2 { background: #a8a8a1; border-color: #9c9c95; }
+.cell.step-3 { background: #6f6d67; border-color: #64625d; }
+.cell.step-4 { background: #121210; border-color: #121210; }
+.scale-legend {
+  display: flex; align-items: center; gap: var(--s-3);
+  margin-top: var(--s-5); font-size: var(--t-xs);
+}
+@media (max-width: 620px) {
+  .chart-grid { grid-template-columns: 1fr; gap: var(--s-9); }
+}
+
+/* The presence scale in the dark, stepped against the dark surface rather
+   than flipped: the same four places on the ramp, measured from #1a1a18
+   up to the ink this theme writes in. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .cell.step-1 { background: #35352f; border-color: #3d3d37; }
+  :root:not([data-theme="light"]) .cell.step-2 { background: #5c5a53; border-color: #656258; }
+  :root:not([data-theme="light"]) .cell.step-3 { background: #96948e; border-color: #a09e97; }
+  :root:not([data-theme="light"]) .cell.step-4 { background: #f0f0ec; border-color: #f0f0ec; }
+}
+:root[data-theme="dark"] .cell.step-1 { background: #35352f; border-color: #3d3d37; }
+:root[data-theme="dark"] .cell.step-2 { background: #5c5a53; border-color: #656258; }
+:root[data-theme="dark"] .cell.step-3 { background: #96948e; border-color: #a09e97; }
+:root[data-theme="dark"] .cell.step-4 { background: #f0f0ec; border-color: #f0f0ec; }
+/* A single value is a figure, not a chart. Proportional digits: tabular
+   ones make a large standalone number look loose. */
+.chart-figure { display: flex; align-items: baseline; gap: var(--s-4); margin: 0; }
+.chart-figure-value { font-size: var(--t-2xl); font-weight: 700; line-height: 1; }
+.chart-figure-value.accent { color: var(--accent); }
+.chart-figure a { color: inherit; }
+/* The grid's column headings sit over cells 16px wide, so they are 16px
+   wide too, or the numbers drift off the squares they label. */
+.presence thead th { padding: 0 0 var(--s-3); width: 18px; text-align: center; }
+.presence thead th:first-child { width: auto; }
+.presence th[scope="row"] { padding-right: var(--s-5); }

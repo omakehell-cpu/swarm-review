@@ -890,6 +890,107 @@ test('the whole story compiles into one file', async () => {
   assert.strictEqual(buffer.subarray(0, 2).toString('latin1'), 'PK', 'a real .docx is a zip');
 });
 
+
+test('point of view and strand are remembered and offered back', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const chapterId = models.listChaptersForStory(story.id)[0].id;
+  const latest = models.getLatestVersion(chapterId);
+
+  const res = await request(`/chapters/${chapterId}/edit`, {
+    method: 'POST',
+    ...multipart([
+      ['baseVersion', String(latest.version_number)], ['title', 'Chapter One'], ['summary', ''],
+      ['content', latest.content], ['changelog', ''],
+      ['pov', 'Kessler'], ['strand', 'The anchorage'],
+    ]),
+  });
+  assert.strictEqual(res.status, 302);
+  const saved = models.getChapterById(chapterId);
+  assert.strictEqual(saved.pov, 'Kessler');
+  assert.strictEqual(saved.strand, 'The anchorage');
+
+  // What the story has used is offered back as you type, rather than
+  // having to be configured first.
+  assert.deepStrictEqual(models.listPovs(story.id).map((p) => p.value), ['Kessler']);
+  assert.deepStrictEqual(models.listStrands(story.id).map((p) => p.value), ['The anchorage']);
+  const editor = await (await request(`/chapters/${chapterId}/edit`)).text();
+  assert.match(editor, /<datalist id="known-povs">/);
+  assert.match(editor, /<option value="Kessler">/);
+
+  // And it lands on the outline without anybody putting it there.
+  assert.match(await (await request(`/stories/${story.id}/outline`)).text(), /Kessler/);
+});
+
+test('a goal nobody set draws nothing', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  assert.strictEqual(models.getStoryById(story.id).word_goal, 0);
+  assert.ok(!(await (await request(`/stories/${story.id}`)).text()).includes('goal-track'));
+
+  models.setStoryWordGoal(story.id, 90000);
+  const withGoal = await (await request(`/stories/${story.id}`)).text();
+  assert.match(withGoal, /class="goal-track"/);
+  assert.match(withGoal, /of 90,000 words|of 90k words/);
+
+  // Nonsense is clamped rather than stored.
+  assert.strictEqual(models.setStoryWordGoal(story.id, -20), 0);
+  assert.strictEqual(models.setStoryWordGoal(story.id, 'lots'), 0);
+  models.setStoryWordGoal(story.id, 90000);
+});
+
+test('the analysis counts what is there and invents nothing', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const analysis = models.storyAnalysis(story.id);
+  const chapters = models.listChaptersForStory(story.id);
+  assert.strictEqual(analysis.chapters.length, chapters.length);
+  assert.strictEqual(analysis.words, chapters.reduce((sum, c) => sum + (c.word_count || 0), 0));
+
+  // A chapter that never said whose point of view it is counts as "not
+  // said" rather than being dropped.
+  const unset = analysis.povs.find((p) => p.unset);
+  assert.ok(analysis.povs.some((p) => !p.unset), 'the one that was set is there');
+  if (chapters.length > 1) assert.ok(unset, 'and so are the ones that were not');
+
+  const html = await (await request(`/stories/${story.id}/analysis`)).text();
+  assert.match(html, /Words per chapter/);
+  assert.match(html, /Point of view/);
+  // Drawn out of a table, so the numbers are there without the picture.
+  assert.match(html, /<table class="bars">/);
+});
+
+test('the analysis is reachable from the story and from the outline', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const link = new RegExp(`href="/stories/${story.id}/analysis"`);
+  // A page nothing links to is a page nobody finds.
+  assert.match(await (await request(`/stories/${story.id}`)).text(), link);
+  assert.match(await (await request(`/stories/${story.id}/outline`)).text(), link);
+});
+
+test('a private bible keeps its cast out of the analysis too', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const reader = makeClient(app.base);
+  await reader.login('reader', USER.password);
+  const open = await (await reader.request(`/stories/${story.id}/analysis`)).text();
+  assert.strictEqual((await reader.request(`/stories/${story.id}/analysis`)).status, 200);
+
+  models.setBiblePrivate(story.id, true);
+  const shut = await (await reader.request(`/stories/${story.id}/analysis`)).text();
+  assert.ok(!shut.includes('Who is in what'), 'no presence grid for somebody who cannot read the bible');
+  // The author still has it, if there is anybody in it at all.
+  const mine = await (await request(`/stories/${story.id}/analysis`)).text();
+  assert.strictEqual(open.includes('Who is in what'), mine.includes('Who is in what'));
+  models.setBiblePrivate(story.id, false);
+});
+
+test('a writing streak needs a goal to be a streak', () => {
+  const user = models.getUserByUsername(USER.username);
+  const withoutGoal = models.writingStreak(user.id, 0);
+  assert.ok(withoutGoal.streak >= 1, 'days written, when no goal is set');
+  // A goal nobody could have met gives no streak, rather than pretending.
+  assert.strictEqual(models.writingStreak(user.id, 1000000).streak, 0);
+  assert.strictEqual(models.setDailyGoal(user.id, -5), 0);
+  assert.strictEqual(models.setDailyGoal(user.id, 500), 500);
+});
+
 test('logging out invalidates the session', async () => {
   const res = await request('/logout', { method: 'POST', ...form([]) });
   assert.strictEqual(res.status, 302);
