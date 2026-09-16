@@ -526,6 +526,10 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, values = /*
             </select>
             <span class="hint">There is no &ldquo;on hiatus&rdquo; to pick: a story that has been ongoing with nothing new for six months says so on its own, and stops saying it the day you add a chapter.</span>
           </label>
+          <label>Word goal (optional)
+            <input type="number" name="wordGoal" value="${story.word_goal || ''}" min="0" step="1000" placeholder="e.g. 90000">
+            <span class="hint">What the finished thing is aiming at. The story page draws how far along it is. Leave it empty and nothing is drawn: a number nobody set is not a target anybody missed.</span>
+          </label>
           <div class="writer-section">
             <p class="writer-section-label">Tags</p>
             ${tagPicker(groups, selectedTagIds, { allowPropose: true })}
@@ -1325,6 +1329,158 @@ function chapterCastBlock(entities, storyId) {
     </section>`;
 }
 
+// ---------- the analysis (bibisco's strongest screen, on data this app
+// already had) ----------
+// Every chart here is one series, so every chart is one colour: no ramp
+// across bars, which would burn the only free channel re-saying the thing
+// the bar length already says. The accent is kept for the one thing that
+// means "somebody is waiting". And each chart is drawn out of a table, so
+// the numbers are readable without seeing the picture and there is
+// nothing to build a separate "table view" out of.
+function barRows(rows, { unit = 'words', max = 0 } = {}) {
+  const top = max || rows.reduce((m, r) => Math.max(m, r.value), 0) || 1;
+  return rows.map((row) => `
+    <tr>
+      <th scope="row">${row.href ? `<a href="${row.href}">${escapeHtml(row.label)}</a>` : escapeHtml(row.label)}${
+  row.note ? `<span class="bar-note">${escapeHtml(row.note)}</span>` : ''}</th>
+      <td class="bar-cell">
+        <span class="bar${row.accent ? ' accent' : ''}" style="width: ${Math.max(1, Math.round((row.value / top) * 100))}%"></span>
+      </td>
+      <td class="bar-value">${row.display || (unit === 'words' ? wordCount(row.value) : row.value)}</td>
+    </tr>`).join('');
+}
+
+function barChart(title, note, rows, opts = {}) {
+  if (!rows.length) return '';
+  // One bar is not a bar chart: a single value drawn full-width says only
+  // that it is the biggest of itself. It is a figure, so it is written as
+  // one.
+  const body = rows.length === 1
+    ? `<p class="chart-figure"><span class="chart-figure-value${rows[0].accent ? ' accent' : ''}">${
+  rows[0].display || (opts.unit === 'words' ? wordCount(rows[0].value) : rows[0].value)}</span>
+        <span class="muted">${opts.figureLead ? `${escapeHtml(opts.figureLead)} ` : ''}${rows[0].href ? `<a href="${rows[0].href}">${escapeHtml(rows[0].label)}</a>` : escapeHtml(rows[0].label)}</span></p>`
+    : `<table class="bars"><tbody>${barRows(rows, opts)}</tbody></table>`;
+  return `
+    <section class="chart">
+      <h2 class="side-head">${escapeHtml(title)}</h2>
+      ${note ? `<p class="muted chart-note">${note}</p>` : ''}
+      ${body}
+    </section>`;
+}
+
+// Who is in what. A presence grid is the one place a scale earns its
+// keep, because the cells are ordered by how much somebody is in a
+// chapter -- so: one hue, four steps, a legend, and the exact count on
+// every cell for anybody who cannot see the shade.
+function presenceStep(mentions) {
+  if (!mentions) return 0;
+  if (mentions >= 12) return 4;
+  if (mentions >= 5) return 3;
+  if (mentions >= 2) return 2;
+  return 1;
+}
+
+function presenceGrid(analysis, { limit = 24 } = {}) {
+  const people = analysis.presence.slice(0, limit);
+  if (!people.length || !analysis.chapters.length) return '';
+  const head = analysis.chapters.map((c) =>
+    `<th scope="col" title="Chapter ${c.chapter_number}: ${escapeHtml(c.title)}">${c.chapter_number}</th>`).join('');
+  const rows = people.map((person) => `
+    <tr>
+      <th scope="row"><a href="/bible/${person.id}">${escapeHtml(person.name)}</a></th>
+      ${analysis.chapters.map((c) => {
+    const mentions = person.chapters.get(c.id) || 0;
+    const step = presenceStep(mentions);
+    const label = mentions
+      ? `${person.name} is named ${mentions} time${mentions === 1 ? '' : 's'} in chapter ${c.chapter_number}`
+      : `${person.name} is not named in chapter ${c.chapter_number}`;
+    // The swatch is a span inside the cell rather than the cell itself: a
+    // <td> stretches to the row, and a square that is only square when the
+    // name beside it is short is not a square.
+    return `<td class="cell-cell" title="${escapeHtml(label)}"><span class="cell step-${step}"></span><span class="sr-only">${mentions}</span></td>`;
+  }).join('')}
+      <td class="bar-value">${person.chapters.size}</td>
+    </tr>`).join('');
+  return `
+    <section class="chart chart-wide">
+      <h2 class="side-head">Who is in what</h2>
+      <p class="muted chart-note">Read out of the chapters themselves, by name and alias. The last column is how many chapters each one is named in${
+  analysis.presence.length > limit ? `, and this shows the ${limit} most present of ${analysis.presence.length}` : ''}.</p>
+      <div class="grid-wrap">
+        <table class="presence">
+          <thead><tr><th scope="col"><span class="sr-only">Who</span></th>${head}<th scope="col">In</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p class="scale-legend">
+        <span class="muted">Times named:</span>
+        ${[1, 2, 3, 4].map((step) => `<span class="cell step-${step}"></span>`).join('')}
+        <span class="muted">1 &rarr; 12 or more</span>
+      </p>
+    </section>`;
+}
+
+// Words added per week rather than per day: a novel written in evenings
+// is mostly zeroes at a day's resolution, and a chart of zeroes says
+// nothing anybody needed to know.
+function weeksFrom(days) {
+  const byWeek = new Map();
+  for (const day of days) {
+    const date = new Date(`${day.day}T00:00:00Z`);
+    // Monday of that week, which is what a writing week means to a person.
+    const monday = new Date(date.getTime() - ((date.getUTCDay() + 6) % 7) * 86400000);
+    const key = monday.toISOString().slice(0, 10);
+    byWeek.set(key, (byWeek.get(key) || 0) + day.words);
+  }
+  return Array.from(byWeek.entries()).map(([week, words]) => ({ week, words })).slice(-16);
+}
+
+function analysisPage({ user, story, analysis, canWrite = false }) {
+  const chapters = analysis.chapters;
+  const weeks = weeksFrom(analysis.days);
+  const labelled = (rows) => rows.map((r) => ({
+    label: r.unset ? 'Not said' : r.label,
+    value: r.words,
+    note: `${r.chapters} chapter${r.chapters === 1 ? '' : 's'}`,
+  }));
+
+  return layout({
+    title: `Analysis &middot; ${story.title}`,
+    user,
+    wide: true,
+    body: `
+      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      <div class="page-head">
+        <div>
+          <h1>Analysis</h1>
+          <p class="muted">What <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> is made of, counted. Nothing here is set by hand: it is the chapters, the bible and the notes, added up.</p>
+        </div>
+        <div class="page-head-actions">
+          <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
+          <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
+        </div>
+      </div>
+      ${goalBar(analysis.words, story.word_goal)}
+      <div class="chart-grid">
+        ${barChart('Words per chapter', 'The length of each chapter as it stands.',
+    chapters.map((c) => ({ label: `${c.chapter_number}. ${c.title}`, value: c.word_count || 0, href: `/chapters/${c.id}` })))}
+        ${analysis.arcs.length > 1 ? barChart('Words per arc', 'How the weight falls across the books.', labelled(analysis.arcs)) : ''}
+        ${barChart('Point of view', 'Whose eyes the story is told through, by weight rather than by chapter count.', labelled(analysis.povs))}
+        ${analysis.strands.length > 1 ? barChart('Strands', 'How much of the story each thread carries.', labelled(analysis.strands)) : ''}
+        ${weeks.length > 1 ? barChart('Written per week', 'Words added, week by week. A week spent cutting counts backwards, which is the truth about that week.',
+    weeks.map((w) => ({ label: w.week, value: Math.max(0, w.words), display: `${w.words < 0 ? '-' : ''}${wordCount(Math.abs(w.words))}` }))) : ''}
+        ${chapters.some((c) => c.pending_comments) ? barChart('Notes waiting', 'Unresolved notes, by chapter. This is the only thing on this page in red, because it is the only thing here that is waiting on somebody.',
+    chapters.filter((c) => c.pending_comments).map((c) => ({
+      label: `${c.chapter_number}. ${c.title}`, value: c.pending_comments, href: `/chapters/${c.id}`, accent: true,
+      display: String(c.pending_comments),
+    })), { unit: 'count', figureLead: 'waiting in' }) : ''}
+      </div>
+      ${presenceGrid(analysis)}
+      ${canWrite && !analysis.povs.some((p) => !p.unset) ? `
+        <p class="muted">No chapter says whose point of view it is yet. There is a field for it on the chapter editor, and it lands here and on the outline.</p>` : ''}`,
+  });
+}
+
 // ---------- the outline ----------
 // Scrivener's outliner, in the shape this app already has: every chapter
 // on one line, with the things you actually sort a draft by. The chapter
@@ -1352,6 +1508,8 @@ function outlineRow(chapter, { cast = [], canOrder = false, index = 0, total = 0
           <button class="btn ghost tiny" type="submit">Save</button>
         </form>
       </td>
+      <td class="outline-pov">${chapter.pov ? escapeHtml(chapter.pov) : '<span class="muted">&mdash;</span>'}</td>
+      <td class="outline-strand">${chapter.strand ? escapeHtml(chapter.strand) : '<span class="muted">&mdash;</span>'}</td>
       <td class="outline-cast">${cast.length
     ? `${cast.slice(0, 4).map((n) => escapeHtml(n)).join(', ')}${cast.length > 4 ? ` +${cast.length - 4}` : ''}`
     : '<span class="muted">&mdash;</span>'}</td>
@@ -1390,6 +1548,10 @@ function outlinePage({ user, story, chapters = [], castByChapter = new Map(), ca
           <h1>Outline</h1>
           <p class="muted">Every chapter of <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> on one line: what happens, who is in it, how long it is, and what is still waiting on somebody.${canOrder ? ' Drag a row to move a chapter.' : ''}</p>
         </div>
+        <div class="page-head-actions">
+          <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
+          <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
+        </div>
       </div>
       ${notice ? `<p class="flash info">${escapeHtml(notice)}</p>` : ''}
       <p class="outline-totals">
@@ -1407,6 +1569,8 @@ function outlinePage({ user, story, chapters = [], castByChapter = new Map(), ca
                 <th scope="col"><span class="sr-only">Order</span>#</th>
                 <th scope="col">Chapter</th>
                 <th scope="col">What happens</th>
+                <th scope="col">POV</th>
+                <th scope="col">Strand</th>
                 <th scope="col">Cast</th>
                 <th scope="col">Words</th>
                 <th scope="col">Notes</th>
@@ -1625,6 +1789,27 @@ function arcField(selectedValue) {
     </label>`;
 }
 
+// Whose eyes the chapter is behind, and which thread it belongs to. Free
+// text, with what this story has already used offered back -- so a
+// vocabulary settles by being reused rather than by being configured
+// before anybody has written anything.
+function povAndStrandFields(pov, strand, { povs = [], strands = [] } = {}) {
+  const list = (id, values) => (values.length
+    ? `<datalist id="${id}">${values.map((v) => `<option value="${escapeHtml(v.value)}"></option>`).join('')}</datalist>`
+    : '');
+  return `
+    <div class="entity-form-row">
+      <label>Point of view
+        <input type="text" name="pov" value="${escapeHtml(pov || '')}" maxlength="80" list="known-povs" placeholder="Whose eyes we are behind">
+      </label>
+      <label>Strand
+        <input type="text" name="strand" value="${escapeHtml(strand || '')}" maxlength="80" list="known-strands" placeholder="Which thread of the story">
+      </label>
+    </div>
+    <span class="hint">Both are optional and both are free text. What this story has used before is offered as you type, so they settle into a vocabulary on their own. They show up on the outline and in the story's analysis.</span>
+    ${list('known-povs', povs)}${list('known-strands', strands)}`;
+}
+
 function positionField(chapters, selectedValue) {
   if (!chapters.length) return '';
   const selected = selectedValue || 'end';
@@ -1641,8 +1826,8 @@ function positionField(chapters, selectedValue) {
     </label>`;
 }
 
-/** @param {{ user: Row, story: Row, chapters?: Row[], error?: string|null, values?: FormValues }} props */
-function newChapterPage({ user, story, chapters = [], error, values = /** @type {FormValues} */ ({}) }) {
+/** @param {{ user: Row, story: Row, chapters?: Row[], error?: string|null, vocabulary?: any, values?: FormValues }} props */
+function newChapterPage({ user, story, chapters = [], error, vocabulary = {}, values = /** @type {FormValues} */ ({}) }) {
   return layout({
     title: `New chapter - ${story.title}`,
     user,
@@ -1664,6 +1849,7 @@ function newChapterPage({ user, story, chapters = [], error, values = /** @type 
             ${positionField(chapters, values.position)}
             ${stageField(values.stage)}
             ${arcField(values.arcTitle)}
+            ${povAndStrandFields(values.pov, values.strand, vocabulary)}
           </div>
           <div class="writer-actions">
             <a class="btn ghost" href="/stories/${story.id}">Cancel</a>
@@ -1699,8 +1885,8 @@ function conflictNotice(chapter, conflict) {
 
 
 
-/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, conflict?: any, latestVersionNumber?: number, values?: FormValues }} props */
-function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, conflict = null, latestVersionNumber = 0, values = /** @type {FormValues} */ ({}) }) {
+/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, conflict?: any, latestVersionNumber?: number, vocabulary?: any, values?: FormValues }} props */
+function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, conflict = null, latestVersionNumber = 0, vocabulary = {}, values = /** @type {FormValues} */ ({}) }) {
   const topLevelComments = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -1735,6 +1921,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
           ${fileUploadField()}
           ${stageField(values.stage ?? chapter.stage)}
           ${arcField(values.arcTitle ?? chapter.arc_title)}
+          ${povAndStrandFields(values.pov ?? chapter.pov, values.strand ?? chapter.strand, vocabulary)}
           <label>What changed? (shown in the version history)<input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Fixed a couple of typos"></label>
         </div>
         <div class="writer-actions">
@@ -1852,6 +2039,52 @@ function readingTime(words) {
 
 // The shape of the story at a glance: how much there is, how long it takes,
 // how much of it is waiting on somebody.
+// Progress towards a goal somebody actually set. One bar, one colour, a
+// number beside it: the story is a single measure and a single measure is
+// not a chart. The bar is drawn from the numbers in the sentence next to
+// it, so what it says is readable without seeing it.
+function goalBar(words, goal) {
+  if (!goal || goal <= 0) return '';
+  const done = Math.max(0, Math.min(1, words / goal));
+  const percent = Math.round(done * 100);
+  const over = words > goal;
+  return `
+    <div class="goal">
+      <p class="goal-line">
+        <span class="goal-figure">${wordCount(words)}</span>
+        <span class="muted">of ${wordCount(goal)}${over ? ' &mdash; past it' : `, ${percent}%`}</span>
+      </p>
+      <div class="goal-track" role="img" aria-label="${wordCount(words)} of ${wordCount(goal)}, ${percent} per cent">
+        <div class="goal-fill${over ? ' over' : ''}" style="width: ${percent}%"></div>
+      </div>
+    </div>`;
+}
+
+// How much somebody has written lately, and whether they are keeping to
+// their own number. Three figures, so three figures -- a bar chart of one
+// person's week is a chart looking for a job.
+//
+// Without a goal it counts days written rather than pretending the goal
+// was one word: a number nobody set is not a target anybody met.
+function writingBlock(streak, { own = false } = {}) {
+  if (!streak) return '';
+  const item = (value, label) => `<div class="story-stat"><span class="story-stat-value">${value}</span><span class="story-stat-label">${label}</span></div>`;
+  const nothing = !streak.week && !streak.today && !streak.streak;
+  if (nothing) {
+    return own
+      ? '<p class="muted">Nothing written in the last week. That is allowed.</p>'
+      : '';
+  }
+  return `
+    <div class="story-stats">
+      ${streak.today ? item(wordCount(streak.today).replace(/ words$/, ''), 'today') : ''}
+      ${streak.week ? item(wordCount(streak.week).replace(/ words$/, ''), 'this week') : ''}
+      ${streak.streak ? item(streak.streak, streak.goal
+    ? `day${streak.streak === 1 ? '' : 's'} at ${wordCount(streak.goal).replace(/ words$/, '')}+`
+    : `day${streak.streak === 1 ? '' : 's'} running`) : ''}
+    </div>`;
+}
+
 function storyStatsBlock(stats) {
   if (!stats) return '';
   const item = (value, label) => `<div class="story-stat"><span class="story-stat-value">${value}</span><span class="story-stat-label">${label}</span></div>`;
@@ -2015,10 +2248,12 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           ${story.description ? `<p class="summary">${escapeHtml(story.description)}</p>` : ''}
           ${tagChips(tags)}
           ${storyStatsBlock(stats)}
+          ${goalBar(stats ? stats.words : 0, story.word_goal)}
         </div>
         <div class="page-head-actions">
           ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
           <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
+          <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
           ${bibleVisible ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
           ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
           ${isStoryAuthor ? `
@@ -2802,8 +3037,8 @@ function profilePage({ user, person, stats, stories, chapters }) {
 
 // ---------- account settings ----------
 
-/** @param {{ user: Row, error?: string|null, notice?: string|null, groups?: any[], hiddenTagIds?: number[] }} props */
-function accountPage({ user, error, notice, groups = [], hiddenTagIds = [] }) {
+/** @param {{ user: Row, error?: string|null, notice?: string|null, groups?: any[], hiddenTagIds?: number[], streak?: any }} props */
+function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], streak = null }) {
   return layout({
     title: 'Account',
     user,
@@ -2819,6 +3054,16 @@ function accountPage({ user, error, notice, groups = [], hiddenTagIds = [] }) {
           <button class="btn" type="submit">Save name</button>
         </form>
         <p class="muted"><a href="/users/${escapeHtml(user.username)}">See your page as the group sees it &rarr;</a></p>
+      </div>
+      <div class="auth-card">
+        <h2>Writing</h2>
+        <p class="muted">A number to aim at on the days you write. It is yours alone: nobody else sees it, and nothing nags you about it.</p>
+        ${writingBlock(streak, { own: true })}
+        <form method="post" action="/account/goal">
+          <label>Words a day<input type="number" name="dailyGoal" value="${user.daily_goal || ''}" min="0" step="50" placeholder="e.g. 500"></label>
+          <button class="btn" type="submit">Save goal</button>
+        </form>
+        <p class="muted">Leave it empty and the count just says which days you wrote.</p>
       </div>
       <div class="auth-card">
         <h2>Change password</h2>
@@ -3163,6 +3408,7 @@ module.exports = {
   storyPage,
   archivedChaptersPage,
   chapterPage,
+  analysisPage,
   bibleIndexPage,
   outlinePage,
   changelogPage,

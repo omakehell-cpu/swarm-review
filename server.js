@@ -260,7 +260,16 @@ async function handleAccountPage(req, res, user, query) {
     user, notice,
     groups: models.listTagsGrouped(),
     hiddenTagIds: models.listUserHiddenTagIds(user.id),
+    streak: models.writingStreak(user.id, user.daily_goal),
   }));
+}
+
+async function handleAccountGoalSubmit(req, res, user) {
+  const body = await parseBody(req);
+  const goal = models.setDailyGoal(user.id, body.dailyGoal);
+  redirect(res, `/account?notice=${encodeURIComponent(goal
+    ? `Aiming at ${goal} words a day.`
+    : 'No daily goal. The count will just say which days you wrote.')}`);
 }
 
 async function handleAccountPasswordSubmit(req, res, user) {
@@ -583,6 +592,7 @@ async function handleEditStorySubmit(req, res, user, storyId) {
     }));
   }
   models.updateStoryDetails(storyId, { title, description, synopsis, status });
+  models.setStoryWordGoal(storyId, body.wordGoal);
   models.setStoryTags(storyId, tagIds);
   logEvent(user, 'story-edited', { subject: title, href: `/stories/${storyId}`, storyId });
   if (status && status !== story.status) {
@@ -727,6 +737,17 @@ async function handleCompile(req, res, user, storyId, format, query) {
     'Content-Length': buffer.length,
   });
   return res.end(buffer);
+}
+
+async function handleAnalysis(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  const analysis = models.storyAnalysis(storyId);
+  // A private bible does not show its cast here either.
+  if (!models.canReadBible(story, user)) analysis.presence = [];
+  sendHtml(res, 200, views.analysisPage({
+    user, story, analysis, canWrite: models.canWriteInStory(story, user),
+  }));
 }
 
 // ---------- the outline (Scrivener's outliner, in this app's shape) ----------
@@ -1430,7 +1451,7 @@ async function handleNewChapterPage(req, res, user, storyId) {
   if (!story) return sendError(res, 404, 'Story not found', user);
   if (!models.canWriteInStory(story, user)) return sendError(res, 403, "Only the story's authors can add chapters.", user);
   const chapters = models.listChaptersForStory(storyId);
-  sendHtml(res, 200, views.newChapterPage({ user, story, chapters, values: {} }));
+  sendHtml(res, 200, views.newChapterPage({ user, story, chapters, values: {}, vocabulary: storyVocabulary(storyId) }));
 }
 
 async function handleNewChapterSubmit(req, res, user, storyId) {
@@ -1444,18 +1465,20 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   const summary = (body.summary || '').trim();
   const stage = body.stage;
   const arcTitle = (body.arcTitle || '').trim();
+  const pov = (body.pov || '').trim();
+  const strand = (body.strand || '').trim();
   let content = (body.content || '').replace(/\r\n/g, '\n');
-  const values = { title, summary, content, position: body.position, stage, arcTitle };
+  const values = { title, summary, content, position: body.position, stage, arcTitle, pov, strand };
 
   try {
     const uploaded = await extractUploadedText(files.file);
     if (uploaded !== null) { content = uploaded; values.content = content; }
   } catch (err) {
-    return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: err.message, values }));
+    return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: err.message, values, vocabulary: storyVocabulary(storyId) }));
   }
 
-  if (!title) return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: 'Missing title.', values }));
-  if (!content.trim()) return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: 'The chapter is empty. Paste some text or upload a .md/.txt/.docx file.', values }));
+  if (!title) return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: 'Missing title.', values, vocabulary: storyVocabulary(storyId) }));
+  if (!content.trim()) return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: 'The chapter is empty. Paste some text or upload a .md/.txt/.docx file.', values, vocabulary: storyVocabulary(storyId) }));
 
   // "position" picks an existing chapter to insert *before*; anything else
   // (including the default "end" option, or a tampered/stale value that no
@@ -1466,8 +1489,8 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
     : null;
 
   const chapter = insertBeforeNumber !== null
-    ? models.insertChapterAt({ storyId, position: insertBeforeNumber, title, summary, authorId: user.id, content, stage, arcTitle })
-    : models.createChapter({ storyId, title, summary, authorId: user.id, content, stage, arcTitle });
+    ? models.insertChapterAt({ storyId, position: insertBeforeNumber, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand })
+    : models.createChapter({ storyId, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand });
   if (arcTitle) {
     logEvent(user, 'arc-started', { subject: arcTitle, href: `/stories/${storyId}`, storyId, chapterId: chapter.id });
   }
@@ -1576,8 +1599,16 @@ async function handleEditChapterPage(req, res, user, chapterId) {
     user, chapter, latestContent: latest ? latest.content : '', comments, values: {},
     canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
     latestVersionNumber: latest ? latest.version_number : 0,
+    vocabulary: storyVocabulary(chapter.story_id),
   }));
 }
+
+// What this story has called things before, for the fields that offer it
+// back rather than making somebody remember.
+const storyVocabulary = (storyId) => ({
+  povs: models.listPovs(storyId),
+  strands: models.listStrands(storyId),
+});
 
 async function handleEditChapterSubmit(req, res, user, chapterId) {
   const chapter = models.getChapterById(chapterId);
@@ -1591,7 +1622,9 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
   const changelog = (body.changelog || '').trim();
   const stage = body.stage;
   const arcTitle = (body.arcTitle || '').trim();
-  const values = { title, summary, content, changelog, stage, arcTitle };
+  const pov = (body.pov || '').trim();
+  const strand = (body.strand || '').trim();
+  const values = { title, summary, content, changelog, stage, arcTitle, pov, strand };
   const latest = models.getLatestVersion(chapterId);
   // The version this editor was opened on. A form from before this field
   // existed, or one a script posted, sends nothing -- and an absent answer
@@ -1613,6 +1646,7 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
       user, chapter, latestContent: latest ? latest.content : '', values,
       error: 'The chapter text cannot be empty. Paste some text or upload a .md/.txt/.docx file.',
       latestVersionNumber: baseVersion || (latest ? latest.version_number : 0),
+      vocabulary: storyVocabulary(chapter.story_id),
     }));
   }
 
@@ -1629,6 +1663,7 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
     return sendHtml(res, 409, views.editChapterPage({
       user, chapter, latestContent: latest.content, values,
       canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
+      vocabulary: storyVocabulary(chapter.story_id),
       conflict: {
         version: latest.version_number,
         at: latest.created_at,
@@ -1638,7 +1673,7 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
     }));
   }
 
-  const { version } = models.editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle });
+  const { version } = models.editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle, pov, strand });
   if (stage && stage !== chapter.stage) {
     logEvent(user, 'stage-changed', { subject: `${title}: ${stage}`, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId });
   }
@@ -1921,6 +1956,7 @@ async function router(req, res) {
     if (pathname === '/account/password' && req.method === 'POST') return handleAccountPasswordSubmit(req, res, user);
     if (pathname === '/account/hidden-tags' && req.method === 'POST') return handleHiddenTagsSubmit(req, res, user);
     if (pathname === '/account/name' && req.method === 'POST') return handleAccountNameSubmit(req, res, user);
+    if (pathname === '/account/goal' && req.method === 'POST') return handleAccountGoalSubmit(req, res, user);
     if ((m = pathname.match(/^\/users\/([A-Za-z0-9_.-]+)$/)) && req.method === 'GET') {
       return handleProfilePage(req, res, user, m[1]);
     }
@@ -2018,6 +2054,9 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/download\.(md|txt|docx)$/)) && req.method === 'GET') {
       return handleCompile(req, res, user, Number(m[1]), m[2], url.searchParams);
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/analysis$/)) && req.method === 'GET') {
+      return handleAnalysis(req, res, user, Number(m[1]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/outline$/)) && req.method === 'GET') {
       return handleOutline(req, res, user, Number(m[1]), url.searchParams);
