@@ -668,6 +668,83 @@ function unarchiveChapter(chapterId) {
 // against). Uses a temporary negative chapter_number -- guaranteed unique,
 // since no real chapter_number is ever negative -- so the swap never trips
 // the UNIQUE(story_id, chapter_number) constraint mid-transaction.
+
+/**
+ * Puts the chapters of a story in the given order, in one go -- what a
+ * drag across a table means, as against the one-step swap of moveChapter.
+ *
+ * Only the numbers the non-archived chapters already hold are reused, so
+ * an archived chapter keeps its slot and UNIQUE(story_id, chapter_number)
+ * is never in danger. Everything is parked on a negative number first,
+ * because the numbers being handed out are the numbers currently in use.
+ * @param {number} storyId
+ * @param {number[]} orderedIds
+ */
+function reorderChapters(storyId, orderedIds) {
+  const siblings = db.prepare(
+    'SELECT id, chapter_number FROM chapters WHERE story_id = ? AND archived_at IS NULL ORDER BY chapter_number ASC'
+  ).all(storyId);
+  if (!siblings.length) return [];
+  const known = new Set(siblings.map((c) => c.id));
+  const wanted = [];
+  const seen = new Set();
+  for (const raw of orderedIds || []) {
+    const id = Number(raw);
+    if (!known.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    wanted.push(id);
+  }
+  // A chapter the caller did not mention keeps its place at the end rather
+  // than losing its number: a partial list should not be able to delete an
+  // ordering.
+  for (const c of siblings) if (!seen.has(c.id)) wanted.push(c.id);
+
+  const slots = siblings.map((c) => c.chapter_number);
+  const set = db.prepare('UPDATE chapters SET chapter_number = ? WHERE id = ?');
+  db.exec('BEGIN');
+  try {
+    for (const id of wanted) set.run(-id, id);
+    wanted.forEach((id, i) => set.run(slots[i], id));
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  return wanted;
+}
+
+/** Who is in each chapter of a story, in one query rather than one each. */
+
+/**
+ * Every chapter of a story with its current text, in running order --
+ * what compiling a manuscript needs, in one query rather than one per
+ * chapter. Archived chapters are left out: they are not in the book.
+ */
+const chaptersForCompile = (storyId) => db.prepare(`
+  SELECT c.id, c.chapter_number, c.title, c.summary, c.arc_title, v.content
+    FROM chapters c
+    JOIN chapter_versions v ON v.chapter_id = c.id
+   WHERE c.story_id = ? AND c.archived_at IS NULL
+     AND v.version_number = (SELECT MAX(v2.version_number) FROM chapter_versions v2 WHERE v2.chapter_id = c.id)
+   ORDER BY c.chapter_number
+`).all(storyId);
+
+function castByChapter(storyId) {
+  const rows = db.prepare(`
+    SELECT sc.chapter_id, e.name, e.kind, sc.mentions
+      FROM story_entity_chapters sc
+      JOIN story_entities e ON e.id = sc.entity_id
+     WHERE sc.story_id = ?
+     ORDER BY sc.mentions DESC, e.name COLLATE NOCASE
+  `).all(storyId);
+  const map = new Map();
+  for (const row of rows) {
+    if (!map.has(row.chapter_id)) map.set(row.chapter_id, []);
+    map.get(row.chapter_id).push(row.name);
+  }
+  return map;
+}
+
 function moveChapter(chapterId, direction) {
   const chapter = getChapterById(chapterId);
   if (!chapter) return null;
@@ -2192,6 +2269,9 @@ const listChapterStubs = (storyId) => db.prepare(
 ).all(storyId);
 
 module.exports = {
+  chaptersForCompile,
+  castByChapter,
+  reorderChapters,
   canReadBible,
   setBiblePrivate,
   markChangelogSeen,

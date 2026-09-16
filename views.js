@@ -5,7 +5,7 @@ const { escapeHtml, toScriptJson } = require('./lib/util');
 const { parseMarkdown, renderHighlighted } = require('./lib/markdown');
 const { timeHtml } = require('./lib/time');
 const {
-  storyState, STORY_STATES, CHOOSABLE_STORY_STATES,
+  storyState, STORY_STATES, CHOOSABLE_STORY_STATES, groupChaptersIntoArcs,
   CHAPTER_STAGES, DEFAULT_CHAPTER_STAGE, CHAPTER_STAGE_META,
 } = require('./lib/story-state');
 const wiki = require('./lib/wiki');
@@ -1325,6 +1325,107 @@ function chapterCastBlock(entities, storyId) {
     </section>`;
 }
 
+// ---------- the outline ----------
+// Scrivener's outliner, in the shape this app already has: every chapter
+// on one line, with the things you actually sort a draft by. The chapter
+// page is for reading one; this is for seeing the shape of all of them.
+//
+// Drag to reorder, and edit a summary where it sits. Without JavaScript
+// the up/down buttons and a plain save button do both, which is why they
+// are in the markup rather than drawn by a script.
+function outlineRow(chapter, { cast = [], canOrder = false, index = 0, total = 0 }) {
+  const stage = chapterStageBadge(chapter);
+  return `
+    <tr class="outline-row" draggable="${canOrder ? 'true' : 'false'}" data-chapter="${chapter.id}">
+      <td class="outline-handle">
+        ${canOrder ? '<span class="grip" aria-hidden="true">&#8942;&#8942;</span>' : ''}
+        <span class="outline-number">${chapter.chapter_number}</span>
+      </td>
+      <td class="outline-title">
+        <a href="/chapters/${chapter.id}">${escapeHtml(chapter.title)}</a>
+        ${chapter.arc_title ? `<span class="outline-arc">${escapeHtml(chapter.arc_title)}</span>` : ''}
+        ${stage}
+      </td>
+      <td class="outline-summary">
+        <form method="post" action="/chapters/${chapter.id}/summary" class="summary-form">
+          <textarea name="summary" rows="2" placeholder="What happens here">${escapeHtml(chapter.summary || '')}</textarea>
+          <button class="btn ghost tiny" type="submit">Save</button>
+        </form>
+      </td>
+      <td class="outline-cast">${cast.length
+    ? `${cast.slice(0, 4).map((n) => escapeHtml(n)).join(', ')}${cast.length > 4 ? ` +${cast.length - 4}` : ''}`
+    : '<span class="muted">&mdash;</span>'}</td>
+      <td class="outline-words">${chapter.word_count ? wordCount(chapter.word_count) : '&mdash;'}</td>
+      <td class="outline-notes">${chapter.pending_comments
+    ? `<a href="/chapters/${chapter.id}">${chapter.pending_comments}</a>`
+    : '<span class="muted">&mdash;</span>'}</td>
+      <td class="outline-move">
+        ${canOrder ? `
+          <form method="post" action="/chapters/${chapter.id}/move-up" class="inline-form">
+            <button class="btn ghost tiny" type="submit" ${index === 0 ? 'disabled' : ''} aria-label="Move up">&uarr;</button>
+          </form>
+          <form method="post" action="/chapters/${chapter.id}/move-down" class="inline-form">
+            <button class="btn ghost tiny" type="submit" ${index === total - 1 ? 'disabled' : ''} aria-label="Move down">&darr;</button>
+          </form>` : ''}
+      </td>
+    </tr>`;
+}
+
+function outlinePage({ user, story, chapters = [], castByChapter = new Map(), canOrder = false, stats = null, notice = '' }) {
+  const rows = chapters.map((c, i) => outlineRow(c, {
+    cast: castByChapter.get(c.id) || [], canOrder, index: i, total: chapters.length,
+  })).join('');
+  const words = chapters.reduce((sum, c) => sum + (c.word_count || 0), 0);
+  const pending = chapters.reduce((sum, c) => sum + (c.pending_comments || 0), 0);
+  const noSummary = chapters.filter((c) => !String(c.summary || '').trim()).length;
+
+  return layout({
+    title: `Outline &middot; ${story.title}`,
+    user,
+    wide: true,
+    body: `
+      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      <div class="page-head">
+        <div>
+          <h1>Outline</h1>
+          <p class="muted">Every chapter of <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> on one line: what happens, who is in it, how long it is, and what is still waiting on somebody.${canOrder ? ' Drag a row to move a chapter.' : ''}</p>
+        </div>
+      </div>
+      ${notice ? `<p class="flash info">${escapeHtml(notice)}</p>` : ''}
+      <p class="outline-totals">
+        <span>${chapters.length} chapter${chapters.length === 1 ? '' : 's'}</span>
+        <span>${wordCount(words)}</span>
+        ${stats && stats.arcs ? `<span>${stats.arcs} arc${stats.arcs === 1 ? '' : 's'}</span>` : ''}
+        ${pending ? `<span class="pending-total">${pending} note${pending === 1 ? '' : 's'} waiting</span>` : ''}
+        ${noSummary ? `<span class="muted">${noSummary} without a summary</span>` : ''}
+      </p>
+      ${chapters.length ? `
+        <div class="outline-wrap">
+          <table class="outline" id="outline">
+            <thead>
+              <tr>
+                <th scope="col"><span class="sr-only">Order</span>#</th>
+                <th scope="col">Chapter</th>
+                <th scope="col">What happens</th>
+                <th scope="col">Cast</th>
+                <th scope="col">Words</th>
+                <th scope="col">Notes</th>
+                <th scope="col"><span class="sr-only">Move</span></th>
+              </tr>
+            </thead>
+            <tbody data-reorder="${canOrder ? `/stories/${story.id}/outline/order` : ''}">${rows}</tbody>
+          </table>
+        </div>
+        <p class="outline-status" data-outline-status hidden></p>`
+    : emptyState({
+      art: 'sheets',
+      title: 'Nothing to outline yet',
+      body: 'Every chapter of this story has been archived, or it has none.',
+      action: `<a class="btn ghost small" href="/stories/${story.id}">Back to the story</a>`,
+    })}`,
+  });
+}
+
 // ---------- help and the changelog (see lib/docs.js) ----------
 // Two pages of writing about the app rather than in it. They are markdown
 // files in docs/, rendered with the same parser chapters use, so a how-to
@@ -1856,23 +1957,6 @@ function chapterStageBadge(chapter) {
   return `<span class="state-badge stage-${stage}" title="${escapeHtml(meta.hint)}">${escapeHtml(meta.label)}</span>`;
 }
 
-// An arc is the stretch from the chapter that names it to the chapter
-// that names the next one. Chapters before the first named one are not an
-// arc and get no heading -- a story that never mentions arcs reads
-// exactly as it did before this existed.
-function groupChaptersIntoArcs(chapters) {
-  const groups = [];
-  for (const chapter of chapters) {
-    const name = (chapter.arc_title || '').trim();
-    if (name || !groups.length) {
-      groups.push({ title: name, chapters: [chapter] });
-    } else {
-      groups[groups.length - 1].chapters.push(chapter);
-    }
-  }
-  return groups;
-}
-
 function arcHeading(group, position) {
   if (!group.title) return '';
   const words = group.chapters.reduce((sum, c) => sum + (c.word_count || 0), 0);
@@ -1934,6 +2018,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
         </div>
         <div class="page-head-actions">
           ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
+          <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
           ${bibleVisible ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
           ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
           ${isStoryAuthor ? `
@@ -1944,6 +2029,17 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
       </div>
       ${synopsisSection(story)}
       ${named ? `<div class="arc-stack">${rows}</div>` : `<div class="chapter-list">${rows}</div>`}
+      ${chapters.length ? `
+        <section class="compile">
+          <h2 class="side-head">The whole story, in one file</h2>
+          <p class="muted">Every chapter in order, arcs as parts, with a title page. The chapters are compiled as they stand now.</p>
+          <p class="compile-links">
+            <a class="btn ghost small" href="/stories/${story.id}/download.docx">Word (.docx)</a>
+            <a class="btn ghost small" href="/stories/${story.id}/download.md">Markdown (.md)</a>
+            <a class="btn ghost small" href="/stories/${story.id}/download.txt">Plain text (.txt)</a>
+            ${story.synopsis ? `<a class="btn ghost small" href="/stories/${story.id}/download.docx?synopsis=1">With the synopsis</a>` : ''}
+          </p>
+        </section>` : ''}
       <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>
       ${(isStoryAuthor || coauthors.length) ? coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId: user.id }) : ''}
       ${canWrite ? storyDictionarySection(story, dictionary) : ''}`,
@@ -3068,6 +3164,7 @@ module.exports = {
   archivedChaptersPage,
   chapterPage,
   bibleIndexPage,
+  outlinePage,
   changelogPage,
   helpIndexPage,
   helpTopicPage,

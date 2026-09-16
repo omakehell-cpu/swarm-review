@@ -2708,3 +2708,77 @@ main[data-reading="read"] .reading-pane {
   padding: var(--s-2) 0; border-bottom: 1px solid var(--border);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- the outline (Scrivener's outliner, in this app's shape) ---- */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.outline-totals {
+  display: flex; flex-wrap: wrap; gap: var(--s-4) var(--s-8);
+  margin: var(--s-7) 0; padding: var(--s-4) 0;
+  border-top: 2px solid var(--border-strong); border-bottom: 1px solid var(--border);
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+  font-variant-numeric: tabular-nums;
+}
+.outline-totals .pending-total { color: var(--accent); }
+.outline-wrap { overflow-x: auto; }
+.outline { width: 100%; border-collapse: collapse; }
+.outline th {
+  text-align: left; padding: var(--s-3) var(--s-5) var(--s-3) 0;
+  border-bottom: 2px solid var(--border-strong);
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
+  white-space: nowrap;
+}
+.outline td {
+  padding: var(--s-5) var(--s-5) var(--s-5) 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top; font-size: var(--t-sm);
+}
+.outline-row.dragging { opacity: 0.4; }
+.outline-row[draggable="true"] .outline-handle { cursor: grab; }
+.outline-handle { white-space: nowrap; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.grip { margin-right: var(--s-3); letter-spacing: -3px; }
+.outline-number { font-weight: 700; color: var(--text); }
+.outline-title { min-width: 16ch; }
+.outline-title a { color: var(--text); text-decoration: none; font-weight: 700; }
+.outline-title a:hover { color: var(--accent); }
+.outline-arc {
+  display: block; font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking); margin-top: var(--s-2);
+}
+.outline-summary { width: 42%; }
+/* A summary is a field you type into, not a form you fill in: no box
+   until you go near it, and the save button only when it is wanted. It
+   stays in the markup rather than being drawn by a script, so it is there
+   for a browser with JavaScript off -- :focus-within is CSS, so the
+   keyboard reaches it either way. */
+.summary-form { display: flex; gap: var(--s-3); align-items: flex-start; }
+.summary-form textarea {
+  flex: 1 1 auto; min-width: 0; font-size: var(--t-sm); resize: vertical;
+  border: 1px solid transparent; background: transparent;
+  padding: var(--s-2) var(--s-3); margin-left: calc(var(--s-3) * -1);
+}
+.summary-form textarea:hover { border-color: var(--border); }
+.summary-form textarea:focus { border-color: var(--border-strong); background: var(--bg); }
+.summary-form button { opacity: 0; transition: opacity 0.1s ease; }
+.summary-form:hover button, .summary-form:focus-within button { opacity: 1; }
+@media (hover: none) { .summary-form button { opacity: 1; } }
+.outline-cast, .outline-words, .outline-notes { color: var(--text-muted); }
+.outline-words, .outline-notes { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.outline-notes a { color: var(--accent); }
+.outline-move { white-space: nowrap; }
+.outline-move .inline-form { display: inline-block; }
+.outline-status { margin-top: var(--s-5); font-size: var(--t-sm); color: var(--text-muted); }
+.outline-status.error { color: var(--accent); }
+@media (max-width: 900px) {
+  .outline { min-width: 720px; }
+}
+
+/* ---- compiling the whole story ---- */
+.compile { margin-top: var(--s-10); }
+.compile .side-head { border-top: 2px solid var(--border-strong); }
+.compile p { margin: 0 0 var(--s-5); max-width: 60ch; }
+.compile-links { display: flex; flex-wrap: wrap; gap: var(--s-4); }
