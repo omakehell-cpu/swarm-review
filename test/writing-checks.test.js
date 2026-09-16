@@ -304,3 +304,46 @@ test('a rewrite never swallows the space after the previous sentence', () => {
   assert.strictEqual(text.slice(0, r.start) + r.suggestion + text.slice(r.end),
     'She waited. Kessler opened the door.');
 });
+
+// ---------------------------------------------------------------------
+// the reading grade
+// ---------------------------------------------------------------------
+
+test('the reading grade rises with the difficulty of the prose', () => {
+  const plain = 'The dog ran. The cat sat. She went home. He ate bread. They slept well.';
+  const dense = 'The extraordinary institutional considerations, notwithstanding their '
+    + 'demonstrable incompatibility with contemporary administrative methodology, '
+    + 'necessitated a comprehensive reconsideration of every operational assumption.';
+  const easy = run(plain).stats.grade;
+  const hard = run(dense).stats.grade;
+  assert.ok(easy < 5, `short plain sentences read low, got ${easy}`);
+  assert.ok(hard > 15, `one long Latinate sentence reads high, got ${hard}`);
+});
+
+test('the grade is the whole text, not its worst sentence', () => {
+  const monster = 'The extraordinary institutional considerations, notwithstanding their '
+    + 'demonstrable incompatibility with contemporary administrative methodology, '
+    + 'necessitated a comprehensive reconsideration of every operational assumption.';
+  const short = ' The dog ran. The cat sat. She went home. He ate bread. They slept well. '
+    + 'It was cold. The door shut. He left.';
+  const mixed = run(monster + short).stats;
+  const alone = run(monster).stats.grade;
+  assert.ok(mixed.grade < alone,
+    'the short sentences around it pull the grade down');
+  assert.strictEqual(mixed.red, 1, 'and the monster is still shaded red on its own');
+});
+
+test('the grade survives the checks being switched off', () => {
+  const text = 'The dog ran quickly. The cat was seen by the man. She went home.';
+  const off = {};
+  for (const id of wa.CHECK_ORDER) off[id] = false;
+  const quiet = run(text, off).stats;
+  assert.ok(quiet.grade > 0, 'the grade is a fact about the text, not a check');
+  assert.strictEqual(quiet.yellow + quiet.red + quiet.passive + quiet.adverb, 0,
+    'and nothing else fired');
+});
+
+test('an empty text has no grade rather than a grade of zero', () => {
+  assert.strictEqual(run('').stats.grade, null);
+  assert.strictEqual(run('   \n\n  ').stats.grade, null);
+});

@@ -79,6 +79,47 @@ function storyStatsBlock(stats) {
     </div>`;
 }
 
+// The whole story as one file, in whichever shape it is for.
+//
+// The two layouts are not two skins on one document: a manuscript is what
+// an editor asks for and is deliberately plain, and a book is what you
+// send a friend. Choosing between them at the moment of downloading is
+// the only place the choice makes sense -- it is a fact about where the
+// file is going, not a setting about the story.
+//
+// A form rather than a row of links, because otherwise every format would
+// need two buttons, then four when somebody wants the synopsis.
+function compileSection(story) {
+  const layouts = [
+    ['manuscript', 'Manuscript', 'Double-spaced, ragged right, running heads. What an editor or a competition asks for.'],
+    ['book', 'Book', 'Justified, chapters opening on the right, scene breaks as an ornament. What you send a friend.'],
+  ];
+  return `
+    <section class="compile">
+      <h2 class="side-head">The whole story, in one file</h2>
+      <p class="muted">Every chapter in order, arcs as parts, with a title page. The chapters are compiled as they stand now.</p>
+      <form class="compile-form" method="get" action="/stories/${story.id}/download.pdf" data-compile>
+        <fieldset class="compile-layouts">
+          <legend>Laid out as</legend>
+          ${layouts.map(([value, label, note], i) => `
+            <label class="compile-layout">
+              <input type="radio" name="layout" value="${value}"${i === 0 ? ' checked' : ''}>
+              <span><strong>${label}</strong><span class="muted">${escapeHtml(note)}</span></span>
+            </label>`).join('')}
+        </fieldset>
+        ${story.synopsis ? `
+          <label class="compile-option">
+            <input type="checkbox" name="synopsis" value="1"> Include the synopsis
+          </label>` : ''}
+        <p class="compile-links">
+          ${[['pdf', 'PDF'], ['epub', 'EPUB'], ['docx', 'Word'], ['md', 'Markdown'], ['txt', 'Plain text']]
+    .map(([ext, label]) => `<button class="btn ghost small" type="submit" formaction="/stories/${story.id}/download.${ext}">${label}</button>`).join('')}
+        </p>
+        <p class="hint">PDF and EPUB are laid out; Word, Markdown and plain text carry the text and let whatever opens them decide how it looks.</p>
+      </form>
+    </section>`;
+}
+
 function synopsisSection(story) {
   if (!story.synopsis) return '';
   return `
@@ -208,17 +249,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
       </div>
       ${synopsisSection(story)}
       ${named ? `<div class="arc-stack">${rows}</div>` : `<div class="chapter-list">${rows}</div>`}
-      ${chapters.length ? `
-        <section class="compile">
-          <h2 class="side-head">The whole story, in one file</h2>
-          <p class="muted">Every chapter in order, arcs as parts, with a title page. The chapters are compiled as they stand now.</p>
-          <p class="compile-links">
-            <a class="btn ghost small" href="/stories/${story.id}/download.docx">Word (.docx)</a>
-            <a class="btn ghost small" href="/stories/${story.id}/download.md">Markdown (.md)</a>
-            <a class="btn ghost small" href="/stories/${story.id}/download.txt">Plain text (.txt)</a>
-            ${story.synopsis ? `<a class="btn ghost small" href="/stories/${story.id}/download.docx?synopsis=1">With the synopsis</a>` : ''}
-          </p>
-        </section>` : ''}
+      ${chapters.length ? compileSection(story) : ''}
       <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>
       ${(isStoryAuthor || coauthors.length) ? coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId: user.id }) : ''}
       ${canWrite ? storyDictionarySection(story, dictionary) : ''}`,
@@ -268,5 +299,6 @@ module.exports = {
   storyDictionarySection,
   storyPage,
   storyStatsBlock,
+  compileSection,
   synopsisSection,
 };

@@ -4,6 +4,15 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — A book, and a manuscript
+
+- **The story compiles to PDF and to EPUB**, alongside the .docx, .md and .txt that were already there.
+- **You choose a layout first, and the two are different documents.** *Manuscript* is what a competition or an agent asks for: double-spaced, ragged right, an inch of margin, your surname and the page number in the corner, every chapter a third of the way down a fresh page. *Book* is the one to read: justified, first lines indented except after a chapter head or a scene break, chapters opening on a right-hand page, scene breaks as `* * *`.
+- The PDF is **typeset, not a printed web page** -- the difference is a page that looks like a book rather than a page that looks like a browser with the toolbars hidden.
+- **The EPUB deliberately does less.** It carries the structure -- a working table of contents, one file per chapter, arcs as parts -- and leaves typeface, size and margins to the e-reader, because a book that overrules them is a worse book on somebody's phone.
+- Compiling the same story twice gives you **the same file, byte for byte**, so you can tell whether anything actually changed.
+- **The editor now shows a reading grade** beside the word count: the school year that would follow the text on a first read. It is the one number in that strip that is not a count of things to fix, and it has no colour on purpose -- there is no grade that is wrong.
+
 ## 2026-09-16 — Notes you can answer without losing your place
 
 - **Accept, turn down, retract, reopen and reply happen in place.** On a chapter with forty notes, answering the eleventh used to send you back to the top of the page to find the twelfth.

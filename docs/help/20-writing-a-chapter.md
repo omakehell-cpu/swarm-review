@@ -79,6 +79,16 @@ than only complaining.
 They are suggestions from a set of rules, not judgements. Nothing is sent
 anywhere: the checks run in your browser.
 
+Along the same strip, beside the word count, is a **reading grade** -- the
+American school year that would follow the text on a first read, worked out
+from sentence length and syllables per word. Most published fiction lands
+between 4 and 8; children's books lower, a dense literary chapter higher.
+It is the one number there that is not a count of things to fix, and it has
+no colour for the same reason: there is no grade that is wrong. A hard
+chapter written on purpose is a hard chapter written on purpose. It is
+useful for noticing that a scene has drifted somewhere you did not mean it
+to go, and useless as a target.
+
 The spellchecker uses a real dictionary, which means it does not know your
 invented names. Add them to the **story dictionary** (on the story page, or
 from the spelling highlight itself) and it will stop underlining them. Names
@@ -111,14 +121,37 @@ it -- [what that page shows](/help/targets-and-analysis).
 
 ## The whole story in one file
 
-At the foot of the story page: the entire thing as one **.docx**, **.md**
-or **.txt**. Chapters in running order, arcs as parts, a title page with
-the author and the blurb. The synopsis is left out unless you ask for it,
-because it is a note to the group rather than the front of the book.
+At the foot of the story page: the entire thing as one **.pdf**, **.epub**,
+**.docx**, **.md** or **.txt**. Chapters in running order, arcs as parts, a
+title page with the author and the blurb. The synopsis is left out unless
+you ask for it, because it is a note to the group rather than the front of
+the book.
+
+Before you pick a format you pick a **layout**, and the two are genuinely
+different documents:
+
+- **Manuscript** is the format an agent or a competition asks for.
+  Double-spaced, ragged right, twelve point serif, an inch of margin all
+  round, your surname and the page number in the top corner, every chapter
+  starting a third of the way down a fresh page. It is deliberately plain
+  and deliberately easy to mark up.
+- **Book** is the one to read. Justified, single-spaced and a little
+  tighter, first lines indented except at the opening of a chapter and
+  after a scene break, chapters starting on a right-hand page with a blank
+  left-hand page before them where that is what it takes, the story's title
+  in the running head. Scene breaks come out as `* * *`.
+
+The layout applies to the PDF, which is a real typeset document rather than
+a printed web page. The **EPUB** ignores most of it on purpose: an e-reader
+decides its own typeface, size and margins, and a book that fights that
+decision is a worse book on somebody's phone. What the EPUB keeps is the
+structure -- a table of contents that works, one file per chapter, parts as
+parts.
 
 It compiles the chapters as they stand at that moment. It is not a
 publishing pipeline and does not want to be: it is what you send somebody
-who asked to read the thing.
+who asked to read the thing, and what you upload when somebody asks for a
+manuscript.
 
 ## Archiving
 
