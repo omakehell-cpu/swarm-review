@@ -54,9 +54,13 @@
     const wikiTip = document.createElement('div');
     wikiTip.className = 'wa-hover-tip hidden';
     document.body.appendChild(wikiTip);
+    // While the card beside the chapter is open (public/js/name-card.js)
+    // it is already saying this, at greater length and in a place that
+    // does not sit on top of the paragraph being read.
+    const cardOpen = () => Boolean(document.querySelector('[data-name-card]:not([hidden])'));
     textEl.addEventListener('mouseover', (ev) => {
       const link = /** @type {HTMLAnchorElement|null} */ (/** @type {Element} */ (ev.target).closest('a.wiki-link'));
-      if (!link) return;
+      if (!link || cardOpen()) return;
       wikiTip.textContent = link.dataset.wikiSummary || '';
       const rect = link.getBoundingClientRect();
       wikiTip.style.top = `${window.scrollY + rect.top - 8}px`;
@@ -66,6 +70,12 @@
     textEl.addEventListener('mouseout', (ev) => {
       const link = /** @type {Element} */ (ev.target).closest('a.wiki-link');
       if (link && !link.contains(/** @type {Node} */ (ev.relatedTarget))) wikiTip.classList.add('hidden');
+    });
+    // Clicking the name answers the question the tip was answering, and
+    // the pointer does not move afterwards, so no mouseout comes to take
+    // it away.
+    textEl.addEventListener('click', (ev) => {
+      if (/** @type {Element} */ (ev.target).closest('a.wiki-link')) wikiTip.classList.add('hidden');
     });
   }
 

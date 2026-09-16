@@ -412,6 +412,10 @@ function handleBesideEntity(req, res, user, entityId) {
   const html = views.besideEntityFragment(entity, {
     aliases: models.listEntityAliases(entityId),
     links: models.listStoryEntityLinks(entityId),
+    // The first picture is the portrait -- "make this the portrait" on
+    // the entry is "move it to the front", so there is nothing else to
+    // ask here.
+    image: models.listEntityImages(entityId)[0] || null,
     // The spoiler section is folded on the entry's own page and is left
     // out here entirely: this is a thing to glance at while writing, and
     // a glance is exactly how you spoil yourself.

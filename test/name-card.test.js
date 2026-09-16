@@ -50,9 +50,20 @@ test.before(async () => {
       + '<h2>History</h2><p>Nobody has been there twice.</p>',
     categories: ['Places'],
   }]);
+  // A face on one of them, and none on the other: the card has to be
+  // right both ways round.
+  const imageId = models.addEntityImage({
+    entityId: kessler.id, storyId: story.id, filename: 'kessler.png',
+    contentType: 'image/png', bytes: 1024, caption: 'On the spine, 04:20', uploadedBy: me.id,
+  });
+  models.setEntityImageFocus(imageId, 38, 22);
+  const prado = models.createStoryEntity({
+    storyId: story.id, kind: 'person', name: 'Prado', summary: 'Leaves the hatch open.',
+    createdBy: me.id,
+  });
   client = makeClient(app.base);
   await client.login(ME.username, ME.password);
-  ids = { story, chapter, kessler };
+  ids = { story, chapter, kessler, prado, imageId };
   ({ leadOf } = require('../lib/wiki'));
 });
 
@@ -134,4 +145,22 @@ test('the reader gets their place back', () => {
   assert.match(script, /opener\.focus\(\)/, 'and puts the reader back on it');
   assert.match(script, /event\.key !== 'Escape'/, 'Escape closes it');
   assert.match(script, /aria-live/, 'and it says what happened, for somebody not looking');
+});
+
+test('a face on the card, cropped where the entry was cropped', async () => {
+  const html = await (await client.request(`/bible/${ids.kessler.id}/beside`)).text();
+  assert.match(html, new RegExp(`<img class="beside-portrait" src="/entity-images/${ids.imageId}"`),
+    'the portrait is there');
+  assert.match(html, /object-position: 38% 22%/,
+    'cropped where somebody put the crop, not through the middle of a group photograph');
+  assert.match(html, /alt="On the spine, 04:20"/, 'and the caption is its alt text');
+  // The heading is still the first h3 in the fragment, because that is
+  // what the card turns into the link onwards.
+  assert.ok(html.indexOf('<h3>Kessler</h3>') > -1);
+});
+
+test('no picture is not an empty box', async () => {
+  const html = await (await client.request(`/bible/${ids.prado.id}/beside`)).text();
+  assert.ok(!/beside-portrait/.test(html), 'nothing stands in for a face that is not there');
+  assert.match(html, /<h3>Prado<\/h3>/);
 });

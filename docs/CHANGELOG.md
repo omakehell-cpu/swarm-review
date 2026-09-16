@@ -8,6 +8,8 @@ missing on the site, it has not been restarted yet.
 
 - **Click a name while you are reading and it opens beside the chapter**, at the top of the column the notes are in: who they are, the line of summary, and as much of the entry as fits. You have not left the page and you have not lost your paragraph.
 - It works for both kinds of name: the people and places in this story's **bible**, and the pages of the shared **glossary**.
+- **In Read as well as in Review.** Read mode takes the second column away; the card is the one thing that brings it back, for as long as it is open and with none of the notes in it.
+- **With the picture, if the entry has one**, cropped where the entry was cropped.
 - **The name at the top of the card is the way on** to the entry itself, and so is *Open the whole entry*. **Escape** closes it and puts you back on the word you clicked.
 - On a phone, holding Ctrl or Cmd, or with JavaScript off, the name does what it always did and takes you to the page. It is a link and it stays a link.
 - **Pressing Save no longer asks whether you meant to leave the page.** The editor keeps a copy of your writing in the browser and warns before you abandon it -- and a form post is leaving the page as far as a browser is concerned, so it asked every time anybody published anything. Closing the tab on top of real unsaved writing still asks, which is the case it exists for.

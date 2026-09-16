@@ -28,6 +28,15 @@ chapter**, at the top of the column the notes are in: what it is, the line
 of summary, and as much of the entry as fits. You have not gone anywhere --
 the chapter is still there, at the paragraph you were on.
 
+If the entry has a **picture**, it is on the card, cropped where whoever
+wrote the entry cropped it. Half of what a bible is for is recognising
+somebody, and a face does that faster than a line of summary.
+
+This works in **Read** as well as in **Review**. Read mode takes the second
+column away, and the card is the one thing that brings it back: while it is
+open the text makes room for it, with none of the notes, and when you close
+it the chapter has the page to itself again.
+
 If that is not enough, **the name at the top of the card is the way on**:
 click it, or *Open the whole entry*, and you get the entry itself.
 **Escape** closes the card and puts you back on the word you clicked.

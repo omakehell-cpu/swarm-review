@@ -2281,6 +2281,16 @@ mark.search-hit {
 main[data-reading="read"] .chapter-body-grid { grid-template-columns: 1fr; }
 main[data-reading="read"] .comments-pane,
 main[data-reading="read"] .wa-card { display: none; }
+/* ...except for the one thing a reader asks for on purpose. Reading is
+   exactly when "who was that again?" gets asked, so the card opens in
+   read mode too: the second column comes back for as long as the card is
+   in it, with none of the apparatus read mode was hiding -- no notes, no
+   form, no heading -- and goes away again with it. */
+main[data-reading="read"] .chapter-body-grid.name-card-open {
+  grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr);
+}
+main[data-reading="read"] .name-card-open .comments-pane { display: flex; }
+main[data-reading="read"] .name-card-open .comments-pane > *:not(.name-card) { display: none; }
 /* The left half of the version bar goes quiet in read mode, but it keeps
    its slot: the bar is a space-between row, so taking the left child out
    of the flow would slide the Read/Review switch from the right edge to
@@ -2304,7 +2314,10 @@ main[data-reading="read"] #chapter-text mark.wa-sentence {
    card) slid the whole chapter sideways the moment you pressed Read,
    while the title and the controls above it stayed put. Nothing moves
    now: the comments simply stop being there. */
-main[data-reading="read"] .reading-pane {
+/* The chapter's own pane, not every pane on the page: the card beside it
+   holds one too, and a two-line summary does not want a chapter's worth
+   of air above it. */
+main[data-reading="read"] .chapter-body-grid > .reading-pane {
   padding-block: var(--s-10) var(--s-11);
 }
 
@@ -2691,10 +2704,12 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .name-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .name-card-close { position: absolute; top: var(--s-4); right: 0; }
 .name-card-body h3 { margin: 0 var(--s-12) var(--s-2) 0; font-size: var(--t-lg); }
+.name-card-body .beside-head { margin-bottom: var(--s-4); }
+.name-card-body .beside-head + .summary { margin-top: 0; }
 .name-card-body h3 a { color: inherit; text-decoration: none; }
 .name-card-body h3 a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
 .name-card-body .summary { margin: 0 0 var(--s-4); }
-.name-card-body .reading-pane { padding-left: var(--s-5); font-size: var(--t-sm); }
+.name-card-body .reading-pane { padding-left: var(--s-5); padding-block: 0; font-size: var(--t-sm); }
 .name-card-body .reading-pane p { margin: 0 0 var(--s-4); }
 .name-card-more { margin: var(--s-4) 0 0; font-size: var(--t-sm); }
 @media (max-width: 900px) {
@@ -2722,6 +2737,15 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
   position: sticky; top: 0; background: var(--bg); padding-bottom: var(--s-4);
 }
 .beside-pane-body h3 { margin: 0 0 var(--s-3); font-size: var(--t-lg); }
+/* A face beside the name, in whichever column the card has landed in.
+   Smaller than the one on the entry's own page: this is a reminder of who
+   somebody is, not a portrait gallery. */
+.beside-head { display: flex; gap: var(--s-5); align-items: flex-start; }
+.beside-head-text { min-width: 0; }
+.beside-portrait {
+  width: 72px; height: 72px; object-fit: cover; flex: 0 0 auto;
+  border: 1px solid var(--border-strong); background: var(--bg-sunken);
+}
 /* Beside the thing you are writing, not instead of it: smaller, and
    without the reading page's wide margin. */
 .beside-reading { padding-left: var(--s-6); font-size: var(--t-sm); }
