@@ -2609,6 +2609,15 @@ main[data-reading="read"] .reading-pane {
   .row-cover-empty { font-size: var(--t-md); }
 }
 
+/* ---- the feed link ----
+   A secret in a text box, wide and selectable, because the thing you do
+   with it is copy it whole. */
+.feed-url { margin: var(--s-5) 0 var(--s-3); }
+.feed-url-input {
+  width: 100%; font-family: var(--font-mono); font-size: var(--t-xs);
+  padding: var(--s-3) var(--s-4); background: var(--bg-sunken);
+}
+
 /* ---- custom fields ---- */
 .entity-fields { margin-bottom: var(--s-9); }
 .field-list { margin: 0; }

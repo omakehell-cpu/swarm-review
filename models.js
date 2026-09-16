@@ -1524,6 +1524,83 @@ function inboxFor(userId, { since = null, limit = 8 } = {}) {
   };
 }
 
+// ---------- the feed ----------
+// The one way this app tells somebody that a note is waiting without
+// reaching out to the network itself: a private Atom feed per person,
+// behind an unguessable URL, which sits still until their reader asks.
+//
+// The token is created on request and not before -- a capability nobody
+// has made is a capability nobody can leak -- and rotating it is one
+// statement, which is what "somebody saw my screen" needs.
+
+const getUserByFeedToken = (token) => (token
+  ? db.prepare('SELECT * FROM users WHERE feed_token = ?').get(String(token)) || null
+  : null);
+
+function createFeedToken(userId) {
+  const token = auth.generateResetToken();
+  db.prepare('UPDATE users SET feed_token = ? WHERE id = ?').run(token, userId);
+  return token;
+}
+
+function clearFeedToken(userId) {
+  db.prepare('UPDATE users SET feed_token = NULL WHERE id = ?').run(userId);
+}
+
+// What goes in it. Three kinds of thing, each with an id that means the
+// same row for ever, because a reader remembers what it has shown by id.
+//
+// Unlike the index, this does not use "since your last visit": a feed is
+// read somewhere else entirely, and clearing it by loading a web page
+// would make things vanish before they were seen. It is a window of days
+// instead, which is what a reader expects.
+function feedItemsFor(userId, { days = 30, limit = 40 } = {}) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+  const items = [];
+
+  for (const row of pendingOnMyChapters(userId)) {
+    items.push({
+      kind: 'waiting',
+      // The newest note is part of the id on purpose: another note
+      // arriving is a new thing to be told about, and the old entry stays
+      // read rather than silently changing under the reader.
+      key: `waiting/${row.chapter_id}-${row.latest_at}`,
+      title: `${row.pending} note${row.pending === 1 ? '' : 's'} waiting on ${row.chapter_number}. ${row.chapter_title}`,
+      summary: `In ${row.story_title}. Nothing happens to ${row.pending === 1 ? 'it' : 'them'} until you accept or turn ${row.pending === 1 ? 'it' : 'them'} down.`,
+      url: `/chapters/${row.chapter_id}`,
+      at: row.latest_at,
+    });
+  }
+
+  for (const row of repliesToMe(userId, since, limit)) {
+    items.push({
+      kind: 'reply',
+      key: `reply/${row.id}`,
+      title: `${row.author_name} replied on ${row.chapter_number}. ${row.chapter_title}`,
+      summary: row.body,
+      url: `/chapters/${row.chapter_id}`,
+      at: row.created_at,
+      author: row.author_name,
+    });
+  }
+
+  for (const row of chaptersNewToMe(userId, limit)) {
+    if (row.created_at < since) continue;
+    items.push({
+      kind: 'chapter',
+      key: `chapter/${row.id}`,
+      title: `${row.story_title}: ${row.chapter_number}. ${row.title}`,
+      summary: `${row.author_name} posted a chapter you have not opened${row.word_count ? `, ${row.word_count} words` : ''}.`,
+      url: `/chapters/${row.id}`,
+      at: row.created_at,
+      author: row.author_name,
+    });
+  }
+
+  items.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+  return items.slice(0, limit);
+}
+
 // ---------- coauthors ----------
 // A story's own author_id is its owner and is not repeated here: this
 // table holds only the people the owner has added. Everywhere the app asks
@@ -2499,6 +2576,10 @@ module.exports = {
   listEntityImages,
   moveEntityImage,
   removeEntityImage,
+  clearFeedToken,
+  createFeedToken,
+  feedItemsFor,
+  getUserByFeedToken,
   setEntityImageCaption,
   setEntityImageFocus,
   createStoryEntity,
