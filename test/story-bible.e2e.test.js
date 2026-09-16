@@ -353,6 +353,21 @@ test('an entry with no picture still has the box, so the list does not go ragged
   assert.match(index, /class="row-cover row-cover-empty"/);
 });
 
+test('an edit with nobody attached still works, and says what went wrong if it does not', () => {
+  // A caller that does not know who is asking -- a script, an import --
+  // used to blow up inside the dictionary and then have the failure
+  // replaced by "cannot rollback", which is a much less useful sentence.
+  const entity = models.listStoryEntities(storyId).find((e) => e.name === 'Kessler');
+  const updated = models.updateStoryEntity({
+    entityId: entity.id, kind: entity.kind, name: entity.name, summary: entity.summary,
+    description: entity.description, secret: entity.secret, status: entity.status,
+    role: entity.role, aliases: [], fields: [],
+    storyWhen: 'Day 412', storyDay: '412',
+  });
+  assert.strictEqual(updated.story_day, 412);
+  assert.strictEqual(updated.story_when, 'Day 412');
+});
+
 test('a file that is not one of the four formats is refused, SVG included', async () => {
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>', 'utf8');
   const res = await owner.request(`/bible/${kesslerId}/images`, {

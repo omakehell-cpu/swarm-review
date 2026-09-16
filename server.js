@@ -808,6 +808,22 @@ async function handleAnalysis(req, res, user, storyId) {
   }));
 }
 
+// The story's own calendar. A private bible keeps its entries off it, the
+// same way it keeps its cast off the analysis: the chapters are still
+// there, because chapter titles were never the private part.
+async function handleTimeline(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  const timeline = models.storyTimeline(storyId);
+  if (!models.canReadBible(story, user)) {
+    timeline.placed = timeline.placed.filter((item) => item.type !== 'entry');
+    timeline.undated = timeline.undated.filter((item) => item.type !== 'entry');
+  }
+  sendHtml(res, 200, views.timelinePage({
+    user, story, timeline, canWrite: models.canWriteInStory(story, user),
+  }));
+}
+
 // ---------- the outline (Scrivener's outliner, in this app's shape) ----------
 async function handleOutline(req, res, user, storyId, query) {
   const story = models.getStoryById(storyId);
@@ -964,6 +980,8 @@ function entityFieldsFromBody(body) {
     // Template slots and free extras post the same pair of inputs, so
     // there is one code path and one set of rules for both.
     fields: storyBible.parseFields(body.fieldLabel, body.fieldValue),
+    storyWhen: body.storyWhen,
+    storyDay: body.storyDay,
   };
 }
 
@@ -973,6 +991,7 @@ function entityFormExtras(storyId, entity) {
     templates: models.fieldTemplatesByKind(storyId),
     usedLabels: models.listUsedFieldLabels(storyId),
     fields: entity ? models.listEntityFields(entity.id) : [],
+    whens: models.listStoryWhens(storyId),
   };
 }
 
@@ -1528,8 +1547,10 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   const arcTitle = (body.arcTitle || '').trim();
   const pov = (body.pov || '').trim();
   const strand = (body.strand || '').trim();
+  const storyWhen = (body.storyWhen || '').trim();
+  const storyDay = body.storyDay;
   let content = (body.content || '').replace(/\r\n/g, '\n');
-  const values = { title, summary, content, position: body.position, stage, arcTitle, pov, strand };
+  const values = { title, summary, content, position: body.position, stage, arcTitle, pov, strand, storyWhen, storyDay };
 
   try {
     const uploaded = await extractUploadedText(files.file);
@@ -1550,8 +1571,8 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
     : null;
 
   const chapter = insertBeforeNumber !== null
-    ? models.insertChapterAt({ storyId, position: insertBeforeNumber, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand })
-    : models.createChapter({ storyId, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand });
+    ? models.insertChapterAt({ storyId, position: insertBeforeNumber, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand, storyWhen, storyDay })
+    : models.createChapter({ storyId, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand, storyWhen, storyDay });
   if (arcTitle) {
     logEvent(user, 'arc-started', { subject: arcTitle, href: `/stories/${storyId}`, storyId, chapterId: chapter.id });
   }
@@ -1669,6 +1690,7 @@ async function handleEditChapterPage(req, res, user, chapterId) {
 const storyVocabulary = (storyId) => ({
   povs: models.listPovs(storyId),
   strands: models.listStrands(storyId),
+  whens: models.listStoryWhens(storyId),
 });
 
 async function handleEditChapterSubmit(req, res, user, chapterId) {
@@ -1685,7 +1707,9 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
   const arcTitle = (body.arcTitle || '').trim();
   const pov = (body.pov || '').trim();
   const strand = (body.strand || '').trim();
-  const values = { title, summary, content, changelog, stage, arcTitle, pov, strand };
+  const storyWhen = (body.storyWhen || '').trim();
+  const storyDay = body.storyDay;
+  const values = { title, summary, content, changelog, stage, arcTitle, pov, strand, storyWhen, storyDay };
   const latest = models.getLatestVersion(chapterId);
   // The version this editor was opened on. A form from before this field
   // existed, or one a script posted, sends nothing -- and an absent answer
@@ -1734,7 +1758,7 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
     }));
   }
 
-  const { version } = models.editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle, pov, strand });
+  const { version } = models.editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle, pov, strand, storyWhen, storyDay });
   if (stage && stage !== chapter.stage) {
     logEvent(user, 'stage-changed', { subject: `${title}: ${stage}`, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId });
   }
@@ -2132,6 +2156,9 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/analysis$/)) && req.method === 'GET') {
       return handleAnalysis(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/timeline$/)) && req.method === 'GET') {
+      return handleTimeline(req, res, user, Number(m[1]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/outline$/)) && req.method === 'GET') {
       return handleOutline(req, res, user, Number(m[1]), url.searchParams);

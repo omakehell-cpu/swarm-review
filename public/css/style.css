@@ -2609,6 +2609,55 @@ main[data-reading="read"] .reading-pane {
   .row-cover-empty { font-size: var(--t-md); }
 }
 
+/* ---- the timeline ----
+   A single column with the day hanging off the left, and the distance
+   between two rows written in the space between them. The gap is the
+   information: a timeline drawn to scale would make one busy afternoon
+   invisible next to a ten-year silence. */
+.timeline { list-style: none; margin: var(--s-9) 0 0; padding: 0; }
+.tl-row {
+  display: grid; grid-template-columns: 5rem 1fr auto;
+  gap: var(--s-6); align-items: baseline;
+  padding: var(--s-5) 0; border-bottom: 1px solid var(--border);
+}
+.tl-day {
+  font-variant-numeric: tabular-nums; font-weight: 700;
+  font-size: var(--t-2xs); letter-spacing: var(--label-tracking);
+  color: var(--text-muted); text-transform: uppercase;
+}
+.tl-what { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-3) var(--s-5); }
+.tl-what a { color: var(--text); text-decoration: none; font-weight: 700; }
+.tl-what a:hover { color: var(--accent); }
+.tl-when, .tl-note {
+  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.tl-note { font-weight: 400; text-transform: none; letter-spacing: normal; font-size: var(--t-sm); }
+/* An entry is not a chapter and should not be mistaken for one at a
+   glance: same row, lighter rule, and its own mark in the day column. */
+.tl-entry .tl-what a { font-weight: 400; font-style: italic; }
+.tl-gap {
+  display: grid; grid-template-columns: 5rem 1fr; gap: var(--s-6);
+  padding: var(--s-2) 0;
+}
+.tl-gap span {
+  grid-column: 2; font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+  color: var(--text-muted);
+}
+/* Told out of order is a flashback: a decision, so it is marked rather
+   than flagged as wrong. */
+.tl-flag {
+  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking); white-space: nowrap;
+}
+.tl-back .tl-day { color: var(--text); }
+.timeline-loose .tl-row { border-bottom-style: dashed; }
+@media (max-width: 620px) {
+  .tl-row, .tl-gap { grid-template-columns: 3.5rem 1fr; }
+  .tl-flag { grid-column: 2; }
+}
+
 /* ---- the feed link ----
    A secret in a text box, wide and selectable, because the thing you do
    with it is copy it whole. */

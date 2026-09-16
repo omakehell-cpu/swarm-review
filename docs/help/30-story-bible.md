@@ -100,6 +100,13 @@ cast list are both cut the same way.
 Entries without a picture keep the same box in the list, with their initial
 in it, so a half-illustrated cast still reads as one column of names.
 
+## When it happens
+
+An entry takes a date too -- **When this happens** and a **day number** --
+so a battle, a founding or a death sits on the story's
+[timeline](/help/targets-and-analysis) beside the chapters that tell it.
+Both optional, and an entry with neither simply does not appear there.
+
 ## Custom fields
 
 Two kinds, and you can use both.

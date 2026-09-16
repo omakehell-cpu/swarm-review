@@ -281,6 +281,13 @@ ensureColumn('chapters', 'pov', "TEXT NOT NULL DEFAULT ''");
 ensureColumn('chapters', 'strand', "TEXT NOT NULL DEFAULT ''");
 // What this story is aiming at, and what one person is aiming at in a
 // day. Zero means nobody has said, which is not the same as zero words.
+// Where something sits in the story's own calendar, which has nothing to
+// do with the order the chapters are told in. `when` is what the story
+// calls it and can be anything ("Day 412", "Third of Marrow, 1123"); `day`
+// is the number that puts it on a line, on whatever scale the writer
+// picks. Null means nobody has said, which is not the same as day zero.
+ensureColumn('chapters', 'story_when', "TEXT NOT NULL DEFAULT ''");
+ensureColumn('chapters', 'story_day', 'INTEGER');
 ensureColumn('stories', 'word_goal', 'INTEGER NOT NULL DEFAULT 0');
 ensureColumn('users', 'daily_goal', 'INTEGER NOT NULL DEFAULT 0');
 // The secret in a person's feed URL. Null until they ask for one: a
@@ -594,6 +601,11 @@ CREATE VIEW IF NOT EXISTS story_entity_chapters AS
        WHERE a.entity_id = o.entity_id AND a.chapter_id = o.chapter_id
      );
 `);
+
+// The same two on a bible entry, so a battle or a founding can sit on the
+// timeline beside the chapters that tell it.
+ensureColumn('story_entities', 'story_when', "TEXT NOT NULL DEFAULT ''");
+ensureColumn('story_entities', 'story_day', 'INTEGER');
 
 // Where in a picture the face is. A thumbnail is a square cut out of a
 // picture that is rarely square, and the middle of the frame is a guess:

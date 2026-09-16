@@ -1254,7 +1254,7 @@ function entityPage({
   });
 }
 
-function entityFormPage({ user, story, entity = null, aliases = [], fields = [], templates = {}, usedLabels = [], error = '' }) {
+function entityFormPage({ user, story, entity = null, aliases = [], fields = [], templates = {}, usedLabels = [], whens = [], error = '' }) {
   const value = (field) => escapeHtml(entity ? entity[field] || '' : '');
   const selected = (field, option) => ((entity ? entity[field] : '') === option ? ' selected' : '');
   return layout({
@@ -1294,6 +1294,7 @@ function entityFormPage({ user, story, entity = null, aliases = [], fields = [],
             </select>
           </label>
         </div>
+        ${whenFields(entity ? entity.story_when : '', entity ? entity.story_day : null, { whens })}
         ${entityFieldFieldset({
     templates, fields, usedLabels,
     currentKind: (entity && entity.kind) || bible.DEFAULT_KIND,
@@ -1509,10 +1510,7 @@ function analysisPage({ user, story, analysis, canWrite = false }) {
           <h1>Analysis</h1>
           <p class="muted">What <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> is made of, counted. Nothing here is set by hand: it is the chapters, the bible and the notes, added up.</p>
         </div>
-        <div class="page-head-actions">
-          <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
-          <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
-        </div>
+        ${storyViewSwitch(story)}
       </div>
       ${goalBar(analysis.words, story.word_goal)}
       <div class="chart-grid">
@@ -1583,6 +1581,78 @@ function outlineRow(chapter, { cast = [], canOrder = false, index = 0, total = 0
     </tr>`;
 }
 
+// The three ways of looking at a story that is already written: the list,
+// the count, and the calendar. One switch, so adding a fourth does not
+// mean finding three copies of it.
+function storyViewSwitch(story) {
+  return `
+    <div class="page-head-actions">
+      <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
+      <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
+      <a class="btn ghost small" href="/stories/${story.id}/timeline">Timeline</a>
+    </div>`;
+}
+
+// The story's own calendar, which is not the order it is told in. Every
+// row is something somebody gave a day to; the gaps between them are
+// drawn from those days, and a chapter that happens before one told
+// earlier is marked as told out of order -- because that is a flashback,
+// which is a decision, not a mistake to correct.
+function timelineRow(item, { showGap }) {
+  // The distance to the row above, in whatever the writer is counting.
+  // No unit, because the app does not know whether these are days, years
+  // or winters -- and the one thing worse than no unit is the wrong one.
+  const gap = showGap && item.gap
+    ? `<li class="tl-gap"><span>+${escapeHtml(String(item.gap))}</span></li>`
+    : '';
+  return `${gap}
+    <li class="tl-row tl-${item.type}${item.outOfOrder ? ' tl-back' : ''}">
+      <span class="tl-day">${item.day === null ? '&mdash;' : escapeHtml(String(item.day))}</span>
+      <span class="tl-what">
+        <a href="${item.url}">${escapeHtml(item.title)}</a>
+        ${item.when ? `<span class="tl-when">${escapeHtml(item.when)}</span>` : ''}
+        ${item.note ? `<span class="tl-note">${escapeHtml(item.note)}</span>` : ''}
+      </span>
+      ${item.outOfOrder ? '<span class="tl-flag">Told out of order</span>' : '<span></span>'}
+    </li>`;
+}
+
+function timelinePage({ user, story, timeline, canWrite = false }) {
+  const { placed, undated } = timeline;
+  const rows = placed.map((item) => timelineRow(item, { showGap: true })).join('');
+  const nothing = !placed.length && !undated.length;
+
+  return layout({
+    title: `Timeline &middot; ${story.title}`,
+    user,
+    wide: true,
+    body: `
+      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      <div class="page-head">
+        <div>
+          <h1>Timeline</h1>
+          <p class="muted">When things happen in <a href="/stories/${story.id}">${escapeHtml(story.title)}</a>, which is not the order they are told in. Nothing here is guessed: it is what has been given a day.</p>
+        </div>
+        ${storyViewSwitch(story)}
+      </div>
+      ${nothing ? `
+        <p class="muted">Nothing has a date yet. Chapters take one under <strong>Optional details</strong> in the editor, and bible entries under <strong>When this happens</strong> -- a word for what the story calls the moment, and a number to put it in line. Date two things and this page starts working.</p>`
+    : `
+        <p class="outline-totals">
+          <span>${timeline.dated} of ${timeline.chapters} chapter${timeline.chapters === 1 ? '' : 's'} dated</span>
+          ${timeline.span ? `<span>Day ${escapeHtml(String(timeline.span.from))} to ${escapeHtml(String(timeline.span.to))}</span>` : ''}
+          ${timeline.outOfOrder ? `<span class="pending-total">${timeline.outOfOrder} told out of order</span>` : ''}
+        </p>
+        ${placed.length ? `<ol class="timeline">${rows}</ol>` : ''}
+        ${undated.length ? `
+          <section class="chart chart-wide">
+            <h2 class="side-head">Not on the line yet</h2>
+            <p class="muted chart-note">These say when they happen but have no number to sort by${canWrite ? ', so they are waiting on one' : ''}.</p>
+            <ol class="timeline timeline-loose">${undated.map((item) => timelineRow(item, { showGap: false })).join('')}</ol>
+          </section>` : ''}`}`,
+  });
+}
+
 function outlinePage({ user, story, chapters = [], castByChapter = new Map(), canOrder = false, stats = null, notice = '' }) {
   const rows = chapters.map((c, i) => outlineRow(c, {
     cast: castByChapter.get(c.id) || [], canOrder, index: i, total: chapters.length,
@@ -1602,10 +1672,7 @@ function outlinePage({ user, story, chapters = [], castByChapter = new Map(), ca
           <h1>Outline</h1>
           <p class="muted">Every chapter of <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> on one line: what happens, who is in it, how long it is, and what is still waiting on somebody.${canOrder ? ' Drag a row to move a chapter.' : ''}</p>
         </div>
-        <div class="page-head-actions">
-          <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
-          <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
-        </div>
+        ${storyViewSwitch(story)}
       </div>
       ${notice ? `<p class="flash info">${escapeHtml(notice)}</p>` : ''}
       <p class="outline-totals">
@@ -1847,6 +1914,27 @@ function arcField(selectedValue) {
 // text, with what this story has already used offered back -- so a
 // vocabulary settles by being reused rather than by being configured
 // before anybody has written anything.
+// When this happens in the story's own calendar, which has nothing to do
+// with the order it is told in. Two fields because they answer two
+// different questions: what the story calls this moment, and where it
+// goes on a line. The line needs a number; the reader needs the words.
+function whenFields(storyWhen, storyDay, { whens = [] } = {}) {
+  const list = whens.length
+    ? `<datalist id="known-whens">${whens.map((v) => `<option value="${escapeHtml(v)}"></option>`).join('')}</datalist>`
+    : '';
+  return `
+    <div class="entity-form-row">
+      <label>When this happens
+        <input type="text" name="storyWhen" value="${escapeHtml(storyWhen || '')}" maxlength="80" list="known-whens" placeholder="Day 412, or Third of Marrow">
+      </label>
+      <label>Day number
+        <input type="number" name="storyDay" value="${storyDay === null || storyDay === undefined ? '' : escapeHtml(String(storyDay))}" step="1" placeholder="412">
+      </label>
+    </div>
+    <span class="hint">Both optional. The words are what the story calls it; the number is what puts it on the timeline, on whatever scale you pick -- days, years, chapters of a war. Leave the number empty and nothing is assumed: undated is not day zero.</span>
+    ${list}`;
+}
+
 function povAndStrandFields(pov, strand, { povs = [], strands = [] } = {}) {
   const list = (id, values) => (values.length
     ? `<datalist id="${id}">${values.map((v) => `<option value="${escapeHtml(v.value)}"></option>`).join('')}</datalist>`
@@ -1904,6 +1992,7 @@ function newChapterPage({ user, story, chapters = [], error, vocabulary = {}, va
             ${stageField(values.stage)}
             ${arcField(values.arcTitle)}
             ${povAndStrandFields(values.pov, values.strand, vocabulary)}
+            ${whenFields(values.storyWhen, values.storyDay, vocabulary)}
           </div>
           <div class="writer-actions">
             <a class="btn ghost" href="/stories/${story.id}">Cancel</a>
@@ -1976,6 +2065,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
           ${stageField(values.stage ?? chapter.stage)}
           ${arcField(values.arcTitle ?? chapter.arc_title)}
           ${povAndStrandFields(values.pov ?? chapter.pov, values.strand ?? chapter.strand, vocabulary)}
+          ${whenFields(values.storyWhen ?? chapter.story_when, values.storyDay ?? chapter.story_day, vocabulary)}
           <label>What changed? (shown in the version history)<input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Fixed a couple of typos"></label>
         </div>
         <div class="writer-actions">
@@ -2308,6 +2398,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
           <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
           <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
+          <a class="btn ghost small" href="/stories/${story.id}/timeline">Timeline</a>
           ${bibleVisible ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
           ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
           ${isStoryAuthor ? `
@@ -3495,6 +3586,7 @@ module.exports = {
   analysisPage,
   bibleIndexPage,
   outlinePage,
+  timelinePage,
   changelogPage,
   helpIndexPage,
   helpTopicPage,

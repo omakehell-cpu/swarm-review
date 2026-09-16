@@ -957,6 +957,59 @@ test('the analysis counts what is there and invents nothing', async () => {
   assert.match(html, /<table class="bars">/);
 });
 
+test('the timeline reads the story calendar and marks a flashback', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const chapters = models.listChaptersForStory(story.id);
+  assert.ok(chapters.length >= 2, 'two chapters to put in order');
+
+  // Undated is not day zero: with nothing dated, nothing is placed.
+  let timeline = models.storyTimeline(story.id);
+  assert.strictEqual(timeline.placed.length, 0);
+  assert.strictEqual(timeline.dated, 0);
+
+  // Chapter two happens before chapter one: a flashback.
+  models.editChapter({
+    chapterId: chapters[0].id, title: chapters[0].title, summary: chapters[0].summary,
+    content: models.getLatestVersion(chapters[0].id).content, changelog: '',
+    storyWhen: 'Day 40', storyDay: '40',
+  });
+  models.editChapter({
+    chapterId: chapters[1].id, title: chapters[1].title, summary: chapters[1].summary,
+    content: models.getLatestVersion(chapters[1].id).content, changelog: '',
+    storyWhen: 'Day 12', storyDay: '12',
+  });
+
+  timeline = models.storyTimeline(story.id);
+  assert.deepStrictEqual(timeline.placed.map((i) => i.day), [12, 40]);
+  assert.strictEqual(timeline.span.from, 12);
+  assert.strictEqual(timeline.span.to, 40);
+  // The gap between two rows is drawn from their days, not from the
+  // spacing on the page.
+  assert.strictEqual(timeline.placed[1].gap, 28);
+  // The reader meets these by number: chapter one on day 40, then chapter
+  // two on day 12. The jump backwards happens at chapter two, so chapter
+  // two is the flashback -- not the chapter it flashes back from.
+  assert.strictEqual(timeline.outOfOrder, 1);
+  assert.strictEqual(timeline.placed.find((i) => i.outOfOrder).order, chapters[1].chapter_number);
+
+  const html = await (await request(`/stories/${story.id}/timeline`)).text();
+  assert.match(html, /Told out of order/);
+  assert.match(html, /\+28/);
+  assert.match(html, new RegExp(`href="/stories/${story.id}/timeline"`), 'and it is linked from the switch');
+
+  // Nonsense in the number is not a date. It goes back to undated rather
+  // than to the front of the line.
+  models.editChapter({
+    chapterId: chapters[0].id, title: chapters[0].title, summary: chapters[0].summary,
+    content: models.getLatestVersion(chapters[0].id).content, changelog: '',
+    storyWhen: 'Some time later', storyDay: 'ages',
+  });
+  timeline = models.storyTimeline(story.id);
+  assert.strictEqual(timeline.placed.length, 1);
+  assert.ok(timeline.undated.some((i) => i.when === 'Some time later'),
+    'a date in words with no number is listed, not dropped');
+});
+
 test('a feed link is made on request, works without a session, and rotates', async () => {
   // Nothing exists until somebody asks: a capability nobody has created
   // is a capability nobody can leak.
