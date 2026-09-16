@@ -1,5 +1,6 @@
 'use strict';
 
+const { htmlToText } = require('../lib/util');
 const { db } = require('./shared');
 function listWikiPages() {
   return db.prepare('SELECT title, title_lower, summary FROM wiki_pages').all();
@@ -15,14 +16,16 @@ function replaceWikiPages(pages) {
     db.exec('DELETE FROM wiki_pages');
     db.exec('DELETE FROM wiki_page_categories');
     const insert = db.prepare(
-      'INSERT INTO wiki_pages (title, title_lower, summary, content_html) VALUES (?, ?, ?, ?)'
+      'INSERT INTO wiki_pages (title, title_lower, summary, content_html, content_text) VALUES (?, ?, ?, ?, ?)'
     );
     const file = db.prepare(
       'INSERT OR IGNORE INTO wiki_page_categories (title_lower, category) VALUES (?, ?)'
     );
     for (const p of pages) {
       const lower = p.title.toLowerCase();
-      insert.run(p.title, lower, p.summary || '', p.contentHtml || null);
+      // content_text is what the search index reads: the same page with
+      // the tags taken out, written here so the index never has to parse.
+      insert.run(p.title, lower, p.summary || '', p.contentHtml || null, htmlToText(p.contentHtml));
       for (const category of p.categories || []) file.run(lower, category);
     }
     db.exec('COMMIT');

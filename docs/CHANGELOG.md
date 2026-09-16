@@ -4,6 +4,14 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — A search that matches words
+
+- **Searching for a word now finds that word.** It used to look for the letters anywhere: on this archive, a search for "art" returned **355 of the 691 glossary pages** -- part, start, particular, Martin. It returns 8.
+- **Phrases work**, in quotes: `"held its breath"` finds the sentence and not the three words scattered about. **A half-typed name works too**: "Kessl" finds Kessler.
+- **Results come back best first** instead of alphabetically, each with the line it was found in and the word marked.
+- Accents fold, so "Tampaad" finds "Tampáad" and nobody has to guess which spelling was used.
+- What has not changed: archived work is still left out, only each chapter's current version is searched, and a private bible is still private.
+
 ## 2026-09-16 — Typing stopped waiting for the checks
 
 - **The writing checks and the spellchecker moved off the thread that draws the page.** On a four-thousand-word chapter they were taking about 48 milliseconds of it every time you paused -- on a desktop. On a phone that is the stutter you have felt. It is 0.08 now: the work is the same, it just happens somewhere else.
