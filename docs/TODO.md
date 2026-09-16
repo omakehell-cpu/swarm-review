@@ -1,8 +1,12 @@
 # Still to do
 
 Not a promise and not an order of work -- just the things that are known to
-be missing, so they stop living in somebody's head. Newest thinking at the
-top of each entry; move an item into the changelog when it ships.
+be missing, so they stop living in somebody's head. Grouped by what they
+cost, because that is the useful question when there is an evening free.
+Move an item into the changelog when it ships.
+
+Accessibility sits above the groups because it is the only item with a
+person blocked by it today. Everything under it is sized, not ranked.
 
 ## Accessibility, for a writer who cannot see the screen
 
@@ -45,37 +49,61 @@ What needs doing, roughly in the order it would hurt:
   the person who is hitting them. Everything above is a guess made by
   somebody looking at a screen.
 
-## Notifications
+# Medium -- two or three days each
 
-Somebody leaves a note and nobody knows until they next look. The only fix
-that actually reaches a person is email, and email is the one thing that
-would send traffic off this machine -- which is against the rule the app is
-built on. Needs a decision before any code: in-app only, or a mail server,
-and if a mail server, whose.
+## Letting people know there is a note waiting
 
-## A timeline
+**Top of this group.** It took a while to see clearly: this is a review
+site where nobody knows a note is waiting for them unless they go and
+look. The index does put what is waiting on you at the top, but you have
+to be there to see it.
 
-The bible knows who is in which chapter. It does not know when anything
-happens in the story's own calendar, which is the other half of keeping a
-long book straight.
+There is no mail configured, so there are two honest paths and the choice
+between them is yours, not a technical one:
 
-## Writing, not just reading, on a phone
+- **A digest by email.** Would need SMTP -- and it is the only thing in
+  the whole app that would reach out to the network.
+- **A feed per person**, which each of you subscribes to wherever you
+  already read things. Nothing leaves the machine unless somebody's reader
+  comes and asks for it.
 
-The reading side works on a phone. The editor does not really, and a
-chapter written on a train is still a chapter.
+## A chronology
 
-## Scenes inside chapters
+Internal dates on chapters and on events, and a timeline drawn from them.
+This is what catches the holes in a long story with a lot of people in it:
+the bible knows who is in which chapter, but nothing knows *when* anything
+happens in the story's own calendar.
 
-A chapter is the smallest unit the app knows about. Long chapters are made
-of scenes, and moving a scene is a thing writers do constantly.
+## Writing with something else open
 
-## A search that is worth the name
+Scrivener's split: the previous chapter, or a bible entry, open beside the
+one you are writing.
 
-The current one is a LIKE over the text. SQLite has FTS5 built in; that
-would make it fast, ranked, and able to handle a phrase.
+## Writing from a phone
 
-## Restoring from a backup
+Reading and commenting on a phone work well. Writing does not: today it is
+a textarea with the spellchecker on top of it.
 
-Backups are taken daily and kept for a fortnight, and the only way to use
-one is to stop the server and copy a file by hand. The admin page should be
-able to do it, or at least tell you exactly how.
+# Large -- a week or more
+
+## Scenes inside a chapter
+
+Scrivener's Binder. The chapter stops being atomic and becomes a list of
+scenes, each with its own summary, point of view and state, reorderable,
+and still reading as one continuous text.
+
+This is the real structural change: it touches the model, the anchored
+comments and the editor. Not worth starting until it is clear you need it
+-- with chapters of four thousand words, maybe you do not.
+
+# Background debt
+
+- **The search is a `LIKE`.** Four milliseconds today (measured, not
+  guessed) -- and a problem at ten times the text. SQLite has FTS5 built
+  in: fast, ranked, and able to handle a phrase.
+- **An accessibility pass**, beyond the urgent part at the top of this
+  file.
+- **Restoring a backup from the web.** They are taken daily and kept for a
+  fortnight, and the only way to use one is to stop the server, find the
+  file and swap it by hand. The admin page should either do it or tell you
+  exactly how.
