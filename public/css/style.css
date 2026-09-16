@@ -2002,6 +2002,7 @@ mark.search-hit {
    doesn't jump sideways as issue chips appear and disappear. */
 .wa-words { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
 .wa-chip.muted { color: var(--text-muted); font-weight: 400; }
+.wa-grade { font-variant-numeric: tabular-nums; color: var(--text-muted); border-left: 1px solid var(--border); padding-left: var(--s-2); }
 
 /* ---- what's waiting for you, above the story list ----
    Not a panel: a block at the head of the page, opened by the red rule
@@ -3001,6 +3002,22 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .compile .side-head { border-top: 2px solid var(--border-strong); }
 .compile p { margin: 0 0 var(--s-5); max-width: 60ch; }
 .compile-links { display: flex; flex-wrap: wrap; gap: var(--s-4); }
+/* The layout is chosen where the file is asked for, because it is a fact
+   about where the file is going rather than a setting about the story. */
+.compile-form { display: flex; flex-direction: column; gap: var(--s-6); max-width: 60ch; }
+.compile-layouts { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--s-4); }
+.compile-layouts > legend {
+  padding: 0; margin-bottom: var(--s-4);
+  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.compile-layout { display: flex; gap: var(--s-4); align-items: flex-start; cursor: pointer; }
+.compile-layout input { margin-top: 0.25em; flex: 0 0 auto; }
+.compile-layout > span { display: flex; flex-direction: column; gap: 1px; }
+.compile-layout .muted { font-size: var(--t-sm); }
+.compile-option { display: flex; gap: var(--s-4); align-items: center; font-size: var(--t-md); }
+.compile-option input { flex: 0 0 auto; }
+.compile-form .hint { margin: 0; }
 
 /* ---- a goal somebody set ----
    One measure, so one bar and one colour: no ramp, nothing stacked, and

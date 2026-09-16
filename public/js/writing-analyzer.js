@@ -371,13 +371,32 @@
   // to meaningfully judge (this also naturally skips blank lines).
   function scoreSentence(chunk) {
     const words = chunk.text.split(/\s+/).map((w) => w.replace(/^[^a-zA-Z']+|[^a-zA-Z']+$/g, '')).filter(Boolean);
-    if (words.length < 6) return { words: words.length, grade: 0, severity: null };
     const syllables = words.reduce((sum, w) => sum + countSyllables(w), 0);
+    if (words.length < 6) return { words: words.length, syllables, grade: 0, severity: null };
     const grade = 0.39 * words.length + 11.8 * (syllables / words.length) - 15.59;
     let severity = null;
     if (grade >= 15 || words.length > 40) severity = 'red';
     else if (grade >= 9 || words.length > 20) severity = 'yellow';
-    return { words: words.length, grade, severity };
+    return { words: words.length, syllables, grade, severity };
+  }
+
+  // The same Flesch-Kincaid formula as above, but over the whole text at
+  // once rather than sentence by sentence: totals in, one number out.
+  // That is deliberately not the average of the per-sentence grades and
+  // not the worst of them -- a chapter with one monstrous sentence in it
+  // is not a hard chapter, and the sentence itself is already shaded red.
+  // Sentences too short to score still count here, because they are still
+  // part of what a reader reads.
+  //
+  // The number it returns is a US school grade: 8 means an eighth-grader
+  // follows it on the first read. Most published fiction lands between 4
+  // and 8. It says nothing about whether the prose is good, only about
+  // how much work the sentences make a reader do, so it is one chip in
+  // the strip rather than a score at the top of the page.
+  function gradeLevel(sentences, words, syllables) {
+    if (sentences < 1 || words < 1) return null;
+    const grade = 0.39 * (words / sentences) + 11.8 * (syllables / words) - 15.59;
+    return Math.max(1, grade);
   }
 
   // ---------------------------------------------------------------------
@@ -1027,23 +1046,32 @@
     const chunks = splitSentences(text);
     const ranges = [];
     const stats = {
-      yellow: 0, red: 0, passive: 0, adverb: 0, filler: 0, complex: 0, spell: 0, maxGrade: 0,
+      yellow: 0, red: 0, passive: 0, adverb: 0, filler: 0, complex: 0, spell: 0, grade: null,
       echo: 0, filter: 0, dialogue: 0, opening: 0,
     };
     const sentenceChecksOn = !settings || settings.sentence !== false;
+    let totalWords = 0;
+    let totalSyllables = 0;
+    let totalSentences = 0;
 
     for (const chunk of chunks) {
-      const score = sentenceChecksOn ? scoreSentence(chunk) : { words: 0, grade: 0, severity: null };
-      if (score.severity === 'yellow') stats.yellow += 1;
-      if (score.severity === 'red') stats.red += 1;
-      if (score.grade > stats.maxGrade) stats.maxGrade = score.grade;
+      // Scored even when the sentence checks are off: the reading grade is
+      // a fact about the text, not one of the toggles.
+      const score = scoreSentence(chunk);
+      if (score.words) {
+        totalSentences += 1;
+        totalWords += score.words;
+        totalSyllables += score.syllables;
+      }
+      if (sentenceChecksOn && score.severity === 'yellow') stats.yellow += 1;
+      if (sentenceChecksOn && score.severity === 'red') stats.red += 1;
 
       const wordHighlights = findWordHighlights(chunk.text, storyWords, settings);
       for (const w of wordHighlights) {
         if (stats[w.kind] !== undefined) stats[w.kind] += 1;
       }
 
-      if (score.severity) {
+      if (sentenceChecksOn && score.severity) {
         ranges.push({
           start: chunk.start,
           end: chunk.end,
@@ -1082,6 +1110,8 @@
     if (!settings || settings.echo !== false) addWholeText(findEchoes(text, storyWords), 'echo');
     if (!settings || settings.opening !== false) addWholeText(findRepeatedOpenings(chunks), 'opening');
 
+    stats.grade = gradeLevel(totalSentences, totalWords, totalSyllables);
+
     ranges.sort((a, b) => a.start - b.start);
     const html = buildOverlayHtml(text, ranges, commentRanges);
     return { html, ranges, stats };
@@ -1112,8 +1142,25 @@
     return `<span class="wa-chip wa-words">${shown} ${count === 1 ? 'word' : 'words'}</span>`;
   }
 
+  // "Grade 7" -- the one number Hemingway is known for, and the only chip
+  // in the strip that is not a count of things to fix. It carries no color
+  // dot on purpose: there is no grade that is wrong, and shading it would
+  // turn a description into a target. The title says what the number is
+  // for anyone who has not met it before.
+  function gradeChip(grade) {
+    if (grade === null || grade === undefined) return '';
+    const n = Math.round(grade);
+    const ease = n <= 6 ? 'very easy to read'
+      : n <= 9 ? 'easy to read'
+        : n <= 12 ? 'takes some work'
+          : 'hard going';
+    const title = `Reading grade ${n} (Flesch-Kincaid): ${ease}. `
+      + 'Most published fiction sits between 4 and 8.';
+    return `<span class="wa-chip wa-grade" title="${title}">Grade ${n}</span>`;
+  }
+
   function summaryHtml(stats, text) {
-    const words = wordsChip(text);
+    const words = wordsChip(text) + gradeChip(stats.grade);
     const total = stats.yellow + stats.red + stats.passive + stats.adverb + stats.filler
       + stats.complex + stats.spell + stats.echo + stats.filter + stats.dialogue + stats.opening;
     if (total === 0) return `${words}<span class="wa-chip muted">No issues spotted.</span>`;

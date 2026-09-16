@@ -5,6 +5,9 @@
 const { parseMarkdown, renderPlainText } = require('../lib/markdown');
 const { markdownToDocxBuffer } = require('../lib/docx');
 const { compileStory } = require('../lib/compile');
+const typeset = require('../lib/typeset');
+const { renderPdf } = require('../lib/pdf');
+const { renderEpub } = require('../lib/epub');
 const { parseBody, parseMultipartBody, sendHtml, sendJson, redirect } = require('../lib/util');
 const models = require('../models');
 const views = require('../views');
@@ -59,13 +62,14 @@ async function handleCompile(req, res, user, storyId, format, query) {
   const chapters = models.chaptersForCompile(storyId);
   if (!chapters.length) return sendError(res, 404, 'This story has no chapters to compile.', user);
 
-  const markdown = compileStory(story, chapters, {
+  const options = {
     // Off by default: a synopsis is a note to the group, not the front of
     // the book, and the person compiling says when it belongs there.
     synopsis: query.get('synopsis') === '1',
     numbers: query.get('numbers') !== '0',
     frontMatter: query.get('cover') !== '0',
-  });
+    layout: typeset.layoutName(query.get('layout')),
+  };
 
   logEvent(user, 'downloaded', {
     subject: `${story.title}, the whole story as .${format}`, href: `/stories/${storyId}`, storyId,
@@ -73,6 +77,23 @@ async function handleCompile(req, res, user, storyId, format, query) {
 
   const filename = `${slugForFilename(story.title)}.${format}`;
   const disposition = `attachment; filename="${filename}"`;
+
+  // The two that are laid out rather than written out. Both read the same
+  // typeset document, so they agree about what a scene break is and where
+  // a chapter starts -- which they did not when each one re-parsed a
+  // string of markdown and guessed.
+  if (format === 'pdf' || format === 'epub') {
+    const doc = typeset.typesetStory(story, chapters, options);
+    const body = format === 'pdf' ? await renderPdf(doc) : renderEpub(doc);
+    res.writeHead(200, {
+      'Content-Type': format === 'pdf' ? 'application/pdf' : 'application/epub+zip',
+      'Content-Disposition': disposition,
+      'Content-Length': body.length,
+    });
+    return res.end(body);
+  }
+
+  const markdown = compileStory(story, chapters, options);
   if (format === 'md') {
     res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Content-Disposition': disposition });
     return res.end(markdown);
@@ -341,7 +362,7 @@ const routes = [
   ['POST', /^\/stories\/(\d+)\/delete$/, (c) => handleDeleteStory(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/stories\/(\d+)\/authors$/, (c) => handleAddCoauthor(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/stories\/(\d+)\/authors\/(\d+)\/remove$/, (c) => handleRemoveCoauthor(c.req, c.res, c.user, Number(c.m[1]), Number(c.m[2]))],
-  ['GET', /^\/stories\/(\d+)\/download\.(md|txt|docx)$/, (c) => handleCompile(c.req, c.res, c.user, Number(c.m[1]), c.m[2], c.url.searchParams)],
+  ['GET', /^\/stories\/(\d+)\/download\.(md|txt|docx|pdf|epub)$/, (c) => handleCompile(c.req, c.res, c.user, Number(c.m[1]), c.m[2], c.url.searchParams)],
   ['GET', /^\/stories\/(\d+)\/analysis$/, (c) => handleAnalysis(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/timeline$/, (c) => handleTimeline(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/outline$/, (c) => handleOutline(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],

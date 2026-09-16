@@ -26,6 +26,7 @@
   "dependencies": {
     "docx": "^9.7.1",
     "mammoth": "^1.12.3",
-    "markdown-it": "^15.0.2"
+    "markdown-it": "^15.0.2",
+    "pdfkit": "^0.20.2"
   }
 }

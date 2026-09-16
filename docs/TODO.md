@@ -97,6 +97,47 @@ browser. It is doing all of the work alone, though, and the number of
 things posted by script rather than by a form keeps growing. Cheap now,
 annoying later.
 
+## Index cards for the outline
+**Cost: a day.** **Touches: one page, read-only.** Low risk -- it is a
+second way of drawing chapters the outline already loads.
+Scrivener's corkboard: the same chapters as cards on a board rather than
+rows in a table, each showing its summary, coloured by point of view or
+strand, dragged to reorder. The table is better for comparing numbers; the
+board is better for seeing the shape of an act at a glance, which is the
+one thing the table is bad at. Everything it needs -- summary, POV, strand,
+order -- is already on the chapter.
+
+## A character interview
+**Cost: a day.** **Touches: the bible only.** Low risk.
+bibisco's best idea: instead of an empty "notes" box, a list of questions
+for a character -- what do they want, what do they refuse to do, what do
+they lie about -- answered one at a time, with the unanswered ones still
+visible. An empty box asks you to be inspired; a question asks you to
+answer it. The bible already has free text per entry; this is a set of
+prompts stored beside it and a page that walks them.
+
+## Who knows whom, drawn
+**Cost: two or three days.** **Touches: the bible; a new page.**
+The links between bible entries exist and are listed as text. bibisco draws
+them, and a drawing answers "who has not met whom yet" in a second where a
+list does not. This is the one item here that would want real work in the
+browser -- SVG, positions, dragging -- and the one most likely to look
+worse than the list it replaces if it is done carelessly.
+
+## Saved searches
+**Cost: half a day.** **Touches: search and the story page.** Low risk.
+Scrivener's Collections: name a search and keep it -- "every chapter that
+mentions Kessler", "everything tagged *revise*" -- and have it on the story
+page as a list that stays current. The search is now fast enough for this
+to be worth having; before the index it was not.
+
+## A deadline, not just a target
+**Cost: half a day.** **Touches: the story settings and the analysis page.**
+The word goal knows where you are going but not when. bibisco asks for a
+date as well, and then the only number that matters is words per day left.
+Small, and the kind of thing that either helps a great deal or is switched
+off in a week.
+
 ## The log grows forever
 **Cost: an hour.** **Touches: how the service is started, not the app.**
 `server.log` is 23 KB today and nothing ever truncates it. On a Mac mini
