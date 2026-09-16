@@ -6,6 +6,11 @@
 //
 //   node scripts/rebuild-archive.js <repo> <source.sqlite> <target.sqlite> [backup.sqlite]
 //
+// Build the target on a local disk, not on a mounted folder: creating a
+// WAL database needs shared memory the mount may not give you, and the
+// first pragma comes back "disk I/O error". Copy the finished file into
+// place afterwards -- that part is an ordinary file copy.
+//
 // The backup, if given, is where wiki_pages and wiki_page_categories come
 // from -- the glossary is a copy of somebody else's wiki and the least
 // valuable thing in the file, so it is taken from the known-good copy
@@ -69,3 +74,11 @@ console.log('\nforeign key problems:', orphans.length, JSON.stringify(orphans.sl
 const check = fresh.prepare('PRAGMA integrity_check').all();
 console.log('integrity:', JSON.stringify(check).slice(0, 300));
 console.log('search index rows:', fresh.prepare('SELECT count(*) n FROM search_index').get().n);
+
+// One self-contained file to carry away: the write-ahead log folded back
+// in and turned off, so what gets copied into place is the whole database
+// and not two thirds of it. The service turns WAL back on when it opens
+// the file, which is its business and not this script's.
+fresh.prepare('PRAGMA wal_checkpoint(TRUNCATE)').all();
+fresh.exec('PRAGMA journal_mode = DELETE');
+console.log('journal mode:', JSON.stringify(fresh.prepare('PRAGMA journal_mode').all()));
