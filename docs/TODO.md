@@ -51,38 +51,18 @@ What needs doing, roughly in the order it would hurt:
 
 # Medium -- two or three days each
 
-## Letting people know there is a note waiting
+All four of these shipped on 2026-09-16; see the changelog. What is left
+of this group is the half of the notification question that was never a
+coding problem:
 
-**Top of this group.** It took a while to see clearly: this is a review
-site where nobody knows a note is waiting for them unless they go and
-look. The index does put what is waiting on you at the top, but you have
-to be there to see it.
+## Email, if a feed is not enough
 
-There is no mail configured, so there are two honest paths and the choice
-between them is yours, not a technical one:
-
-- **A digest by email.** Would need SMTP -- and it is the only thing in
-  the whole app that would reach out to the network.
-- **A feed per person**, which each of you subscribes to wherever you
-  already read things. Nothing leaves the machine unless somebody's reader
-  comes and asks for it.
-
-## A chronology
-
-Internal dates on chapters and on events, and a timeline drawn from them.
-This is what catches the holes in a long story with a lot of people in it:
-the bible knows who is in which chapter, but nothing knows *when* anything
-happens in the story's own calendar.
-
-## Writing with something else open
-
-Scrivener's split: the previous chapter, or a bible entry, open beside the
-one you are writing.
-
-## Writing from a phone
-
-Reading and commenting on a phone work well. Writing does not: today it is
-a textarea with the spellchecker on top of it.
+The feed covers somebody who reads feeds. Somebody who does not still
+finds out only by coming to look. A digest by email would reach them, and
+would need an SMTP server -- which would make this the only part of the
+app that reaches out to the network. That is the decision, and it has not
+changed by having built the feed: it is about how the group wants to be
+interrupted, not about what is easy.
 
 # Large -- a week or more
 
