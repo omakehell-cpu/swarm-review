@@ -2609,6 +2609,43 @@ main[data-reading="read"] .reading-pane {
   .row-cover-empty { font-size: var(--t-md); }
 }
 
+/* ---- writing on a phone ----
+   The page is the thing you are writing and a way to save it. Everything
+   else the form asks for is a <details> that a small script closes on a
+   narrow screen, and the actions ride along the bottom so that saving is
+   never a scroll away from wherever you have got to. */
+.writer-section > summary, .md-hint > summary {
+  cursor: pointer; list-style-position: outside;
+}
+.writer-section > summary:hover, .md-hint > summary:hover { color: var(--accent); }
+.md-hint > summary {
+  font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.md-hint[open] > summary { margin-bottom: var(--s-3); }
+details.writer-section[open] > summary { margin-bottom: var(--s-2); }
+
+@media (max-width: 720px) {
+  /* Tall enough to write in, short enough that the end of the form is
+     not three screens below the end of the text. A keyboard takes about
+     half of what is left, which is what 52vh is measured against. */
+  .writer-card .main-field textarea { min-height: 0; height: 52vh; }
+  /* dvh second, so a browser that does not know it keeps the vh above:
+     with a keyboard open, vh is the whole screen and dvh is what is
+     actually left of it. */
+  .writer-card .main-field textarea { height: 52dvh; }
+  .writer-actions {
+    position: sticky; bottom: 0; z-index: 3;
+    margin-top: var(--s-6);
+    padding: var(--s-4) 0 calc(var(--s-4) + env(safe-area-inset-bottom, 0px));
+    background: var(--bg); border-top: 1px solid var(--border);
+  }
+  /* Two full-width buttons in reading order: the one you meant is the
+     one on the right, and neither is a 30px target. */
+  .writer-actions .btn { flex: 1 1 0; padding: var(--s-5) var(--s-6); text-align: center; }
+  .writer-section { max-width: none; }
+}
+
 /* ---- writing with something open beside you ----
    Closed, it is one line under the editor and the text keeps the whole
    width. Opened, the card and the pane become two columns -- which is

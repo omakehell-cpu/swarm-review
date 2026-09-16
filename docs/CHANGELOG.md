@@ -4,6 +4,13 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — Writing from a phone
+
+- **Save is reachable.** It was at the bottom of a page three screens tall; now it rides along the bottom of the screen while you are in the form, as two buttons big enough to hit.
+- **Markdown is supported** and **Optional details** fold shut on a narrow screen and are one tap from open. On a screen with room for them they stay open exactly as before: nothing was removed, it was put where it fits.
+- The text box is sized against what is left of the screen with a keyboard up, rather than against the whole of it.
+- Reading and commenting on a phone already worked. This is the other half.
+
 ## 2026-09-16 — Writing with something open beside it
 
 - **Open something beside this**, under the chapter editor: the chapter before this one, or a bible entry, in a column next to the text. Scrivener's split, in the shape this app is already in.

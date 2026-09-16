@@ -14,7 +14,17 @@ const bible = require('./lib/story-bible');
 const bibleImages = require('./lib/entity-images');
 const docs = require('./lib/docs');
 
-const MARKDOWN_HINT = `Markdown is supported: **bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - or 1. list items. Put a backslash before a character to keep it literal (\\* shows a real asterisk). Line breaks are kept as you type them.`;
+// A reminder, not a manual: open on a screen with room for it, and one
+// line you can put away on a screen without.
+function markdownHint() {
+  return `
+    <details class="md-hint hint" data-fold-on-phone open>
+      <summary>Markdown is supported</summary>
+      <span>${MARKDOWN_HINT}</span>
+    </details>`;
+}
+
+const MARKDOWN_HINT = `**bold**, *italic*, ***both***, ~~strikethrough~~, \`code\`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - or 1. list items. Put a backslash before a character to keep it literal (\\* shows a real asterisk). Line breaks are kept as you type them.`;
 
 // Word counts are read at a glance, not audited: exact under ten thousand,
 // rounded to a tenth of a thousand above it, where the last three digits
@@ -1928,14 +1938,14 @@ function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), gr
           <label>Story title<input type="text" name="storyTitle" value="${escapeHtml(values.storyTitle || '')}" required></label>
           <label>Chapter 1 title<input type="text" name="chapterTitle" value="${escapeHtml(values.chapterTitle || '')}" required></label>
           <label class="main-field">Chapter 1 text<textarea name="content" rows="24" placeholder="Paste or write the chapter here...">${escapeHtml(values.content || '')}</textarea>
-            <span class="hint">${MARKDOWN_HINT}</span>
+            ${markdownHint()}
           </label>
-          <div class="writer-section">
-            <p class="writer-section-label">Optional details</p>
+          <details class="writer-section" data-fold-on-phone open>
+            <summary class="writer-section-label">Optional details</summary>
             <label>Story description<textarea name="storyDescription" rows="2">${escapeHtml(values.storyDescription || '')}</textarea></label>
             <label>Chapter summary<textarea name="chapterSummary" rows="2">${escapeHtml(values.chapterSummary || '')}</textarea></label>
             ${fileUploadField()}
-          </div>
+          </details>
           <div class="writer-section">
             <p class="writer-section-label">Tags</p>
             <p class="hint">What readers are walking into. You can change these later from the story page.</p>
@@ -2049,10 +2059,10 @@ function newChapterPage({ user, story, chapters = [], castList = [], error, voca
         <form method="post" action="/stories/${story.id}/chapters/new" class="chapter-form" enctype="multipart/form-data">
           <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title || '')}" required></label>
           <label class="main-field">Chapter text<textarea name="content" rows="24" placeholder="Paste or write the chapter here..." data-story-id="${story.id}">${escapeHtml(values.content || '')}</textarea>
-            <span class="hint">${MARKDOWN_HINT}</span>
+            ${markdownHint()}
           </label>
-          <div class="writer-section">
-            <p class="writer-section-label">Optional details</p>
+          <details class="writer-section" data-fold-on-phone open>
+            <summary class="writer-section-label">Optional details</summary>
             <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary || '')}</textarea></label>
             ${fileUploadField()}
             ${positionField(chapters, values.position)}
@@ -2060,7 +2070,7 @@ function newChapterPage({ user, story, chapters = [], castList = [], error, voca
             ${arcField(values.arcTitle)}
             ${povAndStrandFields(values.pov, values.strand, vocabulary)}
             ${whenFields(values.storyWhen, values.storyDay, vocabulary)}
-          </div>
+          </details>
           <div class="writer-actions">
             <a class="btn ghost" href="/stories/${story.id}">Cancel</a>
             <button class="btn" type="submit">Publish chapter</button>
@@ -2124,10 +2134,10 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
         <input type="hidden" name="baseVersion" value="${conflict ? conflict.version : (latestVersionNumber || '')}">
         <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
         <label class="main-field">Chapter text<textarea name="content" rows="24" data-story-id="${chapter.story_id}">${escapeHtml(values.content ?? latestContent)}</textarea>
-          <span class="hint">${MARKDOWN_HINT}</span>
+          ${markdownHint()}
         </label>
-        <div class="writer-section">
-          <p class="writer-section-label">Optional details</p>
+        <details class="writer-section" data-fold-on-phone open>
+          <summary class="writer-section-label">Optional details</summary>
           <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary ?? chapter.summary ?? '')}</textarea></label>
           ${fileUploadField()}
           ${stageField(values.stage ?? chapter.stage)}
@@ -2135,7 +2145,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
           ${povAndStrandFields(values.pov ?? chapter.pov, values.strand ?? chapter.strand, vocabulary)}
           ${whenFields(values.storyWhen ?? chapter.story_when, values.storyDay ?? chapter.story_day, vocabulary)}
           <label>What changed? (shown in the version history)<input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Fixed a couple of typos"></label>
-        </div>
+        </details>
         <div class="writer-actions">
           <a class="btn ghost" href="/chapters/${chapter.id}">Cancel</a>
           <button class="btn" type="submit">Save changes</button>
