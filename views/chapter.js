@@ -185,6 +185,31 @@ function chapterFloatNav(chapter, neighbours) {
     </nav>`;
 }
 
+// The card that answers "who was that again?" without leaving the
+// chapter.
+//
+// A name in the text is a real link to a real page and stays one: this is
+// the same page, asked for in a smaller shape, put in the column that is
+// already there for everything that is about the text rather than in it.
+// Nothing is rendered here -- the card is an empty frame the reader fills
+// by clicking a name, and with JavaScript off, or on a screen with no room
+// for a second column, it never appears at all and the link does what a
+// link does.
+//
+// The card's own heading becomes the link onwards, because that is the
+// question a card leaves you with: the summary was not enough, take me to
+// the entry.
+function nameCard() {
+  return `
+    <article class="name-card" id="name-card" data-name-card hidden tabindex="-1"
+             role="region" aria-label="The name you opened">
+      <button class="btn ghost tiny name-card-close" type="button" data-name-card-close>Close</button>
+      <div class="name-card-body" data-name-card-body></div>
+      <p class="name-card-more"><a href="/" data-name-card-link>Open the whole entry &rarr;</a></p>
+    </article>`;
+}
+
+
 function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [] }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
@@ -311,6 +336,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         <div id="chapter-text" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}" data-story-id="${chapter.story_id}" data-can-edit-dictionary="${isChapterAuthor ? '1' : '0'}" data-is-author="${isChapterAuthor ? '1' : '0'}">${highlighted}</div>
       </div>
       <aside class="comments-pane">
+        ${nameCard()}
         <h2>Comments</h2>
         <div id="comment-list">${topLevel.length ? anchoredHtml : commentsHtml}</div>
         ${generalHtml}

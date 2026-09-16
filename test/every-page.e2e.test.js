@@ -68,6 +68,7 @@ test.before(async () => {
   pages = [
     '/', '/tags', '/glossary', '/glossary?view=all', '/glossary?kind=person',
     `/glossary/${encodeURIComponent(wiki.title)}`,
+    `/glossary/${encodeURIComponent(wiki.title)}/beside`,
     '/help', '/help/changelog', '/help/reading-and-reviewing', '/help/writing-a-chapter',
     '/help/targets-and-analysis', '/help/story-bible', '/help/glossary',
     '/help/tags-and-search', '/help/your-account',

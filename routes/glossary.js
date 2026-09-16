@@ -3,6 +3,8 @@
 /** @typedef {import('../server').RouteContext} RouteContext */
 
 const { sendHtml } = require('../lib/util');
+const { sendFragment } = require('./shared');
+const wiki = require('../lib/wiki');
 const models = require('../models');
 const views = require('../views');
 const taxonomy = require('../lib/glossary-taxonomy');
@@ -61,6 +63,19 @@ async function handleGlossaryPage(req, res, user, title) {
   }));
 }
 
+// The same page, with nothing around it, for the card beside a chapter.
+// One page, one renderer: this is the page that already exists, asked for
+// in a smaller shape.
+function handleGlossaryBeside(req, res, user, title) {
+  const page = models.getWikiPageByTitleLower(decodeURIComponent(title).toLowerCase());
+  if (!page) return sendHtml(res, 404, views.glossaryNotFoundPage({ user, title }));
+  sendFragment(res, views.besideGlossaryFragment(page, {
+    lead: wiki.leadOf(page.content_html),
+    categories: models.categoriesByPage().get(page.title_lower) || [],
+  }), page.title);
+}
+
+
 // ---------- the whole story as one file (Scrivener's Compile) ----------
 
 // The routes this file answers. server.js walks the tables in order
@@ -69,10 +84,12 @@ async function handleGlossaryPage(req, res, user, title) {
 /** @type {Array<[string, string|RegExp, (c: RouteContext) => any]>} */
 const routes = [
   ['GET', '/glossary', (c) => handleGlossaryIndex(c.req, c.res, c.user, c.url.searchParams)],
+  ['GET', /^\/glossary\/([^/]+)\/beside$/, (c) => handleGlossaryBeside(c.req, c.res, c.user, c.m[1])],
   ['GET', /^\/glossary\/([^/]+)$/, (c) => handleGlossaryPage(c.req, c.res, c.user, c.m[1])],
 ];
 
 module.exports = {
+  handleGlossaryBeside,
   handleGlossaryIndex,
   handleGlossaryPage,
   routes,

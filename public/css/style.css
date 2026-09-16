@@ -2678,6 +2678,30 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
   display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr);
   gap: var(--s-10); align-items: start;
 }
+/* ---- the name you clicked, while reading ----
+   Top of the column the comments are already in, marked off the way a
+   note is: a rule above it and nothing else. It is the thing the reader
+   just asked for, so it gets the accent rule rather than the quiet one,
+   and it goes away again the moment they are done with it. */
+.name-card {
+  border-top: 2px solid var(--accent); padding-top: var(--s-4);
+  max-height: 55vh; overflow-y: auto; position: relative;
+}
+.name-card:focus { outline: none; }
+.name-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.name-card-close { position: absolute; top: var(--s-4); right: 0; }
+.name-card-body h3 { margin: 0 var(--s-12) var(--s-2) 0; font-size: var(--t-lg); }
+.name-card-body h3 a { color: inherit; text-decoration: none; }
+.name-card-body h3 a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+.name-card-body .summary { margin: 0 0 var(--s-4); }
+.name-card-body .reading-pane { padding-left: var(--s-5); font-size: var(--t-sm); }
+.name-card-body .reading-pane p { margin: 0 0 var(--s-4); }
+.name-card-more { margin: var(--s-4) 0 0; font-size: var(--t-sm); }
+@media (max-width: 900px) {
+  /* One column: there is no beside to open into, and the script knows it. */
+  .name-card { display: none; }
+}
+
 .beside-pane { min-width: 0; }
 /* The column a chapter with comments already has: the pane sits above
    them rather than opening a third column beside them. */

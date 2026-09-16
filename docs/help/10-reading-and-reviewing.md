@@ -20,6 +20,22 @@ else.
 
 @figure read-review-switch.png | The bar above the chapter: the Read/Review switch, the type controls behind Aa, and Fill screen.
 
+## A name you do not remember
+
+Characters and places from the story's bible, and names from the shared
+glossary, are underlined in the text. **Click one and it opens beside the
+chapter**, at the top of the column the notes are in: what it is, the line
+of summary, and as much of the entry as fits. You have not gone anywhere --
+the chapter is still there, at the paragraph you were on.
+
+If that is not enough, **the name at the top of the card is the way on**:
+click it, or *Open the whole entry*, and you get the entry itself.
+**Escape** closes the card and puts you back on the word you clicked.
+
+On a narrow screen there is no column to open into, so the name behaves as
+it always did and takes you to the entry. So does holding Ctrl or Cmd, and
+so does everything if JavaScript is off: it is a link, and it stays a link.
+
 ## Leaving a note
 
 **Select the words you mean** and a comment box opens on them. That is the
