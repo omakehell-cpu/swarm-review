@@ -1,0 +1,272 @@
+'use strict';
+
+const { layout } = require('../lib/layout');
+const { escapeHtml } = require('../lib/util');
+const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
+const { timeHtml } = require('../lib/time');
+const { groupChaptersIntoArcs } = require('../lib/story-state');
+const { ICONS, bylineWith, chapterStageBadge, emptyState, goalBar, storyStateBadge, tagChips, wordCount } = require('./shared');
+
+// Two separate forms, because each posts somewhere different, but one
+// control as far as the eye is concerned: a single bordered pair sitting
+// against the row, quiet until you point at it. As two floating boxes
+// with a gap between them they read as debris in the margin.
+function chapterReorderButtons(chapter, index, total) {
+  const label = `chapter ${chapter.chapter_number}, ${escapeHtml(chapter.title)}`;
+  return `
+    <div class="chapter-row-reorder" role="group" aria-label="Reorder ${label}">
+      <form method="post" action="/chapters/${chapter.id}/move-up" class="inline-form">
+        <button type="submit" title="Move up" aria-label="Move ${label} up" ${index === 0 ? 'disabled' : ''}>&uarr;</button>
+      </form>
+      <form method="post" action="/chapters/${chapter.id}/move-down" class="inline-form">
+        <button type="submit" title="Move down" aria-label="Move ${label} down" ${index === total - 1 ? 'disabled' : ''}>&darr;</button>
+      </form>
+    </div>`;
+}
+
+function storyDictionarySection(story, dictionary) {
+  const words = dictionary.length ? `
+    <ul class="story-dictionary-list">
+      ${dictionary.map((entry) => `
+        <li>
+          <span class="invite-code-inline">${escapeHtml(entry.word)}</span>
+          <form method="post" action="/stories/${story.id}/dictionary/${entry.id}/delete" class="inline-form">
+            <button class="btn tiny ghost" type="submit" title="Remove">&times;</button>
+          </form>
+        </li>
+      `).join('')}
+    </ul>` : '<p class="muted">No words added yet.</p>';
+
+  return `
+    <details class="story-dictionary" id="dictionary">
+      <summary>Story dictionary${dictionary.length ? ` (${dictionary.length})` : ''}</summary>
+      <p class="hint">Words the writing analyzer should stop flagging as possible misspellings while you write this story -- handy for invented character or place names.</p>
+      <form method="post" action="/stories/${story.id}/dictionary" class="named-invite-form">
+        <input type="text" name="word" placeholder="e.g. Aetherius" required>
+        <button class="btn small" type="submit">Add word</button>
+      </form>
+      ${words}
+    </details>`;
+}
+
+
+// 250 words a minute is the usual figure for adult fiction read for
+// pleasure. It is an estimate and is written as one -- "about 40 minutes",
+// never "38 minutes" -- because the false precision is what makes this
+// kind of number annoying.
+function readingTime(words) {
+  const minutes = Math.round((Number(words) || 0) / 250);
+  if (!minutes) return 'a few minutes';
+  if (minutes < 60) return `about ${minutes} minute${minutes === 1 ? '' : 's'}`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (!rest) return `about ${hours} hour${hours === 1 ? '' : 's'}`;
+  return `about ${hours}h ${rest}m`;
+}
+
+function storyStatsBlock(stats) {
+  if (!stats) return '';
+  const item = (value, label) => `<div class="story-stat"><span class="story-stat-value">${value}</span><span class="story-stat-label">${label}</span></div>`;
+  return `
+    <div class="story-stats">
+      ${stats.arcs ? item(stats.arcs, `arc${stats.arcs === 1 ? '' : 's'}`) : ''}
+      ${item(stats.chapters, `chapter${stats.chapters === 1 ? '' : 's'}`)}
+      ${stats.words ? item(wordCount(stats.words).replace(/ words$/, ''), 'words') : ''}
+      ${stats.words ? item(readingTime(stats.words).replace(/^about /, ''), 'to read') : ''}
+      ${stats.comments ? item(stats.comments, `comment${stats.comments === 1 ? '' : 's'}`) : ''}
+      ${stats.pending_comments ? item(stats.pending_comments, 'unresolved') : ''}
+      ${stats.last_written_at ? `<div class="story-stat"><span class="story-stat-value">${timeHtml(stats.last_written_at)}</span><span class="story-stat-label">last written</span></div>` : ''}
+    </div>`;
+}
+
+function synopsisSection(story) {
+  if (!story.synopsis) return '';
+  return `
+    <details class="story-synopsis">
+      <summary>Synopsis &mdash; what happens so far <span class="muted">(spoilers)</span></summary>
+      <div class="prose">${renderHighlighted(parseMarkdown(story.synopsis), [], null)}</div>
+    </details>`;
+}
+
+
+// The same thing in one glyph per person, for a list of chapters where the
+// names would not fit.
+function readerDots(readers, currentVersionNumber) {
+  if (!readers || !readers.length) return '';
+  const title = readers.map((r) => r.display_name).join(', ');
+  return `<span class="reader-dots" title="Opened by ${escapeHtml(title)}">${readers.map((r) => `
+    <span class="reader-dot${r.version_number >= currentVersionNumber ? '' : ' earlier'}"
+          aria-hidden="true">${escapeHtml(r.display_name.trim()[0] || '?')}</span>`).join('')}<span class="visually-hidden">Opened by ${escapeHtml(title)}</span></span>`;
+}
+
+function coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId }) {
+  const rows = coauthors.length
+    ? coauthors.map((c) => `
+        <li>
+          <span>${escapeHtml(c.display_name)}</span>
+          ${(isStoryAuthor || c.id === currentUserId) ? `
+            <form method="post" action="/stories/${story.id}/authors/${c.id}/remove" class="inline-form"
+                  data-confirm="${isStoryAuthor
+                    ? `Remove ${escapeHtml(c.display_name)} as a coauthor? The chapters they wrote stay theirs.`
+                    : 'Step back from this story? The chapters you wrote stay yours.'}">
+              <button class="linklike" type="submit">${isStoryAuthor ? 'Remove' : 'Step back'}</button>
+            </form>` : ''}
+        </li>`).join('')
+    : '<li class="muted">Nobody yet.</li>';
+
+  const addForm = (isStoryAuthor && addableCoauthors.length) ? `
+    <form method="post" action="/stories/${story.id}/authors" class="coauthor-add">
+      <label>Add a coauthor
+        <select name="userId">
+          ${addableCoauthors.map((u) => `<option value="${u.id}">${escapeHtml(u.display_name)}</option>`).join('')}
+        </select>
+      </label>
+      <button class="btn small" type="submit">Add</button>
+    </form>` : '';
+
+  return `
+    <section class="coauthors" id="authors">
+      <h2>Who can write in this story</h2>
+      <p class="muted">A coauthor can add chapters and edit the ones they wrote, and shares the story's dictionary. Editing someone else's chapter, changing the story's details or archiving it stay with ${escapeHtml(story.author_name)}.</p>
+      <ul class="coauthor-list">${rows}</ul>
+      ${addForm}
+    </section>`;
+}
+
+function arcHeading(group, position) {
+  if (!group.title) return '';
+  const words = group.chapters.reduce((sum, c) => sum + (c.word_count || 0), 0);
+  return `
+    <div class="arc-head">
+      <h3 class="arc-title"><span class="arc-number">${String(position).padStart(2, '0')}</span>${escapeHtml(group.title)}</h3>
+      <p class="arc-meta">${group.chapters.length} chapter${group.chapters.length === 1 ? '' : 's'}${words ? ` &middot; ${wordCount(words)}` : ''}</p>
+    </div>`;
+}
+
+function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0, bibleVisible = true }) {
+  const chapterRow = (c, i) => `
+    <div class="chapter-row-outer">
+      <a class="chapter-row" href="/chapters/${c.id}">
+        <div class="chapter-row-main">
+          <h3>Chapter ${c.chapter_number}: ${escapeHtml(c.title)}
+            ${c.is_new ? '<span class="badge new">New</span>' : (c.has_new_comments ? '<span class="badge new-comments">New comments</span>' : '')}
+            ${chapterStageBadge(c)}
+          </h3>
+          <p class="muted">${escapeHtml(c.summary || '')}</p>
+        </div>
+        <div class="chapter-row-meta">
+          ${readerDots(readersByChapter.get(c.id) || [], c.latest_version)}
+          <span>by ${escapeHtml(c.author_name)}</span>
+          <span>v${c.latest_version}${c.word_count ? ` &middot; ${wordCount(c.word_count)}` : ''}</span>
+          ${timeHtml(c.created_at)}
+          ${c.pending_comments > 0 ? `<span class="badge pending">${c.pending_comments} pending</span>` : ''}
+        </div>
+      </a>
+      ${isStoryAuthor ? chapterReorderButtons(c, i, chapters.length) : ''}
+    </div>
+  `;
+  const arcs = groupChaptersIntoArcs(chapters);
+  const named = arcs.filter((g) => g.title).length;
+  let arcNumber = 0;
+  const rows = chapters.length ? arcs.map((group) => {
+    if (group.title) arcNumber += 1;
+    return `<section class="arc">${arcHeading(group, arcNumber)}<div class="chapter-list">${
+      group.chapters.map((c) => chapterRow(c, chapters.indexOf(c))).join('')
+    }</div></section>`;
+  }).join('') : emptyState({
+    art: 'sheets',
+    title: 'No chapters here',
+    body: 'Every chapter of this story has been archived. They are still readable, and can be brought back.',
+    action: `<a class="btn ghost small" href="/stories/${story.id}/archived-chapters">View archived chapters</a>`,
+  });
+
+  return layout({
+    title: story.title,
+    user,
+    body: `
+      <div class="page-head">
+        <div>
+          <h1>${escapeHtml(story.title)} ${storyStateBadge(story)}</h1>
+          <p class="muted byline">${bylineWith(story.author_name, coauthors, story.author_username)} &middot; ${timeHtml(story.created_at)}</p>
+          ${story.description ? `<p class="summary">${escapeHtml(story.description)}</p>` : ''}
+          ${tagChips(tags)}
+          ${storyStatsBlock(stats)}
+          ${goalBar(stats ? stats.words : 0, story.word_goal)}
+        </div>
+        <div class="page-head-actions">
+          ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
+          <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
+          <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
+          <a class="btn ghost small" href="/stories/${story.id}/timeline">Timeline</a>
+          ${bibleVisible ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
+          ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
+          ${isStoryAuthor ? `
+            <form method="post" action="/stories/${story.id}/archive" class="inline-form">
+              <button class="btn ghost small" type="submit">Archive story</button>
+            </form>` : ''}
+        </div>
+      </div>
+      ${synopsisSection(story)}
+      ${named ? `<div class="arc-stack">${rows}</div>` : `<div class="chapter-list">${rows}</div>`}
+      ${chapters.length ? `
+        <section class="compile">
+          <h2 class="side-head">The whole story, in one file</h2>
+          <p class="muted">Every chapter in order, arcs as parts, with a title page. The chapters are compiled as they stand now.</p>
+          <p class="compile-links">
+            <a class="btn ghost small" href="/stories/${story.id}/download.docx">Word (.docx)</a>
+            <a class="btn ghost small" href="/stories/${story.id}/download.md">Markdown (.md)</a>
+            <a class="btn ghost small" href="/stories/${story.id}/download.txt">Plain text (.txt)</a>
+            ${story.synopsis ? `<a class="btn ghost small" href="/stories/${story.id}/download.docx?synopsis=1">With the synopsis</a>` : ''}
+          </p>
+        </section>` : ''}
+      <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>
+      ${(isStoryAuthor || coauthors.length) ? coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId: user.id }) : ''}
+      ${canWrite ? storyDictionarySection(story, dictionary) : ''}`,
+  });
+}
+
+// ---------- archived chapters (within a story) ----------
+
+function archivedChaptersPage({ user, story, chapters }) {
+  const rows = chapters.length ? chapters.map((c) => `
+    <div class="chapter-row archived-row">
+      <div class="chapter-row-main">
+        <h3>Chapter ${c.chapter_number}: ${escapeHtml(c.title)}</h3>
+        <p class="muted">archived ${timeHtml(c.archived_at)}</p>
+      </div>
+      <div class="chapter-row-meta">
+        ${user.id === c.author_id ? `
+          <form method="post" action="/chapters/${c.id}/unarchive" class="inline-form">
+            <button class="btn small ghost" type="submit">Unarchive</button>
+          </form>
+          <form method="post" action="/chapters/${c.id}/delete" class="inline-form" data-confirm="Delete this chapter and all its versions and comments forever? This cannot be undone.">
+            <button class="btn small danger" type="submit">Delete forever</button>
+          </form>` : ''}
+      </div>
+    </div>
+  `).join('') : '<p class="muted">No archived chapters.</p>';
+
+  return layout({
+    title: `Archived chapters - ${story.title}`,
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      <h1>Archived chapters</h1>
+      <div class="chapter-list">${rows}</div>`,
+  });
+}
+
+// ---------- chapter reading + review page ----------
+
+module.exports = {
+  arcHeading,
+  archivedChaptersPage,
+  chapterReorderButtons,
+  coauthorsSection,
+  readerDots,
+  readingTime,
+  storyDictionarySection,
+  storyPage,
+  storyStatsBlock,
+  synopsisSection,
+};
