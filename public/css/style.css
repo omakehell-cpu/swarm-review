@@ -2511,12 +2511,36 @@ main[data-reading="read"] .reading-pane {
   width: 56px; height: 56px; object-fit: cover; flex: 0 0 auto;
   margin-right: var(--s-6); border: 1px solid var(--border); background: var(--bg-sunken);
 }
+/* The same box whether or not there is a picture in it, so a cast list
+   half of which has been photographed still reads as one column of names
+   rather than two ragged ones. */
+.row-cover-empty {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: var(--t-lg); font-weight: 700;
+  color: var(--text-muted); background: var(--bg-sunken);
+  border-style: dashed; user-select: none;
+}
 .chapter-row.has-cover { align-items: center; }
+/* Stacked rows on a phone put the picture above the name and, because the
+   row is centred for the picture's sake, centre the name too. Below that
+   width the cast list stays a row -- picture, then name -- and only the
+   meta line drops underneath. */
+@media (max-width: 720px) {
+  .glossary-row.has-cover { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .glossary-row.has-cover .chapter-row-main { flex: 1 1 8rem; }
+  .glossary-row.has-cover .chapter-row-meta { flex: 1 0 100%; text-align: left; }
+}
+/* The name column takes the slack. Without this the middle of the row is
+   shrink-to-fit between two columns of different widths, so every title
+   starts at a different place depending on how long its own meta line
+   happens to be -- a list that looks centred by accident. */
+.glossary-row .chapter-row-main { flex: 1 1 auto; }
+.glossary-row .chapter-row-meta { text-align: right; flex: 0 0 auto; }
 
 .entity-pictures { margin-top: var(--s-10); }
 .entity-pictures .side-head { border-top: 2px solid var(--border-strong); }
 .figure-strip {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: var(--s-7); margin: 0 0 var(--s-7);
 }
 .entity-figure { margin: 0; position: relative; }
@@ -2533,6 +2557,43 @@ main[data-reading="read"] .reading-pane {
 .entity-figure figcaption {
   margin-top: var(--s-3); font-size: var(--t-xs); color: var(--text-muted);
 }
+/* ---- choosing what the thumbnail keeps ----
+   The pin sits on the picture and the square beside the numbers is the
+   crop at the size it will actually be used, so the decision is made
+   against the thing itself rather than against two percentages. */
+.figure-shot { display: block; position: relative; }
+.figure-shot.is-pickable { cursor: crosshair; }
+.focus-pin {
+  position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px;
+  border: 2px solid var(--bg); outline: 1px solid var(--accent);
+  background: var(--accent); pointer-events: none;
+}
+.crop-form {
+  display: flex; gap: var(--s-4); align-items: flex-start;
+  margin: var(--s-4) 0 var(--s-4);
+}
+.crop-preview {
+  flex: 0 0 auto; width: 56px; height: 56px; overflow: hidden;
+  border: 1px solid var(--border); background: var(--bg-sunken);
+}
+.crop-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.crop-fields { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
+.crop-label {
+  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.crop-numbers { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: flex-end; }
+.crop-numbers label {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  flex: 1 1 0; min-width: 0;
+  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.crop-numbers input { width: 100%; min-width: 0; font-size: var(--t-xs); }
+/* The button takes its own line: in a column this narrow it is the third
+   thing, not the third column. */
+.crop-numbers button { flex: 1 0 100%; }
+
 .caption-form { display: flex; gap: var(--s-3); }
 .caption-form input { flex: 1 1 auto; min-width: 0; font-size: var(--t-xs); }
 .figure-actions { display: flex; flex-wrap: wrap; gap: var(--s-3); margin-top: var(--s-3); }
@@ -2545,6 +2606,7 @@ main[data-reading="read"] .reading-pane {
   .entity-head-main { flex-direction: column; gap: var(--s-5); }
   .entity-portrait { width: 96px; height: 96px; }
   .row-cover { width: 44px; height: 44px; margin-right: var(--s-5); }
+  .row-cover-empty { font-size: var(--t-md); }
 }
 
 /* ---- custom fields ---- */
