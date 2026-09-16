@@ -8,6 +8,7 @@ missing on the site, it has not been restarted yet.
 
 - **The story compiles to PDF and to EPUB**, alongside the .docx, .md and .txt that were already there.
 - **You choose a layout first, and the two are different documents.** *Manuscript* is what a competition or an agent asks for: double-spaced, ragged right, an inch of margin, your surname and the page number in the corner, every chapter a third of the way down a fresh page. *Book* is the one to read: justified, first lines indented except after a chapter head or a scene break, chapters opening on a right-hand page, scene breaks as `* * *`.
+- **In the book layout the quotes curl.** A keyboard has one quote key and one apostrophe key; a book has four marks, and using the keyboard's two is, along with an unindented first line, what most gives a page away as typed rather than set. The manuscript layout leaves them exactly as you typed them, because a manuscript is your file and not our idea of it.
 - The PDF is **typeset, not a printed web page** -- the difference is a page that looks like a book rather than a page that looks like a browser with the toolbars hidden.
 - **The EPUB deliberately does less.** It carries the structure -- a working table of contents, one file per chapter, arcs as parts -- and leaves typeface, size and margins to the e-reader, because a book that overrules them is a worse book on somebody's phone.
 - Compiling the same story twice gives you **the same file, byte for byte**, so you can tell whether anything actually changed.
