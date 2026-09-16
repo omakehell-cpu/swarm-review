@@ -625,10 +625,23 @@ function besideChapterFragment(chapter, content) {
     <div class="reading-pane beside-reading">${content}</div>`;
 }
 
-function besideEntityFragment(entity, { aliases = [], links = [], description = '' }) {
+function besideEntityFragment(entity, { aliases = [], links = [], description = '', image = null }) {
+  // Half of what a bible is for is recognising somebody, and a face does
+  // that faster than a line of summary. The crop the entry was given is
+  // the crop that shows here too -- a portrait cropped to the middle of a
+  // group photograph is worse than no portrait.
+  const portrait = image
+    ? `<img class="beside-portrait" src="/entity-images/${image.id}" alt="${escapeHtml(image.caption || entity.name)}"
+            loading="lazy" style="object-position: ${focusPosition(image)}">`
+    : '';
   return `
-    <h3>${escapeHtml(entity.name)}</h3>
-    <p class="muted">${escapeHtml(entityKindLabel(entity.kind))}${aliases.length ? ` &middot; also ${aliases.map((a) => escapeHtml(a)).join(', ')}` : ''}</p>
+    <div class="beside-head">
+      ${portrait}
+      <div class="beside-head-text">
+        <h3>${escapeHtml(entity.name)}</h3>
+        <p class="muted">${escapeHtml(entityKindLabel(entity.kind))}${aliases.length ? ` &middot; also ${aliases.map((a) => escapeHtml(a)).join(', ')}` : ''}</p>
+      </div>
+    </div>
     ${entity.summary ? `<p class="summary">${escapeHtml(entity.summary)}</p>` : ''}
     ${links.length ? `<ul class="relation-list">${links.map((l) => `
       <li><span class="rel-label">${escapeHtml(l.label || 'related to')}</span> <a href="/bible/${l.other_id}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.other_name)}</a></li>`).join('')}</ul>` : ''}

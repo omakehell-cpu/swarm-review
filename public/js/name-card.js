@@ -18,6 +18,11 @@
   const text = document.getElementById('chapter-text');
   if (!card || !text) return;
   const body = card.querySelector('[data-name-card-body]');
+  // Read mode takes the second column away entirely -- there are no notes
+  // to show and the text gets the room. The card is the one thing that
+  // brings it back, so it says when it is open and the stylesheet does
+  // the rest; in review mode the class changes nothing.
+  const grid = card.closest('.chapter-body-grid');
   const onwards = Array.prototype.slice.call(card.querySelectorAll('[data-name-card-link]'));
   const closeButton = card.querySelector('[data-name-card-close]');
   if (!body) return;
@@ -44,6 +49,7 @@
 
   function shut(moveFocus) {
     card.hidden = true;
+    if (grid) grid.classList.remove('name-card-open');
     body.innerHTML = '';
     if (moveFocus && opener && document.contains(opener)) opener.focus();
     opener = null;
@@ -65,6 +71,7 @@
     for (const a of onwards) a.setAttribute('href', href);
     body.innerHTML = '<p class="muted">Looking that up&hellip;</p>';
     card.hidden = false;
+    if (grid) grid.classList.add('name-card-open');
     opener = link;
     card.focus();
 
@@ -76,7 +83,7 @@
     } catch (err) {
       // The link is still a link. Hand it back rather than leaving the
       // reader looking at "Looking that up" for ever.
-      shut(true);
+      shut(false);
       window.location.href = href;
       return true;
     }
