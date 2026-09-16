@@ -63,6 +63,30 @@ cannot change the story.
 
 Being an admin is not a key to somebody else's story.
 
+## The outline
+
+**Outline**, on the story page, puts every chapter on one line: what
+happens, who is in it, how long it is, and how many notes are still
+waiting on somebody. It is the view for seeing the shape of a draft rather
+than reading it.
+
+**Drag a row** to move a chapter (the up and down buttons still work if
+you would rather, or if JavaScript is off), and **write a summary straight
+into the table** -- it saves when you click away. A chapter with no summary
+is counted at the top, because a summary you never wrote is the one you
+will want in six months.
+
+## The whole story in one file
+
+At the foot of the story page: the entire thing as one **.docx**, **.md**
+or **.txt**. Chapters in running order, arcs as parts, a title page with
+the author and the blurb. The synopsis is left out unless you ask for it,
+because it is a note to the group rather than the front of the book.
+
+It compiles the chapters as they stand at that moment. It is not a
+publishing pipeline and does not want to be: it is what you send somebody
+who asked to read the thing.
+
 ## Archiving
 
 **Archive chapter** and **Archive story** take something out of the way

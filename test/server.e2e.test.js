@@ -800,6 +800,96 @@ test('an editor with no version to compare is let through, not blocked', async (
   assert.strictEqual(res.status, 302, 'an absent answer is not a stale one');
 });
 
+
+test('the outline puts every chapter on one line', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const html = await (await request(`/stories/${story.id}/outline`)).text();
+  assert.match(html, /<table class="outline"/);
+  for (const chapter of models.listChaptersForStory(story.id)) {
+    assert.match(html, new RegExp(`data-chapter="${chapter.id}"`), `${chapter.title} is in it`);
+  }
+  // The story page offers the way in.
+  assert.match(await (await request(`/stories/${story.id}`)).text(), new RegExp(`href="/stories/${story.id}/outline"`));
+});
+
+test('a summary can be saved from the outline, and a stranger cannot', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const chapterId = models.listChaptersForStory(story.id)[0].id;
+  const res = await request(`/chapters/${chapterId}/summary`, {
+    method: 'POST', ...form([['summary', 'She cannot sleep; the drop is at six.']]),
+  });
+  assert.strictEqual(res.status, 302);
+  assert.strictEqual(models.getChapterById(chapterId).summary, 'She cannot sleep; the drop is at six.');
+
+  const other = makeClient(app.base);
+  await other.login('reader', USER.password);
+  const refused = await other.request(`/chapters/${chapterId}/summary`, {
+    method: 'POST', ...form([['summary', 'Not mine to write.']]),
+  });
+  assert.strictEqual(refused.status, 403);
+  assert.strictEqual(models.getChapterById(chapterId).summary, 'She cannot sleep; the drop is at six.');
+});
+
+test('dragging a chapter saves the whole order at once', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const before = models.listChaptersForStory(story.id);
+  if (before.length < 2) return; // nothing to reorder in this fixture
+
+  const flipped = [before[before.length - 1].id, ...before.slice(0, -1).map((c) => c.id)];
+  const res = await request(`/stories/${story.id}/outline/order`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ order: flipped }),
+  });
+  assert.strictEqual(res.status, 200);
+  const after = models.listChaptersForStory(story.id);
+  assert.deepStrictEqual(after.map((c) => c.id), flipped, 'the running order is what was sent');
+  // The numbers stay 1..n, with no gaps and no repeats.
+  assert.deepStrictEqual(after.map((c) => c.chapter_number), before.map((c) => c.chapter_number));
+
+  // Put it back, and prove a partial list does not lose anybody.
+  const half = [before[0].id];
+  await request(`/stories/${story.id}/outline/order`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ order: half }),
+  });
+  const restored = models.listChaptersForStory(story.id);
+  assert.strictEqual(restored.length, before.length, 'nobody fell out of the story');
+  assert.strictEqual(restored[0].id, before[0].id);
+});
+
+test('somebody else cannot reorder your story', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const other = makeClient(app.base);
+  await other.login('reader', USER.password);
+  const res = await other.request(`/stories/${story.id}/outline/order`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ order: [1] }),
+  });
+  assert.strictEqual(res.status, 403);
+});
+
+test('the whole story compiles into one file', async () => {
+  const story = models.listStories().find((s2) => s2.title === 'A Story With Many Tags');
+  const md = await request(`/stories/${story.id}/download.md`);
+  assert.strictEqual(md.status, 200);
+  assert.match(md.headers.get('content-disposition'), /attachment; filename=".*\.md"/);
+  const text = await md.text();
+  assert.match(text, /^# A Story With Many Tags/);
+  for (const chapter of models.chaptersForCompile(story.id)) {
+    assert.ok(text.includes(chapter.title), `${chapter.title} is in the manuscript`);
+  }
+
+  // And as a Word file, which is what anybody outside this app will want.
+  const docx = await request(`/stories/${story.id}/download.docx`);
+  assert.strictEqual(docx.status, 200);
+  const buffer = Buffer.from(await docx.arrayBuffer());
+  assert.ok(buffer.length > 1000);
+  assert.strictEqual(buffer.subarray(0, 2).toString('latin1'), 'PK', 'a real .docx is a zip');
+});
+
 test('logging out invalidates the session', async () => {
   const res = await request('/logout', { method: 'POST', ...form([]) });
   assert.strictEqual(res.status, 302);

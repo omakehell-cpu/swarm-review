@@ -34,6 +34,7 @@ const entityImages = require('./lib/entity-images');
 const castLinks = require('./lib/cast-links');
 const docs = require('./lib/docs');
 const backups = require('./lib/backup');
+const { compileStory } = require('./lib/compile');
 const diff = require('./lib/diff');
 const {
   parseCookies, parseBody, parseMultipartBody, sendHtml, sendJson, redirect, setCookie, clearCookie,
@@ -686,6 +687,95 @@ async function handleGlossaryPage(req, res, user, title) {
     summaries: models.summariesForTitles(linked),
     categories: models.categoriesByPage().get(page.title_lower) || [],
   }));
+}
+
+// ---------- the whole story as one file (Scrivener's Compile) ----------
+// Everything downloadable here was a single chapter, which is the unit the
+// app works in and the wrong unit for showing somebody a novel.
+async function handleCompile(req, res, user, storyId, format, query) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  const chapters = models.chaptersForCompile(storyId);
+  if (!chapters.length) return sendError(res, 404, 'This story has no chapters to compile.', user);
+
+  const markdown = compileStory(story, chapters, {
+    // Off by default: a synopsis is a note to the group, not the front of
+    // the book, and the person compiling says when it belongs there.
+    synopsis: query.get('synopsis') === '1',
+    numbers: query.get('numbers') !== '0',
+    frontMatter: query.get('cover') !== '0',
+  });
+
+  logEvent(user, 'downloaded', {
+    subject: `${story.title}, the whole story as .${format}`, href: `/stories/${storyId}`, storyId,
+  });
+
+  const filename = `${slugForFilename(story.title)}.${format}`;
+  const disposition = `attachment; filename="${filename}"`;
+  if (format === 'md') {
+    res.writeHead(200, { 'Content-Type': 'text/markdown; charset=utf-8', 'Content-Disposition': disposition });
+    return res.end(markdown);
+  }
+  if (format === 'txt') {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Content-Disposition': disposition });
+    return res.end(renderPlainText(parseMarkdown(markdown)));
+  }
+  const buffer = await markdownToDocxBuffer({ title: story.title, markdownSource: markdown });
+  res.writeHead(200, {
+    'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'Content-Disposition': disposition,
+    'Content-Length': buffer.length,
+  });
+  return res.end(buffer);
+}
+
+// ---------- the outline (Scrivener's outliner, in this app's shape) ----------
+async function handleOutline(req, res, user, storyId, query) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  const chapters = models.listChaptersForStory(storyId);
+  sendHtml(res, 200, views.outlinePage({
+    user, story, chapters,
+    // Only the story's own author moves chapters around, the same rule the
+    // up/down buttons have always had.
+    canOrder: story.author_id === user.id,
+    castByChapter: models.canReadBible(story, user) ? models.castByChapter(storyId) : new Map(),
+    stats: models.getStoryStats(storyId),
+    notice: query.get('notice') || '',
+  }));
+}
+
+async function handleOutlineOrder(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendJson(res, 404, { error: 'Story not found' });
+  if (story.author_id !== user.id) return sendJson(res, 403, { error: 'Only the story author can reorder chapters.' });
+  const body = await parseBody(req);
+  const order = [].concat(body.order || []).map(Number).filter(Boolean);
+  if (!order.length) return sendJson(res, 400, { error: 'No order was sent.' });
+  models.reorderChapters(storyId, order);
+  logEvent(user, 'chapter-moved', { subject: story.title, href: `/stories/${storyId}/outline`, storyId });
+  sendJson(res, 200, {
+    order: models.listChaptersForStory(storyId).map((c) => ({ id: c.id, number: c.chapter_number })),
+  });
+}
+
+// A summary edited where it sits, on the outline. The same right as
+// editing the chapter: its own author, or the story's.
+async function handleChapterSummary(req, res, user, chapterId) {
+  const chapter = models.getChapterById(chapterId);
+  const wantsJson = (req.headers.accept || '').includes('application/json');
+  if (!chapter) {
+    return wantsJson ? sendJson(res, 404, { error: 'Chapter not found' }) : sendError(res, 404, 'Chapter not found', user);
+  }
+  if (chapter.author_id !== user.id && chapter.story_author_id !== user.id) {
+    const message = 'Only the chapter author or the story author can change this.';
+    return wantsJson ? sendJson(res, 403, { error: message }) : sendError(res, 403, message, user);
+  }
+  const body = await parseBody(req);
+  const summary = String(body.summary || '').trim().slice(0, 1000);
+  models.updateChapter({ chapterId, title: chapter.title, summary });
+  if (wantsJson) return sendJson(res, 200, { summary });
+  redirect(res, `/stories/${chapter.story_id}/outline?notice=${encodeURIComponent('Summary saved.')}`);
 }
 
 // ---------- help and the changelog (see lib/docs.js) ----------
@@ -1925,6 +2015,18 @@ async function router(req, res) {
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/authors\/(\d+)\/remove$/)) && req.method === 'POST') {
       return handleRemoveCoauthor(req, res, user, Number(m[1]), Number(m[2]));
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/download\.(md|txt|docx)$/)) && req.method === 'GET') {
+      return handleCompile(req, res, user, Number(m[1]), m[2], url.searchParams);
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/outline$/)) && req.method === 'GET') {
+      return handleOutline(req, res, user, Number(m[1]), url.searchParams);
+    }
+    if ((m = pathname.match(/^\/stories\/(\d+)\/outline\/order$/)) && req.method === 'POST') {
+      return handleOutlineOrder(req, res, user, Number(m[1]));
+    }
+    if ((m = pathname.match(/^\/chapters\/(\d+)\/summary$/)) && req.method === 'POST') {
+      return handleChapterSummary(req, res, user, Number(m[1]));
     }
     if ((m = pathname.match(/^\/stories\/(\d+)\/bible$/)) && req.method === 'GET') {
       return handleBibleIndex(req, res, user, Number(m[1]), url.searchParams);
