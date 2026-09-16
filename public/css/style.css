@@ -2512,6 +2512,20 @@ main[data-reading="read"] .chapter-body-grid > .reading-pane {
   .bible-doors { grid-template-columns: 1fr; }
 }
 
+/* ---- replacing a chapter with a file ----
+   Under the box it replaces, marked off by a rule rather than boxed in:
+   it belongs to the text above it, and it is not a section of the form
+   the way "Optional details" is. Quiet until you want it, and then it is
+   exactly where you would look. */
+.upload-version {
+  border-top: 1px solid var(--border); padding-top: var(--s-5);
+  display: flex; flex-direction: column; gap: var(--s-4);
+}
+.upload-version > .writer-section-label { margin: 0; }
+.upload-version-row { display: flex; flex-wrap: wrap; gap: var(--s-5); align-items: center; }
+.upload-version-row input[type="file"] { flex: 1 1 18rem; min-width: 0; }
+.upload-version .hint { margin: 0; max-width: 62ch; }
+
 /* ---- pictures of a bible entry ----
    A face at the top of the entry and a thumbnail in the list, because
    half of what a cast list is for is recognising somebody at a glance. */

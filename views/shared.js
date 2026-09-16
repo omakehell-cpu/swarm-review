@@ -82,6 +82,28 @@ function emptyState({ art, title, body, action }) {
     </div>`;
 }
 
+// Replacing a chapter with a file you already have: the version you wrote
+// somewhere else, the one that came back from somebody's Word, the draft
+// that lives in a folder. It is its own submit button rather than a field
+// the Save button happens to read, because it does something Save does
+// not -- it throws away what is in the box -- and a control that does
+// that should be the one you pressed, not a side effect of another.
+//
+// The button carries the confirmation, not the form: the same form's Save
+// must not ask (see public/js/confirm-forms.js).
+function uploadVersionField() {
+  return `
+    <div class="upload-version">
+      <p class="writer-section-label">Replace this chapter with a file</p>
+      <div class="upload-version-row">
+        <input type="file" name="file" accept=".md,.markdown,.txt,.docx" aria-label="A .md, .txt or .docx file">
+        <button class="btn ghost small" type="submit" name="upload" value="1"
+                data-confirm="Publish that file as the new version of this chapter? What is in the box above will not be saved.">Upload and publish</button>
+      </div>
+      <p class="hint">The file becomes a new version straight away, exactly as it is &mdash; what is in the box above is not saved. The version you are replacing stays in the history, and so do its notes.</p>
+    </div>`;
+}
+
 function fileUploadField() {
   return `
     <label>Or upload a file instead (.md, .txt, or .docx) &mdash; replaces the text above
@@ -448,6 +470,7 @@ module.exports = {
   emptyState,
   errorPage,
   fileUploadField,
+  uploadVersionField,
   goalBar,
   hiddenTagsSection,
   markdownHint,

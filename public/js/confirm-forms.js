@@ -12,7 +12,14 @@
   'use strict';
   document.addEventListener('submit', function (ev) {
     const form = /** @type {Element} */ (ev.target);
-    const message = form.getAttribute && form.getAttribute('data-confirm');
+    // A form can have one button that needs asking about and others that
+    // do not -- the editor's "Upload and publish" beside its Save. The
+    // button that was pressed is the one whose message applies; only when
+    // it has nothing to say does the form's own apply.
+    const submitter = /** @type {Element|null} */ (/** @type {any} */ (ev).submitter);
+    const fromButton = submitter && submitter.getAttribute
+      ? submitter.getAttribute('data-confirm') : null;
+    const message = fromButton || (form.getAttribute && form.getAttribute('data-confirm'));
     if (message && !window.confirm(message)) ev.preventDefault();
   });
 })();

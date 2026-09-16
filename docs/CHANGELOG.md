@@ -4,6 +4,13 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-16 — A chapter you wrote somewhere else
+
+- **Replace this chapter with a file**, under the text box in the editor: choose a `.md`, `.txt` or `.docx`, press **Upload and publish**, and that file becomes a new version straight away.
+- It could always be done -- there was a field for it -- but it was folded inside *Optional details*, called "Or upload a file instead", and it did its work when you pressed Save. Nobody found it, and anybody who did had no way of telling what it was about to do. It is now its own control with its own button, and it asks before it replaces an hour of typing.
+- Nothing is lost: the version you replaced keeps its place in the history and its notes, exactly as with any other save.
+- Pressing it with no file chosen now says so instead of quietly saving the chapter.
+
 ## 2026-09-16 — Who was that again?
 
 - **Click a name while you are reading and it opens beside the chapter**, at the top of the column the notes are in: who they are, the line of summary, and as much of the entry as fits. You have not left the page and you have not lost your paragraph.
