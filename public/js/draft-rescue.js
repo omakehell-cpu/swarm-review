@@ -113,6 +113,11 @@
     restore.addEventListener('click', () => {
       text.value = saved.content;
       if (title && saved.title) title.value = saved.title;
+      // Setting .value does not fire "input", and the writing checks draw
+      // the visible text on a layer over a transparent textarea: without
+      // this the layer kept showing the old text, so the restored draft
+      // came back as blank lines and stray words until the next keystroke.
+      text.dispatchEvent(new Event('input', { bubbles: true }));
       bar.remove();
       text.focus();
       say('Your draft is back in the box. It still has to be saved.');
