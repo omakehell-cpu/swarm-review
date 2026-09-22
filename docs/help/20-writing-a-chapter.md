@@ -18,7 +18,32 @@ The text box takes **markdown**: `**bold**`, `*italic*`, `> quote`, `-` or
 `[link](https://...)`. Line breaks are kept exactly as you type them. A
 backslash makes a character literal, so `\*` shows a real asterisk.
 
+Or skip the symbols: the buttons above the text do **bold**, *italic*, a
+quoted line, a heading and a scene break, and so do the keys every other
+editor uses -- **Ctrl+B** and **Ctrl+I** (**⌘** on a Mac), **Ctrl+Shift+.**
+for a quote, **Ctrl+Enter** for a scene break. Ctrl+Z undoes them like any
+typing.
+
+**Focus**, at the end of that row, takes everything off the page except the
+title, the text and the buttons that save it. **Escape** brings it all
+back. The site remembers which way you like it.
+
 @figure chapter-editor.png | The editor: the text, the markdown reminder, and the writing checks down the side.
+
+## Drafts and publishing
+
+While you write, your text is kept as a **draft**, every few seconds and
+when you switch away from the tab. The draft is yours alone -- nobody else
+sees it -- and it is on the server, so a chapter you started on your phone
+is waiting on your laptop. **Save draft** keeps it on purpose.
+
+**Publish** makes it the next version: readers see it, notes still waiting
+on the passage follow it, and the version before stays in the history.
+
+Opening the editor with a draft waiting opens the draft, and says so, with
+**Discard the draft** to go back to what is published. If a new version
+went up since you started the draft -- a suggested rewrite you applied, say
+-- the editor tells you, and publishing asks before it goes on top.
 
 If the chapter already exists as a file, **upload it instead** — `.md`,
 `.txt` or `.docx` — and it replaces the text in the box. Word documents keep

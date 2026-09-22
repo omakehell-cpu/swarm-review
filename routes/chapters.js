@@ -155,6 +155,9 @@ async function handleChapterPage(req, res, user, chapterId, query) {
 
   const story = models.getStoryById(chapter.story_id);
   const bibleVisible = models.canReadBible(story, user);
+  // Straight back from "Apply change": say so once, in the column.
+  const appliedId = Number(query.get('applied') || 0);
+  const appliedNote = appliedId ? models.getCommentById(appliedId) : null;
   sendHtml(res, 200, views.chapterPage({
     user, chapter, versions, currentVersion, comments, isChapterAuthor,
     // Writing the next chapter is a story-level right, not a chapter-level
@@ -172,6 +175,15 @@ async function handleChapterPage(req, res, user, chapterId, query) {
       ? castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches)
       : wiki.findWikiMatches,
     missingNames: models.canWriteInStory(story, user) ? models.missingNamesInChapter(chapterId) : [],
+    entities: bibleVisible ? models.listStoryEntities(chapter.story_id) : [],
+    leftBehind: models.notesLeftBehind(chapterId),
+    appliedFrom: appliedNote && appliedNote.suggestion != null ? appliedNote.author_name : null,
+    reviewHtml: views.reviewBlock({
+      chapter, isChapterAuthor,
+      requests: models.listReviewRequestsForChapter(chapterId),
+      mine: models.getOpenReviewRequest(chapterId, user.id),
+      people: isChapterAuthor ? models.listPeopleToAsk(user.id) : [],
+    }),
   }));
 }
 
@@ -211,7 +223,7 @@ async function handleChapterDiff(req, res, user, chapterId, query) {
   }));
 }
 
-async function handleEditChapterPage(req, res, user, chapterId) {
+async function handleEditChapterPage(req, res, user, chapterId, query) {
   const chapter = models.getChapterById(chapterId);
   if (!chapter) return sendError(res, 404, 'Chapter not found', user);
   // Deliberately the chapter's author, not the story's: being a coauthor
@@ -223,10 +235,19 @@ async function handleEditChapterPage(req, res, user, chapterId) {
   // anchored to this current latest version regardless of what happens to
   // the text from here.
   const comments = latest ? models.listCommentsForVersion(latest.id) : [];
+  // An unpublished draft is opened instead of the published text: it is
+  // the newer of the two, it is the author's own, and it is what they
+  // were in the middle of. The page says so, and offers the way back.
+  const draft = models.getDraft(chapterId, user.id);
+  const liveDraft = draft && latest && (draft.content !== latest.content || draft.title !== chapter.title) ? draft : null;
+  if (draft && !liveDraft) models.discardDraft(chapterId, user.id);
+  const values = liveDraft ? { title: liveDraft.title || chapter.title, summary: liveDraft.summary, content: liveDraft.content } : {};
   sendHtml(res, 200, views.editChapterPage({
-    user, chapter, latestContent: latest ? latest.content : '', comments, values: {},
+    user, chapter, latestContent: latest ? latest.content : '', comments, values,
+    draft: liveDraft, justDrafted: query.get('drafted') === '1',
     canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
-    latestVersionNumber: latest ? latest.version_number : 0,
+    latestVersionNumber: liveDraft ? liveDraft.base_version : (latest ? latest.version_number : 0),
+    publishedVersionNumber: latest ? latest.version_number : 0,
     vocabulary: storyVocabulary(chapter.story_id),
     siblings: models.listChaptersForStory(chapter.story_id),
     castList: besideCast(models.getStoryById(chapter.story_id), user),
@@ -294,6 +315,15 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
     return sameAgain(err.message);
   }
 
+  // "Save draft": kept for the author, not published. Nothing below this
+  // point -- versions, notes following the text, the log -- happens.
+  if (body.intent === 'draft') {
+    if (content.trim()) {
+      models.saveDraft({ chapterId, userId: user.id, title: title || chapter.title, summary, content, baseVersion: baseVersion || (latest ? latest.version_number : 0) });
+    }
+    return redirect(res, `/chapters/${chapterId}/edit?drafted=1`);
+  }
+
   if (!title) {
     return sendHtml(res, 400, views.editChapterPage({ user, chapter, latestContent: latest ? latest.content : '', error: 'Missing title.', values, latestVersionNumber: baseVersion || (latest ? latest.version_number : 0) }));
   }
@@ -330,6 +360,8 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
   }
 
   const { version } = models.editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle, pov, strand, storyWhen, storyDay });
+  // Published: whatever draft there was is now the chapter.
+  models.discardDraft(chapterId, user.id);
   if (stage && stage !== chapter.stage) {
     logEvent(user, 'stage-changed', { subject: `${title}: ${stage}`, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId });
   }
@@ -345,6 +377,37 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
     href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId,
   });
   redirect(res, version ? `/chapters/${chapterId}?v=${version.version_number}` : `/chapters/${chapterId}`);
+}
+
+// The editor's quiet save, every little while and when the tab is put
+// away: a draft on the server, so it is there on the other device too.
+// Answers in JSON, because nobody is looking at the answer.
+async function handleSaveDraft(req, res, user, chapterId) {
+  const chapter = models.getChapterById(chapterId);
+  if (!chapter) return sendJson(res, 404, { error: 'Chapter not found' });
+  if (chapter.author_id !== user.id) return sendJson(res, 403, { error: 'Only the chapter author can keep a draft of it.' });
+  const body = await parseBody(req);
+  const content = String(body.content || '').replace(/\r\n/g, '\n');
+  if (!content.trim()) return sendJson(res, 400, { error: 'An empty draft is not kept.' });
+  const latest = models.getLatestVersion(chapterId);
+  if (latest && content === latest.content && (body.title || chapter.title) === chapter.title) {
+    // Back to exactly what is published: there is no draft any more.
+    models.discardDraft(chapterId, user.id);
+    return sendJson(res, 200, { ok: true, draft: false });
+  }
+  const draft = models.saveDraft({
+    chapterId, userId: user.id, title: (body.title || chapter.title).trim(), summary: body.summary || '',
+    content, baseVersion: Number(body.baseVersion) || (latest ? latest.version_number : 0),
+  });
+  sendJson(res, 200, { ok: true, draft: true, at: draft.updated_at });
+}
+
+async function handleDiscardDraft(req, res, user, chapterId) {
+  const chapter = models.getChapterById(chapterId);
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
+  if (chapter.author_id !== user.id) return sendError(res, 403, 'Only the chapter author can do that.', user);
+  models.discardDraft(chapterId, user.id);
+  redirect(res, `/chapters/${chapterId}/edit`);
 }
 
 async function handleMoveChapter(req, res, user, chapterId, direction) {
@@ -409,8 +472,10 @@ const routes = [
   ['GET', /^\/chapters\/(\d+)$/, (c) => handleChapterPage(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['GET', /^\/chapters\/(\d+)\/versions\/new$/, (c) => redirect(c.res, `/chapters/${c.m[1]}/edit`)],
   ['GET', /^\/chapters\/(\d+)\/diff$/, (c) => handleChapterDiff(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
-  ['GET', /^\/chapters\/(\d+)\/edit$/, (c) => handleEditChapterPage(c.req, c.res, c.user, Number(c.m[1]))],
+  ['GET', /^\/chapters\/(\d+)\/edit$/, (c) => handleEditChapterPage(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['POST', /^\/chapters\/(\d+)\/edit$/, (c) => handleEditChapterSubmit(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/chapters\/(\d+)\/draft$/, (c) => handleSaveDraft(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/chapters\/(\d+)\/draft\/discard$/, (c) => handleDiscardDraft(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/move-up$/, (c) => handleMoveChapter(c.req, c.res, c.user, Number(c.m[1]), 'up')],
   ['POST', /^\/chapters\/(\d+)\/move-down$/, (c) => handleMoveChapter(c.req, c.res, c.user, Number(c.m[1]), 'down')],
   ['POST', /^\/chapters\/(\d+)\/archive$/, (c) => handleArchiveChapter(c.req, c.res, c.user, Number(c.m[1]))],

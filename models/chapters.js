@@ -3,6 +3,7 @@
 const { countWords } = require('../lib/markdown');
 const { CHAPTER_STAGES } = require('../lib/story-state');
 const { rebuildChapterAppearances } = require('./bible');
+const { carryPendingNotes } = require('./comments');
 const { cleanDay, cleanLabel, db, getLatestVersion } = require('./shared');
 const { getStoryById } = require('./stories');
 /**
@@ -186,6 +187,9 @@ function editChapter({ chapterId, title, summary, content, changelog, stage, arc
         'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, ?, ?, ?, ?)'
       ).run(chapterId, nextNumber, content, changelog || '', countWords(content));
       newVersion = getVersion(Number(info.lastInsertRowid));
+      // In the same transaction: a version that exists without its notes
+      // having followed it is a state nobody should ever load.
+      if (latest) carryPendingNotes(latest, newVersion);
     }
 
     db.exec('COMMIT');
@@ -370,15 +374,23 @@ const getVersionByNumber = (chapterId, versionNumber) =>
   ).get(chapterId, versionNumber);
 
 function addVersion({ chapterId, content, changelog }) {
-  const max = db.prepare(
-    'SELECT COALESCE(MAX(version_number), 0) AS n FROM chapter_versions WHERE chapter_id = ?'
-  ).get(chapterId).n;
-  const nextNumber = max + 1;
-  const info = db.prepare(
-    'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, ?, ?, ?, ?)'
-  ).run(chapterId, nextNumber, content, changelog || '', countWords(content));
+  const previous = getLatestVersion(chapterId);
+  const nextNumber = (previous ? previous.version_number : 0) + 1;
+  db.exec('BEGIN');
+  let version;
+  try {
+    const info = db.prepare(
+      'INSERT INTO chapter_versions (chapter_id, version_number, content, changelog, word_count) VALUES (?, ?, ?, ?, ?)'
+    ).run(chapterId, nextNumber, content, changelog || '', countWords(content));
+    version = getVersion(Number(info.lastInsertRowid));
+    if (previous) carryPendingNotes(previous, version);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
   refreshChapterAppearances(chapterId);
-  return getVersion(Number(info.lastInsertRowid));
+  return version;
 }
 
 // ---------- comments ----------

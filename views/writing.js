@@ -53,7 +53,7 @@ function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), gr
         <form method="post" action="/stories/new" class="chapter-form" enctype="multipart/form-data">
           <label>Story title<input type="text" name="storyTitle" value="${escapeHtml(values.storyTitle || '')}" required></label>
           <label>Chapter 1 title<input type="text" name="chapterTitle" value="${escapeHtml(values.chapterTitle || '')}" required></label>
-          <label class="main-field">Chapter 1 text<textarea name="content" rows="24" placeholder="Paste or write the chapter here...">${escapeHtml(values.content || '')}</textarea>
+          <label class="main-field">Chapter 1 text<textarea name="content" rows="24" placeholder="Paste or write the chapter here..." data-editor-tools>${escapeHtml(values.content || '')}</textarea>
             ${markdownHint()}
           </label>
           <details class="writer-section" data-fold-on-phone open>
@@ -94,7 +94,7 @@ function newChapterPage({ user, story, chapters = [], castList = [], error, voca
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
         <form method="post" action="/stories/${story.id}/chapters/new" class="chapter-form" enctype="multipart/form-data">
           <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title || '')}" required></label>
-          <label class="main-field">Chapter text<textarea name="content" rows="24" placeholder="Paste or write the chapter here..." data-story-id="${story.id}">${escapeHtml(values.content || '')}</textarea>
+          <label class="main-field">Chapter text<textarea name="content" rows="24" placeholder="Paste or write the chapter here..." data-story-id="${story.id}" data-editor-tools>${escapeHtml(values.content || '')}</textarea>
             ${markdownHint()}
           </label>
           <details class="writer-section" data-fold-on-phone open>
@@ -144,8 +144,28 @@ function conflictNotice(chapter, conflict) {
 
 
 
-/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, conflict?: any, latestVersionNumber?: number, vocabulary?: any, siblings?: Row[], castList?: Row[], values?: FormValues }} props */
-function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, conflict = null, latestVersionNumber = 0, vocabulary = {}, siblings = [], castList = [], values = /** @type {FormValues} */ ({}) }) {
+// Where this editor stands relative to what readers see. Said once, at
+// the top, in a sentence -- the difference between "saved" and
+// "published" is the whole point of having drafts, and it must never be
+// something the author has to work out.
+function draftNotice(chapter, draft, justDrafted, publishedVersionNumber) {
+  if (!draft) return '';
+  const behind = draft.base_version && publishedVersionNumber > draft.base_version;
+  return `
+    <div class="draft-notice${justDrafted ? ' just-saved' : ''}" role="status">
+      <p><strong>${justDrafted ? 'Draft saved.' : 'This is your unpublished draft.'}</strong>
+      Last saved ${timeHtml(draft.updated_at)}. Readers still see version ${publishedVersionNumber}; nobody sees this until you publish it.</p>
+      ${behind ? `<p class="draft-behind">Version ${publishedVersionNumber} was published after you started this draft (from v${draft.base_version}). <a href="/chapters/${chapter.id}/diff?from=${draft.base_version}&to=${publishedVersionNumber}" target="_blank" rel="noopener noreferrer">See what changed &#8599;</a> Publishing will ask before it goes on top.</p>` : ''}
+      <form method="post" action="/chapters/${chapter.id}/draft/discard" class="inline-form"
+            data-confirm="Throw this draft away and go back to version ${publishedVersionNumber}? The draft cannot be recovered.">
+        <button class="btn ghost tiny" type="submit">Discard the draft</button>
+      </form>
+    </div>`;
+}
+
+/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, conflict?: any, latestVersionNumber?: number, publishedVersionNumber?: number, draft?: Row|null, justDrafted?: boolean, vocabulary?: any, siblings?: Row[], castList?: Row[], values?: FormValues }} props */
+function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, conflict = null, latestVersionNumber = 0, publishedVersionNumber = 0, draft = null, justDrafted = false, vocabulary = {}, siblings = [], castList = [], values = /** @type {FormValues} */ ({}) }) {
+  const published = publishedVersionNumber || latestVersionNumber;
   const topLevelComments = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -165,13 +185,18 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
   const writerCard = `
     <div class="writer-card">
       <h1>Edit chapter</h1>
-      <p class="muted writer-intro">Saving publishes a new version automatically if you changed the text, so any existing comments stay anchored to the passage they were originally made about. The version history is still available from the "Version" dropdown on the chapter page.</p>
+      <details class="writer-intro-fold">
+        <summary>Drafts and versions, in two lines</summary>
+        <p class="muted">Your writing is kept as a <strong>draft</strong> while you work &mdash; every few seconds, and on this device and your others. Only you see it. <strong>Publish</strong> turns it into the next version: readers see it, notes still waiting on the passage follow it there, and the old version stays in the history.</p>
+      </details>
       ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
       ${conflict ? conflictNotice(chapter, conflict) : ''}
-      <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" enctype="multipart/form-data">
+      ${conflict ? '' : draftNotice(chapter, draft, justDrafted, published)}
+      <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" enctype="multipart/form-data"
+            data-draft-url="/chapters/${chapter.id}/draft">
         <input type="hidden" name="baseVersion" value="${conflict ? conflict.version : (latestVersionNumber || '')}">
         <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
-        <label class="main-field">Chapter text<textarea name="content" rows="24" data-story-id="${chapter.story_id}">${escapeHtml(values.content ?? latestContent)}</textarea>
+        <label class="main-field">Chapter text<textarea name="content" rows="24" data-story-id="${chapter.story_id}" data-editor-tools>${escapeHtml(values.content ?? latestContent)}</textarea>
           ${markdownHint()}
         </label>
         ${uploadVersionField()}
@@ -186,7 +211,8 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
         </details>
         <div class="writer-actions">
           <a class="btn ghost" href="/chapters/${chapter.id}">Cancel</a>
-          <button class="btn" type="submit">Save changes</button>
+          <button class="btn ghost" type="submit" name="intent" value="draft" formnovalidate>Save draft</button>
+          <button class="btn" type="submit" name="intent" value="publish">Publish${published ? ` as v${published + 1}` : ''}</button>
         </div>
       </form>
       ${canWrite ? editorBiblePanel(chapter) : ''}

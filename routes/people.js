@@ -3,7 +3,7 @@
 /** @typedef {import('../server').RouteContext} RouteContext */
 
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
-const { parseBody, sendHtml, sendJson } = require('../lib/util');
+const { parseBody, redirect, sendHtml, sendJson } = require('../lib/util');
 const models = require('../models');
 const views = require('../views');
 const wiki = require('../lib/wiki');
@@ -57,7 +57,14 @@ async function handleStories(req, res, user, query) {
     user, stories: visible, folded, since, tagsByStory, coauthorsByStory,
     activeTags, allGroups: models.listTagsGrouped(),
     inbox: models.inboxFor(user.id, { since }),
+    activity: models.groupActivity(user),
+    welcome: models.welcomeState(user),
   }));
+}
+
+async function handleDismissWelcome(req, res, user) {
+  models.dismissWelcome(user.id);
+  redirect(res, '/');
 }
 
 // Renders arbitrary pasted/typed markdown to HTML using the exact same
@@ -84,6 +91,7 @@ const routes = [
   ['POST', '/markdown/preview', (c) => handleMarkdownPreview(c.req, c.res, c.user)],
   ['GET', '/search', (c) => handleSearch(c.req, c.res, c.user, c.url.searchParams)],
   ['GET', '/', (c) => handleStories(c.req, c.res, c.user, c.url.searchParams)],
+  ['POST', '/welcome/dismiss', (c) => handleDismissWelcome(c.req, c.res, c.user)],
   ['GET', /^\/users\/([A-Za-z0-9_.-]+)$/, (c) => handleProfilePage(c.req, c.res, c.user, c.m[1])],
 ];
 

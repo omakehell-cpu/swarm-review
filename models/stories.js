@@ -34,6 +34,13 @@ function listStories({ since, onlyArchived = false, tagIds = [] } = {}) {
         WHERE c3.story_id = s.id AND c3.archived_at IS NULL
           AND v.version_number = (SELECT MAX(v5.version_number) FROM chapter_versions v5 WHERE v5.chapter_id = c3.id)
       ) AS word_count,
+      -- Who has been reading it, and how much has been said about it: the
+      -- two numbers that say a story has an audience in the group.
+      (SELECT COUNT(DISTINCT r.user_id) FROM chapter_reads r JOIN chapters c7 ON c7.id = r.chapter_id
+        WHERE c7.story_id = s.id AND c7.archived_at IS NULL) AS reader_count,
+      (SELECT COUNT(*) FROM comments cm8 JOIN chapter_versions v8 ON v8.id = cm8.version_id
+        JOIN chapters c8 ON c8.id = v8.chapter_id
+        WHERE c8.story_id = s.id AND cm8.parent_id IS NULL AND cm8.deleted_at IS NULL) AS note_count,
       ${since ? `(SELECT EXISTS(SELECT 1 FROM chapters ch3 WHERE ch3.story_id = s.id AND ch3.archived_at IS NULL AND ch3.created_at > @since))` : '0'} AS has_new_chapters
     FROM stories s
     JOIN users u ON u.id = s.author_id

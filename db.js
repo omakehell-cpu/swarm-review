@@ -633,6 +633,11 @@ ensureColumn('story_entities', 'story_day', 'INTEGER');
 ensureColumn('story_entity_images', 'focus_x', 'INTEGER NOT NULL DEFAULT 50');
 ensureColumn('story_entity_images', 'focus_y', 'INTEGER NOT NULL DEFAULT 50');
 
+// The review loop -- kinds of note, rewrites, notes that follow the text,
+// asking for a read, drafts, the welcome card. Its own file (db-review.js)
+// so this one stays under the length the structure test allows.
+require('./db-review')(db, ensureColumn);
+
 
 // One-time migration: older versions of this app gated registration with a
 // single static code stored in data/invite-code.txt (valid forever, for
