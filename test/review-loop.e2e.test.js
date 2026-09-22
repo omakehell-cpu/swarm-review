@@ -275,3 +275,15 @@ test('a story has a cover only if its author uploads one, and it can be cropped 
   assert.strictEqual(models.getStoryById(story.id).cover_filename, null);
   assert.doesNotMatch(await home(), /class="story-cover"/);
 });
+
+test('each person picks the look the site wears for them, and nobody else', async () => {
+  const look = async (client) => ((await (await client.request('/')).text()).match(/<html lang="en"( data-look="([a-z]+)")?>/) || [])[2] || '';
+  assert.strictEqual(await look(luis), '', 'the default writes no attribute');
+  await luis.request('/account/look', { method: 'POST', ...form([['look', 'swarm']]) });
+  assert.strictEqual(await look(luis), 'swarm');
+  assert.strictEqual(await look(ana), '', 'Ana still sees the default');
+  await luis.request('/account/look', { method: 'POST', ...form([['look', 'nonsense']]) });
+  assert.strictEqual(await look(luis), '', 'an unknown look is the default');
+  const css = await luis.request('/css/looks.css');
+  assert.strictEqual(css.status, 200);
+});

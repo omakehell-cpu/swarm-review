@@ -4,6 +4,11 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-22 — Three looks
+
+- **Pick how the site looks, on your account page:** *Clean* (as it has been), *Literary* (paper, serif headings, the stories as a shelf of covers, a drop capital at the start of each chapter) or *The Swarm* (a dark console with the prose on a lit page).
+- It is yours alone, and it follows you to every device you sign in on. The moon button still switches Literary between day and night; The Swarm is always dark.
+
 ## 2026-09-22 — A quieter page
 
 - **Red means one thing again: something is waiting for you.** Links, the page you are on, pressed buttons and the box you are typing in are ink now.
