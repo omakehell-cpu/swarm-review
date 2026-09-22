@@ -48,6 +48,7 @@ const ROUTES = [
   require('./routes/tags'),
   require('./routes/comments'),
   require('./routes/reviews'),
+  require('./routes/covers'),
   require('./routes/bible'),
   require('./routes/chapters'),
   require('./routes/stories'),

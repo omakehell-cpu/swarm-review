@@ -68,4 +68,13 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   // The welcome card on the front page, until its three steps are done or
   // its reader puts it away.
   ensureColumn('users', 'welcome_dismissed_at', 'TEXT');
+
+  // A story's cover, if its author has uploaded one. The file sits with
+  // the bible's pictures in data/entity-images (see lib/entity-images.js);
+  // the focus is which part of it a cropped thumbnail keeps, in per cent.
+  // No cover is a normal state, and the story is listed as text.
+  ensureColumn('stories', 'cover_filename', 'TEXT');
+  ensureColumn('stories', 'cover_type', 'TEXT');
+  ensureColumn('stories', 'cover_focus_x', 'INTEGER NOT NULL DEFAULT 50');
+  ensureColumn('stories', 'cover_focus_y', 'INTEGER NOT NULL DEFAULT 50');
 };

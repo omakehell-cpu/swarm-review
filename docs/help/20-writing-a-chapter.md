@@ -11,6 +11,12 @@ synopsis — can wait, and is on **Edit details** afterwards.
 After that, **Add chapter** from the story page, or from the end of the last
 chapter, which is usually where you are when you think of it.
 
+**A cover** is optional. From the story's page, **Edit details**, then
+*Upload a cover*: a PNG, JPEG, GIF or WebP, ideally upright. Click the
+picture where the small thumbnail in the story list should centre, or type
+the two numbers, and **Save crop**. A story without a cover is simply
+listed as text.
+
 ## Writing the text
 
 The text box takes **markdown**: `**bold**`, `*italic*`, `> quote`, `-` or

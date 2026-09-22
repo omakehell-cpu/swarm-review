@@ -6,7 +6,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { startApp, makeClient, form, multipart } = require('./helpers/app');
+const { startApp, makeClient, form, multipart, multipartWithFile } = require('./helpers/app');
 
 let app;
 let models;
@@ -224,8 +224,11 @@ test('a draft is kept for the author, is not a version, and becomes one only whe
 
 test('the front page shows what the group has been doing, and welcomes a newcomer until they are in', async () => {
   const home = await (await luis.request('/')).text();
-  assert.match(home, /Lately in the group/);
-  assert.match(home, /left a note on/);
+  assert.match(home, /All activity/, 'the front page carries a short strip, with a way to the rest');
+  assert.strictEqual((home.match(/class="activity-item/g) || []).length, 3, 'and only the last three');
+  const page = await (await luis.request('/activity')).text();
+  assert.match(page, /Lately in the group/);
+  assert.match(page, /left a note on/);
   // Luis has read and noted, but not written anything of his own.
   assert.match(home, /Welcome to the group/);
   await luis.request('/welcome/dismiss', { method: 'POST', ...form([]) });
@@ -240,4 +243,35 @@ test('a private bible stays out of the activity of people who cannot open it', (
   assert.ok(!models.groupActivity(luisRow).some((a) => a.subject === 'The secret twin'));
   assert.ok(models.groupActivity(models.getUserByUsername('ana')).some((a) => a.subject === 'The secret twin'));
   models.setBiblePrivate(story.id, false);
+});
+
+test('a story has a cover only if its author uploads one, and it can be cropped and taken off', async () => {
+  const story = models.listStories()[0];
+  const home = async () => (await luis.request('/')).text();
+  assert.doesNotMatch(await home(), /class="story-cover"/, 'no cover, no picture and no stand-in');
+
+  // The smallest real PNG there is: one transparent pixel.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+  const upload = (client, body) => client.request(`/stories/${story.id}/cover`, {
+    method: 'POST',
+    ...multipartWithFile([], { name: 'cover', filename: 'cover.png', body }),
+  });
+  assert.strictEqual((await upload(luis, png)).status, 403, 'only the author');
+  assert.strictEqual((await upload(ana, Buffer.from('<svg></svg>'))).status, 400, 'only real pictures');
+  assert.strictEqual((await upload(ana, png)).status, 302);
+
+  const withCover = models.getStoryById(story.id);
+  assert.ok(withCover.cover_filename);
+  assert.match(await home(), new RegExp(`/stories/${story.id}/cover\\?v=`));
+  const img = await luis.request(`/stories/${story.id}/cover?v=${withCover.cover_filename}`);
+  assert.strictEqual(img.status, 200);
+  assert.strictEqual(img.headers.get('content-type'), 'image/png');
+
+  await ana.request(`/stories/${story.id}/cover/focus`, { method: 'POST', ...form([['focusX', '20'], ['focusY', '140']]) });
+  const cropped = models.getStoryById(story.id);
+  assert.deepStrictEqual([cropped.cover_focus_x, cropped.cover_focus_y], [20, 100], 'kept inside the picture');
+
+  await ana.request(`/stories/${story.id}/cover/remove`, { method: 'POST', ...form([]) });
+  assert.strictEqual(models.getStoryById(story.id).cover_filename, null);
+  assert.doesNotMatch(await home(), /class="story-cover"/);
 });

@@ -399,6 +399,17 @@ function chapterStageBadge(chapter) {
 
 const STATUS_LABEL = { pending: 'Pending', accepted: 'Accepted', rejected: 'Rejected' };
 
+// A story's cover, if it has one, cropped where its author said. The
+// address carries the file name so a new cover is a new address and the
+// old one can be cached for good. Decorative wherever it appears next to
+// the title it illustrates, hence the empty alt.
+function storyCoverImg(story, className = 'story-cover') {
+  if (!story || !story.cover_filename) return '';
+  const x = Number.isFinite(Number(story.cover_focus_x)) ? Number(story.cover_focus_x) : 50;
+  const y = Number.isFinite(Number(story.cover_focus_y)) ? Number(story.cover_focus_y) : 50;
+  return `<img class="${className}" src="/stories/${story.id}/cover?v=${encodeURIComponent(story.cover_filename)}" alt="" loading="lazy" draggable="false" style="object-position: ${x}% ${y}%">`;
+}
+
 // What each kind of note is called, where a reader sees it. '' has no
 // label: a plain note does not need to announce that it is a note.
 const KIND_LABEL = {
@@ -496,6 +507,7 @@ module.exports = {
   KIND_LABEL,
   STATUS_LABEL,
   kindBadge,
+  storyCoverImg,
   suggestionDiff,
   arcField,
   bible,
