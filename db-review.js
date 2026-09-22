@@ -77,4 +77,10 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   ensureColumn('stories', 'cover_type', 'TEXT');
   ensureColumn('stories', 'cover_focus_x', 'INTEGER NOT NULL DEFAULT 50');
   ensureColumn('stories', 'cover_focus_y', 'INTEGER NOT NULL DEFAULT 50');
+
+  // Which of the three looks this person reads the site in: '' (the
+  // default, clean), 'literary' or 'swarm'. A preference like the reading
+  // size, except that it follows them to every device, so it is stored
+  // here rather than in the browser. See lib/looks.js.
+  ensureColumn('users', 'look', "TEXT NOT NULL DEFAULT ''");
 };

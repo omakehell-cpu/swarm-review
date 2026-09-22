@@ -88,3 +88,13 @@ presses the button.
 There is no AI anywhere in this app. The spellchecker is a dictionary, the
 writing checks are rules, and the story bible's scan is a regular
 expression. Nothing you write is sent anywhere to be read by anything.
+
+## How the site looks
+
+Your account page has three looks to choose from: **Clean**, the site as
+it was designed; **Literary**, paper and serif, with the stories laid out
+as a shelf of covers; and **The Swarm**, a dark console with the chapter on
+a lit page in the middle of it. The choice is yours alone -- nobody else
+sees it -- and it follows you to every device you sign in on. Light and
+dark still follow the moon button in the top bar, except in The Swarm,
+which is always dark.

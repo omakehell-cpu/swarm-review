@@ -375,7 +375,14 @@ function consumePasswordResetToken(tokenId, userId, passwordHash) {
 
 // ---------- stories ----------
 
+// Which look the site wears for this person (see lib/looks.js). The value
+// is cleaned by the caller; this only stores it.
+function setUserLook(userId, look) {
+  db.prepare('UPDATE users SET look = ? WHERE id = ?').run(look, userId);
+}
+
 module.exports = {
+  setUserLook,
   adminDeleteUser,
   adminLockAccount,
   adminSetPassword,

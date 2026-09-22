@@ -1,0 +1,231 @@
+/* public/css/looks.css -- the two looks besides the default.
+ *
+ * Everything in here is scoped to <html data-look="...">, which the layout
+ * writes for a signed-in person who has picked a look on their account
+ * page (see lib/looks.js). With no attribute -- the default look, and
+ * every signed-out page -- not one rule in this file applies.
+ *
+ * A look changes tokens first and components second. The tokens are the
+ * ones style.css already draws everything with (--bg, --text, --accent,
+ * --font-display...), so most of a look is a dozen lines; the rest is the
+ * handful of places where a look wants a different shape, not just a
+ * different colour.
+ */
+
+/* ======================================================================
+   Literary -- a magazine on paper.
+   Warm paper and ink, a deeper red, the book face for headings as well as
+   prose, the story list as a shelf of covers, and a drop capital.
+   ====================================================================== */
+:root[data-look="literary"] {
+  --bg: #f6f1e7; --bg-elevated: #f6f1e7; --bg-sunken: #eee7d8;
+  --border: #dcd2bf; --border-strong: #2a241c;
+  --text: #221d16; --text-muted: #72695b;
+  --accent: #9e2a1f; --accent-strong: #84211a; --accent-rgb: 158, 42, 31;
+  --pending: #9e2a1f; --pending-rgb: 158, 42, 31;
+  --accepted: #221d16; --rejected: #72695b;
+  --btn-text: #f6f1e7;
+  --font-display: var(--font-prose);
+}
+/* Literary at night: the same magazine read by lamplight. */
+@media (prefers-color-scheme: dark) {
+  :root[data-look="literary"]:not([data-theme="light"]) {
+    --bg: #1b1814; --bg-elevated: #1b1814; --bg-sunken: #25211b;
+    --border: #3a342b; --border-strong: #e9e1d2;
+    --text: #e9e1d2; --text-muted: #a39a8a;
+    --accent: #e0664f; --accent-strong: #ec8470; --accent-rgb: 224, 102, 79;
+    --pending: #e0664f; --pending-rgb: 224, 102, 79;
+    --accepted: #e9e1d2; --rejected: #a39a8a; --btn-text: #1b1814;
+  }
+}
+:root[data-look="literary"][data-theme="dark"] {
+  --bg: #1b1814; --bg-elevated: #1b1814; --bg-sunken: #25211b;
+  --border: #3a342b; --border-strong: #e9e1d2;
+  --text: #e9e1d2; --text-muted: #a39a8a;
+  --accent: #e0664f; --accent-strong: #ec8470; --accent-rgb: 224, 102, 79;
+  --pending: #e0664f; --pending-rgb: 224, 102, 79;
+  --accepted: #e9e1d2; --rejected: #a39a8a; --btn-text: #1b1814;
+}
+
+[data-look="literary"] h1, [data-look="literary"] h2, [data-look="literary"] h3 { font-weight: 600; letter-spacing: -0.01em; }
+[data-look="literary"] .page-head h1 { font-style: italic; }
+[data-look="literary"] .topbar { border-bottom-width: 1px; min-height: 60px; }
+[data-look="literary"] .topbar .brand {
+  font-family: var(--font-prose); text-transform: none; font-size: 1.3rem;
+  font-weight: 600; font-style: italic; letter-spacing: 0;
+}
+[data-look="literary"] .topbar .brand-mark { font-style: normal; }
+[data-look="literary"] .topbar nav > a { font-family: var(--font-prose); font-size: 0.95rem; }
+/* Section labels become italic headings rather than spaced capitals. */
+[data-look="literary"] .welcome h2,
+[data-look="literary"] .inbox-group h3,
+[data-look="literary"] .activity-strip h3,
+[data-look="literary"] .comments-pane h2,
+[data-look="literary"] .writer-section-label {
+  font-family: var(--font-prose); font-style: italic; text-transform: none;
+  letter-spacing: 0; font-size: 1.05rem; font-weight: 500;
+}
+[data-look="literary"] .welcome-lede { font-family: var(--font-prose); }
+
+/* The shelf: stories as covers in a grid. A story without a cover is its
+   title and blurb in the same column width -- no stand-in picture. */
+[data-look="literary"] .chapter-list:has(> .story-row) {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: var(--s-10) var(--s-8); margin-top: var(--s-6); align-items: start;
+}
+[data-look="literary"] .chapter-list > .story-row {
+  flex-direction: column; align-items: stretch; gap: var(--s-4);
+  border: 0 !important; padding: 0; box-shadow: none !important;
+}
+[data-look="literary"] .story-row .story-cover {
+  width: 100%; height: auto; aspect-ratio: 3 / 4; border: 0;
+  box-shadow: 0 1px 0 var(--border-strong), 6px 8px 0 -2px var(--bg-sunken);
+}
+[data-look="literary"] .story-row:not(:has(.story-cover)) { border-top: 2px solid var(--border-strong) !important; padding-top: var(--s-5); }
+[data-look="literary"] .story-row h3 { font-size: 1.3rem; }
+[data-look="literary"] .story-row .chapter-row-main p {
+  font-family: var(--font-prose); font-size: 0.95rem;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+[data-look="literary"] .story-row .chapter-row-meta { flex-wrap: wrap; gap: var(--s-2) var(--s-5); white-space: normal; font-size: var(--t-xs); }
+[data-look="literary"] .story-row .story-progress { max-width: none; }
+@media (max-width: 720px) {
+  [data-look="literary"] .chapter-list:has(> .story-row) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-8) var(--s-5); }
+  [data-look="literary"] .story-row .story-cover { width: 100%; height: auto; }
+}
+
+/* The chapter, set like the opening of a story in a magazine. */
+[data-look="literary"] .chapter-header { border-top: 0; text-align: center; }
+[data-look="literary"] .chapter-header h1 { margin: var(--s-8) auto var(--s-3); max-width: none; font-style: italic; }
+[data-look="literary"] .chapter-header .summary { margin-left: auto; margin-right: auto; }
+[data-look="literary"] .version-bar { justify-content: center; }
+[data-look="literary"] #chapter-text > p:first-of-type::first-letter {
+  float: left; font-size: 4.2em; line-height: 0.85; padding: 6px 10px 0 0;
+  font-weight: 600; color: var(--accent);
+}
+[data-look="literary"] #chapter-text hr::before { content: "\2766"; letter-spacing: 0; font-size: 1.4em; }
+[data-look="literary"] .comment { border-top-width: 1px; }
+
+/* ======================================================================
+   The Swarm -- the ship's console.
+   Always dark, whatever the moon button says: a ruled deck, labels in a
+   monospace, the red lit as an alert. The prose itself sits on a lit page
+   inside it, because reading four thousand words of light-on-dark is
+   the one thing a console is bad at.
+   ====================================================================== */
+:root[data-look="swarm"],
+:root[data-look="swarm"][data-theme="light"],
+:root[data-look="swarm"][data-theme="dark"] {
+  --bg: #0a0d12; --bg-elevated: #0e131b; --bg-sunken: #121823;
+  --border: #1f2835; --border-strong: #7f93ad;
+  --text: #d6dde7; --text-muted: #7b8aa1;
+  --accent: #ff5a36; --accent-strong: #ff7a5c; --accent-rgb: 255, 90, 54;
+  --pending: #ff5a36; --pending-rgb: 255, 90, 54;
+  --accepted: #d6dde7; --rejected: #7b8aa1;
+  --btn-text: #0a0d12;
+  --code-bg: rgba(214, 221, 231, 0.08);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-look="swarm"]:not([data-theme="light"]) {
+    --bg: #0a0d12; --bg-elevated: #0e131b; --bg-sunken: #121823;
+    --border: #1f2835; --border-strong: #7f93ad;
+    --text: #d6dde7; --text-muted: #7b8aa1; --btn-text: #0a0d12;
+  }
+}
+/* It is always night on a ship: the moon button has nothing to switch. */
+[data-look="swarm"] .theme-toggle { display: none; }
+[data-look="swarm"] body {
+  background-image:
+    linear-gradient(rgba(127, 147, 173, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(127, 147, 173, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+[data-look="swarm"] .topbar { background: rgba(10, 13, 18, 0.94); border-bottom: 1px solid var(--border-strong); }
+[data-look="swarm"] .topbar .brand { font-family: var(--font-mono); letter-spacing: 0.18em; font-size: 0.85rem; }
+[data-look="swarm"] .topbar nav > a,
+[data-look="swarm"] .topbar-account > a,
+[data-look="swarm"] .topbar .linklike,
+[data-look="swarm"] .nav-toggle {
+  font-family: var(--font-mono); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.12em;
+}
+[data-look="swarm"] .topbar nav > a.current { color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+[data-look="swarm"] .page-head h1::before { content: "// "; color: var(--accent); font-family: var(--font-mono); font-weight: 400; }
+[data-look="swarm"] .byline, [data-look="swarm"] .chapter-row-meta, [data-look="swarm"] .breadcrumb,
+[data-look="swarm"] time, [data-look="swarm"] .activity-item, [data-look="swarm"] .inbox-where,
+[data-look="swarm"] .story-audience, [data-look="swarm"] .comment-meta strong {
+  font-family: var(--font-mono); letter-spacing: 0.02em;
+}
+[data-look="swarm"] .byline, [data-look="swarm"] .chapter-row-meta, [data-look="swarm"] .breadcrumb { font-size: var(--t-xs); }
+/* Section labels read as console headings. */
+[data-look="swarm"] .welcome h2, [data-look="swarm"] .inbox-group h3,
+[data-look="swarm"] .activity-strip h3, [data-look="swarm"] .comments-pane h2,
+[data-look="swarm"] .writer-section-label {
+  font-family: var(--font-mono); color: var(--accent); border-top: 0;
+}
+[data-look="swarm"] .welcome h2::before, [data-look="swarm"] .inbox-group h3::before,
+[data-look="swarm"] .activity-strip h3::before { content: "\25B8  "; }
+/* Panels with a lit corner. */
+[data-look="swarm"] .welcome, [data-look="swarm"] .inbox, [data-look="swarm"] .activity-strip {
+  position: relative; padding: var(--s-5) var(--s-6); background: var(--bg-elevated);
+  border: 1px solid var(--border) !important;
+}
+[data-look="swarm"] .welcome::before, [data-look="swarm"] .inbox::before {
+  content: ""; position: absolute; left: -1px; top: -1px; width: 14px; height: 14px;
+  border-left: 2px solid var(--accent); border-top: 2px solid var(--accent);
+}
+[data-look="swarm"] .chapter-list > .story-row {
+  background: var(--bg-elevated); border: 1px solid var(--border) !important;
+  padding: var(--s-6); margin-bottom: var(--s-4);
+}
+[data-look="swarm"] .story-row .story-cover { border: 1px solid var(--border-strong); filter: saturate(0.85) contrast(1.05); }
+[data-look="swarm"] .btn { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.72rem; }
+[data-look="swarm"] .btn:not(.ghost):not(.danger) { background: var(--accent); border-color: var(--accent); color: var(--btn-text); }
+[data-look="swarm"] .btn:not(.ghost):not(.danger):hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+[data-look="swarm"] .mode-switch button[aria-pressed="true"] { background: var(--accent); color: var(--btn-text); }
+[data-look="swarm"] .comment { background: var(--bg-elevated); border: 1px solid var(--border); border-top: 2px solid var(--accent); padding: var(--s-4) var(--s-5); }
+[data-look="swarm"] .comment.status-accepted, [data-look="swarm"] .comment.kind-praise { border-top-color: var(--border-strong); }
+
+/* The lit page: the chapter, the editor and the text beside the editor
+   are on paper, with the tokens swapped back to ink inside it so every
+   underline, highlight and link keeps its contrast. */
+[data-look="swarm"] .reading-pane,
+[data-look="swarm"] .wa-editor-wrap,
+[data-look="swarm"] .md-preview {
+  --text: #1d1a15; --text-muted: #5b5346; --border: #cfc6b3; --border-strong: #1d1a15;
+  --accent: #c8321e; --accent-strong: #a8281a; --accent-rgb: 200, 50, 30;
+  --bg: #efe8d8; --bg-sunken: #efe8d8; --code-bg: rgba(29, 26, 21, 0.07);
+  background: #efe8d8; color: #1d1a15;
+}
+[data-look="swarm"] .reading-pane { padding: var(--s-9) var(--s-10) !important; box-shadow: 0 0 0 1px #3a4557, 0 20px 50px rgba(0, 0, 0, 0.5); }
+[data-look="swarm"] .wa-editor-wrap textarea { color: #1d1a15; }
+@media (max-width: 720px) {
+  [data-look="swarm"] .reading-pane { padding: var(--s-6) var(--s-5) !important; }
+}
+
+/* ======================================================================
+   The picker on the account page: three cards with a sketch of each.
+   ====================================================================== */
+.look-options { border: 0; margin: 0 0 var(--s-5); padding: 0; display: grid; gap: var(--s-4); }
+.look-option {
+  display: grid; grid-template-columns: 72px 1fr; grid-template-rows: auto auto; gap: var(--s-1) var(--s-5);
+  align-items: start; padding: var(--s-4); border: 1px solid var(--border); cursor: pointer;
+  text-transform: none; letter-spacing: 0; font-size: var(--t-md); color: var(--text); font-weight: 400;
+}
+.look-option:has(input:checked) { border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
+.look-option input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.look-option:has(input:focus-visible) { outline: 2px solid var(--text); outline-offset: 2px; }
+.look-swatch { grid-row: 1 / span 2; width: 72px; height: 54px; display: grid; grid-template-rows: 10px 1fr 6px; border: 1px solid var(--border); overflow: hidden; }
+.look-name { font-weight: 600; }
+.look-blurb { font-size: var(--t-sm); color: var(--text-muted); }
+.look-clean .look-swatch { background: #fff; }
+.look-clean .look-swatch span:nth-child(1) { background: #fff; border-bottom: 2px solid #121210; }
+.look-clean .look-swatch span:nth-child(2) { background: linear-gradient(#121210, #121210) 8px 10px / 36px 5px no-repeat, linear-gradient(#b9b8b3, #b9b8b3) 8px 22px / 50px 3px no-repeat; }
+.look-clean .look-swatch span:nth-child(3) { background: linear-gradient(#d8231a, #d8231a) 8px 0 / 14px 3px no-repeat; }
+.look-literary .look-swatch { background: #f6f1e7; }
+.look-literary .look-swatch span:nth-child(1) { border-bottom: 1px solid #2a241c; }
+.look-literary .look-swatch span:nth-child(2) { background: linear-gradient(#3b2f25, #3b2f25) 8px 8px / 14px 20px no-repeat, linear-gradient(#c4b08c, #c4b08c) 26px 8px / 14px 20px no-repeat, linear-gradient(#9e2a1f, #9e2a1f) 44px 8px / 14px 20px no-repeat; }
+.look-swarm .look-swatch { background: #0a0d12; border-color: #1f2835; }
+.look-swarm .look-swatch span:nth-child(1) { border-bottom: 1px solid #7f93ad; }
+.look-swarm .look-swatch span:nth-child(2) { background: linear-gradient(#efe8d8, #efe8d8) 8px 8px / 34px 22px no-repeat, linear-gradient(#ff5a36, #ff5a36) 48px 8px / 16px 2px no-repeat; }
+.look-swarm .look-swatch span:nth-child(3) { background: linear-gradient(#ff5a36, #ff5a36) 8px 0 / 10px 2px no-repeat; }
