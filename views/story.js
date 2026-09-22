@@ -5,7 +5,7 @@ const { escapeHtml } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
 const { groupChaptersIntoArcs } = require('../lib/story-state');
-const { ICONS, bylineWith, chapterStageBadge, emptyState, goalBar, storyStateBadge, tagChips, wordCount } = require('./shared');
+const { ICONS, bylineWith, chapterStageBadge, emptyState, goalBar, storyCoverImg, storyStateBadge, tagChips, wordCount } = require('./shared');
 
 // Two separate forms, because each posts somewhere different, but one
 // control as far as the eye is concerned: a single bordered pair sitting
@@ -225,7 +225,8 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
     title: story.title,
     user,
     body: `
-      <div class="page-head">
+      <div class="page-head${story.cover_filename ? ' has-cover' : ''}">
+        ${storyCoverImg(story, 'story-page-cover')}
         <div>
           <h1>${escapeHtml(story.title)} ${storyStateBadge(story)}</h1>
           <p class="muted byline">${bylineWith(story.author_name, coauthors, story.author_username)} &middot; ${timeHtml(story.created_at)}</p>

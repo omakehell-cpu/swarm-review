@@ -62,6 +62,10 @@ async function handleStories(req, res, user, query) {
   }));
 }
 
+async function handleActivity(req, res, user) {
+  sendHtml(res, 200, views.activityPage({ user, activity: models.groupActivity(user, { limit: 80 }) }));
+}
+
 async function handleDismissWelcome(req, res, user) {
   models.dismissWelcome(user.id);
   redirect(res, '/');
@@ -91,6 +95,7 @@ const routes = [
   ['POST', '/markdown/preview', (c) => handleMarkdownPreview(c.req, c.res, c.user)],
   ['GET', '/search', (c) => handleSearch(c.req, c.res, c.user, c.url.searchParams)],
   ['GET', '/', (c) => handleStories(c.req, c.res, c.user, c.url.searchParams)],
+  ['GET', '/activity', (c) => handleActivity(c.req, c.res, c.user)],
   ['POST', '/welcome/dismiss', (c) => handleDismissWelcome(c.req, c.res, c.user)],
   ['GET', /^\/users\/([A-Za-z0-9_.-]+)$/, (c) => handleProfilePage(c.req, c.res, c.user, c.m[1])],
 ];

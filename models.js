@@ -20,6 +20,7 @@ const modules = [
   ['reviews', require('./models/reviews')],
   ['drafts', require('./models/drafts')],
   ['activity', require('./models/activity')],
+  ['covers', require('./models/covers')],
   ['tags', require('./models/tags')],
   ['calendar', require('./models/calendar')],
   ['coauthors', require('./models/coauthors')],

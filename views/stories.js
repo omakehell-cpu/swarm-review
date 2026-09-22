@@ -4,29 +4,13 @@ const { layout } = require('../lib/layout');
 const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
 const { storyState, STORY_STATES, CHOOSABLE_STORY_STATES } = require('../lib/story-state');
-const { ICONS, bylineWith, emptyState, storyStateBadge, tagChips, tagPicker, wordCount } = require('./shared');
+const { ICONS, bylineWith, emptyState, storyCoverImg, storyStateBadge, tagChips, tagPicker, wordCount } = require('./shared');
+const { ACCEPT_ATTRIBUTE } = require('../lib/entity-images');
 
 // One story as it appears in any list -- the front page, a tag's page, a
 // search result. `hiddenBy` is the reader's own hidden tags that this
 // story tripped (see handleStories); it only ever arrives set from a list
 // that has already decided to fold the story away.
-// A cover for a story nobody has drawn a cover for, which is every story:
-// its initials, large, on a block of ink or paper, with the one red rule.
-// Derived from the title, so the same story always has the same cover and
-// it changes only if the title does. It is a way of telling six rows of
-// text apart at a glance, not an illustration, and it says nothing a
-// screen reader needs -- hence aria-hidden.
-function storyCover(title) {
-  const words = String(title || '').replace(/[^\p{L}\p{N}\s]/gu, '').split(/\s+/).filter(Boolean);
-  const skip = new Set(['the', 'a', 'an', 'of', 'and', 'is', 'in', 'on', 'to', 'at', 'we', 'are', 'el', 'la', 'los', 'las', 'de', 'y', 'en']);
-  const strong = words.filter((w) => !skip.has(w.toLowerCase()));
-  const pick = (strong.length ? strong : words).slice(0, 2);
-  const initials = pick.map((w) => w[0].toUpperCase()).join('') || '\u2014';
-  let hash = 0;
-  for (const ch of String(title || '')) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
-  return `<div class="story-cover cover-${hash % 4}" aria-hidden="true"><span>${escapeHtml(initials)}</span></div>`;
-}
-
 // How far along, in a hairline: only when the author has set a goal.
 function storyProgress(s) {
   if (!s.word_goal || s.word_goal <= 0) return '';
@@ -51,7 +35,7 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } 
   // still clickable everywhere the chips aren't.
   return `
     <div class="chapter-row story-row">
-      ${storyCover(s.title)}
+      ${storyCoverImg(s)}
       <div class="chapter-row-main">
         <h3><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a> ${s.has_new_chapters ? '<span class="badge new">New</span>' : ''}</h3>
         <p class="muted">${escapeHtml(s.description || '')}</p>
@@ -178,25 +162,43 @@ function welcomeCard(welcome) {
     </section>`;
 }
 
-// What everybody has been doing lately, most recent first. A column of
-// sentences, because that is what it is: "Luis read Seals and signatures".
-function activityColumn(activity) {
+// What everybody has been doing lately, most recent first. Sentences,
+// because that is what it is: "Luis read Seals and signatures".
+function activityItem(a) {
+  const what = a.subject ? (a.href ? `<a href="${escapeHtml(a.href)}">${escapeHtml(a.subject)}</a>` : escapeHtml(a.subject)) : '';
+  return `
+    <li class="activity-item kind-${escapeHtml(a.kind)}">
+      <span class="activity-who">${escapeHtml(a.display_name)}</span>
+      ${escapeHtml(a.verb)} ${what}${a.times > 1 ? ` <span class="activity-times">&times;${a.times}</span>` : ''}
+      ${timeHtml(a.created_at)}
+    </li>`;
+}
+
+// On the front page, only the last three, in a quiet strip under what is
+// waiting for you: enough to feel that other people are here, not so much
+// that it competes with the stories. The rest is one link away.
+function activityStrip(activity) {
   if (!activity || !activity.length) return '';
   return `
-    <aside class="activity" aria-labelledby="activity-title">
-      <h2 id="activity-title">Lately in the group</h2>
-      <ol class="activity-list">
-        ${activity.map((a) => {
-          const what = a.subject ? (a.href ? `<a href="${escapeHtml(a.href)}">${escapeHtml(a.subject)}</a>` : escapeHtml(a.subject)) : '';
-          return `
-          <li class="activity-item kind-${escapeHtml(a.kind)}">
-            <span class="activity-who">${escapeHtml(a.display_name)}</span>
-            ${escapeHtml(a.verb)} ${what}${a.times > 1 ? ` <span class="activity-times">&times;${a.times}</span>` : ''}
-            ${timeHtml(a.created_at)}
-          </li>`;
-        }).join('')}
-      </ol>
-    </aside>`;
+    <section class="activity-strip" aria-labelledby="activity-title">
+      <h3 id="activity-title">Lately</h3>
+      <ol class="activity-list">${activity.slice(0, 3).map(activityItem).join('')}</ol>
+      <a class="activity-more" href="/activity">All activity &rarr;</a>
+    </section>`;
+}
+
+function activityPage({ user, activity }) {
+  return layout({
+    title: 'Activity',
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/">&larr; Stories</a></p>
+      <div class="page-head"><h1>Lately in the group</h1></div>
+      <p class="muted">What people have been reading, writing and saying, newest first. Several notes on one chapter on the same day count once.</p>
+      ${activity.length
+        ? `<ol class="activity-list activity-full">${activity.map(activityItem).join('')}</ol>`
+        : emptyState({ art: 'sheets', title: 'Nothing yet', body: 'When somebody reads, writes or leaves a note, it shows up here.' })}`,
+  });
 }
 
 function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null, activity = [], welcome = null }) {
@@ -262,16 +264,12 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
         <a class="btn" href="/stories/new">New story</a>
       </div>
       ${activeTags.length ? '' : welcomeCard(welcome)}
-      <div class="home-grid${activeTags.length || !activity.length ? ' no-activity' : ''}">
-        <div class="home-main">
-          ${activeTags.length ? '' : inboxSection(inbox)}
-          ${filter}
-          <div class="chapter-list">${rows}</div>
-          ${foldedBlock}
-          <p class="muted archive-link"><a href="/archived-stories">View archived stories &rarr;</a></p>
-        </div>
-        ${activeTags.length ? '' : activityColumn(activity)}
-      </div>`,
+      ${activeTags.length ? '' : inboxSection(inbox)}
+      ${activeTags.length ? '' : activityStrip(activity)}
+      ${filter}
+      <div class="chapter-list">${rows}</div>
+      ${foldedBlock}
+      <p class="muted archive-link"><a href="/archived-stories">View archived stories &rarr;</a></p>`,
   });
 }
 
@@ -373,8 +371,55 @@ function tagNotFoundPage({ user, slug }) {
 }
 
 
-/** @param {{ user: Row, story: Row, groups: any[], selectedTagIds: number[], error?: string|null, values?: FormValues }} props */
-function editStoryPage({ user, story, groups, selectedTagIds, error, values = /** @type {FormValues} */ ({}) }) {
+// The cover, on the details page but in forms of its own: a file upload
+// is multipart and the details form is not, and forms cannot nest. The
+// crop works the way a bible picture's does -- click the picture where the
+// thumbnail should centre, or type the two numbers (public/js/image-focus.js).
+function coverSection(story, coverError) {
+  const has = Boolean(story.cover_filename);
+  const x = Number(story.cover_focus_x ?? 50);
+  const y = Number(story.cover_focus_y ?? 50);
+  const key = `cover-${story.id}`;
+  return `
+    <section class="writer-section cover-section" id="cover">
+      <p class="writer-section-label">Cover</p>
+      ${coverError ? `<p class="error">${escapeHtml(coverError)}</p>` : ''}
+      ${has ? `
+        <div class="cover-editor">
+          <a class="figure-shot cover-full" href="/stories/${story.id}/cover?v=${encodeURIComponent(story.cover_filename)}" target="_blank" rel="noopener noreferrer" data-focus-picker="${key}">
+            <img src="/stories/${story.id}/cover?v=${encodeURIComponent(story.cover_filename)}" alt="The current cover">
+            <span class="focus-pin" style="left: ${x}%; top: ${y}%"></span>
+          </a>
+          <form method="post" action="/stories/${story.id}/cover/focus" class="crop-form" data-focus-form="${key}">
+            <span class="crop-preview cover-crop-preview">
+              ${storyCoverImg(story, 'cover-thumb').replace('<img ', '<img data-focus-preview ')}
+            </span>
+            <span class="crop-fields">
+              <span class="crop-label">What the thumbnail in the story list keeps</span>
+              <span class="crop-numbers">
+                <label>Across <input type="number" name="focusX" value="${x}" min="0" max="100" step="1" data-focus-x></label>
+                <label>Down <input type="number" name="focusY" value="${y}" min="0" max="100" step="1" data-focus-y></label>
+                <button class="btn ghost tiny" type="submit">Save crop</button>
+              </span>
+            </span>
+          </form>
+        </div>` : '<p class="hint">No cover: the story is listed as text, which is fine. A cover is a picture you have the right to use &mdash; a sketch, a photo, a design of your own.</p>'}
+      <form method="post" action="/stories/${story.id}/cover" enctype="multipart/form-data" class="image-form">
+        <label>${has ? 'Replace it' : 'Upload a cover'}
+          <input type="file" name="cover" accept="${ACCEPT_ATTRIBUTE}" data-shrink required>
+        </label>
+        <button class="btn ghost small" type="submit">Upload</button>
+        <span class="hint">PNG, JPEG, GIF or WebP. Upright works best (three wide by four tall); large pictures are shrunk in your browser before they are sent.</span>
+      </form>
+      ${has ? `
+        <form method="post" action="/stories/${story.id}/cover/remove" class="inline-form" data-confirm="Take the cover off this story?">
+          <button class="btn ghost tiny" type="submit">Remove the cover</button>
+        </form>` : ''}
+    </section>`;
+}
+
+/** @param {{ user: Row, story: Row, groups: any[], selectedTagIds: number[], error?: string|null, coverError?: string|null, values?: FormValues }} props */
+function editStoryPage({ user, story, groups, selectedTagIds, error, coverError = null, values = /** @type {FormValues} */ ({}) }) {
   const title = values.title !== undefined ? values.title : story.title;
   const description = values.description !== undefined ? values.description : story.description;
   const synopsis = values.synopsis !== undefined ? values.synopsis : (story.synopsis || '');
@@ -420,6 +465,7 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, values = /*
             <button class="btn" type="submit">Save details</button>
           </div>
         </form>
+        ${coverSection(story, coverError)}
       </div>`,
   });
 }
@@ -427,6 +473,7 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, values = /*
 // ---------- glossary (a local, offline mirror of the shared-universe
 
 module.exports = {
+  activityPage,
   commentGist,
   editStoryPage,
   inboxSection,
