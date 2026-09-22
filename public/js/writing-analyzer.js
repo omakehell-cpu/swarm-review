@@ -165,16 +165,16 @@
   // *inside* a sentence-level one, and two stacked translucent fills turn
   // the passage into mud exactly where the writer most needs to read it.
   // An underline carries the same color coding, stacks cleanly with the
-  // sentence tint underneath, and leaves the letterforms alone. The very
-  // faint wash on top is just enough to find the span at a glance.
+  // sentence tint underneath, and leaves the letterforms alone.
   function wordMarkStyle(kind) {
     if (kind === 'spell') {
       return `text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:${CHECK_META.spell.color};text-decoration-thickness:1px;text-underline-offset:3px;`;
     }
     const meta = CHECK_META[kind];
     if (!meta) return '';
-    return `background:${hexToRgba(meta.color, 0.1)};`
-      + `text-decoration-line:underline;text-decoration-style:solid;text-decoration-color:${hexToRgba(meta.color, 0.85)};`
+    // No wash behind the word: the underline is the mark. A tinted block
+    // behind every flagged word turned a draft into a paint chart.
+    return `text-decoration-line:underline;text-decoration-style:solid;text-decoration-color:${hexToRgba(meta.color, 0.85)};`
       + 'text-decoration-thickness:2px;text-underline-offset:3px;';
   }
 
@@ -1417,15 +1417,14 @@
     wrap.className = 'wa-wrap';
     textarea.parentNode.insertBefore(wrap, textarea);
 
-    // On a phone the card starts folded: open, it is a screen and a half
-    // of toggles standing between the writer and the text. The counts in
-    // its heading still show, and one tap opens it.
-    const narrowScreen = Boolean(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
+    // The card starts folded: open, it is two rows of toggles standing
+    // between the writer and the text (a screen and a half of them on a
+    // phone). Its heading still carries the counts, and one click opens it.
     const { card, summary, sections } = buildControlsCard(settings, (id, checked) => {
       settings = Object.assign({}, settings, { [id]: checked });
       saveSettings(settings);
       render();
-    }, { startOpen: !narrowScreen });
+    }, { startOpen: false });
     wrap.appendChild(card);
 
     // --- markdown preview toggle (editor only) ---

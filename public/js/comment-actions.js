@@ -76,6 +76,9 @@
       // listening means losing their place entirely.
       fresh.setAttribute('tabindex', '-1');
       block.replaceWith(fresh);
+      // Whatever was holding the old element (the phone's note sheet, in
+      // app.js) needs to know it is gone.
+      document.dispatchEvent(new CustomEvent('note-replaced', { detail: { from: block, to: fresh } }));
       /** @type {HTMLElement} */ (fresh).focus({ preventScroll: true });
       say(announcement);
     } catch (err) {

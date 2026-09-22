@@ -89,6 +89,50 @@
     return Boolean(grid && grid.classList.contains('comments-hidden'));
   }
 
+  // ---- on a phone, a note comes up from the bottom of the screen ----
+  //
+  // Below the two-column width the notes are listed after the chapter, so
+  // "jump to the note" meant scrolling a long way from the sentence and
+  // then all the way back. Instead the note itself is lifted over the text
+  // as a sheet -- the same element, with its buttons working as before --
+  // and put back in its place when the sheet is closed.
+  const narrowScreen = window.matchMedia('(max-width: 999px)');
+  const backdrop = document.createElement('div');
+  backdrop.className = 'note-sheet-backdrop';
+  document.body.appendChild(backdrop);
+  let sheet = null;
+  let sheetReturnFocus = null;
+  function closeSheet() {
+    if (!sheet) return;
+    sheet.classList.remove('as-sheet');
+    const close = sheet.querySelector('.note-sheet-close');
+    if (close) close.remove();
+    sheet = null;
+    backdrop.classList.remove('open');
+    if (sheetReturnFocus) sheetReturnFocus.focus({ preventScroll: true });
+  }
+  function openSheet(note) {
+    closeSheet();
+    sheet = note;
+    sheetReturnFocus = /** @type {HTMLElement|null} */ (document.activeElement);
+    note.classList.add('as-sheet');
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'btn ghost tiny note-sheet-close';
+    close.textContent = 'Close';
+    close.addEventListener('click', closeSheet);
+    note.insertBefore(close, note.firstChild);
+    backdrop.classList.add('open');
+    note.setAttribute('tabindex', '-1');
+    note.focus({ preventScroll: true });
+  }
+  backdrop.addEventListener('click', closeSheet);
+  document.addEventListener('note-replaced', (ev) => {
+    const { from, to } = /** @type {CustomEvent} */ (ev).detail;
+    if (sheet === from) { sheet = null; openSheet(to); }
+  });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeSheet(); });
+
   // ---- clicking a highlighted span jumps to the comment in the sidebar ----
   textEl.addEventListener('click', (ev) => {
     if (commentsCurrentlyHidden()) return;
@@ -97,6 +141,11 @@
     const ids = (span.dataset.commentIds || '').split(',').filter(Boolean);
     if (!ids.length) return;
     const target = /** @type {HTMLDetailsElement|null} */ (document.getElementById(`comment-${ids[0]}`));
+    if (target && narrowScreen.matches) {
+      if (target.tagName === 'DETAILS') target.open = true;
+      openSheet(target);
+      return;
+    }
     if (target) {
       // A settled comment is rendered as a collapsed <details> (see
       // renderComment in views.js) -- scrolling to one that's still shut

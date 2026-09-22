@@ -468,7 +468,7 @@ function renderCommentReadOnly(c, { replies }) {
       <div class="comment-meta">
         <strong>${escapeHtml(c.author_name)}</strong>
         ${kindBadge(c.kind)}
-        <span class="status-badge status-${c.status}">${statusLabel}</span>
+        ${c.kind === 'praise' ? '' : `<span class="status-badge status-${c.status}">${statusLabel}</span>`}
         ${timeHtml(c.created_at)}
         ${c.edited_at ? '<span class="muted edited-tag">(edited)</span>' : ''}
       </div>

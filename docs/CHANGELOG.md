@@ -4,6 +4,15 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-22 — A quieter page
+
+- **Red means one thing again: something is waiting for you.** Links, the page you are on, pressed buttons and the box you are typing in are ink now.
+- **Fewer capitals.** Buttons, bylines, breadcrumbs, the menu and the details at the end of a row are in ordinary letters at a size you can read; small capitals are kept for the labels over a section.
+- **The chapter heading is shorter:** who has read it joins the byline, and *Fill screen* moved into **Aa**.
+- **The writing checks are calmer:** folded until you open them, no coloured wash behind flagged words, no tinted buttons.
+- **On a phone, tapping an underlined passage brings its note up from the bottom of the screen**, over the text; *Close* or Escape puts it back. Buttons and folds are big enough for a thumb.
+- The search box is square like everything else, the log-in and account pages are centred, and the rule down the side of the chapter is gone.
+
 ## 2026-09-22 — Reading each other, and saying so
 
 The group's whole point is reading each other's chapters and answering them. The archive had forty-four chapters and four notes. This batch is about that gap.
