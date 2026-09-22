@@ -1,6 +1,7 @@
 'use strict';
 
 const { chaptersNewToMe, pendingOnMyChapters, repliesToMe } = require('./reading');
+const { reviewQueueFor } = require('./reviews');
 const { auth, db } = require('./shared');
 // The order chapters are told in and the order things happen in are two
 // different orders, and the gap between them is where a long book with a
@@ -149,6 +150,20 @@ function feedItemsFor(userId, { days = 30, limit = 40 } = {}) {
       summary: `In ${row.story_title}. Nothing happens to ${row.pending === 1 ? 'it' : 'them'} until you accept or turn ${row.pending === 1 ? 'it' : 'them'} down.`,
       url: `/chapters/${row.chapter_id}`,
       at: row.latest_at,
+    });
+  }
+
+  // Being asked to read something is the most personal thing this feed
+  // carries, and the one most worth being told about.
+  for (const row of reviewQueueFor(userId)) {
+    items.push({
+      kind: 'asked',
+      key: `asked/${row.id}-${row.created_at}`,
+      title: `${row.requested_by_name || 'Somebody'} asked you to read ${row.chapter_number}. ${row.chapter_title}`,
+      summary: row.question ? `\u201c${row.question}\u201d` : `In ${row.story_title}.`,
+      url: `/chapters/${row.chapter_id}`,
+      at: row.created_at,
+      author: row.requested_by_name,
     });
   }
 

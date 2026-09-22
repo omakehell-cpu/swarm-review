@@ -1417,11 +1417,15 @@
     wrap.className = 'wa-wrap';
     textarea.parentNode.insertBefore(wrap, textarea);
 
+    // On a phone the card starts folded: open, it is a screen and a half
+    // of toggles standing between the writer and the text. The counts in
+    // its heading still show, and one tap opens it.
+    const narrowScreen = Boolean(window.matchMedia && window.matchMedia('(max-width: 720px)').matches);
     const { card, summary, sections } = buildControlsCard(settings, (id, checked) => {
       settings = Object.assign({}, settings, { [id]: checked });
       saveSettings(settings);
       render();
-    });
+    }, { startOpen: !narrowScreen });
     wrap.appendChild(card);
 
     // --- markdown preview toggle (editor only) ---
@@ -1971,7 +1975,12 @@
     // below are only ever built for the story's own author -- a reviewer
     // reading someone else's chapter never even fetches the (multi-MB)
     // dictionary or runs the analysis, since it's not their tool to use.
-    let commentsVisible = loadCommentsVisible(isAuthor);
+    // On for everybody until they say otherwise. It used to start off for
+    // anyone but the author -- which meant a reader opening somebody
+    // else's chapter could select a passage and nothing at all happened:
+    // no button, no box, no sign that notes were the point of the page.
+    // The one person the review tool is for could not find it.
+    let commentsVisible = loadCommentsVisible(true);
     function applyCommentsVisibility() {
       if (gridEl) gridEl.classList.toggle('comments-hidden', !commentsVisible);
     }

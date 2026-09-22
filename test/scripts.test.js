@@ -40,9 +40,10 @@ test('every script the app ships can be reached by some page', () => {
 test('a plain page carries almost nothing', () => {
   const html = layout({ title: 'T', user: { display_name: 'A', username: 'a' }, body: '<p>Nothing here.</p>' });
   const loaded = [...html.matchAll(/src="\/js\/([a-z-]+)\.js"/g)].map((m) => m[1]);
-  // The toggle is in the topbar this layout writes, so it is always
-  // there; everything else is earned.
-  assert.deepStrictEqual(loaded.sort(), ['theme-init', 'theme-toggle']);
+  // The theme toggle and the phone menu are in the topbar this layout
+  // writes for anybody signed in, so they are always there; everything
+  // else is earned.
+  assert.deepStrictEqual(loaded.sort(), ['nav-toggle', 'theme-init', 'theme-toggle']);
 });
 
 test('a page gets exactly the scripts its own markup asks for', () => {
@@ -52,6 +53,7 @@ test('a page gets exactly the scripts its own markup asks for', () => {
     ['<div class="chapter-body-grid"><div class="reading-pane">x</div></div>', ['margin-notes', 'reading']],
     ['<table id="outline"><tbody data-reorder></tbody></table>', ['outline']],
     ['<form class="chapter-form"><textarea name="content"></textarea></form>', ['draft-rescue']],
+    ['<form class="chapter-form"><textarea name="content" data-editor-tools></textarea></form>', ['draft-rescue', 'editor-tools']],
     ['<a class="chapter-row glossary-row" href="#">x</a>', ['glossary-filter']],
     ['<details data-beside></details>', ['beside']],
     ['<input type="file" data-shrink>', ['image-shrink']],
@@ -64,7 +66,7 @@ test('a page gets exactly the scripts its own markup asks for', () => {
   for (const [body, expected] of cases) {
     const html = layout({ title: 'T', user, body });
     const loaded = [...html.matchAll(/src="\/js\/([a-z-]+)\.js"/g)].map((m) => m[1])
-      .filter((n) => !['theme-init', 'theme-toggle'].includes(n));
+      .filter((n) => !['theme-init', 'theme-toggle', 'nav-toggle'].includes(n));
     assert.deepStrictEqual(loaded.sort(), expected.sort(), body);
   }
 });

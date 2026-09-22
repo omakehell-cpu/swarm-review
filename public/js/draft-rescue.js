@@ -45,10 +45,58 @@
   const original = text.value;
   let timer = null;
 
+  // ---- the server copy ----
+  //
+  // On the chapter editor there is also a draft on the server
+  // (form[data-draft-url]), which is the one that follows the author to
+  // another device. It is written a few seconds after typing stops and
+  // when the tab is put away, and once it has landed, closing the tab no
+  // longer needs a warning: nothing would be lost.
+  const draftUrl = form.getAttribute('data-draft-url');
+  const summaryField = /** @type {HTMLTextAreaElement|null} */ (form.querySelector('textarea[name="summary"]'));
+  const baseField = /** @type {HTMLInputElement|null} */ (form.querySelector('input[name="baseVersion"]'));
+  const SERVER_AFTER_MS = 4000;
+  let serverCopy = original;
+  let serverTimer = null;
+  const draftFields = () => new URLSearchParams({
+    content: text.value,
+    title: title ? title.value : '',
+    summary: summaryField ? summaryField.value : '',
+    baseVersion: baseField ? baseField.value : '',
+  });
+  async function sendToServer() {
+    if (!draftUrl || text.value === serverCopy || !text.value.trim()) return;
+    const sending = text.value;
+    try {
+      const res = await fetch(draftUrl, { method: 'POST', body: draftFields(), credentials: 'same-origin' });
+      if (!res.ok) throw new Error(String(res.status));
+      serverCopy = sending;
+      if (text.value === sending) {
+        store.clear();
+        say(`Draft saved to your account, ${clock()} \u2014 not published yet`);
+      }
+    } catch (e) {
+      say(`Draft kept in this browser, ${clock()} (the server copy will be tried again)`);
+    }
+  }
+  if (draftUrl) {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'hidden' || saving || text.value === serverCopy || !text.value.trim()) return;
+      try {
+        const blob = new Blob([draftFields().toString()], { type: 'application/x-www-form-urlencoded' });
+        if (navigator.sendBeacon(draftUrl, blob)) serverCopy = text.value;
+      } catch (e) { /* the local copy still has it */ }
+    });
+  }
+
   function keep() {
-    if (text.value === original) { store.clear(); say(''); return; }
+    if (text.value === original && text.value === serverCopy) { store.clear(); say(''); return; }
     store.write({ content: text.value, title: title ? title.value : '', at: Date.now() });
     say(`Draft kept in this browser, ${clock()}`);
+    if (draftUrl) {
+      clearTimeout(serverTimer);
+      serverTimer = setTimeout(sendToServer, SERVER_AFTER_MS);
+    }
   }
 
   const saved = store.read();
@@ -115,6 +163,7 @@
   window.addEventListener('beforeunload', (e) => {
     if (saving) return;
     if (text.value === original) return;
+    if (draftUrl && text.value === serverCopy) return;
     keep();
     e.preventDefault();
     e.returnValue = '';

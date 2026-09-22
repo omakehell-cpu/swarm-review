@@ -4,6 +4,22 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-22 — Reading each other, and saying so
+
+The group's whole point is reading each other's chapters and answering them. The archive had forty-four chapters and four notes. This batch is about that gap.
+
+- **Readers can see the notes, and leave them, from the first visit.** The notes column used to start hidden for everyone but the author, so a reader could select a passage and nothing happened -- no button, no box. It starts shown now, for everybody; the switch to hide it is where it was.
+- **Suggest a rewrite.** Select a passage, tick *Suggest a rewrite*, and change the words in place. The author sees what changed, word by word, and **Apply change** puts it into the chapter as a new version. It refuses, with nothing changed, when the rewrite would break the formatting around it.
+- **Say what kind of note it is:** Typo, Pacing, Continuity (which can name the bible entry), Question -- or **♥ Love it**, which needs no words and never waits on the author.
+- **Notes follow the text.** Publishing a new version used to leave every pending note behind on the old one. Now each note whose words are still there moves to the new version, replies and all; one whose passage was rewritten stays where it was, and the new version says how many are waiting back there.
+- **Ask somebody to read.** From your own chapter: tick the people, write the question you want answered. It sits at the top of their front page, and above the chapter, until they press *I've finished reading* -- with a line for you if they want.
+- **Drafts.** The editor keeps your text as a draft on the server as you write, so it follows you between devices, and nobody sees it until you **Publish**. *Save draft* does it on purpose. The editor says whenever you are looking at a draft rather than what readers see.
+- **Buttons and keys in the editor:** bold, italic, quote, heading, scene break; Ctrl+B, Ctrl+I, Ctrl+Enter. **Focus** hides everything but the writing, until Escape.
+- **The front page shows the group:** *Lately in the group* -- who read, who noted, who posted -- beside the stories. Each story has a cover made from its title, a hairline of progress towards its word goal, and how many people have read it.
+- **A welcome for somebody new:** three steps -- read a chapter, leave a note, put something up -- ticked off as they happen. It goes away when they are done, or when they say they know their way round.
+- **On a phone** the top bar is one *Menu* button, and the writing checks start folded so the text is on the first screen.
+- **Names in the text are ink now, not red.** Red in the prose means one thing -- a note is waiting on this passage -- and a red name with a red line under it looked exactly like one.
+
 ## 2026-09-16 — A chapter you wrote somewhere else
 
 - **Replace this chapter with a file**, under the text box in the editor: choose a `.md`, `.txt` or `.docx`, press **Upload and publish**, and that file becomes a new version straight away.

@@ -118,6 +118,18 @@
   const quotedInput = /** @type {HTMLInputElement} */ (document.getElementById('nc-quoted'));
   const bodyInput = /** @type {HTMLTextAreaElement} */ (document.getElementById('nc-body'));
   const cancelBtn = document.getElementById('nc-cancel');
+  const suggestionInput = /** @type {HTMLTextAreaElement|null} */ (document.getElementById('nc-suggestion'));
+  const suggestToggle = /** @type {HTMLInputElement|null} */ (document.getElementById('nc-suggest-toggle'));
+  // Ticking "suggest a rewrite" puts the cursor in the rewrite, where the
+  // work is, with the passage already selected for overtyping.
+  if (suggestToggle && suggestionInput) {
+    suggestToggle.addEventListener('change', () => {
+      if (suggestToggle.checked) {
+        suggestionInput.focus();
+        suggestionInput.select();
+      }
+    });
+  }
 
   let pendingSelection = null;
 
@@ -163,6 +175,12 @@
       ? pendingSelection.text.slice(0, 200) + '...'
       : pendingSelection.text;
     previewEl.textContent = `"${shown}"`;
+    // The rewrite box starts as the passage itself, so suggesting a change
+    // is editing a sentence rather than retyping it. It stays folded until
+    // asked for; the server ignores it unless the box is ticked and the
+    // words actually differ.
+    if (suggestionInput) suggestionInput.value = pendingSelection.text;
+    if (suggestToggle) suggestToggle.checked = false;
     box.classList.remove('hidden');
     toast.classList.add('hidden');
     // The passage is the context for what is about to be typed, so it is
@@ -237,6 +255,7 @@
     cancelBtn.addEventListener('click', () => {
       box.classList.add('hidden');
       bodyInput.value = '';
+      if (suggestToggle) suggestToggle.checked = false;
     });
   }
 

@@ -702,6 +702,17 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
    underline instead of a solid one, so they read as "this is a glossary
    reference" rather than a link the author deliberately placed there. */
 .wiki-link { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
+/* ...and in ink, not red. Red in the prose means exactly one thing -- a
+   note is waiting on this passage -- and a name in red with a red rule
+   under it was indistinguishable from a note on that name. A glossary
+   name is a reference, so it looks like one: the colour of the text, a
+   grey dotted rule. */
+#chapter-text a.wiki-link {
+  color: inherit;
+  text-decoration-color: var(--text-muted);
+  text-decoration-thickness: 1px;
+}
+#chapter-text a.wiki-link:hover { color: var(--accent-strong); text-decoration-color: currentColor; }
 /* The reader's own "Wiki links" toggle (writing-analyzer.js) -- same
    neutralize-in-place pattern as .comments-hidden .hl below, so turning
    it off doesn't reflow the text, just makes it read as plain prose
@@ -3191,3 +3202,283 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .presence thead th { padding: 0 0 var(--s-3); width: 18px; text-align: center; }
 .presence thead th:first-child { width: auto; }
 .presence th[scope="row"] { padding-right: var(--s-5); }
+
+/* ======================================================================
+   The review loop: kinds of note, rewrites, asking for a read.
+   Same rules as everything above -- one red, meaning "waiting for you";
+   labels in spaced capitals; no boxes where a rule will do.
+   ====================================================================== */
+
+/* The kind of a note, beside the name. A word, not a coloured pill: the
+   kind is a label for reading the column quickly, never an alarm. */
+.kind-badge {
+  font-size: var(--t-2xs); font-weight: 600; text-transform: uppercase;
+  letter-spacing: var(--label-tracking); color: var(--text-muted);
+  border: 1px solid var(--border); padding: 0 var(--s-3);
+}
+.kind-badge.kind-praise { color: var(--text); border-color: var(--border-strong); }
+.kind-badge.kind-suggestion { color: var(--text); border-color: var(--text); }
+.status-badge.status-praise { color: var(--text); }
+.comment.kind-praise { border-top-color: var(--text); }
+
+/* The picker in the note form: a row of small chips, one of which is
+   always chosen. Radios, so the keyboard walks them with the arrows. */
+.note-kinds { border: 0; margin: 0 0 var(--s-4); padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2); min-width: 0; }
+.note-kind {
+  display: inline-flex; align-items: center; margin: 0; cursor: pointer;
+  text-transform: none; letter-spacing: normal; font-weight: 500;
+}
+.note-kind input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.note-kind span {
+  border: 1px solid var(--border); padding: var(--s-1) var(--s-4);
+  font-size: var(--t-sm); color: var(--text-muted);
+  transition: border-color 0.14s ease, color 0.14s ease, background 0.14s ease;
+}
+.note-kind:hover span { border-color: var(--border-strong); color: var(--text); }
+.note-kind input:checked + span { background: var(--text); border-color: var(--text); color: var(--btn-text); }
+.note-kind input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The bible picker only once "Continuity" is chosen; the rewrite only
+   once it is asked for. With no :has() support both simply show, which
+   is harmless. */
+.new-comment-box .entity-field,
+.new-comment-box .suggest-field { display: none; }
+.new-comment-box:has(input[name="kind"][value="continuity"]:checked) .entity-field,
+.new-comment-box:has(#nc-suggest-toggle:checked) .suggest-field { display: flex; flex-direction: column; gap: var(--s-2); }
+@supports not selector(:has(*)) {
+  .new-comment-box .entity-field, .new-comment-box .suggest-field { display: flex; flex-direction: column; }
+}
+.new-comment-box form { display: flex; flex-direction: column; gap: var(--s-3); }
+.new-comment-box form textarea { width: 100%; }
+.suggest-toggle {
+  display: flex; flex-direction: row; align-items: center; gap: var(--s-3); margin: var(--s-1) 0;
+  text-transform: none; letter-spacing: normal; font-weight: 500; font-size: var(--t-sm); cursor: pointer;
+}
+.suggest-field textarea { font-family: var(--font-prose); font-size: var(--t-md); min-height: 4.5em; }
+.entity-field select { max-width: 100%; }
+
+/* A rewrite, shown as what it changes. The words going are struck and
+   grey; the words arriving are ink, underscored in the red of something
+   waiting to be decided. Set in the prose face: it is a piece of the
+   chapter, not a piece of the interface. */
+.suggestion {
+  margin: 0 0 var(--s-4); font-family: var(--font-prose); font-size: var(--t-md); line-height: 1.6;
+}
+.suggestion del { color: var(--text-muted); text-decoration-thickness: 1px; }
+.suggestion ins { text-decoration: none; box-shadow: inset 0 -2px 0 var(--accent); }
+.comment.status-accepted .suggestion ins,
+.comment.status-rejected .suggestion ins { box-shadow: inset 0 -2px 0 var(--text-muted); }
+
+.note-histories { margin: 0 0 var(--s-3); display: flex; flex-direction: column; gap: var(--s-1); }
+.note-history { font-size: var(--t-xs); color: var(--text-muted); }
+.note-history.changed { color: var(--text); }
+.note-history.applied .ico { width: 11px; height: 11px; vertical-align: -1px; margin-right: var(--s-1); }
+.note-about { margin: 0 0 var(--s-4); font-size: var(--t-sm); color: var(--text-muted); }
+
+.left-behind {
+  margin: 0; padding: var(--s-3) 0 var(--s-3) var(--s-5);
+  border-left: 2px solid var(--accent); font-size: var(--t-sm);
+}
+.flash-inline {
+  margin: 0; padding: var(--s-3) 0 var(--s-3) var(--s-5);
+  border-left: 2px solid var(--text); font-size: var(--t-sm);
+}
+.flash-inline .ico { width: 12px; height: 12px; margin-right: var(--s-2); vertical-align: -1px; }
+
+/* Asking for a read. The request a reader has been sent sits above the
+   chapter, in red, because it is the one thing on the page waiting for
+   them; the author's own list of who they asked sits in the same place,
+   in ink, because it is waiting on other people. */
+.review-ask {
+  margin: 0 0 var(--s-8); padding: var(--s-5) 0; border-top: 2px solid var(--accent);
+  border-bottom: 1px solid var(--border);
+}
+.review-ask p { margin: 0 0 var(--s-4); }
+.review-question { display: block; margin-top: var(--s-2); font-family: var(--font-prose); font-style: italic; font-size: var(--t-lg); }
+.review-done-form { display: flex; gap: var(--s-4); flex-wrap: wrap; align-items: center; }
+.review-done-form input { flex: 1; min-width: 14rem; }
+.review-requests { margin: 0 0 var(--s-8); padding: var(--s-4) 0; border-top: 1px solid var(--border-strong); }
+.review-list { list-style: none; margin: 0 0 var(--s-4); padding: 0; display: grid; gap: var(--s-3); font-size: var(--t-md); }
+.review-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2) var(--s-4); }
+.review-state { font-size: var(--t-sm); color: var(--text-muted); }
+.review-state.done { color: var(--text); }
+.review-state .ico { width: 12px; height: 12px; vertical-align: -1px; margin-right: var(--s-1); }
+.review-done-note { flex-basis: 100%; font-family: var(--font-prose); font-style: italic; color: var(--text-muted); }
+.review-form summary { cursor: pointer; font-size: var(--t-sm); font-weight: 600; }
+.review-form form { display: flex; flex-direction: column; gap: var(--s-5); margin-top: var(--s-5); max-width: 40rem; }
+.review-people { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-3); }
+.review-people legend { font-size: var(--t-2xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); margin-bottom: var(--s-3); }
+
+.inbox-question { grid-column: 1 / -1; font-family: var(--font-prose); font-style: italic; font-size: var(--t-md); }
+.inbox-asked h3 { color: var(--accent); }
+
+/* ---- the top bar on a phone ----
+   Folded behind one button, and only when a script is there to unfold it
+   (html.js, set by theme-init.js). The theme toggle stays out: it is one
+   square and it is used in the dark, half asleep. */
+.nav-toggle { display: none; }
+@media (max-width: 720px) {
+  .js .topbar { flex-wrap: nowrap; }
+  .js .topbar nav { justify-content: flex-end; }
+  .js .nav-toggle {
+    display: inline-block; background: transparent; border: 1px solid var(--border-strong); color: var(--text);
+    font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking);
+    padding: var(--s-3) var(--s-5); cursor: pointer;
+  }
+  .js .topbar:not(.nav-open) nav > :not(.nav-toggle):not(.theme-toggle) { display: none; }
+  /* Open, it is a list: one place per line, big enough for a thumb, the
+     search box first because on a phone it is the quickest way anywhere. */
+  .js .topbar.nav-open { flex-wrap: wrap; padding-bottom: var(--s-5); }
+  .js .topbar.nav-open .brand { flex: 1; }
+  .js .topbar.nav-open nav {
+    flex-basis: 100%; flex-direction: column; align-items: stretch; gap: 0;
+  }
+  .js .topbar.nav-open .nav-toggle { position: absolute; top: var(--s-4); right: var(--s-6); }
+  .js .topbar.nav-open { position: relative; }
+  .js .topbar.nav-open .theme-toggle { position: absolute; top: var(--s-5); right: calc(var(--s-6) + 88px); margin: 0; }
+  .js .topbar.nav-open .topbar-search { order: -1; margin: var(--s-4) 0; }
+  .js .topbar.nav-open .topbar-search input { width: 100%; }
+  .js .topbar.nav-open nav > a { padding: var(--s-5) 0; border-bottom: 1px solid var(--border); font-size: var(--t-xs); }
+  .js .topbar.nav-open .topbar-account { border-left: 0; padding: var(--s-4) 0 0; margin: 0; gap: var(--s-6); }
+  .js .topbar.nav-open .topbar-account > a,
+  .js .topbar.nav-open .topbar-account .linklike { padding-left: 0; }
+}
+
+/* ---- the editor: its toolbar, drafts, and focus ---- */
+.editor-tools {
+  display: flex; align-items: center; gap: var(--s-1); flex-wrap: wrap;
+  margin: var(--s-3) 0 var(--s-2); text-transform: none; letter-spacing: normal;
+}
+.editor-tool {
+  min-width: 32px; height: 30px; padding: 0 var(--s-4);
+  background: transparent; color: var(--text); border: 1px solid var(--border);
+  font-family: var(--font-prose); font-size: var(--t-md); cursor: pointer;
+}
+.editor-tool:hover { border-color: var(--border-strong); }
+.editor-tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.editor-tool.tool-bold { font-weight: 800; }
+.editor-tool.tool-italic { font-style: italic; }
+.editor-tool.tool-break { font-size: var(--t-xs); letter-spacing: 0.2em; }
+.editor-tool.tool-focus {
+  font-family: var(--font-ui); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.editor-tool[aria-pressed="true"] { background: var(--text); color: var(--btn-text); border-color: var(--text); }
+.editor-tools-spacer { flex: 1; }
+
+.writer-intro-fold { margin: 0 0 var(--s-6); }
+.writer-intro-fold summary { cursor: pointer; font-size: var(--t-sm); color: var(--text-muted); }
+.writer-intro-fold p { margin: var(--s-3) 0 0; max-width: 60ch; font-size: var(--t-md); }
+
+.draft-notice {
+  margin: 0 0 var(--s-6); padding: var(--s-4) 0 var(--s-4) var(--s-5);
+  border-left: 2px solid var(--text); font-size: var(--t-md);
+}
+.draft-notice p { margin: 0 0 var(--s-3); }
+.draft-notice.just-saved { border-left-color: var(--accent); }
+.draft-behind { color: var(--text); }
+
+/* Focus: the title, the text, the toolbar and the buttons that save it.
+   Everything else -- the bar, the breadcrumbs, the checks, the notes, the
+   optional details, the panel beside -- is still on the page and back
+   with Escape. */
+body.writing-focus .topbar,
+body.writing-focus .breadcrumb,
+body.writing-focus .writer-intro-fold,
+body.writing-focus .wa-card,
+body.writing-focus .wa-width-bar,
+body.writing-focus .writer-section,
+body.writing-focus .comments-pane,
+body.writing-focus .upload-version,
+body.writing-focus [data-beside],
+body.writing-focus .editor-bible,
+body.writing-focus .writer-card > h1,
+body.writing-focus .markdown-hint { display: none !important; }
+body.writing-focus .chapter-body-grid { display: block; }
+body.writing-focus main.container { max-width: 52rem; }
+body.writing-focus .writer-card { border: 0; box-shadow: none; }
+/* Height only: the checks draw their marks on a layer that has to match
+   the textarea's type exactly, so its size and leading are left alone. */
+body.writing-focus textarea[data-editor-tools] { min-height: 70vh; }
+
+/* ======================================================================
+   The front page: who is here, what they are doing, and a way in.
+   ====================================================================== */
+.home-grid { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: var(--s-10); align-items: start; }
+.home-grid.no-activity { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 900px) {
+  .home-grid { grid-template-columns: minmax(0, 1fr); gap: var(--s-8); }
+}
+
+/* Lately in the group: a column of sentences under a label, hairline
+   between each, the name in ink and the rest in grey. */
+.activity { position: sticky; top: var(--s-6); }
+.activity h2, .welcome h2 {
+  margin: 0 0 var(--s-4); font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: var(--label-tracking); color: var(--text-muted);
+  padding-top: var(--s-3); border-top: 2px solid var(--border-strong);
+}
+.activity-list { list-style: none; margin: 0; padding: 0; }
+.activity-item {
+  padding: var(--s-4) 0; border-bottom: 1px solid var(--border);
+  font-size: var(--t-sm); line-height: 1.45; color: var(--text-muted);
+}
+.activity-item a { color: var(--text); }
+.activity-who { color: var(--text); font-weight: 600; }
+.activity-item time { display: block; font-size: var(--t-xs); margin-top: var(--s-1); }
+.activity-times { font-size: var(--t-xs); }
+.activity-item.kind-review-requested .activity-who,
+.activity-item.kind-suggestion-added .activity-who { color: var(--accent); }
+
+/* The welcome card. Ruled like every section; the steps as a checklist
+   whose ticks are the reader's own doing. */
+.welcome { margin: 0 0 var(--s-10); }
+.welcome .welcome-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-4); }
+.welcome .welcome-head h2 { flex: 1; color: var(--accent); border-top-color: var(--accent); }
+.welcome .welcome-head .inline-form { padding-top: var(--s-3); }
+.welcome-lede { margin: 0 0 var(--s-5); font-size: var(--t-lg); max-width: 60ch; }
+.welcome-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-6); }
+@media (max-width: 720px) { .welcome-steps { grid-template-columns: minmax(0, 1fr); gap: var(--s-4); } }
+.welcome-step { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: var(--s-4); font-size: var(--t-md); line-height: 1.45; }
+.welcome-mark {
+  width: 18px; height: 18px; border: 1.5px solid var(--border-strong); margin-top: 2px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.welcome-step.done .welcome-mark { background: var(--text); border-color: var(--text); color: var(--btn-text); }
+.welcome-step.done .welcome-mark .ico { stroke: var(--btn-text); width: 12px; height: 12px; }
+.welcome-step.done strong { text-decoration: line-through; text-decoration-color: var(--text-muted); }
+.welcome kbd {
+  font-family: var(--font-ui); font-size: var(--t-xs); border: 1px solid var(--border-strong);
+  padding: 0 var(--s-2);
+}
+
+/* The cover a story gets without anybody drawing one: initials, set big,
+   on ink or on paper, with the one red rule. Four variants, picked from
+   the title, so a list of six stories is six different blocks. */
+.story-row { align-items: flex-start; }
+.story-cover {
+  flex: 0 0 72px; width: 72px; height: 96px; position: relative; overflow: hidden;
+  display: flex; align-items: flex-end; padding: var(--s-3);
+  font-family: var(--font-display, var(--font-ui)); font-weight: 800; font-size: 1.9rem;
+  letter-spacing: -0.04em; line-height: 0.9;
+}
+.story-cover span { position: relative; z-index: 1; }
+.story-cover::after { content: ""; position: absolute; left: 0; right: 0; height: 3px; background: var(--accent); }
+.story-cover.cover-0 { background: var(--text); color: var(--bg); }
+.story-cover.cover-0::after { top: var(--s-5); }
+.story-cover.cover-1 { background: var(--bg-sunken); color: var(--text); border: 1px solid var(--border-strong); }
+.story-cover.cover-1::after { top: 50%; }
+.story-cover.cover-2 { background: var(--accent); color: #fff; }
+.story-cover.cover-2::after { background: var(--text); bottom: var(--s-7); }
+.story-cover.cover-3 { background: var(--bg); color: var(--text); border: 2px solid var(--text); }
+.story-cover.cover-3::after { top: 0; }
+.story-row .chapter-row-main { flex: 1; }
+.story-progress { height: 2px; background: var(--border); margin: var(--s-4) 0 0; max-width: 62ch; }
+.story-progress-fill { height: 100%; background: var(--text); }
+.story-audience { margin: var(--s-3) 0 0; font-size: var(--t-sm); color: var(--text-muted); }
+@media (max-width: 720px) {
+  .story-row { flex-direction: row; flex-wrap: wrap; }
+  .story-cover { flex-basis: 54px; width: 54px; height: 72px; font-size: 1.4rem; }
+  .story-row .chapter-row-main { flex: 1 1 calc(100% - 54px - var(--s-8)); }
+  .story-row .chapter-row-meta { flex-basis: 100%; }
+}

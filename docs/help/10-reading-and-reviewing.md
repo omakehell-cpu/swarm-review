@@ -57,6 +57,23 @@ shift and the arrow keys, and then press **C**. The offer is announced
 when the selection is made, so you do not have to know it is there. There
 is nothing in this app that can only be done by pointing at it.
 
+**Say what kind of note it is**, if you like, with the row of words above
+the box: *Typo*, *Pacing*, *Continuity*, *Question* -- or *Note*, which is
+what most notes are. A continuity note can also name the bible entry it is
+about. None of it changes what happens to the note; it tells the author at a
+glance which ones are a two-second fix and which ones need an evening.
+
+**♥ Love it** is a note too, and it needs no words. It asks nothing of the
+author -- it is never "pending" and never waits to be accepted -- so leave
+as many as the chapter deserves. Knowing which lines landed is half of what
+a reader is for.
+
+**Suggest a rewrite** when it is quicker to show than to explain. Tick the
+box and the passage appears underneath, ready to edit: change the words in
+place. The author sees exactly what you changed -- the words that go struck
+through, the ones that arrive underlined -- and can put it into the chapter
+with one click.
+
 If what you want to say is not about one passage, use **General comment (no
 text selected)** at the foot of the notes.
 
@@ -65,7 +82,13 @@ be **Retract**ed.
 
 ## What the author does with it
 
-The author sees **Accept** and **Reject** on each note.
+The author sees **Accept** and **Reject** on each note. On a suggested
+rewrite there is also **Apply change**, which puts the rewrite into the text
+as a new version and marks the note accepted, in one go. It only does it when
+it can do it cleanly: a rewrite that runs across a paragraph break, or half
+in and half out of some italics, is refused with nothing changed, and the
+author makes that edit by hand. **Accept only** is for when they already
+have.
 
 Answering a note does not reload the page. On a chapter with forty of
 them, dealing with the eleventh used to put you back at the top to find
@@ -86,15 +109,39 @@ out where the work is.
 
 ## Versions
 
-Saving a chapter whose text has changed **publishes a new version** rather
-than rewriting the old one. That is what keeps your note anchored to the
-sentence you actually wrote it about.
+Publishing a chapter whose text has changed **makes a new version** rather
+than rewriting the old one.
+
+**Notes still waiting follow the text.** When the author publishes a new
+version, every pending note whose words are still there moves to it,
+underlining the same words in their new place, replies and all. The card
+says which version it was left on. A note whose words the author has
+rewritten stays behind on the version it was about -- it is either done
+with or it needs a look -- and the current version says how many are
+waiting back there, with a link. Accepted and rejected notes never move:
+they are the record of what was said about that draft.
 
 The **Version** dropdown moves between them, and **What changed?** shows the
 difference in prose — the words that went and the words that came, not a
 screen of markdown. A chapter nobody has revised yet just says so.
 
 @figure version-and-diff.png | What changed, shown in prose rather than in markdown source.
+
+## Asking somebody to read
+
+On your own chapter, **Ask someone to read this** is under the chapter
+heading. Tick the people and, if you have one, write the question you want
+answered: *does the jump in time work? is the fight too long?* A question
+gets better notes than "thoughts?".
+
+The people you asked see it **at the top of their front page**, under
+*Asked to read by you*, and above the chapter when they open it, with the
+question. When they are done they press **I've finished reading**, with a
+line for you if they want. You see who you asked, who is done, how many
+notes each left, and what they said. Asking the same person again, about a
+new draft, reopens the same request. **Take back** withdraws one.
+
+It is also in the private feed, for anybody who reads the site that way.
 
 ## Who has read what
 

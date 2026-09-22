@@ -3,6 +3,7 @@
 const { layout } = require('../lib/layout');
 const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
+const { lcsDiff, splitWords } = require('../lib/diff');
 const { storyState, STORY_STATES, CHAPTER_STAGES, DEFAULT_CHAPTER_STAGE, CHAPTER_STAGE_META } = require('../lib/story-state');
 
 const wiki = require('../lib/wiki');
@@ -398,6 +399,35 @@ function chapterStageBadge(chapter) {
 
 const STATUS_LABEL = { pending: 'Pending', accepted: 'Accepted', rejected: 'Rejected' };
 
+// What each kind of note is called, where a reader sees it. '' has no
+// label: a plain note does not need to announce that it is a note.
+const KIND_LABEL = {
+  typo: 'Typo',
+  pacing: 'Pacing',
+  continuity: 'Continuity',
+  question: 'Question',
+  praise: 'Loved this',
+};
+
+const kindBadge = (kind) => (KIND_LABEL[kind]
+  ? `<span class="kind-badge kind-${kind}">${KIND_LABEL[kind]}</span>` : '');
+
+// A suggested rewrite, shown as what it changes: the words that go struck
+// through, the words that arrive underlined, the rest as they were. Word
+// by word rather than all-or-nothing, because "boots loud on grating"
+// against "boots ringing on grating" is one word, and the eye should land
+// on it.
+function suggestionDiff(from, to) {
+  const steps = lcsDiff(splitWords(from), splitWords(to), (x, y) => x.trim() === y.trim());
+  let html = '';
+  for (const step of steps) {
+    if (step.type === 'equal') html += escapeHtml(step.b);
+    else if (step.type === 'remove') html += `<del>${escapeHtml(step.a)}</del>`;
+    else html += `<ins>${escapeHtml(step.b)}</ins>`;
+  }
+  return html || '<del>(the passage)</del>';
+}
+
 
 // A read-only rendering of a comment for reference contexts (the edit
 // page) where clicking an action button would navigate away and lose
@@ -426,12 +456,15 @@ function renderCommentReadOnly(c, { replies }) {
     <div class="comment status-${c.status}">
       <div class="comment-meta">
         <strong>${escapeHtml(c.author_name)}</strong>
+        ${kindBadge(c.kind)}
         <span class="status-badge status-${c.status}">${statusLabel}</span>
         ${timeHtml(c.created_at)}
         ${c.edited_at ? '<span class="muted edited-tag">(edited)</span>' : ''}
       </div>
-      ${c.quoted_text ? `<blockquote class="quoted">${escapeHtml(c.quoted_text)}</blockquote>` : ''}
-      <p class="comment-body">${escapeHtml(c.body)}</p>
+      ${c.suggestion != null
+        ? `<div class="suggestion">${suggestionDiff(c.quoted_text || '', c.suggestion)}</div>`
+        : (c.quoted_text ? `<blockquote class="quoted">${escapeHtml(c.quoted_text)}</blockquote>` : '')}
+      ${c.body ? `<p class="comment-body">${escapeHtml(c.body)}</p>` : ''}
       ${repliesHtml}
     </div>`;
 }
@@ -460,7 +493,10 @@ module.exports = {
   ERROR_HEADINGS,
   ICONS,
   MARKDOWN_HINT,
+  KIND_LABEL,
   STATUS_LABEL,
+  kindBadge,
+  suggestionDiff,
   arcField,
   bible,
   bibleImages,

@@ -1,6 +1,7 @@
 'use strict';
 
 const { db } = require('./shared');
+const { reviewQueueFor } = require('./reviews');
 // An author posting a chapter and hearing nothing back cannot tell the
 // difference between "nobody has looked at it" and "three people read it
 // and had nothing to say". Those are opposite problems and the app used
@@ -139,12 +140,17 @@ function chaptersNewToMe(userId, limit) {
 function inboxFor(userId, { since = null, limit = 8 } = {}) {
   const pending = pendingOnMyChapters(userId);
   const replies = repliesToMe(userId, since, limit);
-  const newChapters = chaptersNewToMe(userId, limit);
+  const asked = reviewQueueFor(userId);
+  // A chapter somebody asked you to read is already at the top of the
+  // list; saying it again under "new to read" is the same thing twice.
+  const askedIds = new Set(asked.map((r) => r.chapter_id));
+  const newChapters = chaptersNewToMe(userId, limit).filter((c) => !askedIds.has(c.id));
   return {
+    asked,
     pending,
     replies,
     newChapters,
-    empty: !pending.length && !replies.length && !newChapters.length,
+    empty: !asked.length && !pending.length && !replies.length && !newChapters.length,
   };
 }
 

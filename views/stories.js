@@ -4,12 +4,44 @@ const { layout } = require('../lib/layout');
 const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
 const { storyState, STORY_STATES, CHOOSABLE_STORY_STATES } = require('../lib/story-state');
-const { bylineWith, emptyState, storyStateBadge, tagChips, tagPicker, wordCount } = require('./shared');
+const { ICONS, bylineWith, emptyState, storyStateBadge, tagChips, tagPicker, wordCount } = require('./shared');
 
 // One story as it appears in any list -- the front page, a tag's page, a
 // search result. `hiddenBy` is the reader's own hidden tags that this
 // story tripped (see handleStories); it only ever arrives set from a list
 // that has already decided to fold the story away.
+// A cover for a story nobody has drawn a cover for, which is every story:
+// its initials, large, on a block of ink or paper, with the one red rule.
+// Derived from the title, so the same story always has the same cover and
+// it changes only if the title does. It is a way of telling six rows of
+// text apart at a glance, not an illustration, and it says nothing a
+// screen reader needs -- hence aria-hidden.
+function storyCover(title) {
+  const words = String(title || '').replace(/[^\p{L}\p{N}\s]/gu, '').split(/\s+/).filter(Boolean);
+  const skip = new Set(['the', 'a', 'an', 'of', 'and', 'is', 'in', 'on', 'to', 'at', 'we', 'are', 'el', 'la', 'los', 'las', 'de', 'y', 'en']);
+  const strong = words.filter((w) => !skip.has(w.toLowerCase()));
+  const pick = (strong.length ? strong : words).slice(0, 2);
+  const initials = pick.map((w) => w[0].toUpperCase()).join('') || '\u2014';
+  let hash = 0;
+  for (const ch of String(title || '')) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+  return `<div class="story-cover cover-${hash % 4}" aria-hidden="true"><span>${escapeHtml(initials)}</span></div>`;
+}
+
+// How far along, in a hairline: only when the author has set a goal.
+function storyProgress(s) {
+  if (!s.word_goal || s.word_goal <= 0) return '';
+  const percent = Math.round(Math.max(0, Math.min(1, (s.word_count || 0) / s.word_goal)) * 100);
+  return `<div class="story-progress" role="img" aria-label="${percent} per cent of a ${wordCount(s.word_goal)} goal"><div class="story-progress-fill" style="width: ${percent}%"></div></div>`;
+}
+
+// Whether anybody is reading, in words. "Nobody yet" is information too.
+function storyAudience(s) {
+  const bits = [];
+  if (s.reader_count) bits.push(`read by ${s.reader_count} ${s.reader_count === 1 ? 'person' : 'people'}`);
+  if (s.note_count) bits.push(`${s.note_count} note${s.note_count === 1 ? '' : 's'}`);
+  return bits.length ? `<p class="story-audience">${bits.join(' &middot; ')}</p>` : '';
+}
+
 function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } = {}) {
   // Not an <a> wrapping the whole row, which is what every other list
   // here does: the tag chips are links themselves, and an anchor inside
@@ -19,9 +51,12 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } 
   // still clickable everywhere the chips aren't.
   return `
     <div class="chapter-row story-row">
+      ${storyCover(s.title)}
       <div class="chapter-row-main">
         <h3><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a> ${s.has_new_chapters ? '<span class="badge new">New</span>' : ''}</h3>
         <p class="muted">${escapeHtml(s.description || '')}</p>
+        ${storyProgress(s)}
+        ${storyAudience(s)}
         ${hiddenBy.length
           ? `<p class="hidden-by">Hidden by your tag settings: ${hiddenBy.map((t) => escapeHtml(t.name)).join(', ')}</p>`
           : tagChips(tags)}
@@ -95,10 +130,76 @@ function inboxSection(inbox) {
       </ul>
     </section>` : '';
 
-  return `<div class="inbox">${pending}${replies}${fresh}</div>`;
+  const asked = inbox.asked && inbox.asked.length ? `
+    <section class="inbox-group inbox-asked">
+      <h3>Asked to read by you</h3>
+      <ul class="inbox-list">
+        ${inbox.asked.map((r) => `
+          <li>
+            <a href="/chapters/${r.chapter_id}">
+              <span class="inbox-what"><strong>${escapeHtml(r.requested_by_name || 'Somebody')}</strong> asked: chapter ${r.chapter_number}, ${escapeHtml(r.chapter_title)}</span>
+              ${r.question ? `<span class="inbox-question">&ldquo;${commentGist(r.question, 160)}&rdquo;</span>` : ''}
+              <span class="inbox-where">${escapeHtml(r.story_title)}${r.word_count ? ` &middot; ${wordCount(r.word_count)}` : ''} &middot; ${timeHtml(r.created_at)}</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+    </section>` : '';
+
+  return `<div class="inbox">${asked}${pending}${replies}${fresh}</div>`;
 }
 
-function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null }) {
+// The welcome card: three steps, each ticked off by doing it rather than
+// by pressing anything. See welcomeState in models/activity.js.
+function welcomeCard(welcome) {
+  if (!welcome || !welcome.show) return '';
+  const t = welcome.tryThis;
+  const step = (done, title, body) => `
+    <li class="welcome-step${done ? ' done' : ''}">
+      <span class="welcome-mark" aria-hidden="true">${done ? ICONS.tick : ''}</span>
+      <span><strong>${title}</strong>${done ? '<span class="sr-only"> (done)</span>' : ''}<br><span class="muted">${body}</span></span>
+    </li>`;
+  return `
+    <section class="welcome" aria-labelledby="welcome-title">
+      <div class="welcome-head">
+        <h2 id="welcome-title">Welcome to the group</h2>
+        <form method="post" action="/welcome/dismiss" class="inline-form">
+          <button class="btn ghost tiny" type="submit">I know my way round</button>
+        </form>
+      </div>
+      <p class="welcome-lede">This is where we read each other's chapters and say what we think, line by line. Three things and you are in:</p>
+      <ol class="welcome-steps">
+        ${step(welcome.read, 'Read a chapter',
+          t ? `Start with <a href="/chapters/${t.id}">${escapeHtml(t.title)}</a> by ${escapeHtml(t.author_name)}, from ${escapeHtml(t.story_title)}.` : 'Any chapter on this page that is not yours.')}
+        ${step(welcome.noted, 'Leave a note on a line',
+          'Select a few words in a chapter and a button appears &mdash; or press <kbd>C</kbd>. Say what you think, suggest a rewrite, or just leave a &hearts;.')}
+        ${step(welcome.wrote, 'Put up something of your own',
+          '<a href="/stories/new">Start a story</a> with its first chapter, then ask somebody to read it from the chapter page.')}
+      </ol>
+    </section>`;
+}
+
+// What everybody has been doing lately, most recent first. A column of
+// sentences, because that is what it is: "Luis read Seals and signatures".
+function activityColumn(activity) {
+  if (!activity || !activity.length) return '';
+  return `
+    <aside class="activity" aria-labelledby="activity-title">
+      <h2 id="activity-title">Lately in the group</h2>
+      <ol class="activity-list">
+        ${activity.map((a) => {
+          const what = a.subject ? (a.href ? `<a href="${escapeHtml(a.href)}">${escapeHtml(a.subject)}</a>` : escapeHtml(a.subject)) : '';
+          return `
+          <li class="activity-item kind-${escapeHtml(a.kind)}">
+            <span class="activity-who">${escapeHtml(a.display_name)}</span>
+            ${escapeHtml(a.verb)} ${what}${a.times > 1 ? ` <span class="activity-times">&times;${a.times}</span>` : ''}
+            ${timeHtml(a.created_at)}
+          </li>`;
+        }).join('')}
+      </ol>
+    </aside>`;
+}
+
+function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null, activity = [], welcome = null }) {
   const sinceQs = since ? `?since=${encodeURIComponent(since)}` : '';
   const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
   const rows = stories.length
@@ -160,11 +261,17 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
         <h1>The Swarm stories</h1>
         <a class="btn" href="/stories/new">New story</a>
       </div>
-      ${activeTags.length ? '' : inboxSection(inbox)}
-      ${filter}
-      <div class="chapter-list">${rows}</div>
-      ${foldedBlock}
-      <p class="muted archive-link"><a href="/archived-stories">View archived stories &rarr;</a></p>`,
+      ${activeTags.length ? '' : welcomeCard(welcome)}
+      <div class="home-grid${activeTags.length || !activity.length ? ' no-activity' : ''}">
+        <div class="home-main">
+          ${activeTags.length ? '' : inboxSection(inbox)}
+          ${filter}
+          <div class="chapter-list">${rows}</div>
+          ${foldedBlock}
+          <p class="muted archive-link"><a href="/archived-stories">View archived stories &rarr;</a></p>
+        </div>
+        ${activeTags.length ? '' : activityColumn(activity)}
+      </div>`,
   });
 }
 

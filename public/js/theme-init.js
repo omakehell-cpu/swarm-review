@@ -8,6 +8,9 @@
 // the DOM -- this one must run before anything is even parsed yet.
 (function () {
   'use strict';
+  // Tells the stylesheet that scripts run, so anything folded away for a
+  // script to open (the phone menu) is only folded when one will.
+  document.documentElement.classList.add('js');
   try {
     const saved = localStorage.getItem('theme');
     if (saved === 'dark' || saved === 'light') {

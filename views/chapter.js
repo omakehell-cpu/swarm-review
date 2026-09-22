@@ -5,7 +5,7 @@ const { escapeHtml, toScriptJson } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
 const { chapterCastBlock, missingNamesBlock } = require('./bible');
-const { ICONS, STATUS_LABEL, emptyState, personLink, readersLine, wiki, wordCount } = require('./shared');
+const { ICONS, STATUS_LABEL, emptyState, kindBadge, personLink, readersLine, suggestionDiff, wiki, wordCount } = require('./shared');
 function renderReply(r, { currentUserId }) {
   const isReplyAuthor = currentUserId === r.author_id;
   if (r.deleted_at) {
@@ -23,13 +23,15 @@ function renderReply(r, { currentUserId }) {
     </div>`;
 }
 
-function renderComment(c, { isChapterAuthor, currentUserId, replies }) {
-  const statusLabel = STATUS_LABEL[c.status] || c.status;
+function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = true }) {
+  const praise = c.kind === 'praise';
+  const statusLabel = praise ? 'Loved' : (c.applied_in ? 'Applied' : (STATUS_LABEL[c.status] || c.status));
   const repliesHtml = replies.map((r) => renderReply(r, { currentUserId })).join('');
+  const kindClass = c.kind ? ` kind-${c.kind}` : '';
 
   if (c.deleted_at) {
     return `
-      <div class="comment status-${c.status} retracted" id="comment-${c.id}" data-comment-id="${c.id}">
+      <div class="comment status-${c.status}${kindClass} retracted" id="comment-${c.id}" data-comment-id="${c.id}">
         <div class="comment-meta">
           <strong>${escapeHtml(c.author_name)}</strong>
           <span class="status-badge status-${c.status}">${statusLabel}</span>
@@ -45,20 +47,48 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies }) {
   // line: the column should read as a list of what still needs answering,
   // with the settled ones a click away rather than gone. Pending notes are
   // the actual work and stay open. <details> rather than a script, so the
-  // column still behaves with JavaScript off.
-  const settled = c.status !== 'pending';
-  const statusBadge = `<span class="status-badge status-${c.status}">${statusLabel}</span>`;
+  // column still behaves with JavaScript off. Praise is the exception: it
+  // was never waiting on anybody, and folding it away is the one thing
+  // that would stop it being read.
+  const settled = c.status !== 'pending' && !praise;
+  const statusBadge = `<span class="status-badge status-${c.status}${praise ? ' status-praise' : ''}">${statusLabel}</span>`;
+  const hasSuggestion = c.suggestion != null;
+
+  // Where this note has been. Both are facts about the text, not about
+  // the note, so they sit with the quote.
+  const history = [
+    c.left_on ? `<span class="note-history">Left on v${c.left_on}, followed the text here</span>` : '',
+    c.passage_changed_in && c.status === 'pending'
+      ? `<span class="note-history changed">The passage was rewritten in <a href="?v=${c.passage_changed_in}">v${c.passage_changed_in}</a>, so this note stayed here</span>` : '',
+    c.applied_in ? `<span class="note-history applied">${ICONS.tick}Put into the text in <a href="?v=${c.applied_in}">v${c.applied_in}</a></span>` : '',
+  ].filter(Boolean).join('');
+
+  const quote = hasSuggestion
+    ? `<div class="suggestion" aria-label="Suggested rewrite">${suggestionDiff(c.quoted_text || '', c.suggestion)}</div>`
+    : (c.quoted_text ? `<blockquote class="quoted">${escapeHtml(c.quoted_text)}</blockquote>` : '');
+
+  const about = c.entity_id && c.entity_name
+    ? `<p class="note-about">About <a href="/bible/${c.entity_id}">${escapeHtml(c.entity_name)}</a> in the bible</p>` : '';
+
+  const canApply = isChapterAuthor && hasSuggestion && c.status === 'pending' && isLatest;
 
   const inner = `
-      ${c.quoted_text ? `<blockquote class="quoted">${escapeHtml(c.quoted_text)}</blockquote>` : ''}
-      <p class="comment-body">${escapeHtml(c.body)}</p>
+      ${quote}
+      ${history ? `<p class="note-histories">${history}</p>` : ''}
+      ${c.body ? `<p class="comment-body">${escapeHtml(c.body)}</p>` : ''}
+      ${about}
       <div class="comment-actions">
+        ${canApply ? `
+          <form method="post" action="/comments/${c.id}/apply" class="inline-form"
+                data-confirm="Put this rewrite into the chapter? It is saved as a new version, and the old one stays in the history.">
+            <button class="btn small accept" type="submit">${ICONS.tick}Apply change</button>
+          </form>` : ''}
         ${isChapterAuthor && c.status === 'pending' ? `
           <form method="post" action="/comments/${c.id}/status" class="inline-form">
-            <button name="status" value="accepted" class="btn small accept" type="submit">${ICONS.tick}Accept</button>
+            <button name="status" value="accepted" class="btn small ${hasSuggestion ? 'ghost' : 'accept'}" type="submit"${hasSuggestion ? ' title="Mark it accepted without changing the text -- for when you made the edit yourself"' : ''}>${hasSuggestion ? '' : ICONS.tick}Accept${hasSuggestion ? ' only' : ''}</button>
             <button name="status" value="rejected" class="btn small reject" type="submit">${ICONS.cross}Reject</button>
           </form>` : ''}
-        ${isChapterAuthor && c.status !== 'pending' ? `
+        ${isChapterAuthor && c.status !== 'pending' && !praise ? `
           <form method="post" action="/comments/${c.id}/reopen" class="inline-form">
             <button class="btn small ghost" type="submit">Reopen</button>
           </form>` : ''}
@@ -71,7 +101,7 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies }) {
         <details class="edit-comment">
           <summary>Edit</summary>
           <form method="post" action="/comments/${c.id}/edit">
-            <textarea name="body" required maxlength="4000">${escapeHtml(c.body)}</textarea>
+            <textarea name="body" maxlength="4000"${hasSuggestion || praise ? '' : ' required'}>${escapeHtml(c.body)}</textarea>
             <button type="submit" class="btn small">Save</button>
           </form>
         </details>` : ''}
@@ -79,18 +109,21 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies }) {
       <details class="reply-box">
         <summary>Reply</summary>
         <form method="post" action="/comments/${c.id}/reply" class="reply-form">
-          <input type="text" name="body" placeholder="Reply..." required maxlength="2000">
+          <input type="text" name="body" placeholder="Reply..." required maxlength="2000" aria-label="Reply to ${escapeHtml(c.author_name)}">
           <button type="submit" class="btn small ghost">Reply</button>
         </form>
       </details>`;
 
+  const gist = c.body || (hasSuggestion ? `\u2192 ${c.suggestion}` : (praise ? '\u2665' : ''));
+
   if (settled) {
     return `
-    <details class="comment settled status-${c.status}" id="comment-${c.id}" data-comment-id="${c.id}">
+    <details class="comment settled status-${c.status}${kindClass}" id="comment-${c.id}" data-comment-id="${c.id}">
       <summary class="comment-summary">
         <strong>${escapeHtml(c.author_name)}</strong>
+        ${kindBadge(c.kind)}
         ${statusBadge}
-        <span class="comment-gist">${escapeHtml(c.body)}</span>
+        <span class="comment-gist">${escapeHtml(gist)}</span>
       </summary>
       <p class="comment-when muted">${timeHtml(c.created_at)}${c.edited_at ? ' &middot; edited' : ''}</p>
       ${inner}
@@ -98,10 +131,12 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies }) {
   }
 
   return `
-    <div class="comment status-${c.status}" id="comment-${c.id}" data-comment-id="${c.id}">
+    <div class="comment status-${c.status}${kindClass}" id="comment-${c.id}" data-comment-id="${c.id}">
       <div class="comment-meta">
         <strong>${escapeHtml(c.author_name)}</strong>
-        ${statusBadge}
+        ${kindBadge(c.kind)}
+        ${hasSuggestion ? '<span class="kind-badge kind-suggestion">Rewrite</span>' : ''}
+        ${praise ? '' : statusBadge}
         ${timeHtml(c.created_at)}
         ${c.edited_at ? '<span class="muted edited-tag">(edited)</span>' : ''}
       </div>
@@ -210,7 +245,113 @@ function nameCard() {
 }
 
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [] }) {
+// What kind of note, picked before or after writing it. Radio buttons in
+// a fieldset, so a screen reader hears "What kind of note, Note, 1 of 6"
+// and the arrow keys move between them. Plain note is the default because
+// it is what most notes are.
+function noteKindPicker(idPrefix) {
+  const kinds = [['', 'Note'], ['typo', 'Typo'], ['pacing', 'Pacing'], ['continuity', 'Continuity'], ['question', 'Question'], ['praise', '\u2665 Love it']];
+  return `
+    <fieldset class="note-kinds">
+      <legend class="sr-only">What kind of note</legend>
+      ${kinds.map(([value, label]) => `
+        <label class="note-kind${value ? ` kind-${value}` : ''}">
+          <input type="radio" name="kind" value="${value}"${value ? '' : ' checked'} id="${idPrefix}-kind-${value || 'note'}">
+          <span>${label}</span>
+        </label>`).join('')}
+    </fieldset>`;
+}
+
+// Which bible entry a continuity note is about. Only offered when the
+// reader can see the bible, and only shown once "Continuity" is picked.
+function entityPicker(entities) {
+  if (!entities || !entities.length) return '';
+  return `
+    <label class="entity-field">About (optional)
+      <select name="entityId">
+        <option value="">Nothing in particular</option>
+        ${entities.map((e) => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('')}
+      </select>
+    </label>`;
+}
+
+// Notes still waiting on an older version, because the words they were
+// about are not in this one. Without this line they would be behind the
+// version dropdown, which is to say gone.
+function leftBehindNotice(leftBehind) {
+  if (!leftBehind || !leftBehind.length) return '';
+  const byVersion = new Map();
+  for (const n of leftBehind) byVersion.set(n.version_number, (byVersion.get(n.version_number) || 0) + 1);
+  const links = [...byVersion.entries()].map(([v, count]) =>
+    `<a href="?v=${v}">${count} on v${v}</a>`).join(', ');
+  return `
+    <p class="left-behind">
+      ${leftBehind.length === 1 ? 'One note is' : `${leftBehind.length} notes are`} still waiting on an earlier version, because the passage ${leftBehind.length === 1 ? 'it was' : 'they were'} about has since been rewritten: ${links}.
+    </p>`;
+}
+
+// Asking for a read, and being asked. Two faces of one thing, and only
+// the people involved see either: the author sees who they asked and how
+// it went; the person asked sees the question, above the chapter, and a
+// way to say they are done. Everybody else sees nothing.
+function reviewBlock({ chapter, isChapterAuthor, requests = [], mine = null, people = [] }) {
+  if (mine && !isChapterAuthor) {
+    return `
+      <section class="review-ask" aria-label="A request to read this">
+        <p><strong>${escapeHtml(mine.requested_by_name || 'The author')} asked you to read this.</strong>
+        ${mine.question ? `<span class="review-question">&ldquo;${escapeHtml(mine.question)}&rdquo;</span>` : ''}</p>
+        <form method="post" action="/review-requests/${mine.id}/done" class="review-done-form">
+          <label class="sr-only" for="review-done-note">A line for ${escapeHtml(chapter.author_name)} (optional)</label>
+          <input type="text" id="review-done-note" name="note" maxlength="1000" placeholder="A line for ${escapeHtml(chapter.author_name)}, if you like: &ldquo;Loved the ending, notes on the middle&rdquo;">
+          <button class="btn small" type="submit">${ICONS.tick}I've finished reading</button>
+        </form>
+      </section>`;
+  }
+  if (!isChapterAuthor) return '';
+
+  const rows = requests.map((r) => {
+    const state = r.done_at
+      ? `<span class="review-state done">${ICONS.tick}Done ${timeHtml(r.done_at)}</span>`
+      : `<span class="review-state waiting">Waiting since ${timeHtml(r.created_at)}</span>`;
+    const notes = r.notes_since ? ` &middot; ${r.notes_since} note${r.notes_since === 1 ? '' : 's'}` : '';
+    return `
+      <li>
+        <strong>${escapeHtml(r.reviewer_name)}</strong> ${state}${notes}
+        ${r.done_note ? `<span class="review-done-note">&ldquo;${escapeHtml(r.done_note)}&rdquo;</span>` : ''}
+        ${!r.done_at ? `
+          <form method="post" action="/review-requests/${r.id}/withdraw" class="inline-form"
+                data-confirm="Take back the request to ${escapeHtml(r.reviewer_name)}?">
+            <button class="btn tiny ghost" type="submit">Take back</button>
+          </form>` : ''}
+      </li>`;
+  }).join('');
+
+  const form = people.length ? `
+    <details class="review-form">
+      <summary>${requests.length ? 'Ask somebody else, or ask again' : 'Ask someone to read this'}</summary>
+      <form method="post" action="/chapters/${chapter.id}/review-requests">
+        <fieldset class="review-people">
+          <legend>Who</legend>
+          ${people.map((p) => `
+            <label class="tag-pick"><input type="checkbox" name="reviewer" value="${p.id}"> <span>${escapeHtml(p.display_name)}</span></label>`).join('')}
+        </fieldset>
+        <label>What you want to know (optional)
+          <textarea name="question" rows="2" maxlength="1000" placeholder="Does the jump in time work? Is the fight too long?"></textarea>
+          <span class="hint">A question gets better notes than &ldquo;thoughts?&rdquo;. They see it above the chapter, and on their front page until they say they are done.</span>
+        </label>
+        <button class="btn small" type="submit">Ask</button>
+      </form>
+    </details>` : '';
+
+  if (!rows && !form) return '';
+  return `
+    <section class="review-requests" id="review-requests" aria-label="Asked to read">
+      ${rows ? `<ul class="review-list">${rows}</ul>` : ''}
+      ${form}
+    </section>`;
+}
+
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '' }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -228,7 +369,8 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
   // in the margin -- and it is better information either way.
   const anchored = topLevel.filter((c) => c.start_offset != null && c.end_offset != null);
   const general = topLevel.filter((c) => c.start_offset == null || c.end_offset == null);
-  const render = (c) => renderComment(c, { isChapterAuthor, currentUserId: user.id, replies: repliesByParent[c.id] || [] });
+  const isLatest = currentVersion.id === versions[0].id;
+  const render = (c) => renderComment(c, { isChapterAuthor, currentUserId: user.id, replies: repliesByParent[c.id] || [], isLatest });
   const anchoredHtml = anchored.map(render).join('');
   const generalHtml = general.length ? `
     <section class="general-notes">
@@ -237,7 +379,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     </section>` : '';
 
   const commentsHtml = topLevel.length
-    ? topLevel.map((c) => renderComment(c, { isChapterAuthor, currentUserId: user.id, replies: repliesByParent[c.id] || [] })).join('')
+    ? topLevel.map(render).join('')
     : emptyState({
       art: 'margin',
       title: 'No comments on this version',
@@ -331,6 +473,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         </div>
       </div>
     </div>
+    ${reviewHtml}
     <div class="chapter-body-grid">
       <div class="reading-pane">
         <div id="chapter-text" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}" data-story-id="${chapter.story_id}" data-can-edit-dictionary="${isChapterAuthor ? '1' : '0'}" data-is-author="${isChapterAuthor ? '1' : '0'}">${highlighted}</div>
@@ -338,6 +481,8 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       <aside class="comments-pane">
         ${nameCard()}
         <h2>Comments</h2>
+        ${appliedFrom ? `<p class="flash-inline" role="status">${ICONS.tick}The rewrite from ${escapeHtml(appliedFrom)} is in the text. This is the new version; the one before it is still in the history.</p>` : ''}
+        ${isLatest ? leftBehindNotice(leftBehind) : ''}
         <div id="comment-list">${topLevel.length ? anchoredHtml : commentsHtml}</div>
         ${generalHtml}
 
@@ -348,7 +493,14 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
             <input type="hidden" name="start" id="nc-start">
             <input type="hidden" name="end" id="nc-end">
             <input type="hidden" name="quoted" id="nc-quoted">
-            <textarea name="body" id="nc-body" required maxlength="4000" placeholder="Comment on the selected passage"></textarea>
+            ${noteKindPicker('nc')}
+            ${entityPicker(entities)}
+            <textarea name="body" id="nc-body" maxlength="4000" placeholder="Comment on the selected passage" aria-label="Your note"></textarea>
+            <label class="suggest-toggle"><input type="checkbox" name="suggestSend" value="1" id="nc-suggest-toggle"> Suggest a rewrite of the passage</label>
+            <label class="suggest-field">How you would write it
+              <textarea name="suggestion" id="nc-suggestion" maxlength="4000" rows="3"></textarea>
+              <span class="hint">Change the words in place. The author sees exactly what you changed and can put it into the text with one click.</span>
+            </label>
             <div class="row">
               <button type="submit" class="btn small">Comment</button>
               <button type="button" class="btn small ghost" id="nc-cancel">Cancel</button>
@@ -360,7 +512,8 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
           <summary>General comment (no text selected)</summary>
           <form method="post" action="/chapters/${chapter.id}/comments">
             <input type="hidden" name="versionId" value="${currentVersion.id}">
-            <textarea name="body" required maxlength="4000" placeholder="General comment about this version"></textarea>
+            ${noteKindPicker('gc')}
+            <textarea name="body" maxlength="4000" placeholder="General comment about this version" aria-label="Your note"></textarea>
             <button type="submit" class="btn small">Comment</button>
           </form>
         </details>
@@ -482,4 +635,5 @@ module.exports = {
   diffVersionOptions,
   renderComment,
   renderReply,
+  reviewBlock,
 };
