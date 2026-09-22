@@ -206,8 +206,15 @@ body {
   overflow-x: hidden;
 }
 
-a { color: var(--accent-strong); text-decoration: none; }
-a:hover { text-decoration: underline; text-underline-offset: 2px; }
+/* A link is ink with a thin rule under it. It used to be red, and red is
+   the one colour that means "this is waiting for you" -- with every link
+   in the app wearing it, the red that mattered (a note, a request, a
+   count) stopped standing out from the red that did not. */
+a {
+  color: inherit; text-decoration-line: underline; text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+a:hover { text-decoration-color: currentColor; }
 
 /* Headings are set, not styled: one weight, tight, flush left, and the
    tracking closing up as the size grows. */
@@ -227,10 +234,6 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.02em; line-height: 1.25; }
    as signposts, not as sentences, and setting them all one way means the
    eye learns the difference between a label and a thing in about two
    pages. */
-.byline,
-.breadcrumb,
-.chapter-row-meta,
-.readers-line,
 .story-stat-label,
 .comments-pane h2,
 .menu-heading,
@@ -266,23 +269,23 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.02em; line-height: 1.25; }
   background: var(--bg);
 }
 .topbar .brand {
+  text-decoration: none;
   font-family: var(--font-display);
   font-weight: 700; font-size: var(--t-md); letter-spacing: -0.02em;
   text-transform: uppercase;
   color: var(--text);
 }
-.topbar .brand:hover { text-decoration: none; color: var(--accent-strong); }
+.topbar .brand:hover { text-decoration: none; color: var(--text); }
 .topbar nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
 /* The navigation links proper -- everything except the account cluster,
    which .topbar-user below peels off to the right. */
 .topbar nav > a {
-  color: var(--text-muted); font-size: var(--t-2xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: var(--label-tracking);
-  padding: var(--s-3) var(--s-4);
+  color: var(--text-muted); font-size: var(--t-sm); font-weight: 500;
+  padding: var(--s-3) var(--s-4); text-decoration: none;
 }
 .topbar nav > a:hover { color: var(--text); text-decoration: none; }
 /* Where you are is said in the one colour, not with a grey pill. */
-.topbar nav > a.current { color: var(--accent); }
+.topbar nav > a.current { color: var(--text); box-shadow: inset 0 -2px 0 var(--text); }
 /* The only red in the masthead, and the reason the bar needs no logo. */
 .topbar .brand-mark { color: var(--accent); font-weight: 700; }
 /* Who you are and how to leave -- set apart from the navigation proper by
@@ -295,14 +298,13 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.02em; line-height: 1.25; }
 .topbar-account > a,
 .topbar .whoami,
 .topbar .inline-form .linklike {
-  color: var(--text-muted); font-size: var(--t-2xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: var(--label-tracking);
+  color: var(--text-muted); font-size: var(--t-sm); font-weight: 500; text-decoration: none;
   padding: var(--s-3) var(--s-4);
 }
 .topbar .whoami { padding-right: 0; }
 .topbar-account > a:hover,
 .topbar .inline-form .linklike:hover { color: var(--text); text-decoration: none; }
-.topbar-account > a.current { color: var(--accent); }
+.topbar-account > a.current { color: var(--text); }
 
 .theme-toggle {
   display: flex; align-items: center; justify-content: center;
@@ -310,10 +312,10 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.02em; line-height: 1.25; }
   background: transparent; border: 1px solid transparent;
   color: var(--text-muted); font-size: var(--t-md); line-height: 1; cursor: pointer;
 }
-.theme-toggle:hover { color: var(--accent); background: transparent; }
+.theme-toggle:hover { color: var(--text); background: transparent; }
 
 .linklike {
-  background: none; border: none; color: var(--accent-strong); cursor: pointer;
+  background: none; border: none; color: inherit; cursor: pointer;
   font: inherit; padding: 0; text-decoration: none;
 }
 .linklike:hover { text-decoration: underline; }
@@ -352,19 +354,20 @@ h1 { margin-top: 0; }
   padding: var(--s-4) var(--s-6);
   border-radius: 0;
   font-family: var(--font-ui);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.11em;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
   cursor: pointer;
-  font-size: var(--t-2xs);
+  font-size: var(--t-sm);
   line-height: 1.4;
+  text-decoration: none;
   /* A button is a word inside a rectangle. There is no gradient, no
      shadow and no lift on hover, because none of those is what tells you
      it is pressable -- the box and the capitals are. What hover does is
      fill it with the one colour that means "act". */
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
-.btn:active { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn:active { background: var(--text); border-color: var(--text); }
 /* Inline SVG, inheriting whatever colour it sits in -- no icon font, no
    dependency. Only the verbs get one; a label with a picture beside every
    word is noise, not help. */
@@ -376,12 +379,12 @@ h1 { margin-top: 0; }
 /* The primary action is the only solid block of ink on a page, so there
    is never a question about which button it is. */
 .btn { background: var(--text); color: var(--btn-text); }
-.btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; text-decoration: none; }
+.btn:hover { background: color-mix(in srgb, var(--text) 82%, var(--bg)); border-color: var(--text); color: var(--btn-text); text-decoration: none; }
 /* Everything else is the same rectangle, empty. */
 .btn.ghost { background: transparent; color: var(--text); }
-.btn.ghost:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.ghost:hover { background: var(--bg-sunken); border-color: var(--border-strong); color: var(--text); }
 .btn.small { padding: var(--s-2) var(--s-5); }
-.btn.tiny { padding: var(--s-1) var(--s-4); font-size: 0.625rem; letter-spacing: 0.1em; }
+.btn.tiny { padding: var(--s-1) var(--s-4); font-size: var(--t-xs); letter-spacing: 0; }
 .btn.accept { background: var(--text); color: var(--btn-text); }
 .btn.reject { background: transparent; color: var(--text); }
 /* A destructive button does not invite: an empty rectangle that only goes
@@ -392,7 +395,7 @@ h1 { margin-top: 0; }
 
 /* --- auth --- */
 .auth-card {
-  max-width: 400px; margin: var(--s-10) 0 var(--s-12); background: var(--bg);
+  max-width: 440px; margin: var(--s-10) auto var(--s-12); background: var(--bg);
   border: 0; border-top: 2px solid var(--border-strong); padding: var(--s-8) 0 0;
 }
 .auth-card h1 { font-size: var(--t-2xl); margin-bottom: var(--s-2); }
@@ -473,7 +476,7 @@ select {
 .page-head .btn { flex-shrink: 0; }
 .breadcrumb { margin: 0 0 var(--s-6); font-size: var(--t-md); }
 .breadcrumb a { color: var(--text-muted); }
-.breadcrumb a:hover { color: var(--accent-strong); }
+.breadcrumb a:hover { color: var(--text); }
 /* The list of chapters in a story is a numbered index, and the counter
    lives here rather than in the markup so reordering a chapter renumbers
    it for free. Only chapters are numbered -- the story list on the front
@@ -500,7 +503,7 @@ select {
 }
 .chapter-row:hover {
   text-decoration: none;
-  box-shadow: inset 0 -2px 0 0 var(--accent);
+  box-shadow: inset 0 -2px 0 0 var(--text);
 }
 .chapter-row h3 { margin: 0 0 var(--s-2); font-size: var(--t-lg); }
 .chapter-row-main { min-width: 0; }
@@ -515,7 +518,7 @@ select {
   content: counter(ch, decimal-leading-zero);
   grid-row: 1 / span 4;
   font-size: var(--t-2xs); font-weight: 700; letter-spacing: 0.1em;
-  color: var(--accent); padding-top: 3px; font-variant-numeric: tabular-nums;
+  color: var(--text-muted); padding-top: 3px; font-variant-numeric: tabular-nums;
 }
 .chapter-row-main p { margin: 0; font-size: var(--t-md); line-height: 1.55; max-width: 62ch; }
 .chapter-row-meta {
@@ -641,8 +644,8 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
    it hangs from on the left. A card here was drawing a box around the one
    thing on screen that never needed one. */
 .reading-pane {
-  background: transparent; border: 0; border-left: 1px solid var(--border); border-radius: 0;
-  padding: var(--s-2) 0 0 var(--s-9);
+  background: transparent; border: 0; border-radius: 0;
+  padding: var(--s-2) 0 0 0;
   box-shadow: none;
   max-width: none;
 }
@@ -712,7 +715,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   text-decoration-color: var(--text-muted);
   text-decoration-thickness: 1px;
 }
-#chapter-text a.wiki-link:hover { color: var(--accent-strong); text-decoration-color: currentColor; }
+#chapter-text a.wiki-link:hover { color: var(--text); text-decoration-color: currentColor; }
 /* The reader's own "Wiki links" toggle (writing-analyzer.js) -- same
    neutralize-in-place pattern as .comments-hidden .hl below, so turning
    it off doesn't reflow the text, just makes it read as plain prose
@@ -959,7 +962,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   transition: transform 0.12s ease;
 }
 .user-log[open] > summary::before { transform: rotate(90deg); }
-.user-log > summary:hover { color: var(--accent); }
+.user-log > summary:hover { color: var(--text); }
 .log-list {
   list-style: none; margin: var(--s-4) 0 0; padding: 0;
   max-height: 340px; overflow-y: auto;
@@ -1025,7 +1028,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 }
 .glossary-door p { margin: 0; font-size: var(--t-sm); }
 .glossary-door:hover .door-count,
-.glossary-door:hover h2 { color: var(--accent); }
+.glossary-door:hover h2 { color: var(--text); }
 
 .directory-head, .glossary-directory > .muted { margin: 0 0 var(--s-3); }
 .directory-head {
@@ -1052,7 +1055,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   gap: var(--s-4); padding: var(--s-2) 0; font-size: var(--t-sm);
 }
 .family-list a { color: var(--text); text-decoration: none; }
-.family-list a:hover { color: var(--accent); text-decoration: underline; }
+.family-list a:hover { color: var(--text); text-decoration: underline; }
 .family-n { color: var(--text-muted); font-variant-numeric: tabular-nums; font-size: var(--t-xs); }
 .directory-foot {
   margin-top: var(--s-6); padding-top: var(--s-5);
@@ -1086,7 +1089,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   text-decoration: none; color: var(--text);
 }
 .az-bar span, .az-bar a.spent { color: var(--border); }
-.az-bar a:hover { color: var(--accent); }
+.az-bar a:hover { color: var(--text); }
 .letter-block { display: grid; grid-template-columns: 4ch 1fr; gap: var(--s-7); }
 .letter-block + .letter-block { margin-top: var(--s-8); }
 .letter-mark {
@@ -1133,8 +1136,8 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   letter-spacing: -0.02em;
 }
 .glossary-preview h3 a { color: var(--text); }
-.glossary-preview:hover { border-top-color: var(--accent); }
-.glossary-preview:hover h3 a { color: var(--accent); }
+.glossary-preview:hover { border-top-color: var(--text); }
+.glossary-preview:hover h3 a { color: var(--text); }
 .glossary-preview p {
   margin: 0; font-size: var(--t-sm); line-height: 1.5; color: var(--text-muted);
 }
@@ -1208,7 +1211,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
-.admin-inline-form summary:hover { color: var(--accent); }
+.admin-inline-form summary:hover { color: var(--text); }
 .admin-inline-form form { display: flex; gap: var(--s-3); margin-top: var(--s-3); }
 .admin-inline-form input { padding: var(--s-3) var(--s-4); font-size: var(--t-sm); }
 .named-invite-form { display: flex; gap: var(--s-4); margin-bottom: var(--s-5); max-width: 420px; }
@@ -1242,7 +1245,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 .writer-actions { padding-top: var(--s-3); }
 .writer-actions .btn { padding: var(--s-4) var(--s-8); }
 input:focus, textarea:focus, select:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent);
+  outline: none; border-color: var(--text); box-shadow: 0 0 0 1px var(--text);
   background: transparent;
 }
 /* Buttons/links had no visible focus state at all -- fine with a mouse,
@@ -1255,7 +1258,7 @@ input:focus, textarea:focus, select:focus {
   outline: none;
   /* Paper first, then ink. A ring of the page colour before the accent
      one, so it reads on a filled button as clearly as on the background. */
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--text);
 }
 
 /* --- writing analyzer (Hemingway-style highlights + markdown preview) --- */
@@ -1317,8 +1320,8 @@ input:focus, textarea:focus, select:focus {
 .wa-check-row input[type="checkbox"]:checked::after { content: none; }
 .wa-check-row.active {
   color: var(--text);
-  border-color: color-mix(in srgb, var(--wa-color, var(--accent)) 45%, var(--border));
-  background: color-mix(in srgb, var(--wa-color, var(--accent)) 9%, transparent);
+  border-color: var(--border);
+  background: transparent;
 }
 
 /* --- comments visibility toggle (shared by the reading and edit pages) --- */
@@ -1342,7 +1345,7 @@ input:focus, textarea:focus, select:focus {
   background: var(--bg-sunken); border: 1px solid var(--border-strong); border-radius: 0;
   transition: border-color 0.14s ease, box-shadow 0.14s ease;
 }
-.wa-editor-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.wa-editor-wrap:focus-within { border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
 .wa-overlay {
   position: absolute; top: 0; right: 0; bottom: 0; left: 0;
   margin: 0; padding: var(--editor-padding); border: none;
@@ -1493,8 +1496,8 @@ mark.wa-word { border-radius: 2px; padding: 0; cursor: pointer; background: tran
   display: inline-flex; align-items: center; gap: var(--s-3);
   padding: var(--s-2) var(--s-4); border: 1px solid var(--border); border-radius: 0;
   background: transparent; color: var(--text-muted);
-  font-family: var(--font-ui); font-size: var(--t-2xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: var(--label-tracking); white-space: nowrap;
+  font-family: var(--font-ui); font-size: var(--t-xs); font-weight: 500;
+  text-decoration: none; white-space: nowrap;
   transition: border-color 0.12s ease, color 0.12s ease;
 }
 .tag-chip:hover { border-color: var(--border-strong); color: var(--text); text-decoration: none; }
@@ -1665,7 +1668,7 @@ mark.wa-word { border-radius: 2px; padding: 0; cursor: pointer; background: tran
   text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
 .chapter-nav-arrow { color: var(--text-muted); white-space: nowrap; }
-.chapter-nav-arrow:hover { color: var(--accent); text-decoration: none; }
+.chapter-nav-arrow:hover { color: var(--text); text-decoration: none; }
 .chapter-nav-arrow.disabled { color: var(--text-muted); opacity: 0.3; }
 
 /* Read mode only (see reading.js): two arrows on the window's own edges,
@@ -1716,7 +1719,7 @@ main[data-reading="read"] .chapter-float { display: block; }
   background: transparent; color: var(--text);
   transition: border-color 0.12s ease;
 }
-.chapter-nav-link:hover { border-top-color: var(--accent); text-decoration: none; }
+.chapter-nav-link:hover { border-top-color: var(--text); text-decoration: none; }
 .chapter-nav-link.next { text-align: right; }
 /* The same shape as a chapter link, because it sits in the same slot and
    answers the same question -- but it is an action, so it is the one in
@@ -1725,7 +1728,7 @@ main[data-reading="read"] .chapter-float { display: block; }
   display: flex; align-items: center; justify-content: flex-end; gap: var(--s-4);
   color: var(--accent);
 }
-.chapter-nav-link.add:hover .chapter-nav-title { color: var(--accent-strong); }
+.chapter-nav-link.add:hover .chapter-nav-title { color: var(--text); }
 .chapter-nav-dir { font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--label-tracking); }
 .chapter-nav-title {
   font-family: var(--font-display); font-size: var(--t-base); line-height: 1.3;
@@ -1822,7 +1825,7 @@ main[data-reading="read"] .chapter-float { display: block; }
 /* --- search ----------------------------------------------------------- */
 .topbar-search { display: flex; margin-left: var(--s-2); }
 .topbar-search input[type="search"] {
-  width: 150px; padding: var(--s-2) var(--s-4); font-size: var(--t-sm); border-radius: 999px;
+  width: 150px; padding: var(--s-2) var(--s-4); font-size: var(--t-sm); border-radius: 0;
   background: var(--bg); border: 1px solid var(--border);
   transition: width 0.16s ease, border-color 0.14s ease;
 }
@@ -2050,7 +2053,7 @@ mark.search-hit {
   box-shadow: inset 2px 0 0 0 transparent;
   transition: box-shadow 0.12s ease;
 }
-.inbox-list a:hover { background: transparent; box-shadow: inset 2px 0 0 0 var(--accent); }
+.inbox-list a:hover { background: transparent; box-shadow: inset 2px 0 0 0 var(--text); }
 .inbox-count {
   grid-row: span 2;
   align-self: center;
@@ -2279,15 +2282,15 @@ mark.search-hit {
 }
 .mode-switch button {
   border: 0; border-radius: 0; background: transparent; box-shadow: none;
-  font: inherit; font-family: var(--font-ui); font-size: var(--t-2xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.1em;
+  font: inherit; font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 600;
+  text-transform: none; letter-spacing: 0;
   padding: var(--s-3) var(--s-5); cursor: pointer; color: var(--text-muted);
   transition: background 0.12s ease, color 0.12s ease;
 }
 .mode-switch button + button { border-left: 1px solid var(--border-strong); }
 .mode-switch button:hover { color: var(--text); }
-.mode-switch button[aria-pressed="true"] { background: var(--accent); color: #fff; }
-.mode-switch button:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+.mode-switch button[aria-pressed="true"] { background: var(--text); color: var(--btn-text); }
+.mode-switch button:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--text); }
 
 main[data-reading="read"] .chapter-body-grid { grid-template-columns: 1fr; }
 main[data-reading="read"] .comments-pane,
@@ -2479,7 +2482,7 @@ main[data-reading="read"] .chapter-body-grid > .reading-pane {
 .rel-main { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); align-items: baseline; min-width: 0; }
 .rel-remove { flex: 0 0 auto; }
 .appearance-list a, .relation-list a { color: var(--text); text-decoration: none; }
-.appearance-list a:hover, .relation-list a:hover { color: var(--accent); text-decoration: underline; }
+.appearance-list a:hover, .relation-list a:hover { color: var(--text); text-decoration: underline; }
 .ent-mentions { flex: 0 0 auto; color: var(--text-muted); font-size: var(--t-xs); text-align: right; }
 .rel-kind { color: var(--text-muted); font-size: var(--t-xs); }
 .rel-label {
@@ -2495,7 +2498,7 @@ main[data-reading="read"] .chapter-body-grid > .reading-pane {
   text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
 .appearance-editor > summary::-webkit-details-marker { display: none; }
-.appearance-editor > summary:hover { color: var(--accent); }
+.appearance-editor > summary:hover { color: var(--text); }
 .appearance-ticks { list-style: none; margin: var(--s-4) 0; padding: 0; }
 .appearance-ticks li { padding: var(--s-2) 0; }
 .tick { display: flex; gap: var(--s-4); align-items: baseline; font-size: var(--t-sm); text-transform: none; letter-spacing: normal; font-weight: 400; }
@@ -2511,7 +2514,7 @@ main[data-reading="read"] .chapter-body-grid > .reading-pane {
 .cast-line { display: flex; flex-wrap: wrap; gap: var(--s-4) var(--s-7); }
 .cast-line li { display: flex; gap: var(--s-3); align-items: baseline; }
 .cast-line a { color: var(--text); text-decoration: none; font-weight: 700; }
-.cast-line a:hover { color: var(--accent); }
+.cast-line a:hover { color: var(--text); }
 .cast-note { color: var(--text-muted); font-size: var(--t-xs); }
 
 @media (max-width: 1000px) {
@@ -2656,7 +2659,7 @@ main[data-reading="read"] .chapter-body-grid > .reading-pane {
 .writer-section > summary, .md-hint > summary {
   cursor: pointer; list-style-position: outside;
 }
-.writer-section > summary:hover, .md-hint > summary:hover { color: var(--accent); }
+.writer-section > summary:hover, .md-hint > summary:hover { color: var(--text); }
 .md-hint > summary {
   font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking);
@@ -2695,7 +2698,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
   cursor: pointer; font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
 }
-.beside > summary:hover { color: var(--accent); }
+.beside > summary:hover { color: var(--text); }
 .beside-body { margin-top: var(--s-5); }
 .beside-body .writer-section-label { margin-top: var(--s-6); }
 .beside-filter { width: 100%; max-width: 24rem; margin-bottom: var(--s-4); }
@@ -2705,7 +2708,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
   display: flex; gap: var(--s-5); align-items: baseline; justify-content: space-between;
   padding: var(--s-4) 0; color: var(--text); text-decoration: none;
 }
-.beside-picks a:hover { color: var(--accent); }
+.beside-picks a:hover { color: var(--text); }
 .beside-note {
   flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: var(--t-xs); color: var(--text-muted);
@@ -2732,7 +2735,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .name-card-body .beside-head { margin-bottom: var(--s-4); }
 .name-card-body .beside-head + .summary { margin-top: 0; }
 .name-card-body h3 a { color: inherit; text-decoration: none; }
-.name-card-body h3 a:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+.name-card-body h3 a:hover { text-decoration: underline; text-decoration-color: currentColor; }
 .name-card-body .summary { margin: 0 0 var(--s-4); }
 .name-card-body .reading-pane { padding-left: var(--s-5); padding-block: 0; font-size: var(--t-sm); }
 .name-card-body .reading-pane p { margin: 0 0 var(--s-4); }
@@ -2798,7 +2801,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 }
 .tl-what { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-3) var(--s-5); }
 .tl-what a { color: var(--text); text-decoration: none; font-weight: 700; }
-.tl-what a:hover { color: var(--accent); }
+.tl-what a:hover { color: var(--text); }
 .tl-when, .tl-note {
   font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: var(--label-tracking);
@@ -3037,7 +3040,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .outline-number { font-weight: 700; color: var(--text); }
 .outline-title { min-width: 16ch; }
 .outline-title a { color: var(--text); text-decoration: none; font-weight: 700; }
-.outline-title a:hover { color: var(--accent); }
+.outline-title a:hover { color: var(--text); }
 .outline-arc {
   display: block; font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted);
   text-transform: uppercase; letter-spacing: var(--label-tracking); margin-top: var(--s-2);
@@ -3130,7 +3133,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
   max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .bars th a { color: var(--text); text-decoration: none; }
-.bars th a:hover { color: var(--accent); }
+.bars th a:hover { color: var(--text); }
 .bar-note {
   display: block; font-size: var(--t-2xs); color: var(--text-muted);
   text-transform: uppercase; letter-spacing: var(--label-tracking); font-weight: 700;
@@ -3158,7 +3161,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 }
 .presence th[scope="row"] { text-align: left; text-transform: none; letter-spacing: normal; font-size: var(--t-sm); color: var(--text); }
 .presence th[scope="row"] a { color: inherit; text-decoration: none; }
-.presence th[scope="row"] a:hover { color: var(--accent); }
+.presence th[scope="row"] a:hover { color: var(--text); }
 .cell {
   display: inline-block; width: 16px; height: 16px;
   background: var(--bg-sunken); border: 1px solid var(--border);
@@ -3212,12 +3215,10 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 /* The kind of a note, beside the name. A word, not a coloured pill: the
    kind is a label for reading the column quickly, never an alarm. */
 .kind-badge {
-  font-size: var(--t-2xs); font-weight: 600; text-transform: uppercase;
+  font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
   letter-spacing: var(--label-tracking); color: var(--text-muted);
-  border: 1px solid var(--border); padding: 0 var(--s-3);
 }
-.kind-badge.kind-praise { color: var(--text); border-color: var(--border-strong); }
-.kind-badge.kind-suggestion { color: var(--text); border-color: var(--text); }
+.kind-badge.kind-praise, .kind-badge.kind-suggestion { color: var(--text); }
 .status-badge.status-praise { color: var(--text); }
 .comment.kind-praise { border-top-color: var(--text); }
 
@@ -3434,7 +3435,7 @@ body.writing-focus textarea[data-editor-tools] { min-height: 70vh; }
    whose ticks are the reader's own doing. */
 .welcome { margin: 0 0 var(--s-10); }
 .welcome .welcome-head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s-4); }
-.welcome .welcome-head h2 { flex: 1; color: var(--accent); border-top-color: var(--accent); }
+.welcome .welcome-head h2 { flex: 1; color: var(--text); }
 .welcome .welcome-head .inline-form { padding-top: var(--s-3); }
 .welcome-lede { margin: 0 0 var(--s-5); font-size: var(--t-lg); max-width: 60ch; }
 .welcome-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-6); }
@@ -3484,3 +3485,78 @@ body.writing-focus textarea[data-editor-tools] { min-height: 70vh; }
   .story-page-cover { width: 84px; height: 112px; }
   .story-row .chapter-row-meta { flex-basis: 100%; }
 }
+
+
+/* ======================================================================
+   Refinements, 2026-09-22 -- a designer's pass over the whole system.
+
+   Three rules, applied everywhere:
+   1. Red means "waiting for you" and nothing else. Links, the current
+      page, focus rings and pressed buttons are ink.
+   2. Spaced capitals are for the small labels over a section. Bylines,
+      breadcrumbs, the meta at the end of a row and every button are
+      sentence case, at a size you can read without leaning in.
+   3. A control you can touch is at least 44px tall on a phone.
+   ====================================================================== */
+
+/* Links that are part of a component -- a row, a button, the navigation --
+   are the component, and do not also wear the underline a link in a
+   sentence does. */
+.btn, .row-link, a.chapter-row, .chapter-row a, .inbox-list a, .breadcrumb a,
+.chapter-nav a, .chapter-float a, .menu-panel a, a.tag-chip, .glossary-row,
+.figure-shot, .name-card-more a, .topbar a, .story-row h3 a, .chapter-row h3 a {
+  text-decoration: none;
+}
+.chapter-row h3 a:hover, .story-row h3 a:hover { text-decoration: underline; text-decoration-color: currentColor; }
+
+/* The signposts: bylines, breadcrumbs, the meta at the end of a row. */
+.byline, .breadcrumb, .readers-line, .chapter-row-meta {
+  text-transform: none; letter-spacing: 0; font-size: var(--t-sm); font-weight: 500;
+}
+.breadcrumb { font-size: var(--t-sm); }
+.byline a, .chapter-row-meta a { color: var(--text); }
+
+/* A title and its meta used to be 64px and 11px with nothing between.
+   One step down on the display size, and the meta above grows to 13px. */
+h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
+.chapter-header h1 { font-size: clamp(var(--t-2xl), 3.4vw, 2.375rem); }
+
+/* Controls on the chapter bar sit on one line of equal height. */
+.version-bar .btn, .mode-switch button, .reading-prefs > summary { min-height: 32px; }
+.reading-prefs-row.fill-row { justify-content: space-between; }
+
+/* Notes on a phone: tapping an underlined passage brings its note up from
+   the bottom of the screen, over the text, instead of scrolling a long way
+   down to where the notes are listed. */
+.note-sheet-backdrop { display: none; }
+@media (max-width: 999px) {
+  .comment.as-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    max-height: 70vh; overflow-y: auto; margin: 0;
+    background: var(--bg); padding: var(--s-6) var(--s-6) var(--s-8);
+    border-top: 2px solid var(--accent);
+    box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.18);
+  }
+  .comment.as-sheet.status-accepted, .comment.as-sheet.kind-praise { border-top-color: var(--text); }
+  .note-sheet-backdrop.open {
+    display: block; position: fixed; inset: 0; z-index: 89; background: rgba(0, 0, 0, 0.28);
+  }
+  .note-sheet-close { float: right; }
+}
+
+@media (max-width: 720px) {
+  /* Thumb-sized: every button, the Reply and Edit folds, the mode switch. */
+  .btn, .btn.small, .btn.tiny, .mode-switch button, .editor-tool { min-height: 44px; }
+  .btn.tiny { padding-left: var(--s-5); padding-right: var(--s-5); }
+  .reply-box > summary, .edit-comment > summary, .general-comment > summary {
+    min-height: 44px; display: flex; align-items: center;
+  }
+  .note-kind span { display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--s-5); }
+}
+
+/* The last few capitals that were really sentences. */
+.chapter-nav-arrow, .chapter-nav-dir, .version-bar label, .wa-width-label,
+.editor-tool.tool-focus, .review-form summary, .general-comment summary {
+  text-transform: none !important; letter-spacing: 0 !important; font-size: var(--t-sm) !important; font-weight: 500;
+}
+.comment.as-sheet:focus { outline: none; }

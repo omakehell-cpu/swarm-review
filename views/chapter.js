@@ -403,9 +403,12 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         currentVersion.word_count ? ` &middot; ${wordCount(currentVersion.word_count)}` : ''
       }${
         neighbours && neighbours.total > 1 ? ` &middot; <a href="/stories/${chapter.story_id}">chapter ${neighbours.position} of ${neighbours.total}</a>` : ''
+      }${
+        // Who has read it belongs to the same line as who wrote it: one
+        // line of facts under the title rather than two.
+        isChapterAuthor ? ` &middot; ${readersLine(readers, currentVersion.version_number)}` : ''
       }</p>
       ${chapter.summary ? `<p class="summary">${escapeHtml(chapter.summary)}</p>` : ''}
-      ${isChapterAuthor ? `<p class="readers-line">${readersLine(readers, currentVersion.version_number)}</p>` : ''}
       <div class="version-bar">
         <div class="version-context">
           <label>Version:
@@ -448,9 +451,14 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
                   <button type="button" data-pref="reading-leading" data-value="2.05">Loose</button>
                 </div>
               </div>
+              <div class="reading-prefs-row fill-row">
+                <span>Page width</span>
+                <div class="reading-prefs-options">
+                  <button id="reading-fill-screen" type="button">Fill screen</button>
+                </div>
+              </div>
             </div>
           </details>
-          <button id="reading-fill-screen" class="btn ghost small" type="button">Fill screen</button>
           ${isChapterAuthor ? `<a class="btn ghost small" href="/chapters/${chapter.id}/edit">Edit</a>` : ''}
           <details class="menu">
             <summary class="btn ghost small">More</summary>
