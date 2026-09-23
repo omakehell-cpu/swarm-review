@@ -83,10 +83,10 @@ function helpTopicPage({ user, topic, topics = [] }) {
 
 // Releases the reader has not seen are marked rather than hidden: the
 // point of a changelog is that you can also read the ones you have.
-function changelogPage({ user, releases = [], seenAt = null }) {
-  const isNew = (release) => !seenAt || release.date > String(seenAt).slice(0, 10);
+function changelogPage({ user, releases = [], unseen = new Set() }) {
+  const isNew = (release) => unseen.has(docs.releaseKey(release));
   const sections = releases.map((release) => `
-    <section class="release${isNew(release) ? ' unseen' : ''}">
+    <section class="release${isNew(release) ? ' unseen' : ''}" id="${docs.releaseAnchor(release)}">
       <h2 class="release-head">
         <span class="release-date">${releaseDate(release.date)}</span>
         ${release.heading ? `<span class="release-title">${escapeHtml(release.heading)}</span>` : ''}
@@ -97,9 +97,8 @@ function changelogPage({ user, releases = [], seenAt = null }) {
   return layout({
     title: "What's new",
     user,
-    current: 'help',
+    current: 'whats-new',
     body: `
-      <p class="breadcrumb"><a href="/help">&larr; How to</a></p>
       <div class="page-head"><h1>What's new</h1></div>
       <p class="muted">Every change to the site, newest first, in plain language. Anything published since you last looked is marked. The dates are when the work was done -- if something here is missing on the site, it has not been restarted yet.</p>
       ${sections || '<p class="muted">Nothing recorded yet.</p>'}`,

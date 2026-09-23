@@ -19,9 +19,11 @@ async function handleHelpIndex(req, res, user) {
 async function handleChangelog(req, res, user) {
   // What they had seen before this visit is what the marks are about, so
   // it is read first and the column moved on afterwards.
-  const seenAt = user.changelog_seen_at || null;
-  models.markChangelogSeen(user.id, docs.latestReleaseDate());
-  sendHtml(res, 200, views.changelogPage({ user, releases: docs.listReleases(), seenAt }));
+  const unseen = new Set(docs.unseenReleases(user).map(docs.releaseKey));
+  models.markChangelogSeen(user.id, docs.latestReleaseDate(), docs.latestReleaseKey());
+  // The nav's dot is about this very page, so it goes now, not next time.
+  const seenUser = { ...user, changelog_seen_key: docs.latestReleaseKey() };
+  sendHtml(res, 200, views.changelogPage({ user: seenUser, releases: docs.listReleases(), unseen }));
 }
 
 async function handleHelpTopic(req, res, user, slug) {

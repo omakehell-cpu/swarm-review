@@ -201,7 +201,28 @@ function activityPage({ user, activity }) {
   });
 }
 
-function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null, activity = [], welcome = null }) {
+// What changed on the site since this reader last looked. Shown once: the
+// route marks it seen as it hands it over, and after that it lives under
+// What's new in the menu.
+function whatsNewCard(whatsNew) {
+  if (!whatsNew || !whatsNew.releases.length) return '';
+  const items = whatsNew.releases.map((r) => `
+      <li>
+        <a href="/help/changelog#${escapeHtml(r.anchor)}">${escapeHtml(r.heading || r.date)}</a>
+        ${r.highlights.length ? `<span class="whats-new-points">${r.highlights.map(escapeHtml).join(' &middot; ')}</span>` : ''}
+      </li>`).join('');
+  return `
+    <section class="whats-new-card" aria-labelledby="whats-new-title">
+      <h2 id="whats-new-title">New on the site since you were last here</h2>
+      <ul class="whats-new-list">${items}</ul>
+      <p class="whats-new-foot">
+        <a href="/help/changelog">${whatsNew.more ? `All of it, and ${whatsNew.more} more change${whatsNew.more === 1 ? '' : 's'}` : 'Read all about it'} &rarr;</a>
+        <span class="muted">This note shows once. It stays under What's new in the menu.</span>
+      </p>
+    </section>`;
+}
+
+function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null, activity = [], welcome = null, whatsNew = null }) {
   const sinceQs = since ? `?since=${encodeURIComponent(since)}` : '';
   const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
   const rows = stories.length
@@ -263,6 +284,7 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
         <h1>The Swarm stories</h1>
         <a class="btn" href="/stories/new">New story</a>
       </div>
+      ${activeTags.length ? '' : whatsNewCard(whatsNew)}
       ${activeTags.length ? '' : welcomeCard(welcome)}
       ${activeTags.length ? '' : inboxSection(inbox)}
       ${activeTags.length ? '' : activityStrip(activity)}

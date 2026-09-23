@@ -714,9 +714,12 @@ test('the help section is readable, and the changelog marks what is new', async 
 test('opening the changelog does not mark the stories read', async () => {
   const before = models.getUserByUsername(USER.username);
   const lastSeen = before.last_seen_at;
+  // A new member is welcomed rather than told the site's history, and
+  // the front page counts that as seen -- so start from never having seen it.
+  require('../db').prepare('UPDATE users SET changelog_seen_at = NULL, changelog_seen_key = NULL WHERE id = ?').run(before.id);
 
   const first = await (await request('/help/changelog')).text();
-  // Never opened before, so every batch is marked.
+  // Never seen, so every batch is marked.
   assert.match(first, /New to you/);
 
   const after = models.getUserByUsername(USER.username);
@@ -736,8 +739,46 @@ test('the nav carries a dot only while there is something unread', async () => {
   // database file the server is using, opened through the same module.
   const db = require('../db');
   const user = models.getUserByUsername(USER.username);
-  db.prepare("UPDATE users SET changelog_seen_at = '2000-01-01 00:00:00' WHERE id = ?").run(user.id);
-  assert.match(await (await request('/')).text(), /nav-dot/);
+  db.prepare("UPDATE users SET changelog_seen_at = '2000-01-01 00:00:00', changelog_seen_key = NULL WHERE id = ?").run(user.id);
+  assert.match(await (await request('/help')).text(), /nav-dot/);
+});
+
+test('what changed since the last visit is said once on the front page, then not again until something newer', async () => {
+  const db = require('../db');
+  const docs = require('../lib/docs');
+  const user = models.getUserByUsername(USER.username);
+  db.prepare("UPDATE users SET welcome_dismissed_at = datetime('now') WHERE id = ?").run(user.id);
+  const releases = docs.listReleases();
+  assert.ok(releases.length >= 2, 'the changelog has at least two batches');
+
+  // Last saw the second-newest batch: only the newest is news.
+  db.prepare('UPDATE users SET changelog_seen_key = ? WHERE id = ?').run(docs.releaseKey(releases[1]), user.id);
+  const first = await (await request('/')).text();
+  assert.match(first, /class="whats-new-card"/);
+  assert.ok(first.includes(`#${docs.releaseAnchor(releases[0])}`), 'it links to the newest batch');
+  assert.ok(!first.includes(`#${docs.releaseAnchor(releases[1])}`), 'and not to the one already seen');
+  assert.ok(!first.includes('nav-dot'), 'having been told, there is no dot either');
+
+  // Seen once: gone, on the front page and in the menu.
+  const second = await (await request('/')).text();
+  assert.ok(!second.includes('whats-new-card'));
+  assert.strictEqual(models.getUserByUsername(USER.username).changelog_seen_key, docs.latestReleaseKey());
+
+  // The menu has What's new right after Stories.
+  assert.match(second, /href="\/"[^>]*>Stories<\/a>\s*<a href="\/help\/changelog"[^>]*>What's new/);
+});
+
+test('an invite comes with a link that fills in its own code', async () => {
+  const page = await (await fetch(`${app.base}/register?code=abc123&username=nuevo`)).text();
+  assert.match(page, /name="inviteCode" value="abc123"/);
+  assert.match(page, /name="username" value="nuevo"/);
+
+  // On the admin page, each code that works has a button to copy it as a
+  // message, and the script that runs it is loaded.
+  await request('/admin/invite-code/named', { method: 'POST', ...form([['username', 'invitada']]) });
+  const admin = await (await request('/admin')).text();
+  assert.match(admin, /data-copy-invite data-code="[^"]+" data-username="invitada"/);
+  assert.match(admin, /<script src="\/js\/copy-invite\.js" defer><\/script>/);
 });
 
 

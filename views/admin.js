@@ -5,6 +5,14 @@ const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
 const { eventLog } = require('./people');
 const { wiki } = require('./shared');
+// The whole invite as a message to paste into a chat or an email: where
+// to go, the code, and for a named invite the username it is tied to. The
+// page's own address is added in the browser (see copy-invite.js), so it
+// is whatever address the admin is using.
+function copyInviteButton(code, username = '') {
+  return `<button type="button" class="btn small copy-invite" data-copy-invite data-code="${escapeHtml(code)}"${username ? ` data-username="${escapeHtml(username)}"` : ''} hidden>Copy the invite${username ? ` for @${escapeHtml(username)}` : ''}</button>`;
+}
+
 function inviteCodeCard(activeInviteCode) {
   if (!activeInviteCode) {
     return `
@@ -21,8 +29,9 @@ function inviteCodeCard(activeInviteCode) {
       <p class="invite-code">${escapeHtml(activeInviteCode.code)}</p>
       <p class="muted">Created ${timeHtml(activeInviteCode.created_at)}${activeInviteCode.created_by_name ? ` by ${escapeHtml(activeInviteCode.created_by_name)}` : ''}</p>
       <div class="row">
+        ${copyInviteButton(activeInviteCode.code)}
         <form method="post" action="/admin/invite-code/generate" class="inline-form">
-          <button class="btn small" type="submit">Generate a new code</button>
+          <button class="btn small ghost" type="submit">Generate a new code</button>
         </form>
         <form method="post" action="/admin/invite-code/close" class="inline-form" data-confirm="Close registration? Nobody will be able to register until you generate a new code.">
           <button class="btn small ghost" type="submit">Close registration</button>
@@ -64,6 +73,7 @@ function namedInviteRow(inv) {
         <p class="muted small-meta">Code: <span class="invite-code-inline">${escapeHtml(inv.code)}</span> &middot; created ${timeHtml(inv.created_at)}${inv.created_by_name ? ` by ${escapeHtml(inv.created_by_name)}` : ''}</p>
       </div>
       <div class="admin-user-actions">
+        ${copyInviteButton(inv.code, inv.username)}
         <form method="post" action="/admin/invite-code/named/${inv.id}/revoke" class="inline-form" data-confirm="Revoke this invite? The code will stop working.">
           <button class="btn small ghost" type="submit">Revoke</button>
         </form>
@@ -300,6 +310,7 @@ function resetLinksSection(pendingResetLinks) {
 module.exports = {
   adminPage,
   adminUserRow,
+  copyInviteButton,
   inviteCodeCard,
   inviteCodeHistoryTable,
   namedInviteRow,

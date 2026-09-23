@@ -49,8 +49,14 @@ async function handleLoginSubmit(req, res) {
   redirect(res, '/');
 }
 
-async function handleRegisterPage(req, res) {
-  sendHtml(res, 200, views.registerPage({}));
+// An invite is sent as a link that fills in its own code (and, for an
+// invite made for one person, their username), so the person on the
+// other end has one thing to click and nothing to copy.
+async function handleRegisterPage(req, res, query) {
+  const clean = (value, max) => String(value || '').trim().slice(0, max);
+  sendHtml(res, 200, views.registerPage({
+    values: { username: clean(query && query.get('username'), 30), inviteCode: clean(query && query.get('code'), 64) },
+  }));
 }
 
 async function handleRegisterSubmit(req, res) {
@@ -139,7 +145,7 @@ async function handleResetPasswordSubmit(req, res, token) {
 const routes = [
   ['GET', '/login', (c) => handleLoginPage(c.req, c.res, c.url.searchParams)],
   ['POST', '/login', (c) => handleLoginSubmit(c.req, c.res)],
-  ['GET', '/register', (c) => handleRegisterPage(c.req, c.res)],
+  ['GET', '/register', (c) => handleRegisterPage(c.req, c.res, c.url.searchParams)],
   ['POST', '/register', (c) => handleRegisterSubmit(c.req, c.res)],
   ['POST', '/logout', (c) => handleLogout(c.req, c.res)],
   ['GET', /^\/reset-password\/([^/]+)$/, (c) => handleResetPasswordPage(c.req, c.res, c.m[1])],
