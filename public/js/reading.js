@@ -31,11 +31,20 @@
   // guess, and only until somebody says otherwise once.
   const MODE_KEY = 'reading-mode';
   const hasComments = bar.dataset.hasComments === '1';
-  let mode = store.get(MODE_KEY, '') || (hasComments ? 'review' : 'read');
+  // Somebody who has asked, on their account page, for chapters to open
+  // ready to read gets that every time, whatever this browser remembers.
+  const readFirst = bar.dataset.readFirst === '1';
+  let mode = readFirst ? 'read' : (store.get(MODE_KEY, '') || (hasComments ? 'review' : 'read'));
 
   function applyMode() {
     main.dataset.reading = mode;
     placeFloat();
+    // In Review, a passage with notes on it is announced as highlighted;
+    // in Read, nothing is put between the listener and the story.
+    for (const el of Array.from(text.querySelectorAll('.hl'))) {
+      if (mode === 'review') el.setAttribute('role', 'mark');
+      else el.removeAttribute('role');
+    }
     for (const el of bar.querySelectorAll('[data-mode]')) {
       const btn = /** @type {HTMLElement} */ (el);
       btn.setAttribute('aria-pressed', String(btn.dataset.mode === mode));

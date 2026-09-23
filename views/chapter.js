@@ -5,7 +5,7 @@ const { escapeHtml, toScriptJson } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
 const { chapterCastBlock, missingNamesBlock } = require('./bible');
-const { ICONS, STATUS_LABEL, emptyState, kindBadge, personLink, readersLine, suggestionDiff, wiki, wordCount } = require('./shared');
+const { ICONS, KIND_LABEL, STATUS_LABEL, emptyState, kindBadge, personLink, readersLine, suggestionDiff, wiki, wordCount } = require('./shared');
 function renderReply(r, { currentUserId }) {
   const isReplyAuthor = currentUserId === r.author_id;
   if (r.deleted_at) {
@@ -72,8 +72,24 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = 
 
   const canApply = isChapterAuthor && hasSuggestion && c.status === 'pending' && isLatest;
 
+  // What a screen reader hears first, and what heading navigation lands
+  // on: whose note, what kind, where it stands, and what it is about. The
+  // column is otherwise a run of names, badges and times with nothing to
+  // tell one note from the next.
+  const quoteGist = (c.quoted_text || '').replace(/\s+/g, ' ').trim();
+  const heading = [
+    `Note by ${c.author_name}`,
+    hasSuggestion ? 'suggested rewrite' : (KIND_LABEL[c.kind] || '').toLowerCase(),
+    praise ? '' : statusLabel.toLowerCase(),
+  ].filter(Boolean).join(', ') + (quoteGist ? `, on \u201c${quoteGist.length > 60 ? `${quoteGist.slice(0, 59)}\u2026` : quoteGist}\u201d` : ', on the whole chapter');
+  const srHead = `<h3 class="sr-only">${escapeHtml(heading)}, ${timeHtml(c.created_at)}</h3>`;
+  // Back to the words it is about -- the keyboard's way of doing what
+  // clicking the underline does the other way round.
+  const goto = c.start_offset != null ? `<a class="note-goto" href="#passage-${c.id}">Go to the passage</a>` : '';
+
   const inner = `
       ${quote}
+      ${goto}
       ${history ? `<p class="note-histories">${history}</p>` : ''}
       ${c.body ? `<p class="comment-body">${escapeHtml(c.body)}</p>` : ''}
       ${about}
@@ -98,7 +114,7 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = 
           </form>` : ''}
       </div>
       ${isCommentAuthor ? `
-        <details class="edit-comment">
+        <details class="edit-comment" aria-label="Edit your note">
           <summary>Edit</summary>
           <form method="post" action="/comments/${c.id}/edit">
             <textarea name="body" maxlength="4000"${hasSuggestion || praise ? '' : ' required'}>${escapeHtml(c.body)}</textarea>
@@ -106,8 +122,8 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = 
           </form>
         </details>` : ''}
       ${repliesHtml}
-      <details class="reply-box">
-        <summary>Reply</summary>
+      <details class="reply-box" aria-label="Reply to ${escapeHtml(c.author_name)}">
+        <summary aria-label="Reply to ${escapeHtml(c.author_name)}">Reply</summary>
         <form method="post" action="/comments/${c.id}/reply" class="reply-form">
           <input type="text" name="body" placeholder="Reply..." required maxlength="2000" aria-label="Reply to ${escapeHtml(c.author_name)}">
           <button type="submit" class="btn small ghost">Reply</button>
@@ -125,6 +141,7 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = 
         ${statusBadge}
         <span class="comment-gist">${escapeHtml(gist)}</span>
       </summary>
+      ${srHead}
       <p class="comment-when muted">${timeHtml(c.created_at)}${c.edited_at ? ' &middot; edited' : ''}</p>
       ${inner}
     </details>`;
@@ -132,7 +149,8 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = 
 
   return `
     <div class="comment status-${c.status}${kindClass}" id="comment-${c.id}" data-comment-id="${c.id}">
-      <div class="comment-meta">
+      ${srHead}
+      <div class="comment-meta" aria-hidden="true">
         <strong>${escapeHtml(c.author_name)}</strong>
         ${kindBadge(c.kind)}
         ${hasSuggestion ? '<span class="kind-badge kind-suggestion">Rewrite</span>' : ''}
@@ -162,11 +180,11 @@ function chapterNav(chapter, neighbours, { compact = false, canWrite = false } =
   if (compact) {
     if (total < 2) return '';
     return `
-      <nav class="chapter-nav compact" aria-label="Chapters">
+      <nav class="chapter-nav compact" aria-label="Chapters, before the text">
         ${prev ? `<a class="chapter-nav-arrow" href="/chapters/${prev.id}" title="${label(prev)}" rel="prev">&larr; Previous</a>`
-               : '<span class="chapter-nav-arrow disabled">&larr; Previous</span>'}
+               : '<span class="chapter-nav-arrow disabled" aria-hidden="true"></span>'}
         ${next ? `<a class="chapter-nav-arrow" href="/chapters/${next.id}" title="${label(next)}" rel="next">Next &rarr;</a>`
-               : '<span class="chapter-nav-arrow disabled">Next &rarr;</span>'}
+               : '<span class="chapter-nav-arrow disabled" aria-hidden="true"></span>'}
       </nav>`;
   }
   // The one at the foot of the chapter carries the titles: by the time
@@ -187,7 +205,7 @@ function chapterNav(chapter, neighbours, { compact = false, canWrite = false } =
     : '<span></span>';
   if (total < 2 && !canWrite) return '';
   return `
-    <nav class="chapter-nav foot" aria-label="Chapters">
+    <nav class="chapter-nav foot" aria-label="Chapters, after the text">
       ${prev ? `<a class="chapter-nav-link prev" href="/chapters/${prev.id}" rel="prev">
           <span class="chapter-nav-dir">&larr; Previous</span>
           <span class="chapter-nav-title">${label(prev)}</span>
@@ -212,11 +230,11 @@ function chapterFloatNav(chapter, neighbours) {
   const { prev, next } = neighbours;
   const label = (c) => `Chapter ${c.chapter_number}: ${escapeHtml(c.title)}`;
   return `
-    <nav class="chapter-float" aria-label="Chapters, while reading">
-      ${prev ? `<a class="chapter-float-arrow prev" href="/chapters/${prev.id}" rel="prev"
-          title="${label(prev)}" aria-label="Previous chapter" aria-keyshortcuts="ArrowLeft">&larr;</a>` : ''}
-      ${next ? `<a class="chapter-float-arrow next" href="/chapters/${next.id}" rel="next"
-          title="${label(next)}" aria-label="Next chapter" aria-keyshortcuts="ArrowRight">&rarr;</a>` : ''}
+    <nav class="chapter-float" aria-hidden="true">
+      ${prev ? `<a class="chapter-float-arrow prev" href="/chapters/${prev.id}" rel="prev" tabindex="-1"
+          title="${label(prev)}">&larr;</a>` : ''}
+      ${next ? `<a class="chapter-float-arrow next" href="/chapters/${next.id}" rel="next" tabindex="-1"
+          title="${label(next)}">&rarr;</a>` : ''}
     </nav>`;
 }
 
@@ -250,7 +268,7 @@ function nameCard() {
 // and the arrow keys move between them. Plain note is the default because
 // it is what most notes are.
 function noteKindPicker(idPrefix) {
-  const kinds = [['', 'Note'], ['typo', 'Typo'], ['pacing', 'Pacing'], ['continuity', 'Continuity'], ['question', 'Question'], ['praise', '\u2665 Love it']];
+  const kinds = [['', 'Note'], ['typo', 'Typo'], ['pacing', 'Pacing'], ['continuity', 'Continuity'], ['question', 'Question'], ['praise', '<span aria-hidden="true">\u2665 </span>Love it']];
   return `
     <fieldset class="note-kinds">
       <legend class="sr-only">What kind of note</legend>
@@ -390,7 +408,9 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
   // The story's own cast first, then whatever wiki names are left over
   // (see lib/cast-links.js); falling back to the wiki alone for any caller
   // that has not built the combined matcher.
-  const highlighted = renderHighlighted(ast, comments, findMatches || wiki.findWikiMatches);
+  // A reader who has asked for no links in the prose gets none at all:
+  // not the glossary's, not the bible's.
+  const highlighted = renderHighlighted(ast, comments, user.plain_names ? null : (findMatches || wiki.findWikiMatches));
 
   const body = `
     <div class="chapter-topline">
@@ -398,7 +418,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       ${chapterNav(chapter, neighbours, { compact: true })}
     </div>
     <div class="chapter-header" data-kicker="LOG ${String(chapter.chapter_number).padStart(2, '0')} // ${escapeHtml(chapter.story_title).toUpperCase()} // V${currentVersion.version_number}${currentVersion.word_count ? ` // ${currentVersion.word_count} W` : ''}">
-      <h1>Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</h1>
+      <h1 id="chapter-title">Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</h1>
       <p class="muted byline">by ${personLink(chapter.author_username, chapter.author_name)} &middot; ${timeHtml(chapter.created_at)}${
         currentVersion.word_count ? ` &middot; ${wordCount(currentVersion.word_count)}` : ''
       }${
@@ -418,50 +438,50 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
           ${currentVersion.changelog ? `<span class="changelog muted">&ldquo;${escapeHtml(currentVersion.changelog)}&rdquo;</span>` : ''}
           ${versions.length > 1 ? `<a class="version-compare" href="/chapters/${chapter.id}/diff?to=${currentVersion.version_number}">What changed?</a>` : ''}
         </div>
-        <div class="version-actions" id="reading-controls" data-has-comments="${comments.length ? '1' : '0'}">
+        <div class="version-actions" id="reading-controls" data-has-comments="${comments.length ? '1' : '0'}" data-read-first="${user.read_first ? '1' : '0'}">
           <div class="mode-switch" role="group" aria-label="How to view this chapter">
             <button type="button" data-mode="read" aria-pressed="false">Read</button>
             <button type="button" data-mode="review" aria-pressed="false">Review</button>
           </div>
-          <details class="reading-prefs">
-            <summary>Aa</summary>
+          <details class="reading-prefs" aria-label="Reading settings">
+            <summary aria-label="Reading settings: type size, line length, spacing">Aa</summary>
             <div class="reading-prefs-panel">
               <div class="reading-prefs-row">
                 <span>Type size</span>
-                <div class="reading-prefs-options">
-                  <button type="button" data-pref="reading-size" data-value="1rem">S</button>
-                  <button type="button" data-pref="reading-size" data-value="">M</button>
-                  <button type="button" data-pref="reading-size" data-value="1.25rem">L</button>
-                  <button type="button" data-pref="reading-size" data-value="1.45rem">XL</button>
+                <div class="reading-prefs-options" role="group" aria-label="Type size">
+                  <button type="button" data-pref="reading-size" data-value="1rem" aria-label="Small, type size">S</button>
+                  <button type="button" data-pref="reading-size" data-value="" aria-label="Medium, type size">M</button>
+                  <button type="button" data-pref="reading-size" data-value="1.25rem" aria-label="Large, type size">L</button>
+                  <button type="button" data-pref="reading-size" data-value="1.45rem" aria-label="Extra large, type size">XL</button>
                 </div>
               </div>
               <div class="reading-prefs-row">
                 <span>Line length</span>
-                <div class="reading-prefs-options">
-                  <button type="button" data-pref="reading-measure" data-value="58ch">Narrow</button>
-                  <button type="button" data-pref="reading-measure" data-value="">Normal</button>
-                  <button type="button" data-pref="reading-measure" data-value="86ch">Wide</button>
+                <div class="reading-prefs-options" role="group" aria-label="Line length">
+                  <button type="button" data-pref="reading-measure" data-value="58ch" aria-label="Narrow, line length">Narrow</button>
+                  <button type="button" data-pref="reading-measure" data-value="" aria-label="Normal, line length">Normal</button>
+                  <button type="button" data-pref="reading-measure" data-value="86ch" aria-label="Wide, line length">Wide</button>
                 </div>
               </div>
               <div class="reading-prefs-row">
                 <span>Line spacing</span>
-                <div class="reading-prefs-options">
-                  <button type="button" data-pref="reading-leading" data-value="1.55">Tight</button>
-                  <button type="button" data-pref="reading-leading" data-value="">Normal</button>
-                  <button type="button" data-pref="reading-leading" data-value="2.05">Loose</button>
+                <div class="reading-prefs-options" role="group" aria-label="Line spacing">
+                  <button type="button" data-pref="reading-leading" data-value="1.55" aria-label="Tight, line spacing">Tight</button>
+                  <button type="button" data-pref="reading-leading" data-value="" aria-label="Normal, line spacing">Normal</button>
+                  <button type="button" data-pref="reading-leading" data-value="2.05" aria-label="Loose, line spacing">Loose</button>
                 </div>
               </div>
               <div class="reading-prefs-row fill-row">
                 <span>Page width</span>
-                <div class="reading-prefs-options">
+                <div class="reading-prefs-options" role="group">
                   <button id="reading-fill-screen" type="button">Fill screen</button>
                 </div>
               </div>
             </div>
           </details>
           ${isChapterAuthor ? `<a class="btn ghost small" href="/chapters/${chapter.id}/edit">${ICONS.pen}Edit</a>` : ''}
-          <details class="menu">
-            <summary class="btn ghost small">More</summary>
+          <details class="menu" aria-label="More for this chapter">
+            <summary class="btn ghost small" aria-label="More for this chapter: downloads and archiving">More</summary>
             <div class="menu-panel">
               ${canWrite ? `
                 <p class="menu-heading">Story</p>
@@ -483,10 +503,10 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     </div>
     ${reviewHtml}
     <div class="chapter-body-grid">
-      <div class="reading-pane">
-        <div id="chapter-text" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}" data-story-id="${chapter.story_id}" data-can-edit-dictionary="${isChapterAuthor ? '1' : '0'}" data-is-author="${isChapterAuthor ? '1' : '0'}">${highlighted}</div>
-      </div>
-      <aside class="comments-pane">
+      <article class="reading-pane" aria-labelledby="chapter-title">
+        <div id="chapter-text" tabindex="-1" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}" data-story-id="${chapter.story_id}" data-can-edit-dictionary="${isChapterAuthor ? '1' : '0'}" data-is-author="${isChapterAuthor ? '1' : '0'}">${highlighted}</div>
+      </article>
+      <aside class="comments-pane" aria-label="Notes on this chapter">
         ${nameCard()}
         <h2>Comments</h2>
         ${appliedFrom ? `<p class="flash-inline" role="status">${ICONS.tick}The rewrite from ${escapeHtml(appliedFrom)} is in the text. This is the new version; the one before it is still in the history.</p>` : ''}
@@ -516,7 +536,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
           </form>
         </div>
 
-        <details class="general-comment">
+        <details class="general-comment" aria-label="A note on the whole chapter">
           <summary>General comment (no text selected)</summary>
           <form method="post" action="/chapters/${chapter.id}/comments">
             <input type="hidden" name="versionId" value="${currentVersion.id}">
@@ -538,7 +558,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     <script src="/js/app.js"></script>
   `;
 
-  return layout({ title: chapter.title, user, body });
+  return layout({ title: chapter.title, user, body, skip: { href: '#chapter-text', label: 'Skip to the chapter' } });
 }
 
 // ---------- comparing two versions of a chapter ----------

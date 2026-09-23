@@ -84,6 +84,12 @@ async function handleAccountNameSubmit(req, res, user) {
   redirect(res, '/account?notice=Name changed. It shows on everything you have written, not just what you write next.');
 }
 
+async function handleAccountReadingSubmit(req, res, user) {
+  const body = await parseBody(req);
+  models.setReadingPrefs(user.id, { readFirst: body.readFirst === '1', plainNames: body.plainNames === '1' });
+  redirect(res, '/account?notice=Reading settings saved.#reading');
+}
+
 async function handleAccountLookSubmit(req, res, user) {
   const body = await parseBody(req);
   const look = cleanLook(body.look);
@@ -109,6 +115,7 @@ const routes = [
   ['POST', '/account/password', (c) => handleAccountPasswordSubmit(c.req, c.res, c.user)],
   ['POST', '/account/hidden-tags', (c) => handleHiddenTagsSubmit(c.req, c.res, c.user)],
   ['POST', '/account/name', (c) => handleAccountNameSubmit(c.req, c.res, c.user)],
+  ['POST', '/account/reading', (c) => handleAccountReadingSubmit(c.req, c.res, c.user)],
   ['POST', '/account/look', (c) => handleAccountLookSubmit(c.req, c.res, c.user)],
   ['POST', '/account/goal', (c) => handleAccountGoalSubmit(c.req, c.res, c.user)],
   ['POST', /^\/account\/feed\/(new|off)$/, (c) => handleAccountFeedSubmit(c.req, c.res, c.user, c.m[1])],

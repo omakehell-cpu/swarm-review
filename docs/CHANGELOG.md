@@ -4,6 +4,20 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — For a reader who listens
+
+The first round of accessibility work, shaped by a writer in the group who reads and writes with a screen reader. The whole site now passes an automated WCAG 2.2 AA check in every look, light and dark; the rest is what no checker can find.
+
+- **Skip links.** The first thing Tab reaches on every page skips the navigation; on a chapter it goes straight to the first line of the text.
+- **Nothing between you and the book.** Two new settings on the account page: open every chapter in Read mode, and no links in the prose -- names read as the words they are. Read mode also leaves out the list of who is in the chapter.
+- **Notes you can walk.** Each note starts with a heading -- whose, what kind, where it stands, what it is about -- and has a link back to its passage. In Review, a passage with notes on it is announced as highlighted; in Read, it is not.
+- **Formatting is said.** Scene breaks are read as scene breaks. In the visual editor the formatting buttons say whether they are on where the caret is, and Alt+F says the formatting and the scene in one sentence.
+- **The writing checks as a list**, for anybody who cannot see coloured underlines: counts first, then every check in order, each one selecting its words.
+- **Every control says what it is.** The reading settings (now "Large, type size" rather than "L"), the More menu, the reply and edit folds, the navigation, the panels. The two chapter navigations are told apart, and the decorative arrows and ornaments are no longer read out.
+- **More contrast when the system asks for it**, and Windows high-contrast mode keeps every underline and border.
+- A new help page: *With a screen reader or the keyboard*.
+- For whoever maintains the site: `npm run a11y` runs the automated check (it needs playwright and axe-core installed; see the top of scripts/a11y-audit.js).
+
 ## 2026-09-23 — A desk to write at
 
 - **Visual or Markdown.** A switch above the editor shows the chapter as it reads while you write it -- italics in italics, scene breaks as breaks, no asterisks. Underneath it is still the same Markdown: switch back at any time and it is there, and nothing is rewritten unless you change it. The site remembers which you prefer.

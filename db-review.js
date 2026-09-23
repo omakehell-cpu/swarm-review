@@ -84,6 +84,14 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   // here rather than in the browser. See lib/looks.js.
   ensureColumn('users', 'look', "TEXT NOT NULL DEFAULT ''");
 
+  // How this person wants to read, when it matters more than taste: open
+  // chapters in Read mode every time, and have no links in the prose at
+  // all -- the glossary and bible names read as the words they are. Asked
+  // for by a reader who listens to the site: "let nothing get between me
+  // and my book".
+  ensureColumn('users', 'read_first', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('users', 'plain_names', 'INTEGER NOT NULL DEFAULT 0');
+
   // The writing desk (see models/desk.js). A note the author keeps against
   // one scene of a chapter -- "this is where she lies to him" -- private to
   // them, and kept by the scene's position in the chapter. And snapshots:

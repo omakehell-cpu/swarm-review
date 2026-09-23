@@ -8,7 +8,8 @@
     "test": "node --test 'test/**/*.test.js'",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "check": "npm run lint && npm run typecheck && npm test"
+    "check": "npm run lint && npm run typecheck && npm test",
+    "a11y": "node scripts/a11y-audit.js"
   },
   "engines": {
     "node": ">=22.5.0"

@@ -37,7 +37,7 @@ function helpIndexPage({ user, topics = [], releases = [], unread = false }) {
   const rows = topics.map((t) => `
     <a class="chapter-row" href="/help/${escapeHtml(t.slug)}">
       <div class="chapter-row-main">
-        <h3>${escapeHtml(t.title)}</h3>
+        <h2 class="row-title">${escapeHtml(t.title)}</h2>
         ${t.summary ? `<p class="muted">${escapeHtml(t.summary)}</p>` : ''}
       </div>
     </a>`).join('');
@@ -53,7 +53,7 @@ function helpIndexPage({ user, topics = [], releases = [], unread = false }) {
       ${latest ? `
         <a class="chapter-row changelog-row" href="/help/changelog">
           <div class="chapter-row-main">
-            <h3>What's new ${unread ? '<span class="badge new">New</span>' : ''}</h3>
+            <h2 class="row-title">What's new ${unread ? '<span class="badge new">New</span>' : ''}</h2>
             <p class="muted">Every change to the site, newest first. Latest: ${escapeHtml(latest.heading || latest.date)}.</p>
           </div>
           <div class="chapter-row-meta"><span>${releaseDate(latest.date)}</span></div>

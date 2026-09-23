@@ -128,7 +128,7 @@
   float: left; font-size: 4.2em; line-height: 0.85; padding: 6px 10px 0 0;
   font-weight: 600; color: var(--accent);
 }
-[data-look="literary"] #chapter-text hr::before { content: "\2766"; letter-spacing: 0; font-size: 1.4em; }
+[data-look="literary"] #chapter-text hr::before { content: "\2766"; content: "\2766" / ""; letter-spacing: 0; font-size: 1.4em; }
 [data-look="literary"] .comment { border-top-width: 1px; }
 
 /* ======================================================================
@@ -177,7 +177,7 @@
   font-family: var(--font-mono); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.12em;
 }
 [data-look="swarm"] .topbar nav > a.current { color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
-[data-look="swarm"] .page-head h1::before { content: "// "; color: var(--accent); font-family: var(--font-mono); font-weight: 400; }
+[data-look="swarm"] .page-head h1::before { content: "// "; content: "// " / ""; color: var(--accent); font-family: var(--font-mono); font-weight: 400; }
 [data-look="swarm"] .byline, [data-look="swarm"] .chapter-row-meta, [data-look="swarm"] .breadcrumb,
 [data-look="swarm"] time, [data-look="swarm"] .activity-item, [data-look="swarm"] .inbox-where,
 [data-look="swarm"] .story-audience, [data-look="swarm"] .comment-meta strong {
@@ -191,7 +191,7 @@
   font-family: var(--font-mono); color: var(--accent); border-top: 0;
 }
 [data-look="swarm"] .welcome h2::before, [data-look="swarm"] .inbox-group h3::before,
-[data-look="swarm"] .activity-strip h3::before { content: "\25B8  "; }
+[data-look="swarm"] .activity-strip h3::before { content: "\25B8  "; content: "\25B8  " / ""; }
 /* Panels with a lit corner. */
 [data-look="swarm"] .welcome, [data-look="swarm"] .inbox, [data-look="swarm"] .activity-strip {
   position: relative; padding: var(--s-5) var(--s-6); background: var(--bg-elevated);
@@ -271,7 +271,7 @@
 [data-look="literary"] .welcome h2::before,
 [data-look="literary"] .inbox-group h3::before,
 [data-look="literary"] .activity-strip h3::before,
-[data-look="literary"] .toc-heading::before { content: "\2767\00a0 "; color: var(--accent); font-style: normal; }
+[data-look="literary"] .toc-heading::before { content: "\2767\00a0 "; content: "\2767\00a0 " / ""; color: var(--accent); font-style: normal; }
 [data-look="literary"] .toc-heading {
   font-family: 'Fraunces', var(--font-prose); font-style: italic; text-transform: none; letter-spacing: 0;
   font-size: 1.5rem; font-weight: 400; color: var(--text); text-align: center;
@@ -290,7 +290,7 @@
 [data-look="literary"] .title-page-blurb { margin-left: auto; margin-right: auto; font-style: italic; }
 [data-look="literary"] .title-page-facts, [data-look="literary"] .title-page-actions, [data-look="literary"] .title-page .tag-chips { justify-content: center; }
 [data-look="literary"] .title-page-text::after {
-  content: "\2766"; display: block; margin-top: var(--s-8); font-size: 1.4rem; color: var(--accent);
+  content: "\2766"; content: "\2766" / ""; display: block; margin-top: var(--s-8); font-size: 1.4rem; color: var(--accent);
 }
 [data-look="literary"] .story-tools { justify-content: center; border-top: 1px solid var(--border); }
 [data-look="literary"] .toc .chapter-row h3 { font-family: 'Fraunces', var(--font-prose); font-weight: 400; }
@@ -310,7 +310,7 @@
 [data-look="swarm"] h1, [data-look="swarm"] h2, [data-look="swarm"] h3 { font-family: var(--font-display); letter-spacing: -0.015em; }
 [data-look="swarm"] h1 { font-weight: 600; }
 [data-look="swarm"] .chapter-header::before {
-  content: attr(data-kicker); display: block; margin-bottom: var(--s-4);
+  content: attr(data-kicker); content: attr(data-kicker) / ""; display: block; margin-bottom: var(--s-4);
   font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.14em; color: var(--accent);
 }
 [data-look="swarm"] .chapter-header h1::after {
@@ -328,13 +328,13 @@
 /* The story page as a dossier. */
 [data-look="swarm"] .title-page { position: relative; padding: var(--s-8); background: var(--bg-elevated); border: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 [data-look="swarm"] .title-page::before {
-  content: "FILE // STORY"; position: absolute; top: -0.7em; left: var(--s-6); padding: 0 var(--s-3);
+  content: "FILE // STORY"; content: "FILE // STORY" / ""; position: absolute; top: -0.7em; left: var(--s-6); padding: 0 var(--s-3);
   background: var(--bg); font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.16em; color: var(--accent);
 }
 [data-look="swarm"] .title-page-kicker, [data-look="swarm"] .title-page-facts, [data-look="swarm"] .story-tools,
 [data-look="swarm"] .toc-num, [data-look="swarm"] .toc-words, [data-look="swarm"] .toc-heading { font-family: var(--font-mono); }
 [data-look="swarm"] .toc-heading { color: var(--accent); }
-[data-look="swarm"] .toc-heading::before { content: "\25B8  "; }
+[data-look="swarm"] .toc-heading::before { content: "\25B8  "; content: "\25B8  " / ""; }
 [data-look="swarm"] .toc-num { color: var(--accent); }
 [data-look="swarm"] .toc-leader { border-bottom-style: dashed; }
 [data-look="swarm"] .story-tools, [data-look="swarm"] .story-tools .linklike { text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.72rem; font-family: var(--font-mono); }
@@ -348,5 +348,5 @@
 [data-look="swarm"] .desk-drawer { background: var(--bg-elevated); box-shadow: -16px 0 40px rgba(0, 0, 0, 0.5); }
 [data-look="swarm"] .desk-tabs button, [data-look="swarm"] .session-count, [data-look="swarm"] .desk-scene-num,
 [data-look="swarm"] .desk-scene-words, [data-look="swarm"] .desk-snap-meta { font-family: var(--font-mono); }
-[data-look="swarm"] .desk-tabs button[aria-selected="true"] { background: var(--accent); color: var(--btn-text); }
+[data-look="swarm"] .desk-tabs button[aria-pressed="true"] { background: var(--accent); color: var(--btn-text); }
 [data-look="literary"] .desk-scene-open, [data-look="literary"] .desk-snap-name { font-family: 'Fraunces', var(--font-prose); }

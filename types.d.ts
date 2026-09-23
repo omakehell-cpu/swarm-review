@@ -63,6 +63,8 @@ interface LayoutOptions {
   wide?: boolean;
   /** Which nav entry to mark as the current page. */
   current?: string;
+  /** Where the skip link at the top of the page goes. */
+  skip?: { href: string; label: string };
 }
 
 // ---------------------------------------------------------------------
