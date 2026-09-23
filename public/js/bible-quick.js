@@ -67,6 +67,22 @@
           const label = document.createElement('span');
           label.className = 'missing-name';
           label.textContent = `${candidate.name} (${candidate.count}×)`;
+          // A new entry of some kind, or another name for somebody already
+          // written down -- the server's guess at who, chosen to begin with.
+          const kind = document.createElement('select');
+          kind.setAttribute('aria-label', `What ${candidate.name} is`);
+          const fresh = document.createElement('optgroup');
+          fresh.label = 'A new entry';
+          const kinds = quick ? Array.from(quick.querySelectorAll('select[name="kind"] option')) : [];
+          for (const o of kinds) fresh.appendChild(o.cloneNode(true));
+          if (!kinds.length) fresh.appendChild(new Option('Person', 'person'));
+          kind.appendChild(fresh);
+          if (found.entries && found.entries.length) {
+            const same = document.createElement('optgroup');
+            same.label = 'Another name for';
+            for (const e of found.entries) same.appendChild(new Option(e.name, `alias:${e.id}`, false, e.id === candidate.sameAs));
+            kind.appendChild(same);
+          }
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'btn ghost tiny';
@@ -74,9 +90,9 @@
           button.addEventListener('click', async () => {
             button.disabled = true;
             try {
-              await post(`/stories/${storyId}/bible/quick`, { name: candidate.name, kind: 'person' });
+              const made = await post(`/stories/${storyId}/bible/quick`, { name: candidate.name, kind: kind.value });
               li.classList.add('added');
-              button.textContent = 'Added';
+              button.textContent = made.alias ? `Added to ${made.name}` : 'Added';
             } catch (err) {
               button.disabled = false;
               say(err.message, true);
@@ -100,6 +116,7 @@
             }
           });
           li.appendChild(label);
+          li.appendChild(kind);
           li.appendChild(button);
           li.appendChild(dismiss);
           ul.appendChild(li);

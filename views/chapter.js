@@ -598,7 +598,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       </aside>
     </div>
     ${chapterCastBlock(cast, chapter.story_id)}
-    ${missingNamesBlock(missingNames, chapter.story_id, `/chapters/${chapter.id}`)}
+    ${missingNamesBlock(missingNames, chapter.story_id, `/chapters/${chapter.id}`, entities)}
     ${chapterNav(chapter, neighbours, { canWrite })}
     ${chapterFloatNav(chapter, neighbours)}
     <button id="selection-toast" class="selection-toast hidden" type="button">+ Comment on selection</button>

@@ -124,6 +124,17 @@ async function handleQuickEntity(req, res, user, storyId) {
   if (!name) {
     return wantsJson ? sendJson(res, 400, { error: 'An entry needs a name.' }) : redirect(res, back);
   }
+  // "Another name for...": the kind is the entry it belongs to.
+  const sameAs = /^alias:(\d+)$/.exec(String(body.kind || ''));
+  if (sameAs) {
+    const target = models.getStoryEntity(Number(sameAs[1]));
+    if (!target || target.story_id !== storyId) {
+      return wantsJson ? sendJson(res, 404, { error: 'That entry is not in this bible.' }) : redirect(res, back);
+    }
+    models.addEntityAlias(target.id, name, user.id);
+    logEvent(user, 'bible-entry-edited', { subject: `${target.name} (${story.title})`, href: `/bible/${target.id}`, storyId });
+    return wantsJson ? sendJson(res, 200, { id: target.id, name: target.name, alias: name }) : redirect(res, back);
+  }
   const existing = models.getStoryEntityByName(storyId, name);
   if (existing) {
     return wantsJson
@@ -171,7 +182,12 @@ async function handleUnknownNames(req, res, user, storyId) {
   if (!story) return sendJson(res, 404, { error: 'Story not found' });
   if (!models.canWriteInStory(story, user)) return sendJson(res, 403, { error: "Only the story's authors can see this." });
   const body = await parseBody(req);
-  sendJson(res, 200, { names: models.missingNamesInText(storyId, String(body.text || '')) });
+  const entries = models.listStoryEntities(storyId);
+  sendJson(res, 200, {
+    names: models.missingNamesInText(storyId, String(body.text || ''))
+      .map((n) => ({ ...n, sameAs: storyBible.likelySameAs(n.name, entries) })),
+    entries: entries.map((e) => ({ id: e.id, name: e.name })),
+  });
 }
 
 async function handleFieldTemplatePage(req, res, user, storyId) {

@@ -4,6 +4,12 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — Another name for
+
+- **Colonel Jack is Jack.** In the list of names not in the bible, a name can now be added as *another name for* somebody already there -- it becomes one of their aliases, and is linked in the text from then on. When the name shares a word with an entry, that entry is chosen for you. The same in the editor's list.
+- **Opening a name no longer moves the chapter.** The card floats beside the text instead of opening a column, in Read and in Review.
+- **Preview keeps the box's size**: the same width and height as the text you were writing, scrolled to the same place.
+
 ## 2026-09-23 — One place to write
 
 - **The editor is one box again, in Markdown**, with the writing checks behind the words. **Preview** shows the chapter as it will read; press it again, or Escape, to go on writing. The Visual editor, and the side-by-side preview in Editor settings, are gone.

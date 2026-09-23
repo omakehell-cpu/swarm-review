@@ -261,6 +261,25 @@ function knownNamesFor(storyId) {
 }
 
 
+// ---------- another name for somebody already written down ----------
+
+/** "Colonel Jack" is Jack: add it to his aliases. Returns the entry. */
+function addEntityAlias(entityId, alias, userId) {
+  const entity = db.prepare('SELECT id, story_id, name_lower FROM story_entities WHERE id = ?').get(entityId);
+  const clean = bible.cleanName(alias);
+  if (!entity || !clean) return null;
+  if (clean.toLowerCase() !== entity.name_lower) {
+    db.prepare(
+      'INSERT OR IGNORE INTO story_entity_aliases (entity_id, story_id, alias, alias_lower) VALUES (?, ?, ?, ?)'
+    ).run(entityId, entity.story_id, clean, clean.toLowerCase());
+  }
+  teachDictionary(entity.story_id, [clean], userId);
+  castLinks.invalidate(entity.story_id);
+  rebuildStoryAppearances(entity.story_id);
+  return getStoryEntity(entityId);
+}
+
+
 // ---------- "not a name": a false alarm, put down once ----------
 
 /** Stop offering this word as a name in this story. Returns the row. */
@@ -619,6 +638,7 @@ module.exports = {
   APPEARANCE_COUNT_SQL,
   ENTITY_COLUMNS,
   ENTITY_SORTS,
+  addEntityAlias,
   addEntityImage,
   addNotName,
   coverImagesFor,

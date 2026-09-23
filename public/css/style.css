@@ -2273,16 +2273,6 @@ mark.search-hit {
 main[data-reading="read"] .chapter-body-grid { grid-template-columns: 1fr; }
 main[data-reading="read"] .comments-pane,
 main[data-reading="read"] .wa-card { display: none; }
-/* ...except for the one thing a reader asks for on purpose. Reading is
-   exactly when "who was that again?" gets asked, so the card opens in
-   read mode too: the second column comes back for as long as the card is
-   in it, with none of the apparatus read mode was hiding -- no notes, no
-   form, no heading -- and goes away again with it. */
-main[data-reading="read"] .chapter-body-grid.name-card-open {
-  grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr);
-}
-main[data-reading="read"] .name-card-open .comments-pane { display: flex; }
-main[data-reading="read"] .name-card-open .comments-pane > *:not(.name-card) { display: none; }
 /* The left half of the version bar goes quiet in read mode, but it keeps
    its slot: the bar is a space-between row, so taking the left child out
    of the flow would slide the Read/Review switch from the right edge to
@@ -2698,17 +2688,21 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
   gap: var(--s-10); align-items: start;
 }
 /* ---- the name you clicked, while reading ----
-   Top of the column the comments are already in, marked off the way a
-   note is: a rule above it and nothing else. It is the thing the reader
-   just asked for, so it gets the accent rule rather than the quiet one,
-   and it goes away again the moment they are done with it. */
+   A card that floats beside the text (placed by name-card.js), over the
+   page rather than in it, so opening it moves nothing. The accent rule
+   on top says it is the thing the reader just asked for. */
 .name-card {
-  border-top: 2px solid var(--accent); padding-top: var(--s-4);
-  max-height: 55vh; overflow-y: auto; position: relative;
+  position: fixed; z-index: 70; top: 96px; right: 24px; width: 360px;
+  max-height: 70vh; overflow-y: auto;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border-strong); border-top: 2px solid var(--accent);
+  padding: var(--s-5) var(--s-6) var(--s-6);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
 }
+.name-card[hidden] { display: none; }
 .name-card:focus { outline: none; }
 .name-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-.name-card-close { position: absolute; top: var(--s-4); right: 0; }
+.name-card-close { position: absolute; top: var(--s-5); right: var(--s-6); }
 .name-card-body h3 { margin: 0 var(--s-12) var(--s-2) 0; font-size: var(--t-lg); }
 .name-card-body .beside-head { margin-bottom: var(--s-4); }
 .name-card-body .beside-head + .summary { margin-top: 0; }
@@ -3613,8 +3607,8 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
    on it is set the way the chapter page sets it. */
 .editor-preview {
   background: var(--bg-sunken); border: 1px solid var(--border-strong); color: var(--text);
-  padding: var(--s-7) var(--s-8); min-height: 60vh; outline: none;
-  font-family: var(--font-prose); font-size: var(--t-lg); line-height: 1.75;
+  padding: var(--editor-padding); max-width: 100%; overflow-y: auto; outline: none; box-sizing: border-box;
+  font-family: var(--font-prose); font-size: var(--t-base); line-height: var(--editor-line-height);
   overflow-wrap: break-word; text-transform: none; letter-spacing: normal; font-weight: 400;
 }
 .editor-preview:focus { outline: none; }
@@ -3629,7 +3623,6 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
 .editor-preview ul, .editor-preview ol { margin: 0 0 1em; padding-left: 1.4em; }
 .editor-preview code { font-family: var(--font-mono); font-size: 0.9em; background: var(--code-bg); padding: 0 var(--s-2); }
 .editor-preview a { text-decoration-color: currentColor; }
-body.writing-focus .editor-preview { min-height: 75vh; }
 
 /* Typewriter: the line being written stays at the same height. */
 body.typewriter.writing-focus textarea[data-editor-tools] { padding-bottom: 40vh; }
