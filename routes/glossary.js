@@ -11,6 +11,7 @@ const taxonomy = require('../lib/glossary-taxonomy');
 
 // wiki -- see lib/wiki.js) ----------
 async function handleGlossaryIndex(req, res, user, query) {
+  models.refreshStoryGlossary();
   const q = (query.get('q') || '').trim();
   const category = (query.get('category') || '').trim();
   const kind = (query.get('kind') || '').trim();
@@ -45,6 +46,7 @@ async function handleGlossaryIndex(req, res, user, query) {
 }
 
 async function handleGlossaryPage(req, res, user, title) {
+  models.refreshStoryGlossary();
   const page = models.getWikiPageByTitleLower(title.toLowerCase());
   if (!page) return sendHtml(res, 404, views.glossaryNotFoundPage({ user, title }));
   // The summaries of everything this page links to, for the previews in

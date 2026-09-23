@@ -268,9 +268,13 @@ function glossaryPage({ user, page, summaries = new Map(), categories = [] }) {
       <p class="breadcrumb"><a href="/glossary">&larr; Glossary</a></p>
       <div class="page-head">
         <h1>${escapeHtml(page.title)}</h1>
-        <a class="btn ghost small" href="${escapeHtml(wiki.pageUrl(page.title))}" target="_blank" rel="noopener noreferrer">Open on the wiki &#8599;</a>
+        ${page.story_id
+    ? `<a class="btn ghost small" href="/stories/${Number(page.story_id)}">Open the story</a>`
+    : `<a class="btn ghost small" href="${escapeHtml(wiki.pageUrl(page.title))}" target="_blank" rel="noopener noreferrer">Open on the wiki &#8599;</a>`}
       </div>
-      <p class="muted glossary-meta">A local copy${page.fetched_at ? `, last synced ${timeHtml(page.fetched_at)}` : ''}.</p>
+      <p class="muted glossary-meta">${page.story_id
+    ? `Made from the story, which is in this group${page.fetched_at ? `; brought up to date ${timeHtml(page.fetched_at)}` : ''}.`
+    : `A local copy${page.fetched_at ? `, last synced ${timeHtml(page.fetched_at)}` : ''}.`}</p>
       ${entryChips(categories)}
       <div class="glossary-body">
         <div class="reading-pane">
@@ -300,7 +304,7 @@ function besideGlossaryFragment(page, { lead = '', categories = [] } = {}) {
   const topics = taxonomy.topicalCategories(categories).slice(0, 4);
   return `
     <h3>${escapeHtml(page.title)}</h3>
-    <p class="muted">From the glossary${topics.length ? ` &middot; ${topics.map((c) => escapeHtml(c)).join(', ')}` : ''}</p>
+    <p class="muted">${page.story_id ? 'A story in this group' : 'From the glossary'}${topics.length ? ` &middot; ${topics.map((c) => escapeHtml(c)).join(', ')}` : ''}</p>
     ${page.summary ? `<p class="summary">${escapeHtml(page.summary)}</p>` : ''}
     ${lead
     ? `<div class="reading-pane beside-reading">${lead}</div>`
