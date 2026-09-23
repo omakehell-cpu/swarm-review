@@ -93,7 +93,7 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = 
       ${history ? `<p class="note-histories">${history}</p>` : ''}
       ${c.body ? `<p class="comment-body">${escapeHtml(c.body)}</p>` : ''}
       ${about}
-      <div class="comment-actions">
+      <div class="comment-actions" role="group" aria-label="${escapeHtml(`What to do with the note by ${c.author_name}`)}">
         ${canApply ? `
           <form method="post" action="/comments/${c.id}/apply" class="inline-form"
                 data-confirm="Put this rewrite into the chapter? It is saved as a new version, and the old one stays in the history.">

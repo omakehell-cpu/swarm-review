@@ -67,6 +67,16 @@ on the editor's buttons and Alt+F to hear it; value-first labels on the
 reading settings; two account settings for reading with nothing in the way.
 Next is hearing it with her.
 
+### Done on 2026-09-23, second round: zoom, and a script for listening
+At 320 CSS pixels (a laptop at 400%) nothing scrolls sideways except the
+outline table, inside its own box the keyboard can reach; pinned bars stop
+being pinned on a screen that short, so they cannot hide the focus; text
+spacing and 200% text lose nothing. The story's cover sits above its
+title on a narrow screen. Note buttons say which note they belong to.
+`docs/accessibility/voiceover-checklist.md` is the four paths as a
+VoiceOver script, to run before the session with her and after any change
+to the chapter page, the editor or the notes.
+
 ### Done on 2026-09-16
 The margin notes: a passage can be selected with the keyboard and commented
 on with **C**, the offer announces itself, and answering a note happens in
