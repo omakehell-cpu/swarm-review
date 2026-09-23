@@ -4,6 +4,13 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — Typing without the wait
+
+- **Letters appear the moment you type them** in the Markdown view of the editor. The text used to be drawn by the writing checks, so each key waited for them; now the checks only paint their marks behind the text, and keep them on their words as you type.
+- **One switch on the chapter page: Read, Review, Revise.** Read is the story alone -- no notes, and selecting words offers nothing. Review is the story and the notes. Revise, on your own chapter, adds the writing checks, and replaces the separate Revise/Write pair that used to sit above the text.
+- **Not a name.** In the list of names a chapter uses that are not in the bible, a word that is not a name at all can be put away for the whole story. The story page lists them, to bring one back.
+- **Page width is gone** from the Aa menu; it never quite worked.
+
 ## 2026-09-23 — The Swarm by day and by night
 
 - **The Swarm now has a light and a dark version**, on the moon button like the other looks: a pale bridge in steel and ink by day, the dark console by night.

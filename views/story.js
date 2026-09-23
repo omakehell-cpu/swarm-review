@@ -24,6 +24,26 @@ function chapterReorderButtons(chapter, index, total) {
     </div>`;
 }
 
+// The false alarms put away from the unknown-names list, so one clicked
+// by mistake can be brought back.
+function notNamesSection(story, notNames) {
+  if (!notNames.length) return '';
+  return `
+    <details class="story-dictionary" id="not-names">
+      <summary>Not names (${notNames.length})</summary>
+      <p class="hint">Words you told the chapter page are not names. It no longer offers them for the bible. Remove one to have it offered again.</p>
+      <ul class="story-dictionary-list">
+        ${notNames.map((n) => `
+          <li>
+            <span class="invite-code-inline">${escapeHtml(n.name)}</span>
+            <form method="post" action="/stories/${story.id}/bible/not-names/${n.id}/delete" class="inline-form">
+              <button class="btn tiny ghost" type="submit" title="Offer it again" aria-label="Offer ${escapeHtml(n.name)} as a name again">&times;</button>
+            </form>
+          </li>`).join('')}
+      </ul>
+    </details>`;
+}
+
 function storyDictionarySection(story, dictionary) {
   const words = dictionary.length ? `
     <ul class="story-dictionary-list">
@@ -202,7 +222,7 @@ function readingStart(chapters, readersByChapter, userId) {
 // line per chapter with a dotted leader to its length. Everything the
 // authors need (outline, analysis, the bible, the details) is still here,
 // on a quieter row under the title page.
-function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0, bibleVisible = true }) {
+function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], notNames = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0, bibleVisible = true }) {
   const pad = (n) => String(n).padStart(2, '0');
   const chapterRow = (c, i) => `
     <div class="chapter-row-outer toc-entry">
@@ -283,7 +303,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
       ${chapters.length ? compileSection(story) : ''}
       <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>
       ${(isStoryAuthor || coauthors.length) ? coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId: user.id }) : ''}
-      ${canWrite ? storyDictionarySection(story, dictionary) : ''}`,
+      ${canWrite ? storyDictionarySection(story, dictionary) + notNamesSection(story, notNames) : ''}`,
   });
 }
 

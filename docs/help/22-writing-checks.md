@@ -133,9 +133,8 @@ better for it.
 
 ## On the chapter page
 
-The author also has the same panel on the chapter page, in Review, folded
-into one line above the text: *Readability · Grade 5 · 18 flagged*. Open it
-for the cards. It starts in **Write**, with nothing marked, because the
-chapter page is for reading and for the notes; press **Revise** and the
-text is marked as in the editor. The choice is remembered apart from the
-editor's.
+The author also has the same panel on the chapter page, folded into one
+line above the text: *Readability · Grade 5 · 18 flagged*. It is there in
+**Revise**, the third position of the switch under the title (Read,
+Review, Revise), which marks the text as the editor does; Read and Review
+leave the text alone. Open the line for the cards.

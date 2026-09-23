@@ -246,16 +246,40 @@ function deleteStoryEntity(entityId) {
 
 // ---------- names the app already recognises ----------
 
-// The bible's own names and aliases, the glossary's page titles and the
-// story's spelling dictionary, folded down -- everything a proper name
-// found in a chapter might already be accounted for by.
+// The bible's own names and aliases, the glossary's page titles, the
+// story's spelling dictionary and the words its authors have said are not
+// names, folded down -- everything a proper name found in a chapter might
+// already be accounted for by.
 function knownNamesFor(storyId) {
   const known = new Set();
+  for (const row of db.prepare('SELECT name_lower FROM story_not_names WHERE story_id = ?').all(storyId)) known.add(row.name_lower);
   for (const row of db.prepare('SELECT name_lower FROM story_entities WHERE story_id = ?').all(storyId)) known.add(row.name_lower);
   for (const row of db.prepare('SELECT alias_lower FROM story_entity_aliases WHERE story_id = ?').all(storyId)) known.add(row.alias_lower);
   for (const row of db.prepare('SELECT title_lower FROM wiki_pages').all()) known.add(row.title_lower);
   for (const word of getStoryDictionary(storyId)) known.add(String(word).toLowerCase());
   return known;
+}
+
+
+// ---------- "not a name": a false alarm, put down once ----------
+
+/** Stop offering this word as a name in this story. Returns the row. */
+function addNotName(storyId, name, userId) {
+  const clean = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  if (!clean) return null;
+  db.prepare(
+    'INSERT OR IGNORE INTO story_not_names (story_id, name, name_lower, added_by) VALUES (?, ?, ?, ?)'
+  ).run(storyId, clean, clean.toLowerCase(), userId || null);
+  return db.prepare('SELECT * FROM story_not_names WHERE story_id = ? AND name_lower = ?').get(storyId, clean.toLowerCase());
+}
+
+const listNotNames = (storyId) => db.prepare(
+  'SELECT id, name FROM story_not_names WHERE story_id = ? ORDER BY name COLLATE NOCASE'
+).all(storyId);
+
+/** Offer it again. */
+function removeNotName(storyId, id) {
+  db.prepare('DELETE FROM story_not_names WHERE story_id = ? AND id = ?').run(storyId, id);
 }
 
 
@@ -596,6 +620,7 @@ module.exports = {
   ENTITY_COLUMNS,
   ENTITY_SORTS,
   addEntityImage,
+  addNotName,
   coverImagesFor,
   createStoryEntity,
   deleteStoryEntity,
@@ -613,6 +638,7 @@ module.exports = {
   listEntityFields,
   listEntityImages,
   listFieldTemplate,
+  listNotNames,
   listStoryEntities,
   listStoryEntityLinks,
   listUsedFieldLabels,
@@ -622,6 +648,7 @@ module.exports = {
   rebuildChapterAppearances,
   rebuildStoryAppearances,
   removeEntityImage,
+  removeNotName,
   removeStoryEntityLink,
   setAppearanceOverride,
   setEntityImageCaption,

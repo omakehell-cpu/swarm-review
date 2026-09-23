@@ -3,16 +3,20 @@
 How to read a chapter the way you would read a book, and how to leave the
 kind of note the author can actually act on.
 
-## Read or Review
+## Read, Review, Revise
 
 Under the chapter's title is one row of controls, and the first of them is
-the switch between two ways of having the page.
+the switch between the ways of having the page.
 
 **Read** gives you the chapter and nothing else: no notes, no highlights,
-no margin. **Review** brings all of it back: the passages people have left
-notes on are underlined, and the notes sit beside them. Nobody thinks well
-about a sentence while the sentence has three coloured underlines on it,
-so read it once first.
+no margin, and selecting words offers nothing -- it is just the story.
+**Review** brings the notes back: the passages people have left notes on
+are underlined, the notes sit beside them, and selecting words lets you
+leave one. Nobody thinks well about a sentence while the sentence has
+three coloured underlines on it, so read it once first.
+
+On your own chapter there is a third: **Revise** is Review with the
+[writing checks](/help/writing-checks) marked in the text as well.
 
 A chapter with notes opens in Review; one without opens in Read; and after
 that the site remembers which you last chose. If you would rather every
@@ -27,7 +31,6 @@ chapter opened in Read, whatever it has on it, that is a setting on your
 - **Names** -- *Linked* underlines the names the story's bible and the
   glossary know about, so you can click them (see below); *Plain* leaves
   them as words.
-- **Fill screen** -- takes the width of the whole window.
 
 All of that is yours alone: it follows you round the site and changes
 nothing for anybody else. **More** has the downloads -- this version of

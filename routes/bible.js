@@ -145,6 +145,27 @@ async function handleQuickEntity(req, res, user, storyId) {
 // not been saved: the editor posts what is in the textarea and gets back
 // the names nothing accounts for. One implementation of what counts as a
 // name, rather than a second one in JavaScript drifting away from it.
+// "Not a name": from the chapter page (a form, back where it came from),
+// or from the editor's list of names in the draft (a fetch, JSON back).
+async function handleNotName(req, res, user, storyId) {
+  const story = bibleGuard(res, user, storyId, { write: true });
+  if (!story) return;
+  const body = await parseBody(req);
+  const back = /^\/[A-Za-z0-9/_?=&.-]*$/.test(String(body.returnTo || ''))
+    ? String(body.returnTo) : `/stories/${storyId}#not-names`;
+  const wantsJson = (req.headers.accept || '').includes('application/json');
+  const row = models.addNotName(storyId, body.name, user.id);
+  if (wantsJson) return row ? sendJson(res, 200, { id: row.id, name: row.name }) : sendJson(res, 400, { error: 'Which word?' });
+  redirect(res, back);
+}
+
+async function handleRemoveNotName(req, res, user, storyId, id) {
+  const story = bibleGuard(res, user, storyId, { write: true });
+  if (!story) return;
+  models.removeNotName(storyId, id);
+  redirect(res, `/stories/${storyId}#not-names`);
+}
+
 async function handleUnknownNames(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
   if (!story) return sendJson(res, 404, { error: 'Story not found' });
@@ -434,6 +455,8 @@ const routes = [
   ['POST', /^\/stories\/(\d+)\/bible$/, (c) => handleNewEntitySubmit(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/bible\/new$/, (c) => handleNewEntityPage(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/stories\/(\d+)\/bible\/quick$/, (c) => handleQuickEntity(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/stories\/(\d+)\/bible\/not-names$/, (c) => handleNotName(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/stories\/(\d+)\/bible\/not-names\/(\d+)\/delete$/, (c) => handleRemoveNotName(c.req, c.res, c.user, Number(c.m[1]), Number(c.m[2]))],
   ['POST', /^\/stories\/(\d+)\/bible\/unknown-names$/, (c) => handleUnknownNames(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/bible\/fields$/, (c) => handleFieldTemplatePage(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/stories\/(\d+)\/bible\/fields$/, (c) => handleFieldTemplateSubmit(c.req, c.res, c.user, Number(c.m[1]))],

@@ -553,6 +553,39 @@ test('returnTo cannot be pointed off the site', async () => {
   assert.strictEqual(res.headers.get('location'), `/stories/${storyId}/bible`);
 });
 
+test('a false alarm can be put away, and brought back', async () => {
+  const text = 'Yevgenia Bru waited. Somewhere Quiet was the name of nothing at all.';
+  const ask = async () => (await (await owner.request(`/stories/${storyId}/bible/unknown-names`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ text }),
+  })).json()).names.map((n) => n.name);
+  const before = await ask();
+  const alarm = before.find((n) => n !== 'Yevgenia Bru');
+  assert.ok(alarm, `something besides her is offered: ${before.join(', ')}`);
+
+  // Only the story's writers can say so.
+  const refused = await reader.request(`/stories/${storyId}/bible/not-names`, {
+    method: 'POST', ...form([['name', alarm]]),
+  });
+  assert.strictEqual(refused.status, 403);
+
+  const res = await owner.request(`/stories/${storyId}/bible/not-names`, {
+    method: 'POST', ...form([['name', alarm], ['kind', 'person'], ['returnTo', `/chapters/${chapterTwo}`]]),
+  });
+  assert.strictEqual(res.status, 302);
+  assert.strictEqual(res.headers.get('location'), `/chapters/${chapterTwo}`);
+  assert.deepStrictEqual(await ask(), before.filter((n) => n !== alarm));
+  assert.ok(!models.getStoryEntityByName(storyId, alarm), 'nothing was added to the bible');
+
+  // The story page lists it, and removing it offers it again.
+  const story = await (await owner.request(`/stories/${storyId}`)).text();
+  assert.match(story, /id="not-names"/);
+  const row = models.listNotNames(storyId).find((n) => n.name === alarm);
+  await owner.request(`/stories/${storyId}/bible/not-names/${row.id}/delete`, { method: 'POST', ...form([]) });
+  assert.deepStrictEqual(await ask(), before);
+});
+
 test('the editor can ask about a draft that has not been saved', async () => {
   const res = await owner.request(`/stories/${storyId}/bible/unknown-names`, {
     method: 'POST',

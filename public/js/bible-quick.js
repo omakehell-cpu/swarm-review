@@ -82,8 +82,26 @@
               say(err.message, true);
             }
           });
+          // A false alarm, put away for the whole story.
+          const dismiss = document.createElement('button');
+          dismiss.type = 'button';
+          dismiss.className = 'btn ghost tiny missing-dismiss';
+          dismiss.textContent = 'Not a name';
+          dismiss.setAttribute('aria-label', `${candidate.name} is not a name`);
+          dismiss.addEventListener('click', async () => {
+            dismiss.disabled = true;
+            try {
+              await post(`/stories/${storyId}/bible/not-names`, { name: candidate.name });
+              li.remove();
+              say(`${candidate.name} will not be offered again. Undo it from the story page.`, false);
+            } catch (err) {
+              dismiss.disabled = false;
+              say(err.message, true);
+            }
+          });
           li.appendChild(label);
           li.appendChild(button);
+          li.appendChild(dismiss);
           ul.appendChild(li);
         }
         list.appendChild(ul);

@@ -325,12 +325,6 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.02em; line-height: 1.25; }
    above -- change one and change the other. */
 .container { max-width: 1400px; margin: 0 auto; padding: var(--s-10) var(--s-8) var(--s-12); transition: max-width 0.2s ease; }
 .container-wide { max-width: 1700px; }
-/* "Fill screen" on the chapter reading page (see public/js/app.js) -- same
-   pattern as the editor's own Fill-screen button (.writer-card.wa-
-   fullwidth below). #chapter-text's own max-width:72ch still caps actual
-   line length either way, so this only ever gives the comments pane (and
-   the 2.1fr/1fr split generally) more breathing room, not longer lines. */
-.container.wa-fullwidth { max-width: none; }
 
 /* A flash is a banner across the full width, not a tinted box: ink on the
    recessed grey, with the red rule under it when something went wrong. */
@@ -629,16 +623,11 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
    capped at its measure whatever the screen does, and the further the
    comment column drifts from the sentence it is about, the longer the
    connector and the weaker the link. So the chapter page holds its own
-   width inside the wider page column -- and "Fill screen" is still there
-   for anyone who wants the whole window anyway. */
+   width inside the wider page column. */
 .chapter-topline,
 .chapter-header,
 .chapter-body-grid,
 .chapter-nav { max-width: 1180px; }
-.wa-fullwidth .chapter-topline,
-.wa-fullwidth .chapter-header,
-.wa-fullwidth .chapter-body-grid,
-.wa-fullwidth .chapter-nav { max-width: none; }
 .chapter-body-grid { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr); gap: var(--s-10); align-items: start; }
 
 /* There is no sheet. The draft is not printed on a card laid over the
@@ -1366,7 +1355,11 @@ input:focus, textarea:focus, select:focus {
      highlights half a word out. */
   text-transform: none; letter-spacing: normal; font-weight: 400;
   white-space: pre-wrap; word-wrap: break-word; overflow: hidden; pointer-events: none;
-  color: var(--text); background: transparent;
+  /* The overlay paints only the marks: their fills and underlines. The
+     words themselves are the textarea's own, drawn on top, so a key
+     pressed is a letter on the screen in the same frame -- never waiting
+     for the checks to come back. */
+  color: transparent; background: transparent;
 }
 .wa-textarea {
   position: relative; z-index: 1; display: block; width: 100%; min-width: 260px; min-height: 420px;
@@ -1382,10 +1375,10 @@ input:focus, textarea:focus, select:focus {
      actually holds. */
   max-width: 100%;
   border: none !important; border-radius: 0 !important; resize: both;
-  background: transparent !important; color: transparent !important; caret-color: var(--text);
+  background: transparent !important; color: var(--text) !important; caret-color: var(--text);
 }
 .wa-textarea:focus { box-shadow: none; border-color: transparent; }
-.wa-textarea::selection { background: rgba(var(--accent-rgb), 0.4); color: transparent; }
+.wa-textarea::selection { background: rgba(var(--accent-rgb), 0.4); }
 
 .md-preview {
   display: none; border: 1px solid var(--border); border-radius: 0; background: transparent;
@@ -3529,7 +3522,6 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
 
 /* Controls on the chapter bar sit on one line of equal height. */
 .version-bar .btn, .mode-switch button, .reading-prefs > summary { min-height: 32px; }
-.reading-prefs-row.fill-row { justify-content: space-between; }
 
 /* Notes on a phone: tapping an underlined passage brings its note up from
    the bottom of the screen, over the text, instead of scrolling a long way
@@ -3912,7 +3904,6 @@ main:focus { outline: none; }
    writing checks -- share the chapter's width and sit straight under the
    header, without a second rule of their own. */
 .review-requests, .review-ask, .wa-card-reading, .chapter-cast, .missing-names { max-width: 1180px; }
-.wa-fullwidth .review-requests, .wa-fullwidth .review-ask, .wa-fullwidth .wa-card-reading, .wa-fullwidth .chapter-cast, .wa-fullwidth .missing-names { max-width: none; }
 .chapter-header + .review-requests { border-top: 0; padding-top: 0; margin: calc(-1 * var(--s-4)) 0 var(--s-5); }
 @media (max-width: 720px) {
   .chapter-header .reading-prefs > summary { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--s-5); }
@@ -3956,6 +3947,8 @@ mark.wa-word.wa-complex { background: var(--wa-fill-complex); }
 mark.wa-sentence, mark.wa-word { border-radius: 0; }
 @media (forced-colors: active) {
   mark.wa-sentence, mark.wa-word { forced-color-adjust: none; background: Mark; color: MarkText; }
+  .wa-overlay, .wa-overlay mark.wa-sentence, .wa-overlay mark.wa-word { forced-color-adjust: none; color: transparent; }
+  .wa-overlay .hl-pending, .wa-overlay .hl-accepted, .wa-overlay .hl-rejected { text-decoration-color: CanvasText; }
 }
 
 /* The editor: text on the left, the checks (and the notes) on the right. */
@@ -4101,7 +4094,7 @@ a.mention { font-weight: 600; text-decoration: none; }
 /* On the chapter page the author's checks panel is one line above the
    text, and only in Review. */
 .wa-panel-chapter { max-width: 1180px; margin-bottom: var(--s-6); }
-main[data-reading="read"] .wa-panel-chapter { display: none; }
+main:not([data-reading="revise"]) .wa-panel-chapter { display: none; }
 /* The heart inside "Love it" is part of its label, not a second chip. */
 .note-kind span span { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: inherit; }
 
@@ -4181,6 +4174,9 @@ main:not([data-reading="read"]) #chapter-text > .reacted-heat::after {
 .reaction-sum-slow strong { color: var(--react-slow); }
 .reaction-sum-unconvinced strong { color: var(--react-unconvinced); }
 main[data-reading="read"] .reaction-summary { display: none; }
+/* Read is the story alone: the author's list of unknown names is a
+   reviewing tool, and waits in Review with the notes. */
+main[data-reading="read"] .missing-names { display: none; }
 @media (forced-colors: active) {
   .react-btn[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }

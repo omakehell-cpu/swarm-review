@@ -81,7 +81,8 @@ The chapter page is the page the site is for.
   **Next** chapter.
 - The title, with the chapter's place in the story above it (*Chapter 1
   of 2*), then who wrote it, how long it is and when.
-- One row of controls: **Read** or **Review**, **Aa** for how the text
+- One row of controls: **Read**, **Review** (and **Revise**, on your own
+  chapter), **Aa** for how the text
   looks, **Edit** if it is yours, and **More** for downloads and archiving.
 - The text, and -- in Review -- the notes beside it.
 - At the end, the next chapter in large type, and **All chapters**.
