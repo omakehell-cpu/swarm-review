@@ -128,6 +128,22 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   redirect(res, `/chapters/${chapter.id}`);
 }
 
+// One reaction on one paragraph, switched on or off by a reader (see
+// models/reactions.js and public/js/reactions.js). Not by the author: a
+// writer's own "hooked" is not news.
+async function handleReaction(req, res, user, chapterId) {
+  const chapter = models.getChapterById(chapterId);
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
+  if (chapter.author_id === user.id) return sendJson(res, 403, { error: 'Reactions are for readers.' });
+  const body = await parseBody(req);
+  const version = models.getVersion(Number(body.versionId));
+  if (!version || version.chapter_id !== chapterId) return sendJson(res, 400, { error: 'No such version.' });
+  const ok = models.setReaction({
+    versionId: version.id, userId: user.id, paragraph: Number(body.paragraph), kind: String(body.kind || ''), on: body.on === '1',
+  });
+  return sendJson(res, ok ? 200 : 400, { ok });
+}
+
 // Where the reader has got to, sent by the page as they read and when
 // they leave (see reading.js). Anybody who can read the chapter can keep
 // their own place in it; nothing else is written.
@@ -193,6 +209,9 @@ async function handleChapterPage(req, res, user, chapterId, query) {
     // Only on the current version: a place in an old draft is not a place.
     place: currentVersion.id === versions[0].id ? models.readingPlace(user.id, chapterId) : null,
     mentionable: models.listMentionable().filter((p) => p.username !== user.username),
+    reactions: isChapterAuthor
+      ? { mode: 'author', versionId: currentVersion.id, map: models.reactionMap(currentVersion.id) }
+      : { mode: 'reader', versionId: currentVersion.id, mine: models.myReactions(currentVersion.id, user.id) },
     reviewHtml: views.reviewBlock({
       chapter, isChapterAuthor,
       requests: models.listReviewRequestsForChapter(chapterId),
@@ -488,6 +507,7 @@ const routes = [
   ['GET', '/changelog', (c) => redirect(c.res, '/help/changelog')],
   ['GET', /^\/stories\/(\d+)\/archived-chapters$/, (c) => handleArchivedChaptersForStory(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/chapters\/(\d+)\/beside$/, (c) => handleBesideChapter(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/chapters\/(\d+)\/react$/, (c) => handleReaction(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/place$/, (c) => handleReadingPlace(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/summary$/, (c) => handleChapterSummary(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterPage(c.req, c.res, c.user, Number(c.m[1]))],

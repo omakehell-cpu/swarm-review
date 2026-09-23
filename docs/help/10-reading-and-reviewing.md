@@ -110,6 +110,27 @@ name appear under the box; choose one with the arrow keys and Enter, or
 click it. The note is then under *Replies and mentions* on their front page
 (and in their feed), and their name in the note is a link to their page.
 
+### How a paragraph read
+
+Some things are too small for a note and too useful to leave out: *I was
+lost here*, *this dragged*, *I didn't buy it*, *this is where I got hooked*.
+In **Review**, **click or tap a paragraph** and a small bar offers exactly
+those four -- **Hooked**, **Lost me**, **Dragged**, **Didn't buy it**. Each
+is a switch; press it again to take it back. From the keyboard, select a
+few words of the paragraph and press **R**.
+
+Paragraphs you have reacted to carry a thin line in the margin, in the
+colour of the reaction. Nobody else sees yours: the other readers do not
+see anyone's, so nobody is told where to be lost.
+
+**The author** sees them added up. Above the text, *How it read* says how
+many readers reacted and which paragraphs most of them were hooked by, lost
+in, bored by or unconvinced by, each a link to the paragraph. In the text,
+each paragraph readers reacted to has a bar in the margin in the colour of
+the reaction most of them had -- stronger the more of them had it -- and
+the counts underneath. It is the map a note cannot draw: where the chapter
+holds and where it lets go.
+
 ### Under every note
 
 Each note ends in one quiet line:

@@ -4124,3 +4124,69 @@ main[data-reading="read"] .wa-panel-chapter { display: none; }
 .editor-notes .comment.is-current { box-shadow: -3px 0 0 var(--text); padding-left: var(--s-3); }
 .editor-notes .comment.status-accepted, .editor-notes .comment.status-rejected { opacity: 0.7; }
 .editor-note-actions [hidden], .editor-notes-step[hidden] { display: none !important; }
+
+/* ==== Reactions: how each paragraph read ============================== */
+:root {
+  --react-hooked: #3f8f5a;
+  --react-lost: #7a5bb5;
+  --react-slow: #c08a2d;
+  --react-unconvinced: #c0453a;
+}
+.react-bar {
+  position: absolute; z-index: 55; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+  padding: 4px; background: var(--bg); border: 1px solid var(--border-strong);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.06); font-family: var(--font-ui); font-size: var(--t-sm);
+}
+.react-bar[hidden] { display: none; }
+.react-btn, .react-close {
+  min-height: 32px; padding: 0 var(--s-4); border: 1px solid var(--border); background: transparent;
+  color: var(--text); font: inherit; cursor: pointer;
+}
+.react-btn::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: var(--s-2); background: var(--react-color); vertical-align: 1px; }
+.react-hooked { --react-color: var(--react-hooked); }
+.react-lost { --react-color: var(--react-lost); }
+.react-slow { --react-color: var(--react-slow); }
+.react-unconvinced { --react-color: var(--react-unconvinced); }
+.react-btn[aria-pressed="true"] { background: var(--react-color); border-color: var(--react-color); color: #fff; }
+.react-btn[aria-pressed="true"]::before { background: #fff; }
+.react-close { padding: 0 var(--s-3); border-color: transparent; color: var(--text-muted); }
+
+/* A reader's own: a thin line in the margin, in Review only. */
+main:not([data-reading="read"]) #chapter-text > .reacted-mine { box-shadow: -10px 0 0 -7px var(--text-muted); }
+main:not([data-reading="read"]) #chapter-text > .mine-lost { box-shadow: -10px 0 0 -7px var(--react-lost); }
+main:not([data-reading="read"]) #chapter-text > .mine-slow { box-shadow: -10px 0 0 -7px var(--react-slow); }
+main:not([data-reading="read"]) #chapter-text > .mine-unconvinced { box-shadow: -10px 0 0 -7px var(--react-unconvinced); }
+main:not([data-reading="read"]) #chapter-text > .mine-hooked { box-shadow: -10px 0 0 -7px var(--react-hooked); }
+
+/* The author's heat map: the paragraph's margin in the colour most readers
+   felt there, stronger the more of them; the counts beside it. */
+main:not([data-reading="read"]) #chapter-text > .reacted-heat {
+  position: relative;
+  box-shadow: -12px 0 0 -6px color-mix(in srgb, var(--heat-color) calc(var(--heat, 0.5) * 100%), transparent);
+}
+.heat-hooked { --heat-color: var(--react-hooked); }
+.heat-lost { --heat-color: var(--react-lost); }
+.heat-slow { --heat-color: var(--react-slow); }
+.heat-unconvinced { --heat-color: var(--react-unconvinced); }
+main:not([data-reading="read"]) #chapter-text > .reacted-heat::after {
+  content: attr(data-heat-label); content: attr(data-heat-label) / "";
+  display: block; margin-top: 2px; font-family: var(--font-ui); font-size: var(--t-2xs); font-style: normal;
+  font-weight: 600; letter-spacing: 0.02em; color: var(--heat-color);
+}
+#chapter-text > .heat-flash { outline: 2px solid var(--heat-color, var(--text)); outline-offset: 4px; }
+
+.reaction-summary {
+  max-width: 1180px; margin: 0 0 var(--s-6); padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border); font-family: var(--font-ui); font-size: var(--t-sm);
+}
+.reaction-summary-head { margin: 0 0 var(--s-2); font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); }
+.reaction-summary ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-6); }
+.reaction-sum strong { margin-right: var(--s-2); }
+.reaction-sum-hooked strong { color: var(--react-hooked); }
+.reaction-sum-lost strong { color: var(--react-lost); }
+.reaction-sum-slow strong { color: var(--react-slow); }
+.reaction-sum-unconvinced strong { color: var(--react-unconvinced); }
+main[data-reading="read"] .reaction-summary { display: none; }
+@media (forced-colors: active) {
+  .react-btn[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}
