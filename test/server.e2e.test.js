@@ -495,6 +495,31 @@ test('the glossary keeps the state of a page off the subject axis', async () => 
   assert.match(canon, /href="[^"]*status=Stubs"/);
 });
 
+test('a long glossary listing is sent a letter at a time; a search is not', async () => {
+  const before = models.listWikiPagesForGlossary().map((p) => {
+    const full = models.getWikiPageByTitleLower(p.title_lower);
+    return { title: full.title, summary: full.summary, categories: models.categoriesByPage().get(full.title_lower) || [], contentHtml: full.content_html };
+  });
+  const many = [];
+  for (const first of ['Alpha', 'Beta', 'Gamma']) {
+    for (let i = 0; i < 60; i++) many.push({ title: `${first} ${String(i).padStart(2, '0')}`, summary: 'x', categories: ['Ships'], contentHtml: '<p>.</p>' });
+  }
+  models.replaceWikiPages(many);
+  const first = await (await request('/glossary?view=all')).text();
+  assert.match(first, /data-paged="1"/);
+  assert.match(first, />Alpha 00</);
+  assert.ok(!first.includes('>Beta 00<'), 'only the first letter is sent');
+  assert.match(first, /href="\/glossary\?view=all&amp;letter=B"/);
+  const b = await (await request('/glossary?view=all&letter=B')).text();
+  assert.match(b, />Beta 59</);
+  assert.ok(!b.includes('>Alpha 00<'));
+  assert.match(b, /60 of 180 pages, under B/);
+  const found = await (await request('/glossary?q=Gamma')).text();
+  assert.ok(!found.includes('data-paged'), 'a search shows everything it found');
+  // The tests after this one read the small glossary from the one before.
+  models.replaceWikiPages(before);
+});
+
 test('every glossary listing can be filtered without a round trip', async () => {
   const listing = await (await request('/glossary?view=all')).text();
   // The rows carry what the in-page filter matches against, so the filter

@@ -42,9 +42,12 @@
   }
 
   input.addEventListener('input', apply);
-  // Enter would submit and reload a page we have already filtered.
+  // Enter would submit and reload a page we have already filtered -- unless
+  // this is one letter of a long listing, where the page only holds that
+  // letter and Enter is how to search all of them.
+  const paged = list.getAttribute('data-paged') === '1';
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && input.value.trim()) { e.preventDefault(); apply(); }
+    if (!paged && e.key === 'Enter' && input.value.trim()) { e.preventDefault(); apply(); }
   });
   if (input.value.trim()) apply();
 }());

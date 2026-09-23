@@ -66,6 +66,25 @@ function verifySession(token) {
 
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 dias
 
+// --- CSRF: a token every form and every script's POST carries back ---
+// Derived rather than stored: the same secret signs "this person, this
+// generation of their sessions", so every tab has the same token, and
+// changing the password (which bumps session_version) retires it along
+// with the sessions. Another site can make a browser post here with the
+// cookie attached; it cannot read a page of ours to learn this.
+/** @param {{ id: number, session_version?: number }} user */
+function csrfToken(user) {
+  return b64url(crypto.createHmac('sha256', SESSION_SECRET)
+    .update(`csrf:${user.id}:${user.session_version || 0}`).digest());
+}
+/** @param {{ id: number, session_version?: number }} user @param {string} given */
+function csrfMatches(user, given) {
+  if (!given || typeof given !== 'string') return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(csrfToken(user));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 // --- invite codes: gate registration so randoms can't self-sign-up if the
 // server is ever reachable from outside the group. Unlike the old static
 // code this app used to have, these are single-use and live in the
@@ -98,6 +117,8 @@ module.exports = {
   signSession,
   verifySession,
   SESSION_MAX_AGE_MS,
+  csrfToken,
+  csrfMatches,
   generateInviteCode,
   ACCOUNT_LOCKOUT_THRESHOLD,
   generateResetToken,

@@ -53,23 +53,39 @@ async function startApp() {
 // them are two people.
 function makeClient(base) {
   let cookie = '';
+  // A browser gets the CSRF token from the page; a test gets it the way a
+  // script with no page would, once per session cookie. A test can turn it
+  // off (csrf: false) to check what happens without one.
+  const tokens = new Map();
+  async function tokenFor(currentCookie) {
+    if (!currentCookie) return '';
+    if (!tokens.has(currentCookie)) {
+      const res = await fetch(`${base}/csrf-token`, { headers: { cookie: currentCookie }, redirect: 'manual' });
+      tokens.set(currentCookie, res.ok ? (await res.json()).token : '');
+    }
+    return tokens.get(currentCookie);
+  }
   /**
    * @param {string} pathname
-   * @param {{ method?: string, body?: string|Uint8Array, contentType?: string, headers?: Record<string, string> }} [options]
+   * @param {{ method?: string, body?: string|Uint8Array, contentType?: string, headers?: Record<string, string>, csrf?: boolean }} [options]
    */
-  const request = (pathname, { method = 'GET', body, contentType, headers = {} } = {}) =>
-    fetch(base + pathname, {
+  const request = async (pathname, { method = 'GET', body, contentType, headers = {}, csrf = true } = {}) => {
+    const unsafe = method !== 'GET' && method !== 'HEAD';
+    const token = unsafe && csrf ? await tokenFor(cookie) : '';
+    return fetch(base + pathname, {
       method,
       redirect: 'manual',
       headers: {
         ...(cookie ? { cookie } : {}),
         ...(contentType ? { 'content-type': contentType } : {}),
+        ...(token ? { 'x-csrf-token': token } : {}),
         ...headers,
       },
       // Node's fetch takes a Buffer at runtime; its published types only
       // admit the web BodyInit union, which doesn't name ArrayBufferView.
       body: /** @type {any} */ (body),
     });
+  };
 
   return {
     request,

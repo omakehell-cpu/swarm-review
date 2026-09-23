@@ -94,8 +94,11 @@ What they do:
   reactivates it. They can also send somebody a reset link.
 - **Tags.** Approving or merging the tags authors have proposed.
 - **The wiki.** Pressing *Sync wiki now* to refresh the glossary.
-- **Backup.** Downloading the whole database as one file, safe to take
-  while people are using the site.
+- **Backup.** The server keeps a copy of everything every day, for two
+  weeks. An admin can take one on demand, download the whole database as
+  one file, and **put a copy back**: choose it, type RESTORE, and the site
+  goes back to how it was then. A copy of the site as it stood is taken
+  first, so a restore can be undone the same way.
 - **A log** of what each person has been doing, which is there so that
   "something went wrong yesterday" is answerable.
 

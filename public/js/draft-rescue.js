@@ -58,7 +58,11 @@
   const SERVER_AFTER_MS = 4000;
   let serverCopy = original;
   let serverTimer = null;
+  // The page leaving sends its draft as a beacon, which carries no
+  // headers, so the CSRF token rides in the body (see lib/csrf.js).
+  const csrfField = /** @type {HTMLInputElement|null} */ (document.querySelector('input[name="_csrf"]'));
   const draftFields = () => new URLSearchParams({
+    _csrf: csrfField ? csrfField.value : '',
     content: text.value,
     title: title ? title.value : '',
     summary: summaryField ? summaryField.value : '',

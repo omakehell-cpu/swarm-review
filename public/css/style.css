@@ -4054,3 +4054,11 @@ body.writing-focus .wa-panel { display: none; }
 .wa-pcard-craft { min-height: 28px; }
 .wa-panel-more > summary { display: inline-block; min-height: 24px; padding: var(--s-1) 0; }
 .wa-panel-modes button { min-height: 26px; }
+
+/* Putting a backup back: tucked away, and deliberate. */
+.restore-backup { margin: var(--s-5) 0; }
+.restore-backup > summary { cursor: pointer; font-size: var(--t-sm); font-weight: 600; }
+.restore-form { display: flex; flex-direction: column; gap: var(--s-4); max-width: 28rem; margin-top: var(--s-4); }
+/* One letter of a long glossary listing, and the way to the next. */
+.az-bar a.current { background: var(--text); color: var(--btn-text); }
+.letter-steps { display: flex; justify-content: space-between; margin-top: var(--s-7); font-size: var(--t-md); }

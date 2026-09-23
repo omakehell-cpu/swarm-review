@@ -88,35 +88,6 @@ of that item is hearing it done.
 
 # Worth doing when there is an evening
 
-## Not shipping half a megabyte of glossary
-**Cost: half a day.** **Touches: one page.** Low risk.
-`/glossary?view=all` renders all 691 wiki pages into **491 KB of HTML** in
-one response. It is fast on the server -- 13 ms -- and that is not the
-problem: it is half a megabyte down a home tunnel to somebody's phone, and
-691 rows for a screen reader to walk past. The A–Z jump bar is already
-there; the fix is to send one letter at a time, or the first hundred with
-a "more" link.
-
-## Restoring a backup from the web
-**Cost: a day.** **Touches: the admin page and the database file.**
-**The highest-risk item on this list** -- it is the one feature whose bug
-is "the wrong database is now live". Wants a confirmation that names the
-file and its date, a copy of the current database taken first, and the
-server refusing to do it while anybody else is writing.
-Copies are taken daily and kept for a fortnight. Using one means stopping
-the server, finding the file and swapping it by hand, which is a thing
-nobody will get right at midnight.
-
-## A CSRF token
-**Cost: two hours.** **Touches: every form and the four `fetch` calls.**
-Low risk, and easy to verify -- a missing token is a loud failure, not a
-quiet one.
-Today the only thing stopping another site from posting to this one is the
-session cookie's `SameSite=Lax`, which is genuinely enough in a current
-browser. It is doing all of the work alone, though, and the number of
-things posted by script rather than by a form keeps growing. Cheap now,
-annoying later.
-
 ## Index cards for the outline
 **Cost: a day.** **Touches: one page, read-only.** Low risk -- it is a
 second way of drawing chapters the outline already loads.
@@ -157,12 +128,6 @@ The word goal knows where you are going but not when. bibisco asks for a
 date as well, and then the only number that matters is words per day left.
 Small, and the kind of thing that either helps a great deal or is switched
 off in a week.
-
-## The log grows forever
-**Cost: an hour.** **Touches: how the service is started, not the app.**
-`server.log` is 23 KB today and nothing ever truncates it. On a Mac mini
-that runs for a year this is the kind of thing that is fine until it is
-not.
 
 ---
 
