@@ -4062,3 +4062,56 @@ body.writing-focus .wa-panel { display: none; }
 /* One letter of a long glossary listing, and the way to the next. */
 .az-bar a.current { background: var(--text); color: var(--btn-text); }
 .letter-steps { display: flex; justify-content: space-between; margin-top: var(--s-7); font-size: var(--t-md); }
+
+/* The editor's row of tools on a phone: formatting, the two views, and a
+   "…" that opens the rest. */
+.editor-tool.tool-more { display: none; font-family: var(--font-ui); font-weight: 700; }
+@media (max-width: 720px) {
+  .editor-tools { flex-wrap: wrap; gap: 4px; }
+  .editor-tools .editor-tool { min-width: 0; padding: 0 var(--s-3); }
+  .editor-tool.tool-more { display: inline-block; }
+  .editor-tools .editor-tools-spacer { display: none; }
+  .editor-tools:not(.show-more) .tool-secondary { display: none; }
+  .editor-tools.show-more .tool-more { background: var(--text); color: var(--btn-text); border-color: var(--text); }
+}
+
+/* Picking up where you stopped. */
+.resume-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3) var(--s-5);
+  margin: 0 0 var(--s-6); padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--border); border-left: 3px solid var(--text);
+  font-family: var(--font-ui); font-size: var(--t-sm);
+}
+
+/* Order and find, on the front page. */
+.list-tools { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2) var(--s-5); margin-left: auto; }
+.list-sort { display: flex; gap: var(--s-4); font-size: var(--t-sm); }
+.list-sort a { color: var(--text-muted); }
+.list-sort-current { font-weight: 700; color: var(--text); }
+.list-find { width: 12rem; padding: var(--s-1) var(--s-3); font-size: var(--t-sm); }
+@media (max-width: 720px) { .list-tools { margin-left: 0; flex-basis: 100%; } .list-find { flex: 1; } }
+/* Hidden means hidden, whatever display a component gives itself. */
+.story-row[hidden], .list-find[hidden], .glossary-row[hidden] { display: none !important; }
+
+/* Naming somebody in a note. */
+a.mention { font-weight: 600; text-decoration: none; }
+.mention-list {
+  position: absolute; z-index: 60; margin: 0; padding: var(--s-1) 0; list-style: none; min-width: 14rem;
+  background: var(--bg); border: 1px solid var(--border-strong); box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.06);
+  font-family: var(--font-ui); font-size: var(--t-sm);
+}
+.mention-list[hidden] { display: none; }
+.mention-list li { padding: var(--s-2) var(--s-4); cursor: pointer; }
+.mention-list li[aria-selected="true"] { background: var(--text); color: var(--btn-text); }
+.mention-list li[aria-selected="true"] .muted { color: inherit; opacity: 0.75; }
+/* On the chapter page the author's checks panel is one line above the
+   text, and only in Review. */
+.wa-panel-chapter { max-width: 1180px; margin-bottom: var(--s-6); }
+main[data-reading="read"] .wa-panel-chapter { display: none; }
+/* The heart inside "Love it" is part of its label, not a second chip. */
+.note-kind span span { display: inline; min-height: 0; padding: 0; border: 0; background: none; color: inherit; }
+
+/* The checks panel above a chapter: the cards in columns rather than a
+   stack the width of the page, and no editor settings where there is no editor. */
+.wa-panel-chapter .wa-panel-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.wa-panel-more:has(.wa-panel-more-body:empty) { display: none; }

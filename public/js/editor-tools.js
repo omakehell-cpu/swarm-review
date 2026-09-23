@@ -337,12 +337,27 @@
   });
   bar.appendChild(modeGroup);
 
+  // On a phone the row is the formatting and the two views, and the rest
+  // waits behind one button, so the text starts on the first screen
+  // rather than under three rows of controls. On a wide screen the button
+  // is not shown and everything sits in one row as before.
+  const moreBtn = button('tool-more', '\u2026', 'More tools: Checks as a list, Scenes & snapshots, Typewriter, Focus');
+  moreBtn.setAttribute('aria-label', 'More tools');
+  moreBtn.setAttribute('aria-expanded', 'false');
+  moreBtn.addEventListener('click', () => {
+    const open = bar.classList.toggle('show-more');
+    moreBtn.setAttribute('aria-expanded', String(open));
+  });
+  bar.appendChild(moreBtn);
+
   const whereBtn = button('tool-where', 'Formatting here', `Say the formatting and the scene where the caret is (${FKEY})`);
   whereBtn.addEventListener('click', whereAmI);
+  whereBtn.classList.add('tool-secondary');
   bar.appendChild(whereBtn);
 
   const checksBtn = button('tool-checks', 'Checks as a list', 'The writing checks as a list you can walk, each one a jump to its words');
   checksBtn.setAttribute('aria-expanded', 'false');
+  checksBtn.classList.add('tool-secondary');
   bar.appendChild(checksBtn);
 
   const spacer = document.createElement('span');
@@ -350,15 +365,17 @@
   bar.appendChild(spacer);
 
   const session = document.createElement('span');
-  session.className = 'session-count';
+  session.className = 'session-count tool-secondary';
   session.setAttribute('aria-live', 'off');
   bar.appendChild(session);
 
   const typewriterBtn = button('tool-typewriter', 'Typewriter', 'Keep the line you are writing at the same height on the screen');
   typewriterBtn.setAttribute('aria-pressed', 'false');
+  typewriterBtn.classList.add('tool-secondary');
   bar.appendChild(typewriterBtn);
   const focusBtn = button('tool-focus', 'Focus', 'Hide everything but the writing (Esc to come back)');
   focusBtn.setAttribute('aria-pressed', 'false');
+  focusBtn.classList.add('tool-secondary');
   bar.appendChild(focusBtn);
 
   // The bar goes directly above the text, after the writing checks have

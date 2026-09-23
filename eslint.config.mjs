@@ -52,6 +52,17 @@ export default [
   },
 
   {
+    // The service worker: served from the root so that it can look after
+    // the whole site, and running with a worker's globals (caches, clients).
+    files: ['public/sw.js'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'script',
+      globals: { ...globals.serviceworker },
+    },
+  },
+
+  {
     // Everything shipped to the browser. No bundler, no modules: these are
     // plain <script> files, each wrapped in its own IIFE.
     files: ['public/js/**/*.js'],

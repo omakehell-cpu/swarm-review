@@ -1,6 +1,6 @@
 'use strict';
 
-const { chaptersNewToMe, pendingOnMyChapters, repliesToMe } = require('./reading');
+const { chaptersNewToMe, mentionsOf, pendingOnMyChapters, repliesToMe } = require('./reading');
 const { reviewQueueFor } = require('./reviews');
 const { auth, db } = require('./shared');
 // The order chapters are told in and the order things happen in are two
@@ -174,6 +174,20 @@ function feedItemsFor(userId, { days = 30, limit = 40 } = {}) {
       title: `${row.author_name} replied on ${row.chapter_number}. ${row.chapter_title}`,
       summary: row.body,
       url: `/chapters/${row.chapter_id}`,
+      at: row.created_at,
+      author: row.author_name,
+    });
+  }
+
+  const replyIds = new Set(items.filter((i) => i.kind === 'reply').map((i) => i.key));
+  for (const row of mentionsOf(userId, since, limit)) {
+    if (replyIds.has(`reply/${row.id}`)) continue;
+    items.push({
+      kind: 'mention',
+      key: `mention/${row.id}`,
+      title: `${row.author_name} mentioned you on ${row.chapter_number}. ${row.chapter_title}`,
+      summary: row.body,
+      url: `/chapters/${row.chapter_id}#comment-${row.id}`,
       at: row.created_at,
       author: row.author_name,
     });

@@ -205,7 +205,7 @@
     if (!editor || !editor.bar || editor.bar.querySelector('.tool-desk')) return;
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'editor-tool tool-desk';
+    b.className = 'editor-tool tool-desk tool-secondary';
     b.textContent = 'Scenes & snapshots';
     b.title = 'The scenes of this chapter, your notes on them, and snapshots of the text';
     b.addEventListener('mousedown', (ev) => ev.preventDefault());
