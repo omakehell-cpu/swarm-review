@@ -39,7 +39,7 @@ if (!USER || !PASSWORD) {
 }
 const PAGES = (process.env.A11Y_PAGES || '/,/help,/account,/tags,/glossary,/activity,/stories/new,/search?q=the')
   .split(',').filter(Boolean);
-const COMBOS = [['', 'light'], ['', 'dark'], ['literary', 'light'], ['literary', 'dark'], ['swarm', 'dark']];
+const COMBOS = [['', 'light'], ['', 'dark'], ['literary', 'light'], ['literary', 'dark'], ['swarm', 'light'], ['swarm', 'dark']];
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 
 (async () => {

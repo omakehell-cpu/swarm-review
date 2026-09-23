@@ -118,8 +118,8 @@ expression. Nothing you write is sent anywhere to be read by anything.
 
 Your account page has three looks to choose from: **Clean**, the site as
 it was designed; **Literary**, paper and serif, with the stories laid out
-as a shelf of covers; and **The Swarm**, a dark console with the chapter on
-a lit page in the middle of it. The choice is yours alone -- nobody else
-sees it -- and it follows you to every device you sign in on. Light and
-dark still follow the moon button in the top bar, except in The Swarm,
-which is always dark.
+as a shelf of covers; and **The Swarm**, a ship's console -- a pale
+bridge by day and a dark deck by night, where the chapter sits on a dark
+page as well. The choice is yours alone -- nobody else sees it -- and it
+follows you to every device you sign in on. Light and dark follow the moon
+button in the top bar in all three.
