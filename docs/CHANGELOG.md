@@ -6,6 +6,16 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-23 — A desk to write at, and a page to read on
 
+### The look
+
+- **Swarm Review, with a mark.** The site has a name and a logo -- an open book whose pages are halves of the swarm's hexagon -- and titles set in the book face, like the stories.
+- **A calmer top bar.** Stories, Glossary and Help; a search; **+ Write** to start a story; and your name, with Your page, Account, Tags, Admin and Log out behind it.
+- **One way to show what is chosen** (filled in ink), **red only for what is waiting on you**, three kinds of button instead of six, and thin rules instead of heavy ones.
+- **The chapter starts under its title.** The writing checks, How it read and Ask someone to read moved to the top of the notes column. On the text, the checks are the only colour: a note is a dot in the margin, the notes are a plain list beside the text, and reactions are only in the summary.
+- **The editor**: the title is written as a heading, the draft says where it stands in one line, and the checks beside it are compact enough to leave the notes on the first screen.
+- **Front page, story page, bible, account and empty pages tidied**: bigger covers and a readable word goal; the story's Archive behind More; the bible's kinds as tabs instead of five big numbers; the account in one column; an empty glossary that says what it is for.
+- **Night is charcoal**, not black, with brighter check colours. Pages no longer fade in, which made the log-in look disabled for a moment.
+
 ### Writing
 
 - **Writing style checks, on or off.** One switch at the top of the checks panel instead of the Revise and Write pair. Each card says whether its marks are shown with a tick and its colour -- it no longer changes its words or its size -- and hard and very hard sentences are two cards now.

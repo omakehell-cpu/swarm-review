@@ -3,7 +3,7 @@
 const { layout } = require('../lib/layout');
 const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
-const { taxonomy, wiki } = require('./shared');
+const { emptyState, taxonomy, wiki } = require('./shared');
 // wiki -- see lib/wiki.js for how it's kept in sync) ----------
 // The wiki's own categories are three different things at once -- what a
 // page is, what it is about, what state its text is in -- so the index
@@ -41,7 +41,14 @@ function glossaryDirectoryPage({ user, totalPages = 0, kinds = { world: 0, stori
       current: 'glossary',
       body: `
         <div class="page-head"><h1>Glossary</h1></div>
-        <p class="muted">The glossary is empty -- an admin needs to sync the wiki from the ${user.is_admin ? '<a href="/admin">admin page</a>' : 'admin page'} first.</p>`,
+        ${emptyState({
+    art: 'book',
+    title: 'The glossary is waiting for the wiki',
+    body: 'This is the shared universe: its people, ships, places and history, brought in from the wiki. Once it is here, names in every chapter link to it, and a card tells you who someone is without leaving the page.',
+    action: user.is_admin
+      ? '<a class="btn" href="/admin#wiki">Bring the wiki in</a>'
+      : 'An admin brings it in from the admin page. Until then, each story\'s own bible still works.',
+  })}`,
     });
   }
 

@@ -170,7 +170,7 @@ test('an archived story stops being anybody\'s business', () => {
 test('the panel reaches the page, and disappears when there is nothing', async () => {
   const html = await (await ana.request('/')).text();
   assert.match(html, /Waiting on you/);
-  assert.match(html, /comments? to accept or reject/);
+  assert.match(html, /notes? to answer/);
 
   for (const c of models.listCommentsForVersion(versionId)) {
     if (c.parent_id == null && c.status === 'pending') {

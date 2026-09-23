@@ -291,7 +291,7 @@ function wikiSyncSection(state) {
         state.last_status === 'error' ? ` &middot; <span class="error">failed: ${escapeHtml(state.last_error || 'unknown error')}</span>` : ''
       }</p>`;
   return `
-    <section class="admin-section">
+    <section class="admin-section" id="wiki">
       <h2>Wiki linking</h2>
       <p class="muted">Character/place/ship names recognized from <a href="${escapeHtml(wiki.WIKI_BASE_URL)}" target="_blank" rel="noopener noreferrer">the shared-universe wiki</a> get auto-linked in chapter text, with a hover preview of the wiki page's summary -- readers can turn this off from the "Wiki links" toggle on the chapter page. The same local copy also powers the <a href="/glossary">Glossary</a> section, a full offline mirror of the wiki's pages. Nothing here refreshes automatically -- click "Sync wiki now" below whenever the wiki has changed.</p>
       ${statusLine}

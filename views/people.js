@@ -291,6 +291,7 @@ function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], stre
     current: 'account',
     flash: notice ? { type: 'info', message: notice } : null,
     body: `
+      <div class="account-page">
       <h1>Account</h1>
       <div class="auth-card">
         <h2>Your name</h2>
@@ -336,7 +337,8 @@ function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], stre
         </form>
         <p class="muted">Changing your password signs you out of any other device or browser where you're currently logged in.</p>
       </div>
-      ${hiddenTagsSection(groups, hiddenTagIds)}`,
+      ${hiddenTagsSection(groups, hiddenTagIds)}      </div>
+    `,
   });
 }
 

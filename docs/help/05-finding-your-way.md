@@ -91,12 +91,14 @@ All of it is explained in [reading and reviewing](/help/reading-and-reviewing).
 
 ## The top bar
 
-**Stories** is the front page. **New story** starts one. **Tags** and
-**Glossary** are the two shared vocabularies: the codes stories carry, and
-the offline copy of the shared-universe wiki. **Help** is these pages.
-**Search** looks through everything -- stories, chapters, the glossary and
-every bible. Your name leads to your **account**, and the moon switches
-between light and dark.
+On the left, the three places: **Stories** (the front page), **Glossary**
+(the offline copy of the shared-universe wiki) and **Help** (these pages).
+On the right, **Search**, which looks through everything -- stories,
+chapters, the glossary and every bible -- and **+ Write**, which starts a
+new story. Your name opens a small menu: **Your page**, **Account**,
+**Tags** (the codes stories carry), **Admin** if you are one, and **Log
+out**. The moon switches between light and dark. On a phone all of it is
+behind **Menu**.
 
 On a phone the links fold into **Menu**.
 

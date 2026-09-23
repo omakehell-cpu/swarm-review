@@ -548,7 +548,7 @@ test('a dead link lands on a page, not a blank window', async () => {
   assert.strictEqual(res.status, 404);
   const html = await res.text();
   // The site's own chrome, so there is a way out.
-  assert.match(html, /<title>[^<]*The Swarm Review<\/title>/);
+  assert.match(html, /<title>[^<]*Swarm Review<\/title>/);
   assert.match(html, /class="topbar"/);
   assert.match(html, /href="\/"/);
   assert.match(html, /404/);

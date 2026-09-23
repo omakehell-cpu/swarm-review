@@ -206,7 +206,7 @@ test('the index sorts by kind and filters without leaving the page', async () =>
     ...form([['name', 'Kestrel Anchorage'], ['kind', 'place'], ['summary', 'A deep-space anchorage.']]),
   });
   const html = await (await owner.request(`/stories/${storyId}/bible`)).text();
-  assert.match(html, /class="glossary-doors bible-doors"/);
+  assert.match(html, /class="kind-tabs"/);
   assert.match(html, /href="\/stories\/\d+\/bible\?kind=place"/);
   assert.match(html, /data-search="[^"]*kestrel anchorage/);
 

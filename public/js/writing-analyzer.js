@@ -1953,6 +1953,10 @@
   // item and takes a column of its own. Falls back to the old position
   // anywhere that structure isn't there.
   function insertControlsCard(card, container) {
+    // The chapter page keeps the author's tools at the top of the notes
+    // column, so the text starts right under the title.
+    const tools = document.querySelector('.notes-tools');
+    if (tools) { tools.insertBefore(card, tools.firstChild); return; }
     const anchor = container.closest('.chapter-body-grid') || container.closest('.reading-pane') || container;
     anchor.parentNode.insertBefore(card, anchor);
   }
