@@ -631,9 +631,11 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
    connector and the weaker the link. So the chapter page holds its own
    width inside the wider page column -- and "Fill screen" is still there
    for anyone who wants the whole window anyway. */
+.chapter-topline,
 .chapter-header,
 .chapter-body-grid,
 .chapter-nav { max-width: 1180px; }
+.wa-fullwidth .chapter-topline,
 .wa-fullwidth .chapter-header,
 .wa-fullwidth .chapter-body-grid,
 .wa-fullwidth .chapter-nav { max-width: none; }
@@ -2031,7 +2033,7 @@ mark.search-hit {
   border-top: 2px solid var(--accent);
   border-radius: 0;
 }
-.inbox-group h3 {
+.inbox-group h2 {
   margin: 0 0 var(--s-4);
   font-size: var(--t-2xs);
   font-weight: 700;
@@ -3311,7 +3313,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .review-people legend { font-size: var(--t-2xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); margin-bottom: var(--s-3); }
 
 .inbox-question { grid-column: 1 / -1; font-family: var(--font-prose); font-style: italic; font-size: var(--t-md); }
-.inbox-asked h3 { color: var(--accent); }
+.inbox-asked h2 { color: var(--accent); }
 
 /* ---- the top bar on a phone ----
    Folded behind one button, and only when a script is there to unfold it
@@ -3409,7 +3411,7 @@ body.writing-focus textarea[data-editor-tools] { min-height: 70vh; }
    short lines, a link to the rest. Deliberately smaller than everything
    around it. */
 .activity-strip { margin: var(--s-10) 0 var(--s-6); }
-.activity-strip h3 {
+.activity-strip h2 {
   margin: 0 0 var(--s-2); font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
   letter-spacing: var(--label-tracking); color: var(--text-muted);
 }
@@ -3807,3 +3809,106 @@ main:focus { outline: none; }
 .whats-new-list a { font-weight: 600; color: var(--text); }
 .whats-new-points { display: block; font-size: var(--t-sm); color: var(--text-muted); margin-top: 2px; }
 .whats-new-foot { margin: 0; display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-5); align-items: baseline; font-size: var(--t-sm); }
+
+/* ==== Streamlined: the front page and the chapter =====================
+   Fewer rows of controls before the text, facts next to what they are
+   about, and one quiet line of actions under each note. */
+
+/* -- Front page ------------------------------------------------------- */
+.list-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+  gap: var(--s-2) var(--s-6); margin: var(--s-9) 0 0; padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--border-strong);
+}
+.list-head .list-label {
+  margin: 0; font-family: var(--font-ui); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
+.list-count { font-variant-numeric: tabular-nums; margin-left: var(--s-2); color: var(--text-muted); font-weight: 500; }
+.list-head .tag-filter { margin: 0; }
+.list-head .tag-filter > summary { padding: 0; }
+.list-head .tag-filter[open] { flex-basis: 100%; order: 3; }
+.list-head + .chapter-list > .chapter-row:first-child { border-top: 0; }
+
+.story-row .chapter-row-main h3 { margin-bottom: var(--s-2); }
+.story-facts {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-1) var(--s-4);
+  margin: 0 0 var(--s-3); font-size: var(--t-sm); color: var(--text-muted);
+}
+.story-facts .badge { position: relative; }
+.story-blurb { margin: 0; max-width: 62ch; color: var(--text); opacity: 0.85; line-height: 1.5; }
+.story-audience { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) var(--s-5); }
+.story-progress-wrap { display: inline-flex; align-items: center; gap: var(--s-3); }
+.story-progress-wrap .story-progress { display: inline-block; width: 64px; height: 3px; margin: 0; background: var(--border); }
+.story-progress-wrap .story-progress-fill { display: block; }
+
+/* -- Chapter ---------------------------------------------------------- */
+.chapter-kicker {
+  display: block; margin-bottom: var(--s-3);
+  font-family: var(--font-ui); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
+.chapter-kicker-of { font-weight: 500; }
+.chapter-header .byline { margin-top: var(--s-3); }
+.chapter-header .version-bar { margin-top: var(--s-5); }
+.version-bar:not(:has(.version-context)) { justify-content: flex-start; }
+
+.comments-pane h2 { display: flex; align-items: baseline; gap: var(--s-3); }
+.notes-count {
+  font-variant-numeric: tabular-nums; letter-spacing: 0; font-weight: 700;
+  padding: 0 var(--s-2); border: 1px solid var(--border); border-radius: 999px; color: var(--text);
+}
+
+/* One line under each note: Reply, Edit, Retract. An open one takes the
+   whole width underneath, and the others stay where they were. */
+.comment-foot {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2) var(--s-5);
+  margin-top: var(--s-3); font-size: var(--t-sm);
+}
+.comment-foot > details { margin: 0; }
+.comment-foot > details[open] { flex-basis: 100%; order: 2; }
+.comment-foot > details > summary {
+  cursor: pointer; color: var(--text-muted); list-style: none; display: inline-block;
+}
+.comment-foot > details > summary::-webkit-details-marker { display: none; }
+.comment-foot > details > summary:hover { color: var(--text); }
+.comment-foot .edit-comment > summary::before { content: none; }
+.comment-foot .comment-retract .linklike { color: var(--text-muted); font-size: inherit; }
+.comment-foot .comment-retract .linklike:hover { color: var(--text); }
+.comment-actions { margin: var(--s-3) 0 0; }
+
+
+/* Aa is a control like its neighbours, so it looks like one. */
+.chapter-header .reading-prefs > summary {
+  border: 1px solid var(--border); border-radius: var(--radius); padding: var(--s-2) var(--s-4);
+  color: var(--text); font-weight: 600;
+}
+.chapter-header .reading-prefs > summary:hover { border-color: var(--border-strong); background: var(--bg-sunken); }
+
+/* The foot of the chapter: one rule over the whole row, and the way on
+   as the largest thing in it. */
+.chapter-nav.foot .chapter-nav-link {
+  border: 1px solid transparent; border-radius: var(--radius); padding: var(--s-4) var(--s-5);
+}
+.chapter-nav.foot .chapter-nav-link:hover { border-color: var(--border); background: var(--bg-sunken); }
+.chapter-nav.foot .chapter-nav-title { font-size: var(--t-lg); }
+.chapter-nav.foot .chapter-nav-here {
+  padding: var(--s-2) var(--s-4); border: 1px solid var(--border); border-radius: 999px;
+}
+.chapter-nav.foot .chapter-nav-here:hover { border-color: var(--border-strong); color: var(--text); text-decoration: none; }
+
+/* The tools now sit at the left of the header, so their panels open to
+   the right, onto the page, rather than off its edge. */
+@media (min-width: 721px) {
+  .chapter-header .reading-prefs-panel, .chapter-header .menu-panel { left: 0; right: auto; }
+}
+
+/* The author's two extra rows -- who they asked to read it, and the
+   writing checks -- share the chapter's width and sit straight under the
+   header, without a second rule of their own. */
+.review-requests, .review-ask, .wa-card-reading, .chapter-cast, .missing-names { max-width: 1180px; }
+.wa-fullwidth .review-requests, .wa-fullwidth .review-ask, .wa-fullwidth .wa-card-reading, .wa-fullwidth .chapter-cast, .wa-fullwidth .missing-names { max-width: none; }
+.chapter-header + .review-requests { border-top: 0; padding-top: 0; margin: calc(-1 * var(--s-4)) 0 var(--s-5); }
+@media (max-width: 720px) {
+  .chapter-header .reading-prefs > summary { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--s-5); }
+}

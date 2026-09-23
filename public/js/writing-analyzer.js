@@ -1234,20 +1234,6 @@
     return section;
   }
 
-  // A bare-bones card with a single "Comments" section and no title/
-  // summary -- used for readers who aren't the story's author: they only
-  // ever get the comments toggle, never the writing-quality checks (see
-  // setupReadView).
-  function buildMinimalCard(row) {
-    const card = document.createElement('div');
-    card.className = 'wa-card wa-card-reading';
-    const sections = document.createElement('div');
-    sections.className = 'wa-sections';
-    sections.appendChild(buildSection('Comments', [row]));
-    card.appendChild(sections);
-    return card;
-  }
-
   // Builds the visual card that sits above the text in both the editor and
   // the reading page, with two built-in sections (Spelling, Style).
   // `onToggle(checkId, enabled)` fires when a row is toggled. Returns the
@@ -1984,53 +1970,46 @@
     // else's chapter could select a passage and nothing at all happened:
     // no button, no box, no sign that notes were the point of the page.
     // The one person the review tool is for could not find it.
-    let commentsVisible = loadCommentsVisible(true);
-    function applyCommentsVisibility() {
-      if (gridEl) gridEl.classList.toggle('comments-hidden', !commentsVisible);
-    }
-    applyCommentsVisibility(); // apply immediately, before any async work, to avoid a flash of the other state
-
-    function commentsToggleChanged(checked) {
-      commentsVisible = checked;
-      saveCommentsVisible(checked);
-      applyCommentsVisibility();
-    }
+    // Read and Review (see reading.js) now decide whether the notes are
+    // shown, so the old separate switch is gone -- and with it, any stored
+    // "off" that would leave Review with an empty margin and no way back.
+    if (gridEl) gridEl.classList.remove('comments-hidden');
+    saveCommentsVisible(true);
 
     // Wiki-link visibility is its own toggle (not tied to isAuthor the way
     // the writing-quality checks are) -- every reader gets it, since it's
     // about how *they* want to read, same reasoning as "Fill screen".
+    // It lives in the reading settings (the Aa menu), beside type size and
+    // line length, as the pair of buttons "Linked" and "Plain".
     let wikiLinksVisible = loadWikiLinksVisible();
+    const wikiButtons = Array.from(document.querySelectorAll('[data-wiki-links]'));
     function applyWikiLinksVisibility() {
       container.classList.toggle('wikilinks-hidden', !wikiLinksVisible);
+      for (const b of wikiButtons) {
+        b.setAttribute('aria-pressed', String((b.getAttribute('data-wiki-links') === 'on') === wikiLinksVisible));
+      }
     }
     applyWikiLinksVisibility();
-    function wikiLinksToggleChanged(checked) {
-      wikiLinksVisible = checked;
-      saveWikiLinksVisible(checked);
-      applyWikiLinksVisibility();
+    for (const b of wikiButtons) {
+      b.addEventListener('click', () => {
+        wikiLinksVisible = b.getAttribute('data-wiki-links') === 'on';
+        saveWikiLinksVisible(wikiLinksVisible);
+        applyWikiLinksVisibility();
+      });
     }
 
-    if (!isAuthor) {
-      const commentsRow = buildCheckRow('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged);
-      const wikiRow = buildCheckRow('#5a8cd8', 'Wiki links', wikiLinksVisible, wikiLinksToggleChanged);
-      const card = buildMinimalCard(commentsRow);
-      card.querySelector('.wa-sections').appendChild(buildSection('Wiki', [wikiRow]));
-      insertControlsCard(card, container);
-      return;
-    }
+    // A reader has nothing else to set here: the writing checks are the
+    // author's tool, and there is no card at all for anybody else.
+    if (!isAuthor) return;
 
     let settings = loadSettings(READ_SETTINGS_KEY, READ_DEFAULT_SETTINGS);
     let storyWords = new Set();
 
-    const { card, summary, sections } = buildControlsCard(settings, (id, checked) => {
+    const { card, summary } = buildControlsCard(settings, (id, checked) => {
       settings = Object.assign({}, settings, { [id]: checked });
       saveSettings(settings, READ_SETTINGS_KEY);
       render();
     }, { startOpen: false });
-    const commentsRow = buildCheckRow('#4bbf7e', 'Comments', commentsVisible, commentsToggleChanged);
-    sections.appendChild(buildSection('Comments', [commentsRow]));
-    const wikiRow = buildCheckRow('#5a8cd8', 'Wiki links', wikiLinksVisible, wikiLinksToggleChanged);
-    sections.appendChild(buildSection('Wiki', [wikiRow]));
     card.classList.add('wa-card-reading');
     insertControlsCard(card, container);
 

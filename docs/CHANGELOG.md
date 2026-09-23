@@ -4,6 +4,16 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — Less in the way
+
+The front page and the chapter page, with fewer things between you and what you came for.
+
+- **The chapter starts sooner.** The title comes with its place in the story above it (*Chapter 1 of 2*), then who wrote it, then one row of controls: Read or Review, Aa, and More. The version picker only appears once a chapter has more than one version. The separate Comments and Wiki switches are gone: Review shows the notes, Read hides them, and linked or plain names are now a setting under Aa.
+- **Notes are lighter.** Each note ends in one quiet line -- Reply, Edit, Retract -- instead of a stack of buttons. Accept and Reject stay as buttons, for the author, because they are the work. The margin says how many notes there are.
+- **The end of a chapter** points on to the next one in large type, with *All chapters* between.
+- **Stories read top to bottom.** Who wrote it, how long it is and when it last moved sit right under the title, then the blurb, then who is reading it. A word goal says its percentage in words instead of being a bare line.
+- **A heading over the list**, with the tag filter beside it rather than floating above it.
+
 ## 2026-09-23 — News, and invites to send
 
 - **Told once.** When the site has changed since you last came by, the front page says what changed, in a few lines, the first time you open it. After that it keeps quiet until there is something newer. Everything stays under Help, in What's new.
