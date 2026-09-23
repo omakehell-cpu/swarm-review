@@ -154,20 +154,33 @@ than opening a third one.
 
 ## The writing checks
 
-The editor marks passive voice, adverbs propping up a verb, sentences that
-have gone on too long, and the rest. Each check can be switched off on its
-own, and where there is an honest rewrite the check **proposes it** rather
-than only complaining.
+The checks work the way Hemingway does. Beside the text is a panel: the
+**reading grade** in large type, then one coloured card for each kind of
+trouble, and the same colours in the text.
 
-They are suggestions from a set of rules, not judgements. Nothing is sent
-anywhere: the checks run in your browser.
+- **Red** -- a sentence that is very hard to read. **Yellow** -- hard.
+- **Blue** -- an adverb. **Green** -- passive voice. **Purple** -- a word or
+  phrase with a simpler alternative.
+- A wavy underline is a possible misspelling.
+- The craft checks -- filler words, repeated words, filter verbs, dialogue
+  tags, repeated openings -- are **underlined** rather than filled: a
+  second, quieter layer.
 
-Along the same strip, beside the word count, is a **reading grade** -- the
-American school year that would follow the text on a first read, worked out
-from sentence length and syllables per word. Most published fiction lands
-between 4 and 8; children's books lower, a dense literary chapter higher.
-It is the one number there that is not a count of things to fix, and it has
-no colour for the same reason: there is no grade that is wrong. A hard
+**Click a card** to hide or show its marks; it still counts them while they
+are hidden. **Write** at the top of the panel takes every mark away while
+you draft, and **Revise** brings them back. Hover over a mark to see what it
+is and, where there is an honest rewrite, what it proposes. On a phone the
+panel is one line above the text; tap it to open it.
+
+The targets on the cards ("aim for 2 or fewer") are this site's own: about
+one adverb in a hundred words, about one passive sentence in five. They are
+suggestions from a set of rules, not judgements. Nothing is sent anywhere:
+the checks run in your browser.
+
+The **reading grade** is the American school year that would follow the
+text on a first read, worked out from sentence length and syllables per
+word. Most published fiction lands between 4 and 8; children's books lower,
+a dense literary chapter higher. There is no grade that is wrong: a hard
 chapter written on purpose is a hard chapter written on purpose. It is
 useful for noticing that a scene has drifted somewhere you did not mean it
 to go, and useless as a target.

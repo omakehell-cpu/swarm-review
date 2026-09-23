@@ -32,6 +32,6 @@ The chapter editor has two views, switched with the **Markdown** and **Visual** 
 
 Other keys: **Ctrl+B** and **Ctrl+I** (Cmd on a Mac) for bold and italic, **Ctrl+Enter** for a scene break, **Escape** to leave Focus or close a panel.
 
-**Checks as a list** turns the writing checks -- which are otherwise coloured underlines -- into a list: how many of each first, then every one in order, each a button that selects its words in the text.
+**Checks as a list** turns the writing checks -- which are otherwise coloured marks -- into a list: how many of each first, then every one in order, each a button that selects its words in the text.
 
 **Scenes & snapshots** opens a panel beside the editor and moves the focus into it; Escape closes it and puts you back where you were.

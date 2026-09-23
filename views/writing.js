@@ -39,6 +39,17 @@ function archivedStoriesPage({ user, stories }) {
 // ---------- new story (+ first chapter) ----------
 
 
+// The editor is two columns on a wide screen, as Hemingway is: the text,
+// and beside it the writing checks (placed there by writing-analyzer.js)
+// and, when the chapter has any, the notes it was given.
+function editorGrid(writerCard, side = '') {
+  return `
+    <div class="chapter-body-grid editor-grid">
+      ${writerCard}
+      <aside class="comments-pane editor-side" aria-label="Beside the text">${side}</aside>
+    </div>`;
+}
+
 /** @param {{ user: Row, error?: string|null, values?: FormValues, groups?: any[], selectedTagIds?: number[] }} props */
 function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), groups = [], selectedTagIds = [] }) {
   return layout({
@@ -47,6 +58,7 @@ function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), gr
     current: 'new-story',
     wide: true,
     body: `
+      ${editorGrid(`
       <div class="writer-card">
         <h1>Start a new story</h1>
         <p class="muted writer-intro">A story groups together all the chapters that belong to it. You're writing the first chapter now; you can add more later from the story page.</p>
@@ -74,6 +86,7 @@ function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), gr
           </div>
         </form>
       </div>
+      `)}
       <script src="/js/nspell.bundle.js"></script>
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
@@ -90,6 +103,7 @@ function newChapterPage({ user, story, chapters = [], castList = [], error, voca
     wide: true,
     body: `
       <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      ${editorGrid(`
       <div class="writer-card">
         <h1>Add a chapter to "${escapeHtml(story.title)}"</h1>
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
@@ -115,6 +129,7 @@ function newChapterPage({ user, story, chapters = [], castList = [], error, voca
         </form>
         ${besidePanel({ story, chapters, entities: castList })}
       </div>
+      `)}
       <script src="/js/nspell.bundle.js"></script>
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
@@ -226,16 +241,13 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
   // something to reference -- a brand new or not-yet-commented chapter
   // just gets the plain, maximally wide editor, same as before this
   // feature existed.
-  const mainHtml = hasComments ? `
-    <div class="chapter-body-grid">
-      ${writerCard}
-      <aside class="comments-pane">
-        <h2>Comments</h2>
-        <p class="hint">For reference while you edit -- to reply to a comment or accept/reject it, do that from the chapter page instead.</p>
+  const mainHtml = editorGrid(writerCard, hasComments ? `
+      <section class="editor-notes" aria-labelledby="editor-notes-title">
+        <h2 id="editor-notes-title">Notes</h2>
+        <p class="hint">For reference while you edit. Reply, accept or reject from the chapter page.</p>
         <div id="comment-list">${commentsHtml}</div>
-      </aside>
-    </div>
-    <script type="application/json" id="chapter-comments-data">${toScriptJson(commentsData)}</script>` : writerCard;
+      </section>` : '') + (hasComments ? `
+    <script type="application/json" id="chapter-comments-data">${toScriptJson(commentsData)}</script>` : '');
 
   return layout({
     title: `Edit - ${chapter.title}`,
