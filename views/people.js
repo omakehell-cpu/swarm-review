@@ -314,7 +314,7 @@ function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], stre
       </div>
       <div class="auth-card look-card" id="look">
         <h2>How the site looks</h2>
-        <p class="muted">Only for you, and on every device you sign in on. Light or dark still follows the moon button in the top bar, except in The Swarm, which is always dark.</p>
+        <p class="muted">Only for you, and on every device you sign in on. Light or dark follows the moon button in the top bar, in every look.</p>
         <form method="post" action="/account/look" class="look-form">
           <fieldset class="look-options">
             <legend class="sr-only">Look</legend>

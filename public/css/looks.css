@@ -133,42 +133,70 @@
 
 /* ======================================================================
    The Swarm -- the ship's console.
-   Always dark, whatever the moon button says: a ruled deck, labels in a
-   monospace, the red lit as an alert. The prose itself sits on a lit page
-   inside it, because reading four thousand words of light-on-dark is
-   the one thing a console is bad at.
+   A ruled deck, labels in a monospace, the red lit as an alert. Two
+   watches, like the other looks, on the moon button: the day watch, a pale
+   bridge in steel and ink; and the night watch, the dark console, where the
+   chapter sits on a dark page too -- softer text, a little more air
+   between the lines, so four thousand words do not glare.
    ====================================================================== */
-:root[data-look="swarm"],
-:root[data-look="swarm"][data-theme="light"],
+/* The day watch (light). */
+:root[data-look="swarm"] {
+  --bg: #eef1f5; --bg-elevated: #f8fafc; --bg-sunken: #e2e7ee;
+  --border: #c8d0db; --border-strong: #3b4a5e;
+  --text: #111821; --text-muted: #4b5870;
+  --accent: #c42f15; --accent-strong: #a42410; --accent-rgb: 196, 47, 21;
+  --pending: #c42f15; --pending-rgb: 196, 47, 21;
+  --accepted: #111821; --rejected: #4b5870;
+  --btn-text: #ffffff;
+  --code-bg: rgba(17, 24, 33, 0.06);
+  --grid-line: rgba(59, 74, 94, 0.07);
+  --topbar-bg: rgba(248, 250, 252, 0.94);
+  --pane-shadow: 0 0 0 1px #c8d0db, 0 14px 34px rgba(17, 24, 33, 0.08);
+  --glow: rgba(196, 47, 21, 0.25);
+  --font-display: 'Space Grotesk', var(--font-ui);
+  --font-mono: 'Plex Mono', "SF Mono", SFMono-Regular, Consolas, monospace;
+  color-scheme: light;
+}
+/* The night watch (dark): chosen with the moon, or the system's own dark. */
 :root[data-look="swarm"][data-theme="dark"] {
   --bg: #0a0d12; --bg-elevated: #0e131b; --bg-sunken: #121823;
   --border: #1f2835; --border-strong: #7f93ad;
-  --text: #d6dde7; --text-muted: #7b8aa1;
+  --text: #d6dde7; --text-muted: #8391a7;
   --accent: #ff5a36; --accent-strong: #ff7a5c; --accent-rgb: 255, 90, 54;
   --pending: #ff5a36; --pending-rgb: 255, 90, 54;
-  --accepted: #d6dde7; --rejected: #7b8aa1;
+  --accepted: #d6dde7; --rejected: #8391a7;
   --btn-text: #0a0d12;
   --code-bg: rgba(214, 221, 231, 0.08);
-  --font-display: 'Space Grotesk', var(--font-ui);
-  --font-mono: 'Plex Mono', "SF Mono", SFMono-Regular, Consolas, monospace;
+  --grid-line: rgba(127, 147, 173, 0.05);
+  --topbar-bg: rgba(10, 13, 18, 0.94);
+  --pane-shadow: 0 0 0 1px #243042, 0 20px 50px rgba(0, 0, 0, 0.45);
+  --glow: rgba(255, 90, 54, 0.35);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root[data-look="swarm"]:not([data-theme="light"]) {
     --bg: #0a0d12; --bg-elevated: #0e131b; --bg-sunken: #121823;
     --border: #1f2835; --border-strong: #7f93ad;
-    --text: #d6dde7; --text-muted: #7b8aa1; --btn-text: #0a0d12;
+    --text: #d6dde7; --text-muted: #8391a7;
+    --accent: #ff5a36; --accent-strong: #ff7a5c; --accent-rgb: 255, 90, 54;
+    --pending: #ff5a36; --pending-rgb: 255, 90, 54;
+    --accepted: #d6dde7; --rejected: #8391a7;
+    --btn-text: #0a0d12;
+    --code-bg: rgba(214, 221, 231, 0.08);
+    --grid-line: rgba(127, 147, 173, 0.05);
+    --topbar-bg: rgba(10, 13, 18, 0.94);
+    --pane-shadow: 0 0 0 1px #243042, 0 20px 50px rgba(0, 0, 0, 0.45);
+    --glow: rgba(255, 90, 54, 0.35);
+    color-scheme: dark;
   }
 }
-/* It is always night on a ship: the moon button has nothing to switch. */
-[data-look="swarm"] .theme-toggle { display: none; }
 [data-look="swarm"] body {
   background-image:
-    linear-gradient(rgba(127, 147, 173, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(127, 147, 173, 0.05) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 32px 32px;
 }
-[data-look="swarm"] .topbar { background: rgba(10, 13, 18, 0.94); border-bottom: 1px solid var(--border-strong); }
+[data-look="swarm"] .topbar { background: var(--topbar-bg); border-bottom: 1px solid var(--border-strong); }
 [data-look="swarm"] .topbar .brand { font-family: var(--font-mono); letter-spacing: 0.18em; font-size: 0.85rem; }
 [data-look="swarm"] .topbar nav > a,
 [data-look="swarm"] .topbar-account > a,
@@ -214,19 +242,21 @@
 [data-look="swarm"] .comment { background: var(--bg-elevated); border: 1px solid var(--border); border-top: 2px solid var(--accent); padding: var(--s-4) var(--s-5); }
 [data-look="swarm"] .comment.status-accepted, [data-look="swarm"] .comment.kind-praise { border-top-color: var(--border-strong); }
 
-/* The lit page: the chapter, the editor and the text beside the editor
-   are on paper, with the tokens swapped back to ink inside it so every
-   underline, highlight and link keeps its contrast. */
+/* The page the chapter is on: a panel of the console's own colours, lit
+   from inside -- paler than the deck by day, a shade above it by night,
+   with the text a touch softer than the labels round it and a little
+   more space between the lines. */
 [data-look="swarm"] .reading-pane,
 [data-look="swarm"] .wa-editor-wrap,
 [data-look="swarm"] .md-preview {
-  --text: #1d1a15; --text-muted: #5b5346; --border: #cfc6b3; --border-strong: #1d1a15;
-  --accent: #c8321e; --accent-strong: #a8281a; --accent-rgb: 200, 50, 30;
-  --bg: #efe8d8; --bg-sunken: #efe8d8; --code-bg: rgba(29, 26, 21, 0.07);
-  background: #efe8d8; color: #1d1a15;
+  background: var(--bg-elevated); color: var(--text);
 }
-[data-look="swarm"] .reading-pane { padding: var(--s-9) var(--s-10) !important; box-shadow: 0 0 0 1px #3a4557, 0 20px 50px rgba(0, 0, 0, 0.5); }
-[data-look="swarm"] .wa-editor-wrap textarea { color: #1d1a15; }
+[data-look="swarm"] .reading-pane { padding: var(--s-9) var(--s-10) !important; box-shadow: var(--pane-shadow); }
+[data-look="swarm"] #chapter-text { line-height: 1.75; }
+:root[data-look="swarm"][data-theme="dark"] #chapter-text { color: #c9d1dc; }
+@media (prefers-color-scheme: dark) {
+  :root[data-look="swarm"]:not([data-theme="light"]) #chapter-text { color: #c9d1dc; }
+}
 @media (max-width: 720px) {
   [data-look="swarm"] .reading-pane { padding: var(--s-6) var(--s-5) !important; }
 }
@@ -255,7 +285,7 @@
 .look-literary .look-swatch span:nth-child(2) { background: linear-gradient(#3b2f25, #3b2f25) 8px 8px / 14px 20px no-repeat, linear-gradient(#c4b08c, #c4b08c) 26px 8px / 14px 20px no-repeat, linear-gradient(#9e2a1f, #9e2a1f) 44px 8px / 14px 20px no-repeat; }
 .look-swarm .look-swatch { background: #0a0d12; border-color: #1f2835; }
 .look-swarm .look-swatch span:nth-child(1) { border-bottom: 1px solid #7f93ad; }
-.look-swarm .look-swatch span:nth-child(2) { background: linear-gradient(#efe8d8, #efe8d8) 8px 8px / 34px 22px no-repeat, linear-gradient(#ff5a36, #ff5a36) 48px 8px / 16px 2px no-repeat; }
+.look-swarm .look-swatch span:nth-child(2) { background: linear-gradient(#1c2533, #1c2533) 8px 8px / 34px 22px no-repeat, linear-gradient(#ff5a36, #ff5a36) 48px 8px / 16px 2px no-repeat; }
 .look-swarm .look-swatch span:nth-child(3) { background: linear-gradient(#ff5a36, #ff5a36) 8px 0 / 10px 2px no-repeat; }
 
 
@@ -324,7 +354,7 @@
 [data-look="swarm"] .btn, [data-look="swarm"] .editor-tool, [data-look="swarm"] .mode-switch button {
   transition: box-shadow 0.18s ease, background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
-[data-look="swarm"] .btn:hover, [data-look="swarm"] .editor-tool:hover { box-shadow: 0 0 0 1px var(--accent), 0 0 14px rgba(255, 90, 54, 0.35); }
+[data-look="swarm"] .btn:hover, [data-look="swarm"] .editor-tool:hover { box-shadow: 0 0 0 1px var(--accent), 0 0 14px var(--glow); }
 [data-look="swarm"] .story-row { transition: border-color 0.18s ease, box-shadow 0.18s ease; }
 [data-look="swarm"] .story-row:hover { border-color: var(--border-strong) !important; box-shadow: 0 0 22px rgba(127, 147, 173, 0.12); }
 /* The story page as a dossier. */
@@ -343,10 +373,7 @@
 
 /* The desk in the two looks. The Swarm's visual editor is on the lit page,
    like its Markdown one. */
-[data-look="swarm"] .visual-editor {
-  --text: #1d1a15; --text-muted: #5b5346; --border-strong: #1d1a15; --code-bg: rgba(29, 26, 21, 0.07);
-  background: #efe8d8; color: #1d1a15; border-color: #3a4557;
-}
+[data-look="swarm"] .visual-editor { background: var(--bg-elevated); color: var(--text); border-color: var(--border-strong); }
 [data-look="swarm"] .desk-drawer { background: var(--bg-elevated); box-shadow: -16px 0 40px rgba(0, 0, 0, 0.5); }
 [data-look="swarm"] .desk-tabs button, [data-look="swarm"] .session-count, [data-look="swarm"] .desk-scene-num,
 [data-look="swarm"] .desk-scene-words, [data-look="swarm"] .desk-snap-meta { font-family: var(--font-mono); }

@@ -3737,7 +3737,8 @@ main[data-reading="read"] .chapter-cast { display: none; }
    become rules. */
 @media (prefers-contrast: more) {
   :root { --text-muted: #45433f; --border: #8a8883; }
-  :root[data-look="swarm"] { --text-muted: #a9b6c9; --border: #4a5a70; }
+  :root[data-look="swarm"] { --text-muted: #3a4658; --border: #7d8ba0; }
+  :root[data-look="swarm"][data-theme="dark"] { --text-muted: #a9b6c9; --border: #4a5a70; }
   :root[data-look="literary"] { --text-muted: #4a4339; --border: #8f8674; }
 }
 /* Windows high contrast: keep every boundary and mark visible in the
@@ -4043,17 +4044,6 @@ mark.wa-sentence, mark.wa-word { border-radius: 0; }
 .wa-panel-fold:disabled { color: inherit; opacity: 1; }
 body.writing-focus .wa-panel { display: none; }
 
-/* The Swarm writes and reads on paper even in the dark, so its marks keep
-   the light colours -- and so do the cards that are their legend, which
-   then need dark ink on the dark page. */
-:root[data-look="swarm"], :root[data-look="swarm"]:not([data-theme="light"]) {
-  --wa-fill-hard: #f6eab0;
-  --wa-fill-veryhard: #f1c4c6;
-  --wa-fill-adverb: #c6e2f3;
-  --wa-fill-passive: #cdeaae;
-  --wa-fill-complex: #e5c8ec;
-}
-[data-look="swarm"] .wa-pcard:not(.is-zero):not(.is-off):not(.wa-pcard-craft):not(.wa-pcard-spell) { color: #15171b; }
 /* Big enough to hit (WCAG 2.5.8). */
 .wa-pcard-craft { min-height: 28px; }
 .wa-panel-more > summary { display: inline-block; min-height: 24px; padding: var(--s-1) 0; }

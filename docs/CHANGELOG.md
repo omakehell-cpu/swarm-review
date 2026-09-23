@@ -4,6 +4,11 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — The Swarm by day and by night
+
+- **The Swarm now has a light and a dark version**, on the moon button like the other looks: a pale bridge in steel and ink by day, the dark console by night.
+- **At night the chapter is on a dark page too**, instead of the lit paper panel: softer text and a little more space between the lines, so long chapters do not glare. The editor and the writing checks follow it.
+
 ## 2026-09-23 — Word, both ways
 
 - **Download a chapter with its notes as Word comments**, each on the words it was left on, replies included (More, above the text).
