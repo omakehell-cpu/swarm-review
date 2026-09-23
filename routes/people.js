@@ -79,7 +79,10 @@ async function handleDismissWelcome(req, res, user) {
 async function handleMarkdownPreview(req, res, _user) {
   const body = await parseBody(req);
   const text = typeof body.text === 'string' ? body.text : '';
-  const html = renderHighlighted(parseMarkdown(text), [], wiki.findWikiMatches);
+  // `plain` is the visual editor asking: it needs the text exactly as
+  // written, and a glossary link it did not put there would come back to
+  // it as a link the author never wrote.
+  const html = renderHighlighted(parseMarkdown(text), [], body.plain ? null : wiki.findWikiMatches);
   sendJson(res, 200, { html });
 }
 

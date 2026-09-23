@@ -3560,3 +3560,147 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
   text-transform: none !important; letter-spacing: 0 !important; font-size: var(--t-sm) !important; font-weight: 500;
 }
 .comment.as-sheet:focus { outline: none; }
+
+/* ======================================================================
+   The story page as the front of a book: a title page, a quiet row of
+   tools, and the contents.
+   ====================================================================== */
+.title-page {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-10);
+  align-items: end; padding: var(--s-6) 0 var(--s-10); border-bottom: 2px solid var(--border-strong);
+}
+.title-page.has-cover { grid-template-columns: 220px minmax(0, 1fr); }
+.title-page .story-page-cover { width: 220px; height: 293px; box-shadow: 8px 10px 0 -2px var(--bg-sunken); }
+.title-page-kicker { margin: 0 0 var(--s-4); font-size: var(--t-sm); color: var(--text-muted); }
+.title-page-kicker a { color: var(--text); }
+.title-page h1 { font-size: clamp(2.25rem, 5.5vw, var(--t-4xl)); max-width: 18ch; margin: 0 0 var(--s-5); }
+.title-page-blurb { margin: 0 0 var(--s-5); max-width: 52ch; font-family: var(--font-prose); font-size: var(--t-xl); line-height: 1.45; }
+.title-page-facts { margin: 0 0 var(--s-4); font-size: var(--t-sm); color: var(--text-muted); display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); align-items: baseline; }
+.title-page-actions { display: flex; flex-wrap: wrap; gap: var(--s-4); margin-top: var(--s-7); }
+.title-page-actions .btn { padding: var(--s-4) var(--s-7); font-size: var(--t-md); }
+.story-tools {
+  display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-7); align-items: center;
+  padding: var(--s-5) 0; border-bottom: 1px solid var(--border); font-size: var(--t-sm);
+}
+.story-tools a { color: var(--text-muted); text-decoration: none; }
+.story-tools a:hover, .story-tools .linklike:hover { color: var(--text); }
+.story-tools .linklike { color: var(--text-muted); font-size: var(--t-sm); }
+.story-numbers { margin: var(--s-6) 0 0; }
+.story-numbers > summary { cursor: pointer; font-size: var(--t-sm); color: var(--text-muted); }
+.toc-heading {
+  margin: var(--s-10) 0 var(--s-4); font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
+/* A contents line: number, title, a dotted leader, the length. */
+.toc .chapter-row { flex-direction: column; gap: var(--s-2); padding: var(--s-5) 0; }
+.toc .chapter-row-main { width: 100%; }
+.toc .chapter-row h3 { display: flex; align-items: baseline; gap: var(--s-3); margin: 0; font-size: var(--t-xl); }
+.toc-num { font-size: var(--t-sm); font-weight: 600; color: var(--text-muted); font-variant-numeric: tabular-nums; min-width: 2.2em; }
+.toc-leader { flex: 1; min-width: var(--s-8); border-bottom: 1px dotted var(--border-strong); opacity: 0.45; transform: translateY(-0.3em); }
+.toc-words { font-size: var(--t-sm); font-weight: 500; color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.toc .chapter-row-main p { padding-left: calc(2.2em + var(--s-3)); margin-top: var(--s-1); }
+.toc .chapter-row-meta { padding-left: calc(2.2em + var(--s-3)); font-size: var(--t-xs); gap: var(--s-4); }
+.toc-entry .chapter-row-main::before { content: none !important; }
+.toc-entry .chapter-row-main { display: block !important; }
+@media (max-width: 720px) {
+  .title-page.has-cover { grid-template-columns: 110px minmax(0, 1fr); gap: var(--s-6); align-items: start; }
+  .title-page .story-page-cover { width: 110px; height: 147px; }
+  .title-page-blurb { font-size: var(--t-lg); }
+  .toc .chapter-row h3 { font-size: var(--t-lg); flex-wrap: wrap; }
+  .toc-leader { display: none; }
+}
+
+/* Pages arrive rather than appear: a short fade and a few pixels of rise.
+   Nothing for anybody who has asked their system for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  main.container { animation: page-in 0.22s ease-out both; }
+  @keyframes page-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
+
+/* The emblem only one look shows (see looks.css). */
+.brand-emblem { display: none; }
+
+/* ======================================================================
+   The writing desk: the visual editor, typewriter, the session count and
+   the drawer of scenes and snapshots.
+   ====================================================================== */
+.editor-modes { display: inline-flex; margin-left: var(--s-4); border: 1px solid var(--border); }
+.editor-modes .editor-tool { border: 0; font-family: var(--font-ui); font-size: var(--t-sm); }
+.editor-modes .editor-tool + .editor-tool { border-left: 1px solid var(--border); }
+.editor-tool.tool-typewriter, .editor-tool.tool-desk { font-family: var(--font-ui); font-size: var(--t-sm); }
+.session-count { font-size: var(--t-xs); color: var(--text-muted); margin-right: var(--s-4); white-space: nowrap; }
+.session-count.goal-met { color: var(--text); font-weight: 600; }
+
+/* The visual editor is the same paper as the Markdown one, and the text
+   on it is set the way the chapter page sets it. */
+.visual-editor {
+  background: var(--bg-sunken); border: 1px solid var(--border-strong); color: var(--text);
+  padding: var(--s-7) var(--s-8); min-height: 60vh; outline: none;
+  font-family: var(--font-prose); font-size: var(--t-lg); line-height: 1.75;
+  white-space: pre-wrap; overflow-wrap: break-word; text-transform: none; letter-spacing: normal; font-weight: 400;
+}
+.visual-editor:focus { border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
+.visual-editor p { margin: 0 0 1em; }
+.visual-editor h1, .visual-editor h2, .visual-editor h3 { font-family: var(--font-display); margin: 1.2em 0 0.5em; }
+.visual-editor blockquote {
+  margin: 0 0 1em; padding: var(--s-1) var(--s-7); border-left: 2px solid var(--border-strong);
+  color: var(--text-muted); font-style: italic;
+}
+.visual-editor hr { border: none; text-align: center; margin: 1.8em 0; color: var(--text-muted); }
+.visual-editor hr::before { content: "* * *"; letter-spacing: 0.5em; }
+.visual-editor ul, .visual-editor ol { margin: 0 0 1em; padding-left: 1.4em; }
+.visual-editor code { font-family: var(--font-mono); font-size: 0.9em; background: var(--code-bg); padding: 0 var(--s-2); }
+.visual-editor a { text-decoration-color: currentColor; }
+body.writing-focus .visual-editor { min-height: 75vh; }
+
+/* Typewriter: in the visual editor, the paragraph being written stays lit
+   and the rest recedes. The textarea cannot do that -- it is one piece
+   of text -- so there the line simply stays at the same height. */
+body.typewriter .visual-editor > * { transition: opacity 0.2s ease; }
+body.typewriter .visual-editor:focus-within > :not(.is-current) { opacity: 0.32; }
+body.typewriter .visual-editor { padding-bottom: 45vh; }
+body.typewriter.writing-focus textarea[data-editor-tools] { padding-bottom: 40vh; }
+
+/* The drawer. */
+.desk-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 85; width: min(380px, 100vw);
+  background: var(--bg); border-left: 1px solid var(--border-strong);
+  display: flex; flex-direction: column; box-shadow: -16px 0 40px rgba(0, 0, 0, 0.12);
+}
+.desk-drawer[hidden] { display: none; }
+.desk-head { display: flex; align-items: center; justify-content: space-between; padding: var(--s-5) var(--s-6); border-bottom: 1px solid var(--border); }
+.desk-tabs { display: inline-flex; border: 1px solid var(--border-strong); }
+.desk-tabs button {
+  background: transparent; border: 0; padding: var(--s-3) var(--s-5); cursor: pointer;
+  font: inherit; font-size: var(--t-sm); font-weight: 600; color: var(--text-muted);
+}
+.desk-tabs button + button { border-left: 1px solid var(--border-strong); }
+.desk-tabs button[aria-selected="true"] { background: var(--text); color: var(--btn-text); }
+.desk-panel { overflow-y: auto; padding: var(--s-5) var(--s-6) var(--s-10); flex: 1; }
+.desk-hint { margin: 0 0 var(--s-5); font-size: var(--t-sm); color: var(--text-muted); }
+.desk-scenes, .desk-snaps { list-style: none; margin: 0; padding: 0; }
+.desk-scene { padding: var(--s-4) 0; border-top: 1px solid var(--border); }
+.desk-scene-go {
+  display: grid; grid-template-columns: 2em 1fr; gap: var(--s-1) var(--s-3); width: 100%; text-align: left;
+  background: transparent; border: 0; padding: 0; cursor: pointer; color: var(--text); font: inherit;
+}
+.desk-scene-go:hover .desk-scene-open { text-decoration: underline; }
+.desk-scene-num { grid-row: 1 / span 2; font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.desk-scene-open { font-family: var(--font-prose); font-size: var(--t-md); line-height: 1.4; }
+.desk-scene-words { font-size: var(--t-xs); color: var(--text-muted); }
+.desk-scene-note {
+  width: 100%; margin: var(--s-3) 0 0 2em; width: calc(100% - 2em); min-height: 2.6em;
+  font-family: var(--font-ui); font-size: var(--t-sm); background: transparent; border-color: var(--border);
+}
+.desk-scene-note.saved { border-color: var(--text); }
+.desk-scene-note.unsaved { border-color: var(--accent); }
+.desk-snap-form { display: flex; gap: var(--s-3); margin-bottom: var(--s-3); }
+.desk-snap-form input { flex: 1; min-width: 0; }
+.desk-snap { display: flex; flex-direction: column; gap: var(--s-1); padding: var(--s-4) 0; border-top: 1px solid var(--border); }
+.desk-snap-name { font-weight: 600; }
+.desk-snap-meta { font-size: var(--t-xs); color: var(--text-muted); }
+.desk-snap-actions { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-5); font-size: var(--t-sm); }
+.desk-empty { color: var(--text-muted); font-size: var(--t-sm); }
+@media (min-width: 1200px) {
+  body.desk-open main.container { margin-right: 380px; }
+}

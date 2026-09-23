@@ -287,3 +287,47 @@ test('each person picks the look the site wears for them, and nobody else', asyn
   const css = await luis.request('/css/looks.css');
   assert.strictEqual(css.status, 200);
 });
+
+test('the writing desk: scene notes and snapshots belong to the chapter author alone', async () => {
+  const note = (client, body) => client.request(`/chapters/${chapterId}/scene-notes`, { method: 'POST', ...form([['position', '2'], ['body', body]]) });
+  assert.strictEqual((await note(luis, 'mine now')).status, 403);
+  assert.strictEqual((await note(ana, 'Where she lies to him.')).status, 200);
+  assert.deepStrictEqual(models.listSceneNotes(chapterId).map((n) => [n.position, n.body]), [[2, 'Where she lies to him.']]);
+  await note(ana, '   ');
+  assert.strictEqual(models.listSceneNotes(chapterId).length, 0, 'an emptied note is gone');
+
+  const snap = (client, name) => client.request(`/chapters/${chapterId}/snapshots`, {
+    method: 'POST', ...form([['name', name], ['content', 'An older draft, word for word different.']]),
+  });
+  assert.strictEqual((await snap(luis, 'nope')).status, 403);
+  const made = await (await snap(ana, 'Before the big cut')).json();
+  assert.strictEqual(made.snapshots[0].name, 'Before the big cut');
+  const id = made.snapshots[0].id;
+  assert.strictEqual((await luis.request(`/snapshots/${id}.json`)).status, 403);
+  const back = await (await ana.request(`/snapshots/${id}.json`)).json();
+  assert.strictEqual(back.content, 'An older draft, word for word different.');
+  const compare = await ana.request(`/snapshots/${id}/compare`);
+  assert.strictEqual(compare.status, 200);
+  assert.match(await compare.text(), /Before the big cut/);
+  const gone = await (await ana.request(`/snapshots/${id}/delete`, { method: 'POST', ...form([]) })).json();
+  assert.strictEqual(gone.snapshots.length, 0);
+
+  const editor = await (await ana.request(`/chapters/${chapterId}/edit`)).text();
+  assert.match(editor, /id="desk-data"/);
+  assert.match(editor, /writing-desk\.js/);
+});
+
+test('the visual editor gets the text without glossary links it never wrote', async () => {
+  const render = async (plain) => (await (await ana.request('/markdown/preview', {
+    method: 'POST', ...form([['text', 'Plain *text*.'], ...(plain ? [['plain', '1']] : [])]),
+  })).json()).html;
+  assert.strictEqual(await render(true), '<p>Plain <em>text</em>.</p>');
+});
+
+test('the story page opens on a title page with a way to start reading', async () => {
+  const story = models.listStories()[0];
+  const page = await (await luis.request(`/stories/${story.id}`)).text();
+  assert.match(page, /class="title-page/);
+  assert.match(page, /Continue with chapter|Start reading|Read it again/);
+  assert.match(page, /class="toc-heading">Contents/);
+});

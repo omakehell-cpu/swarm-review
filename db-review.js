@@ -83,4 +83,29 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   // size, except that it follows them to every device, so it is stored
   // here rather than in the browser. See lib/looks.js.
   ensureColumn('users', 'look', "TEXT NOT NULL DEFAULT ''");
+
+  // The writing desk (see models/desk.js). A note the author keeps against
+  // one scene of a chapter -- "this is where she lies to him" -- private to
+  // them, and kept by the scene's position in the chapter. And snapshots:
+  // a copy of the text in the editor, with a name, taken on purpose and
+  // kept until thrown away. Neither is a version; nobody else sees them.
+  db.exec(`
+  CREATE TABLE IF NOT EXISTS scene_notes (
+    chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    position   INTEGER NOT NULL,
+    body       TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (chapter_id, position)
+  );
+  CREATE TABLE IF NOT EXISTS chapter_snapshots (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       TEXT NOT NULL DEFAULT '',
+    content    TEXT NOT NULL,
+    word_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_snapshots_chapter ON chapter_snapshots(chapter_id, id DESC);
+  `);
 };

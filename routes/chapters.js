@@ -245,6 +245,13 @@ async function handleEditChapterPage(req, res, user, chapterId, query) {
   sendHtml(res, 200, views.editChapterPage({
     user, chapter, latestContent: latest ? latest.content : '', comments, values,
     draft: liveDraft, justDrafted: query.get('drafted') === '1',
+    desk: {
+      chapterId,
+      notes: models.listSceneNotes(chapterId),
+      snapshots: models.listSnapshots(chapterId).map((sn) => ({ id: sn.id, name: sn.name, words: sn.word_count, at: sn.created_at })),
+      today: models.writingStreak(user.id, user.daily_goal).today,
+      goal: user.daily_goal || 0,
+    },
     canWrite: models.canWriteInStory(models.getStoryById(chapter.story_id), user),
     latestVersionNumber: liveDraft ? liveDraft.base_version : (latest ? latest.version_number : 0),
     publishedVersionNumber: latest ? latest.version_number : 0,

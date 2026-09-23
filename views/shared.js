@@ -50,6 +50,8 @@ const ICONS = {
   tick: '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><polyline points="4,10.5 8,14.5 16,5.5"/></svg>',
   cross: '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><line x1="5.5" y1="5.5" x2="14.5" y2="14.5"/><line x1="14.5" y1="5.5" x2="5.5" y2="14.5"/></svg>',
   plus: '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><line x1="10" y1="4.5" x2="10" y2="15.5"/><line x1="4.5" y1="10" x2="15.5" y2="10"/></svg>',
+  book: '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4.5h5a2 2 0 0 1 2 2v9a1.5 1.5 0 0 0-1.5-1.5H3z"/><path d="M17 4.5h-5a2 2 0 0 0-2 2v9a1.5 1.5 0 0 1 1.5-1.5H17z"/></svg>',
+  pen: '<svg class="ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M13.5 3.5l3 3L7 16H4v-3z"/><line x1="11.5" y1="5.5" x2="14.5" y2="8.5"/></svg>',
 };
 
 // ---------- empty states ----------
