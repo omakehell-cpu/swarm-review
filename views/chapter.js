@@ -475,8 +475,9 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         </div>` : ''}
         <div class="version-actions" id="reading-controls" data-has-comments="${comments.length ? '1' : '0'}" data-read-first="${user.read_first ? '1' : '0'}">
           <div class="mode-switch" role="group" aria-label="How to view this chapter">
-            <button type="button" data-mode="read" aria-pressed="false">Read</button>
-            <button type="button" data-mode="review" aria-pressed="false">Review</button>
+            <button type="button" data-mode="read" aria-pressed="false" title="The story alone">Read</button>
+            <button type="button" data-mode="review" aria-pressed="false" title="The story and the notes">Review</button>
+            ${isChapterAuthor ? '<button type="button" data-mode="revise" aria-pressed="false" title="The notes, and the writing checks marked in the text">Revise</button>' : ''}
           </div>
           <details class="reading-prefs" aria-label="Reading settings">
             <summary aria-label="Reading settings: type size, line length, spacing">Aa</summary>
@@ -514,12 +515,6 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
                   <button type="button" data-wiki-links="off" aria-label="Plain, names in the text">Plain</button>
                 </div>
               </div>`}
-              <div class="reading-prefs-row fill-row">
-                <span>Page width</span>
-                <div class="reading-prefs-options" role="group">
-                  <button id="reading-fill-screen" type="button">Fill screen</button>
-                </div>
-              </div>
             </div>
           </details>
           ${isChapterAuthor ? `<a class="btn ghost small" href="/chapters/${chapter.id}/edit">${ICONS.pen}Edit</a>` : ''}

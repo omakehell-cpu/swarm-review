@@ -547,7 +547,7 @@ function missingNamesBlock(names, storyId, returnTo) {
   return `
     <section class="missing-names">
       <h2 class="side-head">${names.length} name${names.length === 1 ? '' : 's'} here ${names.length === 1 ? 'is' : 'are'} not in the bible</h2>
-      <p class="muted">Proper names this chapter uses that no entry, glossary page or dictionary word accounts for. Guesswork, so some of it will be wrong -- take what is useful.</p>
+      <p class="muted">Proper names this chapter uses that no entry, glossary page or dictionary word accounts for. Guesswork, so some of it will be wrong: <strong>Not a name</strong> puts a false alarm away for the whole story.</p>
       <ul class="missing-list">
         ${names.map((n) => `
           <li>
@@ -560,6 +560,8 @@ function missingNamesBlock(names, storyId, returnTo) {
                 ${bible.KINDS.map((k) => `<option value="${k}">${escapeHtml(bible.KIND_LABELS[k])}</option>`).join('')}
               </select>
               <button class="btn ghost tiny" type="submit">Add</button>
+              <button class="btn ghost tiny missing-dismiss" type="submit" formaction="/stories/${storyId}/bible/not-names"
+                      aria-label="${escapeHtml(n.name)} is not a name">Not a name</button>
             </form>
           </li>`).join('')}
       </ul>

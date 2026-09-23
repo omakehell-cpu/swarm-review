@@ -987,6 +987,16 @@
     comments.forEach((r) => { points.add(r.start); points.add(r.end); });
     const sorted = Array.from(points).filter((p) => p >= 0 && p <= text.length).sort((a, b) => a - b);
 
+    // Words never overlap words, nor sentences sentences (see analyze), so
+    // each list is walked once, in order, beside the segments -- rather than
+    // searched from the top for every segment, which on a long chapter was
+    // most of the cost of a repaint.
+    const byStart = (a, b) => a.start - b.start || a.end - b.end;
+    const words = waRanges.filter((r) => r.kind.indexOf('sentence-') !== 0).sort(byStart);
+    const sentences = waRanges.filter((r) => r.kind.indexOf('sentence-') === 0).sort(byStart);
+    let wi = 0;
+    let si = 0;
+
     let html = '';
     for (let i = 0; i < sorted.length - 1; i++) {
       const segStart = sorted[i];
@@ -994,21 +1004,23 @@
       if (segStart >= segEnd) continue;
       let inner = escapeHtml(text.slice(segStart, segEnd));
 
-      const wordRange = waRanges.find((r) => r.kind.indexOf('sentence-') !== 0 && r.start <= segStart && r.end >= segEnd);
+      while (wi < words.length && words[wi].end <= segStart) wi += 1;
+      const wordRange = wi < words.length && words[wi].start <= segStart && words[wi].end >= segEnd ? words[wi] : null;
       if (wordRange) {
         inner = `<mark class="wa-word wa-${wordRange.kind}" style="${wordMarkStyle(wordRange.kind)}" `
           + `data-wa-start="${wordRange.start}" data-wa-end="${wordRange.end}" data-wa-label="${escapeHtml(wordRange.label)}"`
           + `${wordRange.suggestion ? ` data-wa-suggestion="${escapeHtml(wordRange.suggestion)}"` : ''}>${inner}</mark>`;
       }
 
-      const sentenceRange = waRanges.find((r) => r.kind.indexOf('sentence-') === 0 && r.start <= segStart && r.end >= segEnd);
+      while (si < sentences.length && sentences[si].end <= segStart) si += 1;
+      const sentenceRange = si < sentences.length && sentences[si].start <= segStart && sentences[si].end >= segEnd ? sentences[si] : null;
       if (sentenceRange) {
         const severity = sentenceRange.kind.slice('sentence-'.length);
         inner = `<mark class="wa-sentence wa-${severity}" style="${sentenceMarkStyle(severity)}" `
           + `data-wa-start="${sentenceRange.start}" data-wa-end="${sentenceRange.end}" data-wa-label="${escapeHtml(sentenceRange.label)}">${inner}</mark>`;
       }
 
-      const activeComments = comments.filter((r) => r.start <= segStart && r.end >= segEnd);
+      const activeComments = comments.length ? comments.filter((r) => r.start <= segStart && r.end >= segEnd) : comments;
       if (activeComments.length) {
         const statuses = new Set(activeComments.map((c) => c.status));
         let cls = 'hl';
@@ -1021,6 +1033,29 @@
       html += inner;
     }
     return html;
+  }
+
+  // Where the marks go while the checks are still thinking. One edit is
+  // one run of text replaced by another; marks after it move with it, marks
+  // around it stretch or shrink with it, and marks wholly inside it wait
+  // for the next answer. Cheap enough to do on every key.
+  function shiftRanges(ranges, before, after) {
+    if (before === after) return ranges;
+    let p = 0;
+    const max = Math.min(before.length, after.length);
+    while (p < max && before.charCodeAt(p) === after.charCodeAt(p)) p += 1;
+    let q = 0;
+    while (q < max - p && before.charCodeAt(before.length - 1 - q) === after.charCodeAt(after.length - 1 - q)) q += 1;
+    const oldEnd = before.length - q;
+    const delta = after.length - before.length;
+    const out = [];
+    for (const r of ranges) {
+      const start = r.start <= p ? r.start : (r.start >= oldEnd ? r.start + delta : -1);
+      const end = r.end >= oldEnd ? r.end + delta : (r.end <= p ? r.end : p);
+      if (start < 0 || end <= start) continue;
+      out.push(Object.assign({}, r, { start, end }));
+    }
+    return out;
   }
 
   // Returns { html, ranges, stats } where `html` is what should go inside
@@ -1206,7 +1241,7 @@
 
   function settingFor(id) { return id.indexOf('sentence-') === 0 ? 'sentence' : id; }
 
-  function buildPanel(getSettings, onToggle, onMode, { modeKey = MODE_KEY, defaultMode = 'revise' } = {}) {
+  function buildPanel(getSettings, onToggle, onMode, { modeKey = MODE_KEY, defaultMode = 'revise', modeSwitch = true } = {}) {
     const panel = document.createElement('section');
     panel.className = 'wa-panel';
     panel.setAttribute('aria-label', 'Writing checks');
@@ -1239,7 +1274,10 @@
       return b;
     });
     head.appendChild(fold);
-    head.appendChild(modes);
+    // On the chapter page the page's own switch (Read, Review, Revise)
+    // already says whether the checks are shown; a second one would be
+    // two buttons for the same thing.
+    if (modeSwitch) head.appendChild(modes);
     panel.appendChild(head);
 
     const body = document.createElement('div');
@@ -1350,6 +1388,7 @@
       update,
       refresh() { if (last) update(last.stats, last.text); },
       mode: () => mode,
+      setMode: (m) => setMode(m, false),
       setFolded(folded) {
         panel.classList.toggle('wa-panel-folded', folded);
         fold.setAttribute('aria-expanded', folded ? 'false' : 'true');
@@ -1735,6 +1774,10 @@
     document.body.appendChild(popover);
 
     let currentRanges = [];
+    let paintedText = textarea.value;
+    let paintedComments = [];
+    /** @type {any} */
+    let shiftFrame = 0;
     let timer = null;
     let storyWords = new Set();
 
@@ -1761,8 +1804,9 @@
       if (token !== renderToken) return;
       const writing = panelApi.mode() === 'write';
       const shown = writing ? [] : ranges.filter((r) => settings[r.kind.indexOf('sentence-') === 0 ? 'sentence' : r.kind] !== false);
-      overlay.innerHTML = buildOverlayHtml(text, shown, commentRanges) + (text.endsWith('\n') ? '&nbsp;' : '');
       currentRanges = shown;
+      paintedComments = commentRanges;
+      paint(text);
       panelApi.update(stats, text);
       scheduleVisualChecks();
       // Text that has just grown past the bottom of the box gives the
@@ -1783,7 +1827,39 @@
       timer = setTimeout(render, 250);
     }
 
-    textarea.addEventListener('input', () => { scheduleRender(); schedulePreview(); });
+    // The overlay is only the marks now (see .wa-overlay), so painting it
+    // is never what makes a letter appear. It is still worth keeping the
+    // marks on their words between answers: each pause between keys moves
+    // them with the text, until the checks come back with the real ones.
+    function paint(text) {
+      paintedText = text;
+      // In Visual the Markdown view is put away; there is nothing to paint
+      // until it comes back, and coming back sends an input that repaints.
+      if (!textarea.getClientRects().length) return;
+      overlay.innerHTML = buildOverlayHtml(text, currentRanges, paintedComments) + (text.endsWith('\n') ? '&nbsp;' : '');
+    }
+    function shiftNow() {
+      shiftFrame = 0;
+      const text = textarea.value;
+      if (text === paintedText) return;
+      currentRanges = shiftRanges(currentRanges, paintedText, text);
+      paintedComments = shiftRanges(paintedComments, paintedText, text);
+      paint(text);
+      syncScroll();
+    }
+
+    textarea.addEventListener('input', () => {
+      // In a pause between keys rather than in the frame that shows the
+      // key: on a long chapter a repaint of the marks is not free, and the
+      // letter matters more than the fill behind it.
+      if (!shiftFrame) {
+        shiftFrame = typeof requestIdleCallback === 'function'
+          ? requestIdleCallback(shiftNow, { timeout: 150 })
+          : setTimeout(shiftNow, 60);
+      }
+      scheduleRender();
+      schedulePreview();
+    });
 
     // ---- the same marks in Visual --------------------------------------
     //
@@ -2174,7 +2250,7 @@
 
     // Wiki-link visibility is its own toggle (not tied to isAuthor the way
     // the writing-quality checks are) -- every reader gets it, since it's
-    // about how *they* want to read, same reasoning as "Fill screen".
+    // about how *they* want to read.
     // It lives in the reading settings (the Aa menu), beside type size and
     // line length, as the pair of buttons "Linked" and "Plain".
     let wikiLinksVisible = loadWikiLinksVisible();
@@ -2198,17 +2274,26 @@
     // author's tool, and there is no card at all for anybody else.
     if (!isAuthor) return;
 
-    // The same panel as the editor's, folded to one line above the text,
-    // and starting in Write -- nothing marked -- because this page is for
-    // reading and for the notes. Revise marks the text here as it does in
-    // the editor, and the choice is remembered apart from the editor's.
+    // The same panel as the editor's, folded to one line above the text.
+    // Whether the checks are marked is the page's own switch: Revise marks
+    // them, Read and Review leave the text alone (see reading.js).
     let settings = loadSettings(READ_PANEL_KEY, DEFAULT_SETTINGS);
     let storyWords = new Set();
     const panelApi = buildPanel(() => settings, (id, show) => {
       settings = Object.assign({}, settings, { [id]: show });
       saveSettings(settings, READ_PANEL_KEY);
       render();
-    }, () => render(), { modeKey: 'wa-read-mode', defaultMode: 'write' });
+    }, () => render(), { modeKey: 'wa-read-mode', defaultMode: 'write', modeSwitch: false });
+    const pageMode = () => {
+      const main = document.querySelector('main');
+      return main && main.dataset.reading === 'revise' ? 'revise' : 'write';
+    };
+    panelApi.setMode(pageMode());
+    document.addEventListener('reading-mode', () => {
+      if (panelApi.mode() === pageMode()) return;
+      panelApi.setMode(pageMode());
+      render();
+    });
     panelApi.panel.classList.add('wa-panel-inline', 'wa-panel-chapter');
     panelApi.setFolded(true);
     insertControlsCard(panelApi.panel, container);

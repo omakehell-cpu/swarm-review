@@ -10,7 +10,8 @@ every chapter to open in Read on purpose, that is a setting on your
 [account page](/help/your-account).
 
 **I selected some words and nothing happened.**
-On a phone, lift your finger and wait a moment: the button appears above
+Check you are in **Review**: **Read** is the story alone, and offers
+nothing on a selection. On a phone, lift your finger and wait a moment: the button appears above
 the selection. With a keyboard, press **C** once the words are selected.
 On your own chapter you can comment too -- it is how you answer a reader
 in place.

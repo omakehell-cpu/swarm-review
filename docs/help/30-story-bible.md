@@ -128,8 +128,12 @@ You do not have to type a hundred forms. The bible finds people you have
 written down, but it also **finds the names you have not**: open a chapter
 and look under the text for *names here are not in the bible*. It is
 guesswork over the prose, so some of it will be wrong — the top of the list
-is usually your cast, and one click writes the entry. The same panel is in
-the chapter editor, working on the draft you have not saved yet.
+is usually your cast, and one click writes the entry. A word that is not
+a name at all gets **Not a name**, and is not offered again anywhere in
+the story; the story page lists what you have put away, under *Not names*,
+so one clicked by mistake can be brought back. The same panel is in the
+chapter editor, working on the draft you have not saved yet. The list is
+shown in Review, not in Read.
 
 ## While you write
 

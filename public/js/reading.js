@@ -1,7 +1,7 @@
 // public/js/reading.js -- how the chapter is read, as opposed to what it
 // says. Two things, both remembered in this browser and nowhere else:
 //
-//   1. the mode: reading it, or reviewing it
+//   1. the mode: reading it, reviewing it, or (its author) revising it
 //   2. the three numbers that decide what reading it is like -- the size
 //      of the type, the length of the line, the space between lines
 //
@@ -34,7 +34,12 @@
   // Somebody who has asked, on their account page, for chapters to open
   // ready to read gets that every time, whatever this browser remembers.
   const readFirst = bar.dataset.readFirst === '1';
+  // Three ways to have the page, one switch: Read (the story alone),
+  // Review (the story and the notes) and, for its author, Revise (the
+  // notes and the writing checks on the text as well).
+  const offered = Array.from(bar.querySelectorAll('[data-mode]')).map((b) => /** @type {HTMLElement} */ (b).dataset.mode);
   let mode = readFirst ? 'read' : (store.get(MODE_KEY, '') || (hasComments ? 'review' : 'read'));
+  if (offered.indexOf(mode) === -1) mode = mode === 'revise' ? 'review' : 'read';
 
   function applyMode() {
     main.dataset.reading = mode;
@@ -42,13 +47,14 @@
     // In Review, a passage with notes on it is announced as highlighted;
     // in Read, nothing is put between the listener and the story.
     for (const el of Array.from(text.querySelectorAll('.hl'))) {
-      if (mode === 'review') el.setAttribute('role', 'mark');
+      if (mode !== 'read') el.setAttribute('role', 'mark');
       else el.removeAttribute('role');
     }
     for (const el of bar.querySelectorAll('[data-mode]')) {
       const btn = /** @type {HTMLElement} */ (el);
       btn.setAttribute('aria-pressed', String(btn.dataset.mode === mode));
     }
+    document.dispatchEvent(new CustomEvent('reading-mode', { detail: mode }));
   }
   bar.addEventListener('click', (ev) => {
     const btn = /** @type {HTMLElement|null} */ (/** @type {Element} */ (ev.target).closest('[data-mode]'));

@@ -43,32 +43,6 @@
     });
   }
 
-  // ---- "Fill screen": same pattern as the editor's own width controls
-  // (see public/js/writing-analyzer.js) -- widens the whole page past its
-  // usual 1100px cap, for wide screens where the normal column feels
-  // cramped. Available to every reader, not just the chapter's author,
-  // since it's about how comfortably *they* want to read, not a writing
-  // tool. #chapter-text's own max-width:72ch (style.css) still caps the
-  // actual line length either way -- this only gives the layout as a
-  // whole (mainly the comments pane) more room.
-  const fillScreenBtn = document.getElementById('reading-fill-screen');
-  if (fillScreenBtn) {
-    const mainEl = document.querySelector('main.container');
-    const STORAGE_KEY = 'reading-fullwidth';
-    function applyFullWidth(on) {
-      mainEl.classList.toggle('wa-fullwidth', on);
-      fillScreenBtn.textContent = on ? 'Fit to chapter' : 'Fill screen';
-    }
-    let fullWidthOn = false;
-    try { fullWidthOn = localStorage.getItem(STORAGE_KEY) === '1'; } catch (e) { /* ignore */ }
-    applyFullWidth(fullWidthOn);
-    fillScreenBtn.addEventListener('click', () => {
-      fullWidthOn = !fullWidthOn;
-      try { localStorage.setItem(STORAGE_KEY, fullWidthOn ? '1' : '0'); } catch (e) { /* ignore */ }
-      applyFullWidth(fullWidthOn);
-    });
-  }
-
   // ---- wiki-link hover preview: character/place/ship names the server
   // auto-links from the shared wiki's index (lib/wiki.js) carry their
   // summary in data-wiki-summary; show it on hover, same reasoning as the
@@ -111,7 +85,11 @@
   // inline comment highlights are visually neutralized by CSS, and the
   // interactions below should likewise do nothing rather than jump to or
   // pop open a panel the reader can't currently see.
+  // Read is only the story: no offer to comment, no box, nothing between
+  // the reader and the words. Notes are for Review (and Revise).
   function commentsCurrentlyHidden() {
+    const main = document.querySelector('main');
+    if (main && main.dataset.reading === 'read') return true;
     const grid = textEl.closest('.chapter-body-grid');
     return Boolean(grid && grid.classList.contains('comments-hidden'));
   }
@@ -244,14 +222,7 @@
   // it without one.
   function openCommentBox() {
     if (!pendingSelection) return false;
-    // In Read mode the notes column is put away, and the box lives in it.
-    // Wanting to leave a note is wanting Review, so switch to it first;
-    // the selection is already held in pendingSelection.
-    const main = document.querySelector('main');
-    if (main && main.dataset.reading === 'read') {
-      const review = /** @type {HTMLElement|null} */ (document.querySelector('[data-mode="review"]'));
-      if (review) review.click();
-    }
+    if (commentsCurrentlyHidden()) return false;
     startInput.value = String(pendingSelection.start);
     endInput.value = String(pendingSelection.end);
     quotedInput.value = pendingSelection.text;

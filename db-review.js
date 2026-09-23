@@ -141,5 +141,17 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
     at         TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (user_id, chapter_id)
   );
+  -- Capitalised words an author has said are not names ("Kestrel" the
+  -- adjective, a sentence's first word the check keeps catching): the
+  -- unknown-names list stops offering them, for this story only.
+  CREATE TABLE IF NOT EXISTS story_not_names (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    story_id   INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+    name       TEXT NOT NULL,
+    name_lower TEXT NOT NULL,
+    added_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (story_id, name_lower)
+  );
   `);
 };

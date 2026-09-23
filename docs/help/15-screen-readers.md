@@ -23,7 +23,7 @@ At the end of a chapter the next one is a single link, with its title. The **lef
 
 In **Review** mode, a passage somebody has left a note on is read as highlighted. The notes themselves are in a region called **Notes on this chapter**, and each starts with a heading that says whose it is, what kind, where it stands and what it is about -- *Note by Luis, question, pending, on "four hundred days"* -- so the headings key walks you from note to note. Each note has a **Go to the passage** link back to the words.
 
-To say how a paragraph read -- Hooked, Lost me, Dragged, Didn't buy it -- select a few of its words and press **R**: a toolbar of four switches opens, each saying whether it is on; Escape closes it and puts you back. To leave a note, select the words with Shift and the arrow keys and press **C**; if you were in Read mode, the page switches to Review so that the note box has somewhere to open. Accept, reject, reply and retract happen in place: the page does not reload, your place is kept and one sentence says what happened.
+To say how a paragraph read -- Hooked, Lost me, Dragged, Didn't buy it -- select a few of its words and press **R**: a toolbar of four switches opens, each saying whether it is on; Escape closes it and puts you back. To leave a note, select the words with Shift and the arrow keys and press **C**. Notes are left in Review (or Revise); Read is the story alone and offers nothing on a selection. Accept, reject, reply and retract happen in place: the page does not reload, your place is kept and one sentence says what happened.
 
 ## Writing
 
@@ -34,6 +34,6 @@ The chapter editor has two views, switched with the **Markdown** and **Visual** 
 
 Other keys: **Ctrl+B** and **Ctrl+I** (Cmd on a Mac) for bold and italic, **Ctrl+Enter** for a scene break, **Escape** to leave Focus or close a panel.
 
-The [writing checks](/help/writing-checks) are a panel beside the text, a region called **Writing checks**. It starts with the reading grade and the counts, and each kind of check is a button whose name is its count -- *4 adverbs. Aim for 1 or fewer.* -- and which says whether its marks are shown (pressed) or hidden. **Revise** and **Write** at the top of the panel are a pair of buttons in the same way. **Checks as a list**, above the text, turns every mark into a list: how many of each first, then every one in order, each a button that selects its words in the text.
+The [writing checks](/help/writing-checks) are a panel beside the text, a region called **Writing checks**. It starts with the reading grade and the counts, and each kind of check is a button whose name is its count -- *4 adverbs. Aim for 1 or fewer.* -- and which says whether its marks are shown (pressed) or hidden. In the editor, **Revise** and **Write** at the top of the panel are a pair of buttons in the same way; on the chapter page the panel is there in Revise, the third position of the Read / Review / Revise switch. **Checks as a list**, above the text, turns every mark into a list: how many of each first, then every one in order, each a button that selects its words in the text.
 
 **Scenes & snapshots** opens a panel beside the editor and moves the focus into it; Escape closes it and puts you back where you were.

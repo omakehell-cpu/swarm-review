@@ -250,8 +250,9 @@ async function handleStoryPage(req, res, user, storyId, query) {
   // chapter" button and the dictionary, not "Edit details" or "Archive".
   const canWrite = models.canWriteInStory(story, user);
   const dictionary = canWrite ? models.listStoryDictionaryEntries(storyId) : [];
+  const notNames = canWrite ? models.listNotNames(storyId) : [];
   sendHtml(res, 200, views.storyPage({
-    user, story, chapters, isStoryAuthor, canWrite, dictionary,
+    user, story, chapters, isStoryAuthor, canWrite, dictionary, notNames,
     stats: models.getStoryStats(storyId),
     readersByChapter,
     tags: models.getStoryTags(storyId),
