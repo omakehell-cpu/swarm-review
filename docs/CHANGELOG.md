@@ -4,6 +4,16 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — Checks like Hemingway
+
+The writing checks had got too quiet to be useful. They are back, laid out the way Hemingway does it.
+
+- **A panel beside the text**: the reading grade in large type, words, sentences and reading time, then one coloured card for each kind of trouble -- "1 of 9 sentences is very hard to read", "4 adverbs. Aim for 1 or fewer."
+- **Colour in the text again**, in Hemingway's colours: yellow and red sentences, blue adverbs, green passive voice, purple words with a simpler alternative. Solid, so a blue word in a yellow sentence is two clear colours, not mud. The craft checks this site adds stay underlined, as a second layer.
+- **Click a card** to hide or show its marks. The count stays, so you know what you have hidden.
+- **Write and Revise.** Write takes every mark away while you draft; Revise brings them back.
+- The notes you were given sit in the same column, under the checks. Editor width and the Markdown preview are under *Editor settings* at the bottom of the panel. On a phone the panel is a single line above the text.
+
 ## 2026-09-23 — Less in the way
 
 The front page and the chapter page, with fewer things between you and what you came for.

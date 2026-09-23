@@ -117,20 +117,10 @@
     try { localStorage.setItem(key, JSON.stringify(settings)); } catch (e) { /* ignore */ }
   }
 
-  // The "show comments" toggle is shared by the editor and the reading
-  // page, and by every story -- once someone picks a value in this
-  // browser it sticks everywhere, the same way the check settings above
-  // do. `defaultOn` (the story-author-vs-everyone-else rule) only applies
-  // the very first time, before anyone has chosen anything yet.
+  // There used to be a "show comments" switch; Read and Review decide that
+  // now. Its stored value is set back to on wherever it is found, so
+  // nobody is left with a margin they cannot bring back.
   const COMMENTS_VISIBLE_KEY = 'wa-comments-visible';
-  function loadCommentsVisible(defaultOn) {
-    try {
-      const raw = localStorage.getItem(COMMENTS_VISIBLE_KEY);
-      if (raw === '1') return true;
-      if (raw === '0') return false;
-    } catch (e) { /* ignore */ }
-    return defaultOn;
-  }
   function saveCommentsVisible(visible) {
     try { localStorage.setItem(COMMENTS_VISIBLE_KEY, visible ? '1' : '0'); } catch (e) { /* ignore */ }
   }
@@ -166,24 +156,34 @@
   // the passage into mud exactly where the writer most needs to read it.
   // An underline carries the same color coding, stacks cleanly with the
   // sentence tint underneath, and leaves the letterforms alone.
+  //
+  // That was the reasoning; Hemingway, which this is modelled on, shows
+  // that the fill is the point: a hard sentence is a yellow block you
+  // cannot miss, and an adverb inside it is a blue block sitting on top.
+  // So the five checks Hemingway has are fills again, in its colours, and
+  // solid rather than translucent, so two of them stack into two clean
+  // colours rather than mud. The checks this app adds on top (filler,
+  // repeated words, filter verbs, dialogue tags, repeated openings) and
+  // spelling stay underlines: a second, quieter layer.
+  //
+  // The colours live in style.css (--wa-fill-*), where the dark scheme and
+  // each look can set their own; these return a style only for the
+  // underline layer, whose colour is per check.
+  const FILL_KINDS = new Set(['passive', 'adverb', 'complex']);
   function wordMarkStyle(kind) {
     if (kind === 'spell') {
       return `text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:${CHECK_META.spell.color};text-decoration-thickness:1px;text-underline-offset:3px;`;
     }
+    if (FILL_KINDS.has(kind) || kind === 'rewrite') return '';
     const meta = CHECK_META[kind];
     if (!meta) return '';
-    // No wash behind the word: the underline is the mark. A tinted block
-    // behind every flagged word turned a draft into a paint chart.
     return `text-decoration-line:underline;text-decoration-style:solid;text-decoration-color:${hexToRgba(meta.color, 0.85)};`
       + 'text-decoration-thickness:2px;text-underline-offset:3px;';
   }
 
-  // Sentence-level marks span whole sentences, so they stay a wash rather
-  // than an underline -- a 40-word underline reads as a redaction bar, and
-  // it would collide with the word-level underlines sitting inside it.
-  function sentenceMarkStyle(severity) {
-    const color = SEVERITY_COLOR[severity];
-    return color ? `background:${hexToRgba(color, severity === 'red' ? 0.16 : 0.11)};` : '';
+  // Whole sentences: yellow for hard, red for very hard (see style.css).
+  function sentenceMarkStyle(_severity) {
+    return '';
   }
 
   // ---------------------------------------------------------------------
@@ -1111,6 +1111,7 @@
     if (!settings || settings.opening !== false) addWholeText(findRepeatedOpenings(chunks), 'opening');
 
     stats.grade = gradeLevel(totalSentences, totalWords, totalSyllables);
+    stats.sentences = totalSentences;
 
     ranges.sort((a, b) => a.start - b.start);
     const html = buildOverlayHtml(text, ranges, commentRanges);
@@ -1286,6 +1287,227 @@
     return { card, summary, sections };
   }
 
+
+  // ---------------------------------------------------------------------
+  // the editor's side panel, after Hemingway
+  // ---------------------------------------------------------------------
+  //
+  // Hemingway puts its verdict beside the text, not above it: the grade in
+  // large type, then one coloured card per kind of trouble -- "2 of 14
+  // sentences are very hard to read", "5 adverbs, aim for 2 or fewer" --
+  // each card the same colour as its marks in the text, so the panel is
+  // also the legend. Clicking a card hides or shows its marks. A Write
+  // mode takes all of it away while you are drafting.
+  //
+  // The counts are always of everything: a card you have switched off
+  // still says how many there are, which is how you know to switch it
+  // back on. What the switches change is only what is marked in the text.
+
+  const PANEL_PRIMARY = ['sentence-red', 'sentence-yellow', 'adverb', 'passive', 'complex', 'spell'];
+  const PANEL_CRAFT = ['filler', 'echo', 'filter', 'dialogue', 'opening'];
+  const MODE_KEY = 'wa-mode';
+
+  function plural(n, one, many) { return n === 1 ? one : many; }
+
+  function gradeWord(grade) {
+    if (grade === null || grade === undefined) return '';
+    const n = Math.round(grade);
+    if (n <= 6) return 'Very easy';
+    if (n <= 9) return 'Good';
+    if (n <= 12) return 'OK';
+    return 'Hard';
+  }
+
+  // What each card says. Hemingway's own targets are not published; these
+  // are ours, and say so only as a goal: about one adverb per hundred
+  // words, about one passive sentence in five.
+  function panelLine(id, stats, words) {
+    const s = stats.sentences || 0;
+    const sentences = `${s} ${plural(s, 'sentence', 'sentences')}`;
+    switch (id) {
+      case 'sentence-red': {
+        const n = stats.red;
+        return n ? [n, ` of ${sentences} ${plural(n, 'is', 'are')} very hard to read.`] : [0, ' sentences are very hard to read.'];
+      }
+      case 'sentence-yellow': {
+        const n = stats.yellow;
+        return n ? [n, ` of ${sentences} ${plural(n, 'is', 'are')} hard to read.`] : [0, ' sentences are hard to read.'];
+      }
+      case 'adverb': {
+        const n = stats.adverb; const goal = Math.max(1, Math.round(words / 100));
+        return [n, ` ${plural(n, 'adverb', 'adverbs')}. Aim for ${goal} or fewer.`];
+      }
+      case 'passive': {
+        const n = stats.passive; const goal = Math.max(1, Math.round(s / 5));
+        return [n, ` ${plural(n, 'use', 'uses')} of passive voice. Aim for ${goal} or fewer.`];
+      }
+      case 'complex': {
+        const n = stats.complex;
+        return [n, ` ${plural(n, 'word or phrase has', 'words or phrases have')} a simpler alternative.`];
+      }
+      case 'spell': {
+        const n = stats.spell;
+        return [n, ` possible ${plural(n, 'misspelling', 'misspellings')}.`];
+      }
+      case 'filler': return [stats.filler, ` filler ${plural(stats.filler, 'word', 'words')}`];
+      case 'echo': return [stats.echo, ` repeated ${plural(stats.echo, 'word', 'words')}`];
+      case 'filter': return [stats.filter, ` filter ${plural(stats.filter, 'verb', 'verbs')}`];
+      case 'dialogue': return [stats.dialogue, ` dialogue ${plural(stats.dialogue, 'tag', 'tags')}`];
+      case 'opening': return [stats.opening, ` repeated ${plural(stats.opening, 'opening', 'openings')}`];
+      default: return [0, ''];
+    }
+  }
+
+  function settingFor(id) { return id.indexOf('sentence-') === 0 ? 'sentence' : id; }
+
+  function buildPanel(getSettings, onToggle, onMode) {
+    const panel = document.createElement('section');
+    panel.className = 'wa-panel';
+    panel.setAttribute('aria-label', 'Writing checks');
+
+    let mode = 'revise';
+    try { if (localStorage.getItem(MODE_KEY) === 'write') mode = 'write'; } catch (e) { /* ignore */ }
+
+    const head = document.createElement('div');
+    head.className = 'wa-panel-head';
+    const fold = document.createElement('button');
+    fold.type = 'button';
+    fold.className = 'wa-panel-fold';
+    fold.setAttribute('aria-expanded', 'true');
+    fold.innerHTML = '<span class="wa-panel-label">Readability</span>';
+    const modes = document.createElement('div');
+    modes.className = 'wa-panel-modes';
+    modes.setAttribute('role', 'group');
+    modes.setAttribute('aria-label', 'Checks');
+    const modeButtons = ['revise', 'write'].map((m) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.waMode = m;
+      b.textContent = m === 'revise' ? 'Revise' : 'Write';
+      b.title = m === 'revise' ? 'Show the checks in the text' : 'Hide every check while you draft';
+      b.addEventListener('click', () => setMode(m, true));
+      modes.appendChild(b);
+      return b;
+    });
+    head.appendChild(fold);
+    head.appendChild(modes);
+    panel.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'wa-panel-body';
+    panel.appendChild(body);
+
+    const grade = document.createElement('div');
+    grade.className = 'wa-panel-grade';
+    grade.innerHTML = '<span class="wa-grade-num">&hellip;</span>';
+    body.appendChild(grade);
+    const facts = document.createElement('p');
+    facts.className = 'wa-panel-facts';
+    body.appendChild(facts);
+
+    const writeNote = document.createElement('p');
+    writeNote.className = 'wa-panel-writenote';
+    writeNote.textContent = 'Writing: the checks are out of the way. Switch to Revise to see them.';
+    body.appendChild(writeNote);
+
+    const cards = new Map();
+    function makeCard(id, craft) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `wa-pcard wa-pcard-${id}${craft ? ' wa-pcard-craft' : ''}`;
+      b.dataset.waCheck = id;
+      if (craft) b.style.setProperty('--wa-color', CHECK_META[id].color);
+      b.title = 'Show or hide these in the text';
+      b.addEventListener('click', () => {
+        const key = settingFor(id);
+        onToggle(key, getSettings()[key] === false);
+      });
+      cards.set(id, b);
+      return b;
+    }
+    const primary = document.createElement('div');
+    primary.className = 'wa-panel-cards';
+    primary.setAttribute('role', 'group');
+    primary.setAttribute('aria-label', 'Checks, each one shown or hidden in the text');
+    PANEL_PRIMARY.forEach((id) => primary.appendChild(makeCard(id, false)));
+    body.appendChild(primary);
+
+    const craft = document.createElement('div');
+    craft.className = 'wa-panel-craft';
+    craft.setAttribute('role', 'group');
+    craft.setAttribute('aria-label', 'Craft checks, underlined');
+    const craftHead = document.createElement('p');
+    craftHead.className = 'wa-panel-sub';
+    craftHead.setAttribute('aria-hidden', 'true');
+    craftHead.textContent = 'Craft, underlined';
+    craft.appendChild(craftHead);
+    PANEL_CRAFT.forEach((id) => craft.appendChild(makeCard(id, true)));
+    body.appendChild(craft);
+
+    const more = document.createElement('details');
+    more.className = 'wa-panel-more';
+    more.innerHTML = '<summary>Editor settings</summary>';
+    const moreBody = document.createElement('div');
+    moreBody.className = 'wa-panel-more-body';
+    more.appendChild(moreBody);
+    body.appendChild(more);
+
+    fold.addEventListener('click', () => {
+      const folded = panel.classList.toggle('wa-panel-folded');
+      fold.setAttribute('aria-expanded', folded ? 'false' : 'true');
+    });
+
+    let last = null;
+    function update(stats, text) {
+      last = { stats, text };
+      const words = (String(text || '').replace(/\]\([^)]*\)/g, ']').replace(/[*_~`#>]/g, ' ')
+        .match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length;
+      const g = stats.grade === null || stats.grade === undefined ? null : Math.round(stats.grade);
+      grade.innerHTML = g === null
+        ? '<span class="wa-grade-num">&mdash;</span><span class="wa-grade-word">Write a few sentences</span>'
+        : `<span class="wa-grade-num">Grade ${g}</span><span class="wa-grade-word">${gradeWord(g)}</span>`;
+      const minutes = Math.max(1, Math.round(words / 230));
+      facts.textContent = `${words.toLocaleString('en-GB')} ${plural(words, 'word', 'words')} · `
+        + `${stats.sentences || 0} ${plural(stats.sentences || 0, 'sentence', 'sentences')} · ${minutes} min read`;
+      const flagged = PANEL_PRIMARY.concat(PANEL_CRAFT)
+        .reduce((sum, id) => sum + panelLine(id, stats, words)[0], 0);
+      fold.innerHTML = `<span class="wa-panel-label">Readability</span>`
+        + `<span class="wa-panel-mini">${g === null ? '' : `Grade ${g} · `}${flagged} flagged</span>`;
+      for (const [id, card] of cards) {
+        const [n, rest] = panelLine(id, stats, words);
+        const on = getSettings()[settingFor(id)] !== false;
+        card.classList.toggle('is-zero', !n);
+        card.classList.toggle('is-off', !on);
+        card.setAttribute('aria-pressed', String(on));
+        card.innerHTML = `<strong>${n}</strong>${escapeHtml(rest)}`
+          + (on ? '' : '<span class="wa-pcard-state">hidden</span>');
+      }
+    }
+
+    function setMode(m, fromUser) {
+      mode = m;
+      panel.classList.toggle('wa-panel-writing', m === 'write');
+      modeButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.waMode === m)));
+      if (fromUser) {
+        try { localStorage.setItem(MODE_KEY, m); } catch (e) { /* ignore */ }
+        onMode(m);
+      }
+    }
+    setMode(mode, false);
+
+    return {
+      panel,
+      moreBody,
+      update,
+      refresh() { if (last) update(last.stats, last.text); },
+      mode: () => mode,
+      setFolded(folded) {
+        panel.classList.toggle('wa-panel-folded', folded);
+        fold.setAttribute('aria-expanded', folded ? 'false' : 'true');
+      },
+    };
+  }
+
   // A small, non-interactive preview shown on hover over a highlighted word
   // or sentence -- separate from the click-triggered `.wa-popover` (which
   // carries action buttons and stays open until you click elsewhere), so a
@@ -1408,15 +1630,33 @@
     wrap.className = 'wa-wrap';
     textarea.parentNode.insertBefore(wrap, textarea);
 
-    // The card starts folded: open, it is two rows of toggles standing
-    // between the writer and the text (a screen and a half of them on a
-    // phone). Its heading still carries the counts, and one click opens it.
-    const { card, summary, sections } = buildControlsCard(settings, (id, checked) => {
-      settings = Object.assign({}, settings, { [id]: checked });
+    // The checks live in a panel beside the text (see buildPanel), in the
+    // editor's side column when there is room for one, and folded above
+    // the text when there is not.
+    const panelApi = buildPanel(() => settings, (id, show) => {
+      settings = Object.assign({}, settings, { [id]: show });
       saveSettings(settings);
       render();
-    }, { startOpen: false });
-    wrap.appendChild(card);
+    }, () => render());
+    const sideSlot = document.querySelector('.editor-side');
+    const narrowQuery = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
+    function placePanel() {
+      const narrow = Boolean(narrowQuery && narrowQuery.matches);
+      if (!narrow && sideSlot) {
+        sideSlot.insertBefore(panelApi.panel, sideSlot.firstChild);
+        panelApi.setFolded(false);
+      } else {
+        wrap.insertBefore(panelApi.panel, wrap.firstChild);
+        panelApi.setFolded(true);
+      }
+      panelApi.panel.classList.toggle('wa-panel-inline', narrow || !sideSlot);
+      // Beside the text it is always open, so its heading is not a control.
+      const foldBtn = /** @type {HTMLButtonElement} */ (panelApi.panel.querySelector('.wa-panel-fold'));
+      if (foldBtn) foldBtn.disabled = !(narrow || !sideSlot);
+    }
+    placePanel();
+    if (narrowQuery && narrowQuery.addEventListener) narrowQuery.addEventListener('change', placePanel);
+    const sections = panelApi.moreBody;
 
     // --- markdown preview toggle (editor only) ---
     let previewOn = false;
@@ -1426,7 +1666,7 @@
       try { localStorage.setItem('wa-preview-on', previewOn ? '1' : '0'); } catch (e2) { /* ignore */ }
       applyPreviewState();
     });
-    sections.appendChild(buildSection('Markdown preview', [previewRow]));
+    sections.appendChild(previewRow);
 
     // --- existing comments: reference list + optional inline highlight ---
     // Only present on the edit-chapter page (see views.js's editChapterPage
@@ -1439,22 +1679,10 @@
       try { commentsPayload = JSON.parse(commentsDataEl.textContent) || []; } catch (e) { commentsPayload = []; }
     }
     const editorGridEl = document.querySelector('.chapter-body-grid');
-    // The editor only ever runs for the chapter's own author (see the
-    // route guards in server.js), so "show comments" defaults to on here.
-    let commentsVisible = loadCommentsVisible(true);
-    function applyCommentsVisibility() {
-      if (editorGridEl) editorGridEl.classList.toggle('comments-hidden', !commentsVisible);
-    }
-    if (commentsDataEl && editorGridEl && commentsPayload.length) {
-      const commentsRow = buildCheckRow('#4bbf7e', 'Comments', commentsVisible, (checked) => {
-        commentsVisible = checked;
-        saveCommentsVisible(checked);
-        applyCommentsVisibility();
-        scheduleRender();
-      });
-      sections.appendChild(buildSection('Comments', [commentsRow]));
-    }
-    applyCommentsVisibility();
+    // The notes are always beside the text here: the editor only ever runs
+    // for the chapter's own author, and they are what the rewrite is for.
+    const commentsVisible = true;
+    if (editorGridEl) editorGridEl.classList.remove('comments-hidden');
 
     // Finds each existing comment's quoted passage in the CURRENT raw
     // textarea text with a plain substring search, re-run on every render
@@ -1508,7 +1736,7 @@
     widthBar.appendChild(widthLabel);
     widthBar.appendChild(fitChapterBtn);
     widthBar.appendChild(fitScreenBtn);
-    wrap.appendChild(widthBar);
+    sections.appendChild(widthBar);
 
     function setFullWidth(on) {
       try { localStorage.setItem('wa-editor-fullwidth', on ? '1' : '0'); } catch (e) { /* ignore */ }
@@ -1676,12 +1904,17 @@
     async function render() {
       const token = (renderToken += 1);
       const text = textarea.value;
-      const { html, ranges, stats } = await analyzer.run(text, storyWords, settings, resolveCommentRanges());
+      // Every check runs every time, so the panel can count what is hidden;
+      // the settings and the mode decide only what is marked in the text.
+      const commentRanges = resolveCommentRanges();
+      const { ranges, stats } = await analyzer.run(text, storyWords, DEFAULT_SETTINGS, commentRanges);
       // The answer to a question the typist has already moved on from.
       if (token !== renderToken) return;
-      overlay.innerHTML = html + (text.endsWith('\n') ? '&nbsp;' : '');
-      currentRanges = ranges;
-      summary.innerHTML = summaryHtml(stats, text);
+      const writing = panelApi.mode() === 'write';
+      const shown = writing ? [] : ranges.filter((r) => settings[r.kind.indexOf('sentence-') === 0 ? 'sentence' : r.kind] !== false);
+      overlay.innerHTML = buildOverlayHtml(text, shown, commentRanges) + (text.endsWith('\n') ? '&nbsp;' : '');
+      currentRanges = shown;
+      panelApi.update(stats, text);
       // Text that has just grown past the bottom of the box gives the
       // textarea a scrollbar it did not have a keystroke ago, which
       // changes its content width -- nothing resizes, so the

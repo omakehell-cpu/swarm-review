@@ -3912,3 +3912,145 @@ main:focus { outline: none; }
 @media (max-width: 720px) {
   .chapter-header .reading-prefs > summary { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--s-5); }
 }
+
+/* ==== Writing checks, after Hemingway ================================
+   Fills in Hemingway's colours: yellow for a hard sentence, red for a
+   very hard one, blue adverbs, green passive voice, purple for a word
+   with a simpler alternative. Solid, so an adverb inside a hard sentence
+   is a blue block on a yellow one rather than a muddy mix of the two.
+   The craft checks and spelling stay underlines (set inline by
+   writing-analyzer.js), a second and quieter layer. */
+:root {
+  --wa-fill-hard: #f6eab0;
+  --wa-fill-veryhard: #f1c4c6;
+  --wa-fill-adverb: #c6e2f3;
+  --wa-fill-passive: #cdeaae;
+  --wa-fill-complex: #e5c8ec;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wa-fill-hard: #4a4220;
+    --wa-fill-veryhard: #55292d;
+    --wa-fill-adverb: #1d3c52;
+    --wa-fill-passive: #2c4a22;
+    --wa-fill-complex: #472b50;
+  }
+}
+:root[data-theme="dark"] {
+  --wa-fill-hard: #4a4220;
+  --wa-fill-veryhard: #55292d;
+  --wa-fill-adverb: #1d3c52;
+  --wa-fill-passive: #2c4a22;
+  --wa-fill-complex: #472b50;
+}
+mark.wa-sentence.wa-yellow { background: var(--wa-fill-hard); }
+mark.wa-sentence.wa-red { background: var(--wa-fill-veryhard); }
+mark.wa-word.wa-adverb { background: var(--wa-fill-adverb); }
+mark.wa-word.wa-passive { background: var(--wa-fill-passive); }
+mark.wa-word.wa-complex { background: var(--wa-fill-complex); }
+mark.wa-sentence, mark.wa-word { border-radius: 0; }
+@media (forced-colors: active) {
+  mark.wa-sentence, mark.wa-word { forced-color-adjust: none; background: Mark; color: MarkText; }
+}
+
+/* The editor: text on the left, the checks (and the notes) on the right. */
+.editor-grid { max-width: 1440px; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: var(--s-9); }
+.wa-fullwidth .editor-grid, .editor-grid:has(.wa-fullwidth) { max-width: none; }
+.editor-grid > .writer-card { max-width: none; margin: 0; }
+.editor-side { gap: var(--s-7); }
+.editor-side:empty { display: none; }
+.editor-notes { display: flex; flex-direction: column; gap: var(--s-5); }
+.editor-notes > h2 { margin: 0; }
+@media (max-width: 720px) {
+  .editor-grid { display: block; }
+}
+
+/* The panel. */
+.wa-panel { display: flex; flex-direction: column; gap: var(--s-4); font-size: var(--t-sm); }
+.wa-panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-4); }
+.wa-panel-fold {
+  display: flex; align-items: baseline; gap: var(--s-3); padding: 0; border: 0; background: none;
+  font: inherit; color: inherit; cursor: default; text-align: left;
+}
+.wa-panel-label {
+  font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
+.wa-panel-mini { display: none; color: var(--text-muted); }
+.wa-panel-modes { display: inline-flex; border: 1px solid var(--border-strong); }
+.wa-panel-modes button {
+  border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: var(--t-xs);
+  font-weight: 600; padding: var(--s-1) var(--s-4); cursor: pointer;
+}
+.wa-panel-modes button[aria-pressed="true"] { background: var(--text); color: var(--btn-text); }
+.wa-panel-grade { display: flex; align-items: baseline; gap: var(--s-4); flex-wrap: wrap; }
+.wa-grade-num { font-family: var(--font-display); font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.wa-grade-word { font-size: var(--t-md); font-weight: 600; }
+.wa-panel-facts { margin: 0; color: var(--text-muted); }
+.wa-panel-cards { display: flex; flex-direction: column; gap: var(--s-2); }
+.wa-pcard {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  padding: var(--s-3) var(--s-4); border: 1px solid transparent; border-radius: 0;
+  font: inherit; font-size: var(--t-sm); line-height: 1.4; color: var(--text);
+  background: var(--wa-card-fill, var(--bg-sunken));
+}
+.wa-pcard strong { font-size: var(--t-md); margin-right: 1px; }
+.wa-pcard:hover { border-color: var(--border-strong); }
+.wa-pcard-sentence-red { --wa-card-fill: var(--wa-fill-veryhard); }
+.wa-pcard-sentence-yellow { --wa-card-fill: var(--wa-fill-hard); }
+.wa-pcard-adverb { --wa-card-fill: var(--wa-fill-adverb); }
+.wa-pcard-passive { --wa-card-fill: var(--wa-fill-passive); }
+.wa-pcard-complex { --wa-card-fill: var(--wa-fill-complex); }
+.wa-pcard-spell { --wa-card-fill: transparent; border-color: var(--border); }
+.wa-pcard-spell strong { text-decoration: underline wavy #3f9e92 1px; text-underline-offset: 3px; }
+.wa-pcard.is-zero { background: transparent; border-color: var(--border); color: var(--text-muted); }
+.wa-pcard.is-off { background: transparent; border-color: var(--border); border-style: dashed; color: var(--text-muted); }
+.wa-pcard-state {
+  float: right; margin-left: var(--s-3); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking);
+}
+.wa-panel-craft { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.wa-panel-sub {
+  flex-basis: 100%; margin: var(--s-2) 0 0; font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
+.wa-pcard-craft {
+  width: auto; padding: var(--s-1) var(--s-3); background: transparent; border-color: var(--border);
+  font-size: var(--t-xs);
+}
+.wa-pcard-craft strong {
+  font-size: inherit; text-decoration: underline solid var(--wa-color) 2px; text-underline-offset: 3px;
+}
+.wa-pcard-craft .wa-pcard-state { float: none; margin-left: var(--s-2); }
+.wa-panel-writenote { display: none; margin: 0; color: var(--text-muted); }
+.wa-panel-writing .wa-panel-cards, .wa-panel-writing .wa-panel-craft { display: none; }
+.wa-panel-writing .wa-panel-writenote { display: block; }
+.wa-panel-more > summary { cursor: pointer; color: var(--text-muted); font-size: var(--t-xs); }
+.wa-panel-more-body { display: flex; flex-direction: column; gap: var(--s-3); margin-top: var(--s-3); }
+.wa-panel-more-body .wa-width-bar { margin: 0; }
+
+/* Folded above the text, on a phone: one line that opens. */
+.wa-panel-inline { margin-bottom: var(--s-4); padding-bottom: var(--s-4); border-bottom: 1px solid var(--border); }
+.wa-panel-inline .wa-panel-fold { cursor: pointer; }
+.wa-panel-inline .wa-panel-fold::before { content: "\25BE"; content: "\25BE" / ""; color: var(--text-muted); }
+.wa-panel-folded .wa-panel-fold::before { content: "\25B8"; content: "\25B8" / ""; }
+.wa-panel-folded .wa-panel-mini { display: inline; }
+.wa-panel-folded .wa-panel-body { display: none; }
+.wa-panel-fold:disabled { color: inherit; opacity: 1; }
+body.writing-focus .wa-panel { display: none; }
+
+/* The Swarm writes and reads on paper even in the dark, so its marks keep
+   the light colours -- and so do the cards that are their legend, which
+   then need dark ink on the dark page. */
+:root[data-look="swarm"], :root[data-look="swarm"]:not([data-theme="light"]) {
+  --wa-fill-hard: #f6eab0;
+  --wa-fill-veryhard: #f1c4c6;
+  --wa-fill-adverb: #c6e2f3;
+  --wa-fill-passive: #cdeaae;
+  --wa-fill-complex: #e5c8ec;
+}
+[data-look="swarm"] .wa-pcard:not(.is-zero):not(.is-off):not(.wa-pcard-craft):not(.wa-pcard-spell) { color: #15171b; }
+/* Big enough to hit (WCAG 2.5.8). */
+.wa-pcard-craft { min-height: 28px; }
+.wa-panel-more > summary { display: inline-block; min-height: 24px; padding: var(--s-1) 0; }
+.wa-panel-modes button { min-height: 26px; }
