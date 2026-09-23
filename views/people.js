@@ -302,6 +302,16 @@ function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], stre
         </form>
         <p class="muted"><a href="/users/${escapeHtml(user.username)}">See your page as the group sees it &rarr;</a></p>
       </div>
+      <div class="auth-card" id="reading">
+        <h2>Reading chapters</h2>
+        <form method="post" action="/account/reading" class="reading-form">
+          <label class="check-line"><input type="checkbox" name="readFirst" value="1"${user.read_first ? ' checked' : ''}>
+            <span>Open every chapter in Read mode <span class="muted">&mdash; just the story; switch to Review when you want the notes</span></span></label>
+          <label class="check-line"><input type="checkbox" name="plainNames" value="1"${user.plain_names ? ' checked' : ''}>
+            <span>No links in the prose <span class="muted">&mdash; names from the bible and the glossary read as plain words, not as links</span></span></label>
+          <button class="btn" type="submit">Save</button>
+        </form>
+      </div>
       <div class="auth-card look-card" id="look">
         <h2>How the site looks</h2>
         <p class="muted">Only for you, and on every device you sign in on. Light or dark still follows the moon button in the top bar, except in The Swarm, which is always dark.</p>

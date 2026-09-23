@@ -1,0 +1,37 @@
+# With a screen reader or the keyboard
+
+How to move round the site without a mouse, and what a screen reader is told that the screen only shows.
+
+## Getting to the story
+
+Every page starts with a **Skip** link, the first thing the Tab key reaches. On a chapter it is **Skip to the chapter**, and it puts you on the first line of the text; everywhere else it skips the navigation.
+
+A chapter's text is one region, named after the chapter, so the rotor's landmarks or regions take you straight to it. Scene breaks are read as **Scene break**. Italics and bold are marked the way your screen reader reports emphasis.
+
+## Nothing between you and the book
+
+On your **Account** page, under **Reading chapters**, two settings are for exactly this:
+
+- **Open every chapter in Read mode**: the notes, the underlined passages and the list of who is in the chapter stay out of the way until you switch to Review.
+- **No links in the prose**: names from the story's bible and the shared glossary are read as the words they are, not as links.
+
+Both follow you to every device you sign in on. At the end of a chapter, the next one is a single link: **Next, Chapter 2**.
+
+## Notes
+
+In **Review** mode, a passage somebody has left a note on is read as highlighted. The notes themselves are in a region called **Notes on this chapter**, and each starts with a heading that says whose it is, what kind, where it stands and what it is about -- *Note by Luis, question, pending, on "four hundred days"* -- so the headings key walks you from note to note. Each note has a **Go to the passage** link back to the words.
+
+To leave a note, select the words with Shift and the arrow keys and press **C**. Accept, reject, reply and retract happen in place: the page does not reload, your place is kept and one sentence says what happened.
+
+## Writing
+
+The chapter editor has two views, switched with the **Markdown** and **Visual** buttons above the text.
+
+- In **Markdown** the formatting is part of the text -- `*italic*`, `> ` for a quote, `---` for a scene break -- and is read like any other characters. Nothing is hidden.
+- In **Visual** the formatting is applied, not written. The **Bold**, **Italic**, **Quote** and **Heading** buttons say whether they are on where the caret is, and **Alt+F** (Option+F on a Mac) says it all in one sentence: *Italic, in a quote, scene 2 of 4.*
+
+Other keys: **Ctrl+B** and **Ctrl+I** (Cmd on a Mac) for bold and italic, **Ctrl+Enter** for a scene break, **Escape** to leave Focus or close a panel.
+
+**Checks as a list** turns the writing checks -- which are otherwise coloured underlines -- into a list: how many of each first, then every one in order, each a button that selects its words in the text.
+
+**Scenes & snapshots** opens a panel beside the editor and moves the focus into it; Escape closes it and puts you back where you were.

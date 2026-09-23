@@ -327,7 +327,7 @@ function goalBar(words, goal) {
         <span class="goal-figure">${wordCount(words)}</span>
         <span class="muted">of ${wordCount(goal)}${over ? ' &mdash; past it' : `, ${percent}%`}</span>
       </p>
-      <div class="goal-track" role="img" aria-label="${wordCount(words)} of ${wordCount(goal)}, ${percent} per cent">
+      <div class="goal-track" role="img" aria-label="${percent} per cent: ${wordCount(words)} of ${wordCount(goal)}">
         <div class="goal-fill${over ? ' over' : ''}" style="width: ${percent}%"></div>
       </div>
     </div>`;

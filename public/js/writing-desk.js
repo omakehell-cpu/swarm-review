@@ -57,9 +57,9 @@
   drawer.setAttribute('aria-label', 'Writing desk');
   drawer.innerHTML = `
     <div class="desk-head">
-      <div class="desk-tabs" role="tablist">
-        <button type="button" role="tab" data-tab="scenes" aria-selected="true">Scenes</button>
-        <button type="button" role="tab" data-tab="snapshots" aria-selected="false">Snapshots</button>
+      <div class="desk-tabs" role="group" aria-label="Show">
+        <button type="button" data-tab="scenes" aria-pressed="true">Scenes</button>
+        <button type="button" data-tab="snapshots" aria-pressed="false">Snapshots</button>
       </div>
       <button type="button" class="btn ghost tiny desk-close">Close</button>
     </div>
@@ -80,19 +80,26 @@
   const scenesList = drawer.querySelector('.desk-scenes');
   const snapsList = drawer.querySelector('.desk-snaps');
 
+  // Opening moves the keyboard into the drawer, and closing puts it back
+  // on whatever opened it: a panel that appears somewhere the focus is
+  // not is a panel a screen reader user never finds.
+  let returnTo = null;
   function open(tab) {
+    returnTo = /** @type {HTMLElement|null} */ (document.activeElement);
     drawer.hidden = false;
     document.body.classList.add('desk-open');
     selectTab(tab || 'scenes');
     renderScenes();
     renderSnapshots();
+    /** @type {HTMLElement} */ (drawer.querySelector('[data-tab][aria-pressed="true"]')).focus();
   }
   function close() {
     drawer.hidden = true;
     document.body.classList.remove('desk-open');
+    if (returnTo && document.contains(returnTo)) returnTo.focus();
   }
   function selectTab(tab) {
-    for (const b of Array.from(drawer.querySelectorAll('[data-tab]'))) b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === tab));
+    for (const b of Array.from(drawer.querySelectorAll('[data-tab]'))) b.setAttribute('aria-pressed', String(b.getAttribute('data-tab') === tab));
     for (const p of Array.from(drawer.querySelectorAll('[data-panel]'))) /** @type {HTMLElement} */ (p).hidden = p.getAttribute('data-panel') !== tab;
   }
   drawer.querySelector('.desk-tabs').addEventListener('click', (ev) => {

@@ -6,6 +6,33 @@
   const textEl = document.getElementById('chapter-text');
   if (!textEl) return; // not a chapter page
 
+  // The first underlined stretch of each note gets an address, so the
+  // note's "Go to the passage" link has somewhere to land -- and can be
+  // focused when it gets there.
+  for (const span of Array.from(textEl.querySelectorAll('.hl[data-comment-ids]'))) {
+    for (const id of (/** @type {HTMLElement} */ (span).dataset.commentIds || '').split(',')) {
+      if (id && !document.getElementById(`passage-${id}`) && !span.id) {
+        span.id = `passage-${id}`;
+        span.setAttribute('tabindex', '-1');
+      }
+    }
+  }
+
+  // ...and when two notes start on the same words, the second one's link
+  // still finds them.
+  document.addEventListener('click', (ev) => {
+    const link = /** @type {HTMLAnchorElement|null} */ (/** @type {Element} */ (ev.target).closest('a.note-goto'));
+    if (!link) return;
+    const id = (link.getAttribute('href') || '').replace('#passage-', '');
+    const span = Array.from(textEl.querySelectorAll('.hl[data-comment-ids]'))
+      .find((el) => (/** @type {HTMLElement} */ (el).dataset.commentIds || '').split(',').includes(id));
+    if (!span) return;
+    ev.preventDefault();
+    span.setAttribute('tabindex', '-1');
+    /** @type {HTMLElement} */ (span).focus({ preventScroll: true });
+    span.scrollIntoView({ block: 'center' });
+  });
+
   const metaEl = document.getElementById('chapter-meta');
   const meta = metaEl ? JSON.parse(metaEl.textContent) : {};
 

@@ -606,7 +606,7 @@ function besidePanel({ chapter = null, story, chapters = [], entities = [] }) {
           <p class="muted">Nothing in <a href="/stories/${story.id}/bible" target="_blank" rel="noopener noreferrer">the bible</a> yet.</p>`}
       </div>
     </details>
-    <aside class="beside-pane" data-beside-pane hidden aria-live="polite">
+    <aside class="beside-pane" data-beside-pane hidden aria-live="polite" aria-label="Open beside the editor">
       <div class="beside-pane-head">
         <span data-beside-title></span>
         <button class="btn ghost tiny" type="button" data-beside-close>Close</button>
@@ -655,15 +655,15 @@ function besideEntityFragment(entity, { aliases = [], links = [], description = 
 // JavaScript drifting away from the first.
 function editorBiblePanel(chapter) {
   return `
-    <aside class="editor-bible" id="editor-bible" data-story-id="${chapter.story_id}">
+    <aside class="editor-bible" id="editor-bible" data-story-id="${chapter.story_id}" aria-label="Add to the bible">
       <h2 class="side-head">Bible</h2>
       <p class="muted">Somebody new turned up mid-scene? Write them down here without leaving the chapter.</p>
       <form class="quick-entry" data-quick-entry>
-        <input type="text" name="name" placeholder="Name" maxlength="${bible.MAX_NAME_LENGTH}" required>
-        <select name="kind">
+        <input type="text" name="name" placeholder="Name" aria-label="Name" maxlength="${bible.MAX_NAME_LENGTH}" required>
+        <select name="kind" aria-label="What it is">
           ${bible.KINDS.map((k) => `<option value="${k}">${escapeHtml(bible.KIND_LABELS[k])}</option>`).join('')}
         </select>
-        <input type="text" name="summary" placeholder="One line (optional)" maxlength="240">
+        <input type="text" name="summary" placeholder="One line (optional)" aria-label="One line about them (optional)" maxlength="240">
         <button class="btn ghost small" type="submit">Add to the bible</button>
       </form>
       <p class="quick-result" data-quick-result hidden></p>

@@ -25,15 +25,6 @@ something. Not a checklist run over the markup -- the actual paths, heard.
 This will reorder everything under it and probably add two things nobody
 here has thought of. Doing the rest first is guessing twice.
 
-### The writing checks in the editor
-**Cost: a day.** **Touches: the editor only.** Low risk: it adds a way of
-reading what is already there.
-They mark passages by colour and underline, which is nothing to a screen
-reader. Announced badly, forty passive-voice marks are forty interruptions.
-The shape that probably works is a list beside the text -- "four passives,
-two long sentences" -- that can be walked, each entry moving the cursor to
-its passage. The analysis page already proves the data is there.
-
 ### Everything that is currently only a colour
 **Cost: half a day.** **Touches: every page, one line at a time.** Low
 risk, tedious.
@@ -56,6 +47,25 @@ An entry picture falls back to the entry's name, which tells a listener
 nothing they did not already know. The crop control is pure geometry and is
 useless read aloud. The help figures have captions; whether they describe
 the picture or merely label it is a separate question.
+
+### What she has told us so far
+Contrast and WCAG as the floor, checked with Accessibility Insights (axe).
+Every control named for what it does. A number before its label ("20
+percent volume", not "volume 20 percent"), so a value can be scanned. No
+"slide to" gestures. Formatting that is seen and not said -- indents, font
+changes -- has to be said. Landmarks and headings for pages where things
+get done; for a story, "let nothing get between me and my book". She uses a
+Mac.
+
+### Done on 2026-09-23
+The automated floor: WCAG 2.2 AA with no violations on every main page, in
+every look, light and dark (`npm run a11y`). Skip links; the chapter as a
+named region; a heading on every note with a way back to its passage;
+passages with notes announced as highlighted in Review and not in Read;
+scene breaks named; the writing checks as a walkable list; formatting state
+on the editor's buttons and Alt+F to hear it; value-first labels on the
+reading settings; two account settings for reading with nothing in the way.
+Next is hearing it with her.
 
 ### Done on 2026-09-16
 The margin notes: a passage can be selected with the keyboard and commented

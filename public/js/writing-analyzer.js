@@ -1217,6 +1217,11 @@
     const heading = document.createElement('div');
     heading.className = 'wa-section-title';
     heading.textContent = title;
+    // Read once, as the group's name: "Comments, group, Comments, checkbox"
+    // was the section title and its only toggle saying the same word twice.
+    heading.setAttribute('aria-hidden', 'true');
+    section.setAttribute('role', 'group');
+    section.setAttribute('aria-label', title);
     section.appendChild(heading);
     // Rows wrap horizontally instead of stacking one per line -- Style
     // has five of them, and stacked they made the whole card as tall as
