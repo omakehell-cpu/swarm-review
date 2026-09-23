@@ -5,6 +5,7 @@
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { parseBody, redirect, sendHtml, sendJson } = require('../lib/util');
 const models = require('../models');
+const docs = require('../lib/docs');
 const views = require('../views');
 const wiki = require('../lib/wiki');
 const { sendError } = require('./shared');
@@ -53,12 +54,31 @@ async function handleStories(req, res, user, query) {
     const hit = tags.filter((t) => hiddenTagIds.has(t.id));
     (hit.length ? folded : visible).push({ ...story, hiddenBy: hit });
   }
+  // What changed on the site since they last looked, said once, here, and
+  // then only under What's new until there is something newer. Somebody
+  // still being welcomed has enough to read, so it is marked seen for them
+  // without being shown; a filtered list is not the moment either.
+  const welcome = models.welcomeState(user);
+  let whatsNew = null;
+  const unseen = activeTags.length ? [] : docs.unseenReleases(user);
+  if (unseen.length) {
+    if (!(welcome && welcome.show)) {
+      whatsNew = {
+        releases: unseen.slice(0, 3).map((r) => ({
+          date: r.date, heading: r.heading, anchor: docs.releaseAnchor(r), highlights: docs.releaseHighlights(r.markdown),
+        })),
+        more: Math.max(0, unseen.length - 3),
+      };
+    }
+    models.markChangelogSeen(user.id, docs.latestReleaseDate(), docs.latestReleaseKey());
+    user = { ...user, changelog_seen_key: docs.latestReleaseKey() };
+  }
   sendHtml(res, 200, views.storiesPage({
     user, stories: visible, folded, since, tagsByStory, coauthorsByStory,
     activeTags, allGroups: models.listTagsGrouped(),
     inbox: models.inboxFor(user.id, { since }),
     activity: models.groupActivity(user),
-    welcome: models.welcomeState(user),
+    welcome, whatsNew,
   }));
 }
 

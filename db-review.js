@@ -90,6 +90,9 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   // for by a reader who listens to the site: "let nothing get between me
   // and my book".
   ensureColumn('users', 'read_first', 'INTEGER NOT NULL DEFAULT 0');
+  // Which batch of What's new was newest when this person last saw it
+  // (see unseenReleases in lib/docs.js).
+  ensureColumn('users', 'changelog_seen_key', 'TEXT');
   ensureColumn('users', 'plain_names', 'INTEGER NOT NULL DEFAULT 0');
 
   // The writing desk (see models/desk.js). A note the author keeps against

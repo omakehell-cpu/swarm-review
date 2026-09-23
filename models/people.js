@@ -108,13 +108,16 @@ function bumpLastSeen(userId) {
 // visit with the clock alone would leave a batch dated later than the
 // server's idea of today permanently unread -- and "I have read this page"
 // means all of it, whatever its dates say.
-function markChangelogSeen(userId, upTo) {
+// `key` names that newest batch exactly (see releaseKey in lib/docs.js),
+// so a second batch on the same day still counts as new.
+function markChangelogSeen(userId, upTo, key = null) {
   const floor = upTo && /^\d{4}-\d{2}-\d{2}$/.test(String(upTo)) ? `${upTo} 23:59:59` : null;
   db.prepare(`
     UPDATE users SET changelog_seen_at =
-      CASE WHEN @floor IS NOT NULL AND @floor > datetime('now') THEN @floor ELSE datetime('now') END
+      CASE WHEN @floor IS NOT NULL AND @floor > datetime('now') THEN @floor ELSE datetime('now') END,
+      changelog_seen_key = @key
     WHERE id = @userId
-  `).run({ userId, floor });
+  `).run({ userId, floor, key: key || null });
 }
 
 // ---------- login lockout ----------

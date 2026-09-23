@@ -35,7 +35,7 @@ function registerPage({ error, values = /** @type {FormValues} */ ({}) } = /** @
           <label>Display name<input type="text" name="displayName" value="${escapeHtml(values.displayName || '')}" required></label>
           <label>Username<input type="text" name="username" value="${escapeHtml(values.username || '')}" required pattern="[a-zA-Z0-9_\\-]{3,30}"></label>
           <label>Password<input type="password" name="password" required minlength="8"></label>
-          <label>Invite code<input type="text" name="inviteCode" required></label>
+          <label>Invite code<input type="text" name="inviteCode" value="${escapeHtml(values.inviteCode || '')}" required></label>
           <button class="btn" type="submit">Create account</button>
         </form>
         <p class="muted">Already have an account? <a href="/login">Log in</a></p>
