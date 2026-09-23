@@ -65,6 +65,7 @@ function getCurrentUser(req) {
   // expired session rather than trusting a token some other, now-stale
   // login handed out.
   if (payload.sv !== user.session_version) return null;
+  user.csrf = auth.csrfToken(user);
   return user;
 }
 

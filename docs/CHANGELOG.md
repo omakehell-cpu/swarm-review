@@ -4,6 +4,15 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — Housekeeping
+
+Things nobody sees until the day they matter.
+
+- **Every form and every script that changes something now carries a token** only this site's own pages know. Another website could previously make your browser post here while you were signed in; the browser's cookie rules were the only thing stopping it. If a page has been open for days and says it is out of date, reload it -- what you typed is still in the box.
+- **Admins can put a backup back** from the admin page: pick the copy, type RESTORE. A copy of the site as it stands is taken first, so a restore can be undone the same way.
+- **The server's log is trimmed** once it passes 2 MB, keeping the last three copies.
+- **The glossary's full listing comes a letter at a time** once it is long, instead of half a megabyte in one go. Searching still looks through everything.
+
 ## 2026-09-23 — A better Help
 
 - **Four new pages**: *Finding your way round* (the front page, a story and a chapter, part by part), *The writing checks* (every colour and every check, and what to do about each), *Keys* (every shortcut on one page), and *Questions people ask*.

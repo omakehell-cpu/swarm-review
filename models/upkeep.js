@@ -13,6 +13,66 @@ function backupDatabaseTo(destPath) {
   db.prepare('VACUUM INTO ?').run(destPath);
 }
 
+// Puts the contents of a backup back into the live database, table by
+// table, inside one transaction. The file is opened read-only first and
+// checked: a copy that fails SQLite's own integrity check, or that is not
+// this app's database at all, is refused before anything is touched.
+//
+// Tables are matched by name and columns by name, so an older copy that
+// predates a column leaves it at its default, and a table the copy did not
+// have yet comes back empty -- which is what the site looked like then.
+// The search index is not copied: it is rebuilt from what was restored.
+// Synchronous from start to end, so no request can write in the middle.
+/** @param {string} sourcePath */
+function restoreDatabaseFrom(sourcePath) {
+  const { DatabaseSync } = require('node:sqlite');
+  const check = new DatabaseSync(sourcePath, { readOnly: true });
+  try {
+    const ok = check.prepare('PRAGMA integrity_check').get();
+    if (!ok || Object.values(ok)[0] !== 'ok') throw new Error('that copy is damaged');
+    const hasUsers = check.prepare("SELECT 1 AS y FROM sqlite_master WHERE type = 'table' AND name = 'users'").get();
+    if (!hasUsers) throw new Error('that file is not a copy of this site');
+  } finally {
+    check.close();
+  }
+
+  const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'
+    AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'search_index%'`).all().map((r) => r.name);
+  const q = (name) => `"${String(name).replace(/"/g, '""')}"`;
+  const counts = {};
+  db.exec('PRAGMA foreign_keys = OFF');
+  db.prepare('ATTACH DATABASE ? AS src').run(sourcePath);
+  try {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      const srcTables = new Set(db.prepare("SELECT name FROM src.sqlite_master WHERE type = 'table'").all().map((r) => r.name));
+      for (const t of tables) {
+        db.exec(`DELETE FROM main.${q(t)}`);
+        if (!srcTables.has(t)) { counts[t] = 0; continue; }
+        const mine = db.prepare(`PRAGMA main.table_info(${q(t)})`).all().map((c) => c.name);
+        const theirs = new Set(db.prepare(`PRAGMA src.table_info(${q(t)})`).all().map((c) => c.name));
+        const cols = mine.filter((c) => theirs.has(c)).map(q).join(', ');
+        if (cols) db.exec(`INSERT INTO main.${q(t)} (${cols}) SELECT ${cols} FROM src.${q(t)}`);
+        counts[t] = db.prepare(`SELECT COUNT(*) AS n FROM main.${q(t)}`).get().n;
+      }
+      const mainHasSeq = db.prepare("SELECT 1 AS y FROM main.sqlite_master WHERE name = 'sqlite_sequence'").get();
+      if (srcTables.has('sqlite_sequence') && mainHasSeq) {
+        db.exec('DELETE FROM main.sqlite_sequence');
+        db.exec('INSERT INTO main.sqlite_sequence (name, seq) SELECT name, seq FROM src.sqlite_sequence');
+      }
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+  } finally {
+    db.exec('DETACH DATABASE src');
+    db.exec('PRAGMA foreign_keys = ON');
+  }
+  db.rebuildSearchIndex();
+  return counts;
+}
+
 // ---------- per-story spelling exceptions ----------
 
 // See db.js's story_dictionary_words table comment for what this is for.
@@ -54,6 +114,7 @@ function removeStoryDictionaryWord(storyId, id) {
 module.exports = {
   addStoryDictionaryWord,
   backupDatabaseTo,
+  restoreDatabaseFrom,
   getStoryDictionary,
   listStoryDictionaryEntries,
   removeStoryDictionaryWord,

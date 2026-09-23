@@ -28,8 +28,10 @@ const { URL } = require('url');
 
 const models = require('./models');
 const backups = require('./lib/backup');
-const { redirect, clearCookie } = require('./lib/util');
-const { SESSION_COOKIE, getCurrentUser, handleFeed, sendError } = require('./routes/shared');
+const { redirect, clearCookie, readBody, sendJson } = require('./lib/util');
+const { SESSION_COOKIE, getCurrentUser, handleFeed, sendError, UPLOAD_LIMIT_BYTES } = require('./routes/shared');
+const auth = require('./auth');
+const { tokenFromRequest } = require('./lib/csrf');
 
 // Every route in the app, in the order they are tried. Each file owns its
 // own table, so adding a page means editing the file that page lives in,
@@ -165,6 +167,25 @@ async function router(req, res) {
     if (!user.is_admin) return sendError(res, 403, 'Admin access only.', user);
   }
 
+  // Anything that changes something, from somebody signed in, has to
+  // carry the token only this site's own pages know (see lib/csrf.js and
+  // auth.csrfToken). The cookie alone is not enough: another site can make
+  // a browser send it, and SameSite=Lax was doing all of that work alone.
+  if (user && req.method !== 'GET' && req.method !== 'HEAD') {
+    try {
+      req.rawBody = await readBody(req, UPLOAD_LIMIT_BYTES);
+    } catch (err) {
+      return sendError(res, err.statusCode || 400, 'That was too large to send.', user);
+    }
+    if (!auth.csrfMatches(user, tokenFromRequest(req, req.rawBody))) {
+      return sendError(res, 403, 'This page was open too long, or came from somewhere else. Go back, reload it, and try again -- whatever you typed is still in the box.', user);
+    }
+  }
+  // Scripts that need the token and have no page to read it from.
+  if (user && req.method === 'GET' && pathname === '/csrf-token') {
+    return sendJson(res, 200, { token: user.csrf });
+  }
+
   // The screenshots in the how-tos. Below the login check rather than
   // beside the stylesheets: they are pictures of the inside of the app,
   // and everything else about the inside of the app needs a session.
@@ -201,6 +222,8 @@ const server = http.createServer((req, res) => {
 // thirty backups of thirty throwaway databases.
 if (process.env.NODE_ENV !== 'test') {
   backups.startBackups(models.backupDatabaseTo, (err) => console.error('backup failed:', err.message));
+  // And server.log, which launchd writes and nothing else would trim.
+  require('./lib/logrotate').startLogRotation((err) => console.error('log rotation failed:', err.message));
 }
 
 server.listen(PORT, () => {

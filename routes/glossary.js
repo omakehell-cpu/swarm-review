@@ -38,6 +38,7 @@ async function handleGlossaryIndex(req, res, user, query) {
   const beforeStatus = taxonomy.selectPages(all, byPage, { kind, category, q });
   sendHtml(res, 200, views.glossaryListPage({
     user, pages, byPage, heading, q, kind, category, status, view,
+    letter: (query.get('letter') || '').trim().toUpperCase(),
     statusCounts: taxonomy.statusCounts(beforeStatus, byPage),
     totalPages: all.length,
   }));

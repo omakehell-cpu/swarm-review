@@ -154,7 +154,7 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
       <h1>Admin</h1>
 
       <section class="admin-section">
-        <h2>Backup</h2>
+        <h2 id="backup">Backup</h2>
         <p class="muted">A complete, self-contained snapshot of the database -- every user, story, chapter, version, comment, and invite code -- as a single .sqlite file, safe to take while the server is running.</p>
         <p class="muted">The server now takes one every day by itself and keeps the last ${backups.keep}, in <code>${escapeHtml(backups.dir)}</code>. That protects against a mistake; it does not protect against this machine. Point a cloud folder or a second disk at that directory and it becomes a real backup.</p>
         ${backups.list.length ? `
@@ -162,7 +162,23 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
             ${backups.list.slice(0, 5).map((b) => `
               <li><span>${escapeHtml(b.name)}</span> <span class="muted">${(b.bytes / 1048576).toFixed(1)} MB &middot; ${timeHtml(b.at.replace('T', ' ').slice(0, 19))}</span></li>`).join('')}
           </ul>
-          ${backups.list.length > 5 ? `<p class="muted">${backups.list.length} in all.</p>` : ''}`
+          ${backups.list.length > 5 ? `<p class="muted">${backups.list.length} in all.</p>` : ''}
+          <details class="restore-backup">
+            <summary>Put a copy back&hellip;</summary>
+            <p class="muted">Everything written since that copy is replaced by what was there then. A copy of the site as it is now is taken first and put at the top of this list, so this can be undone the same way.</p>
+            <form method="post" action="/admin/backup/restore" class="restore-form"
+                  data-confirm="Replace everything on the site with the chosen copy? A copy of what is there now is kept first.">
+              <label>Which copy
+                <select name="name" required>
+                  ${backups.list.map((b) => `<option value="${escapeHtml(b.name)}">${escapeHtml(b.at.replace('T', ' ').slice(0, 16))} &middot; ${(b.bytes / 1048576).toFixed(1)} MB</option>`).join('')}
+                </select>
+              </label>
+              <label>Type RESTORE to confirm
+                <input type="text" name="confirm" autocomplete="off" required pattern="[Rr][Ee][Ss][Tt][Oo][Rr][Ee]">
+              </label>
+              <button class="btn small" type="submit">Restore this copy</button>
+            </form>
+          </details>`
     : '<p class="muted">No automatic copy has been taken yet. One is taken when the server starts and every day after that.</p>'}
         <form method="post" action="/admin/backup/now" class="inline-form">
           <button class="btn ghost small" type="submit">Take one now</button>

@@ -152,6 +152,34 @@ async function handleAdminBackupNow(req, res, user) {
   }
 }
 
+// Putting a copy back. The dangerous button on this page, so: the copy is
+// named by its file name and must be one of the listed ones (never a path
+// from the form), the admin types RESTORE to mean it, and a fresh copy of
+// the database as it stands is taken first -- so a restore is itself
+// undoable from the same list.
+async function handleAdminRestore(req, res, user) {
+  const body = await parseBody(req);
+  const name = String(body.name || '');
+  const chosen = backups.listBackups().find((b) => b.name === name);
+  if (!chosen) return redirect(res, `/admin?notice=${encodeURIComponent('There is no copy by that name.')}#backup`);
+  if (String(body.confirm || '').trim().toUpperCase() !== 'RESTORE') {
+    return redirect(res, `/admin?notice=${encodeURIComponent('Nothing was restored: type RESTORE in the box to confirm.')}#backup`);
+  }
+  let safety;
+  try {
+    safety = backups.takeBackup(models.backupDatabaseTo);
+  } catch (err) {
+    return redirect(res, `/admin?notice=${encodeURIComponent(`Nothing was restored: the safety copy failed (${err.message}).`)}#backup`);
+  }
+  try {
+    models.restoreDatabaseFrom(chosen.path);
+  } catch (err) {
+    return redirect(res, `/admin?notice=${encodeURIComponent(`Nothing was restored: ${err.message}.`)}#backup`);
+  }
+  logEvent(user, 'backup-restored', { subject: chosen.name, href: '/admin' });
+  redirect(res, `/admin?notice=${encodeURIComponent(`Restored ${chosen.name}. What was there before is saved as ${safety.name}, at the top of the list.`)}#backup`);
+}
+
 async function handleAdminBackup(req, res, user) {
   logEvent(user, 'backup-downloaded');
   const tmpPath = path.join(os.tmpdir(), `swarm-review-backup-${Date.now()}-${process.pid}.sqlite`);
@@ -219,6 +247,7 @@ const routes = [
   ['POST', '/admin/wiki/sync', (c) => handleAdminSyncWiki(c.req, c.res, c.user)],
   ['GET', '/admin/backup', (c) => handleAdminBackup(c.req, c.res, c.user)],
   ['POST', '/admin/backup/now', (c) => handleAdminBackupNow(c.req, c.res, c.user)],
+  ['POST', '/admin/backup/restore', (c) => handleAdminRestore(c.req, c.res, c.user)],
   ['POST', /^\/admin\/users\/(\d+)\/password$/, (c) => handleAdminSetPassword(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/admin\/users\/(\d+)\/lock$/, (c) => handleAdminLockUser(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/admin\/users\/(\d+)\/unlock$/, (c) => handleAdminUnlockUser(c.req, c.res, c.user, Number(c.m[1]))],
@@ -237,6 +266,7 @@ module.exports = {
   handleAdminApproveTag,
   handleAdminBackup,
   handleAdminBackupNow,
+  handleAdminRestore,
   handleAdminCloseRegistration,
   handleAdminCreateNamedInvite,
   handleAdminCreateTag,

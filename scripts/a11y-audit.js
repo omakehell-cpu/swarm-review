@@ -53,7 +53,14 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
     await page.fill('input[name=username]', USER);
     await page.fill('input[name=password]', PASSWORD);
     await Promise.all([page.waitForNavigation(), page.click('button[type=submit]')]);
-    await page.request.post(`${BASE}/account/look`, { form: { look } });
+    // Posting needs the page's CSRF token, as any script here does.
+    const csrf = await page.evaluate(() => {
+      // eslint-disable-next-line no-undef
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      return meta ? meta.getAttribute('content') : '';
+    });
+    const headers = { 'x-csrf-token': csrf || '' };
+    await page.request.post(`${BASE}/account/look`, { form: { look }, headers });
     // The story and chapter pages of whatever is newest on the front page.
     const home = await (await page.goto(`${BASE}/`)).text();
     const story = (home.match(/href="(\/stories\/\d+)/) || [])[1];
@@ -79,7 +86,7 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
         found.set(v.id, entry);
       }
     }
-    await page.request.post(`${BASE}/account/look`, { form: { look: '' } });
+    await page.request.post(`${BASE}/account/look`, { form: { look: '' }, headers });
     await context.close();
   }
   await browser.close();

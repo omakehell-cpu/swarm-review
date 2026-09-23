@@ -196,6 +196,13 @@ Watch the logs (Ctrl+C to stop watching, doesn't stop the service):
 
 ```bash
 tail -f ~/Documents/swarmEditor/swarm-review/server.log
+```
+
+The server trims that log itself once it passes 2 MB, keeping the last
+three copies as `server.log.1` to `.3`. If the log lives somewhere else,
+set `SWARM_LOG_PATH` to its path.
+
+```sh
 tail -f /tmp/swarm-review-tunnel.log
 ```
 

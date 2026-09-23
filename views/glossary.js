@@ -108,15 +108,43 @@ function glossaryStatusFilters(counts, active, params) {
 // One listing -- a kind, a subject, a search or the lot -- always cut into
 // A-Z sections with a jump bar, because 300 rows in one run is the thing
 // that made the old index unreadable.
+// A listing longer than this is sent a letter at a time: all 691 pages
+// in one response was half a megabyte down a home connection to a phone,
+// and 691 rows for a screen reader to walk past. A search is never cut:
+// what it found is what you asked for.
+const LETTER_AT_A_TIME_OVER = 150;
+
 function glossaryListPage({
   user, pages = [], byPage = new Map(), heading = 'Glossary', q = '',
-  kind = '', category = '', status = '', view = '', statusCounts = [], totalPages = 0,
+  kind = '', category = '', status = '', view = '', statusCounts = [], totalPages = 0, letter = '',
 }) {
-  const letters = taxonomy.groupByLetter(pages);
-  const present = new Set(letters.map((l) => l.letter));
-  const jump = taxonomy.ALPHABET.map((letter) => (present.has(letter)
-    ? `<a href="#letter-${letter === '#' ? 'num' : letter}" data-letter="${letter}">${letter}</a>`
-    : `<span data-letter="${letter}">${letter}</span>`)).join('');
+  const allLetters = taxonomy.groupByLetter(pages);
+  const present = new Set(allLetters.map((l) => l.letter));
+  const paged = !q && pages.length > LETTER_AT_A_TIME_OVER && allLetters.length > 1;
+  const current = paged ? (present.has(letter) ? letter : allLetters[0].letter) : '';
+  const letters = paged ? allLetters.filter((l) => l.letter === current) : allLetters;
+  const hrefFor = (l) => {
+    const params = new URLSearchParams();
+    if (view) params.set('view', view);
+    if (kind) params.set('kind', kind);
+    if (category) params.set('category', category);
+    if (status) params.set('status', status);
+    params.set('letter', l);
+    return `/glossary?${params.toString()}`;
+  };
+  const jump = taxonomy.ALPHABET.map((l) => {
+    if (!present.has(l)) return `<span data-letter="${l}">${l}</span>`;
+    if (!paged) return `<a href="#letter-${l === '#' ? 'num' : l}" data-letter="${l}">${l}</a>`;
+    return `<a href="${escapeHtml(hrefFor(l))}" data-letter="${l}"${l === current ? ' aria-current="page" class="current"' : ''}>${l}</a>`;
+  }).join('');
+  const at = paged ? allLetters.findIndex((l) => l.letter === current) : -1;
+  const prevLetter = at > 0 ? allLetters[at - 1].letter : null;
+  const nextLetter = at >= 0 && at < allLetters.length - 1 ? allLetters[at + 1].letter : null;
+  const letterNav = paged ? `
+        <nav class="letter-steps" aria-label="Letters">
+          ${prevLetter ? `<a href="${escapeHtml(hrefFor(prevLetter))}">&larr; ${prevLetter}</a>` : '<span></span>'}
+          ${nextLetter ? `<a href="${escapeHtml(hrefFor(nextLetter))}">${nextLetter} &rarr;</a>` : '<span></span>'}
+        </nav>` : '';
 
   const row = (p) => {
     const own = byPage.get(p.title_lower) || [];
@@ -138,7 +166,10 @@ function glossaryListPage({
       <div class="chapter-list">${block.pages.map(row).join('')}</div>
     </section>`).join('');
 
-  const count = `${pages.length} page${pages.length === 1 ? '' : 's'}`;
+  const shownHere = paged ? letters[0].pages.length : pages.length;
+  const count = paged
+    ? `${shownHere} of ${pages.length} pages, under ${current === '#' ? 'a number' : current}`
+    : `${pages.length} page${pages.length === 1 ? '' : 's'}`;
   // The heading already says which door this is, so only a category needs
   // spelling out in the line under it.
   const describe = category ? ` filed under ${escapeHtml(category)}` : '';
@@ -154,8 +185,9 @@ function glossaryListPage({
       ${glossarySearchForm(q, { kind, category, status, view })}
       ${glossaryStatusFilters(statusCounts, status, { kind, category, view, q })}
       ${pages.length ? `
-        <nav class="az-bar" aria-label="Jump to a letter">${jump}</nav>
-        <div class="glossary-letters" id="glossary-list">${sections}</div>
+        <nav class="az-bar" aria-label="${paged ? 'Letters' : 'Jump to a letter'}">${jump}</nav>
+        <div class="glossary-letters" id="glossary-list"${paged ? ' data-paged="1"' : ''}>${sections}</div>
+        ${letterNav}
         <p class="no-matches" id="glossary-no-matches" hidden>Nothing here matches.</p>`
     : '<p class="muted">Nothing here matches.</p>'}`,
   });
