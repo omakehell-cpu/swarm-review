@@ -12,18 +12,22 @@ const { ACCEPT_ATTRIBUTE } = require('../lib/entity-images');
 // story tripped (see handleStories); it only ever arrives set from a list
 // that has already decided to fold the story away.
 // How far along, in a hairline: only when the author has set a goal.
+// A word goal, when the author has set one: a short bar with its number
+// beside it, so the line is never a stray rule with no meaning.
 function storyProgress(s) {
   if (!s.word_goal || s.word_goal <= 0) return '';
   const percent = Math.round(Math.max(0, Math.min(1, (s.word_count || 0) / s.word_goal)) * 100);
-  return `<div class="story-progress" role="img" aria-label="${percent} per cent of a ${wordCount(s.word_goal)} goal"><div class="story-progress-fill" style="width: ${percent}%"></div></div>`;
+  return `<span class="story-progress-wrap"><span class="story-progress" aria-hidden="true"><span class="story-progress-fill" style="width: ${percent}%"></span></span>${percent}% of ${wordCount(s.word_goal)}</span>`;
 }
 
-// Whether anybody is reading, in words. "Nobody yet" is information too.
+// Whether anybody is reading, in words, on one quiet line with the goal.
 function storyAudience(s) {
   const bits = [];
-  if (s.reader_count) bits.push(`read by ${s.reader_count} ${s.reader_count === 1 ? 'person' : 'people'}`);
-  if (s.note_count) bits.push(`${s.note_count} note${s.note_count === 1 ? '' : 's'}`);
-  return bits.length ? `<p class="story-audience">${bits.join(' &middot; ')}</p>` : '';
+  const goal = storyProgress(s);
+  if (goal) bits.push(goal);
+  if (s.reader_count) bits.push(`<span>read by ${s.reader_count} ${s.reader_count === 1 ? 'person' : 'people'}</span>`);
+  if (s.note_count) bits.push(`<span>${s.note_count} note${s.note_count === 1 ? '' : 's'}</span>`);
+  return bits.length ? `<p class="story-audience">${bits.join('')}</p>` : '';
 }
 
 function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } = {}) {
@@ -38,19 +42,18 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } 
       ${storyCoverImg(s)}
       <div class="chapter-row-main">
         <h3><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a> ${s.has_new_chapters ? '<span class="badge new">New</span>' : ''}</h3>
-        <p class="muted">${escapeHtml(s.description || '')}</p>
-        ${storyProgress(s)}
+        <p class="story-facts">
+          <span>${bylineWith(s.author_name, coauthors)}</span>
+          <span>${s.chapter_count} chapter${s.chapter_count === 1 ? '' : 's'}${s.word_count ? ` &middot; ${wordCount(s.word_count)}` : ''}</span>
+          ${timeHtml(s.last_chapter_at || s.created_at)}
+          ${storyState(s) === 'ongoing' ? '' : storyStateBadge(s)}
+          ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} pending</span>` : ''}
+        </p>
+        ${s.description ? `<p class="story-blurb">${escapeHtml(s.description)}</p>` : ''}
         ${storyAudience(s)}
         ${hiddenBy.length
           ? `<p class="hidden-by">Hidden by your tag settings: ${hiddenBy.map((t) => escapeHtml(t.name)).join(', ')}</p>`
           : tagChips(tags)}
-      </div>
-      <div class="chapter-row-meta">
-        <span>${bylineWith(s.author_name, coauthors)}</span>
-        ${storyState(s) === 'ongoing' ? '' : storyStateBadge(s)}
-        <span>${s.chapter_count} chapter${s.chapter_count === 1 ? '' : 's'}${s.word_count ? ` &middot; ${wordCount(s.word_count)}` : ''}</span>
-        ${timeHtml(s.last_chapter_at || s.created_at)}
-        ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} pending</span>` : ''}
       </div>
     </div>
   `;
@@ -73,7 +76,7 @@ function inboxSection(inbox) {
 
   const pending = inbox.pending.length ? `
     <section class="inbox-group">
-      <h3>Waiting on you</h3>
+      <h2>Waiting on you</h2>
       <ul class="inbox-list">
         ${inbox.pending.map((row) => `
           <li>
@@ -88,7 +91,7 @@ function inboxSection(inbox) {
 
   const replies = inbox.replies.length ? `
     <section class="inbox-group">
-      <h3>Replies to you</h3>
+      <h2>Replies to you</h2>
       <ul class="inbox-list">
         ${inbox.replies.map((r) => `
           <li>
@@ -102,7 +105,7 @@ function inboxSection(inbox) {
 
   const fresh = inbox.newChapters.length ? `
     <section class="inbox-group">
-      <h3>New to read</h3>
+      <h2>New to read</h2>
       <ul class="inbox-list">
         ${inbox.newChapters.map((c) => `
           <li>
@@ -116,7 +119,7 @@ function inboxSection(inbox) {
 
   const asked = inbox.asked && inbox.asked.length ? `
     <section class="inbox-group inbox-asked">
-      <h3>Asked to read by you</h3>
+      <h2>Asked to read by you</h2>
       <ul class="inbox-list">
         ${inbox.asked.map((r) => `
           <li>
@@ -181,7 +184,7 @@ function activityStrip(activity) {
   if (!activity || !activity.length) return '';
   return `
     <section class="activity-strip" aria-labelledby="activity-title">
-      <h3 id="activity-title">Lately</h3>
+      <h2 id="activity-title">Lately</h2>
       <ol class="activity-list">${activity.slice(0, 3).map(activityItem).join('')}</ol>
       <a class="activity-more" href="/activity">All activity &rarr;</a>
     </section>`;
@@ -287,7 +290,10 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
       ${activeTags.length ? '' : whatsNewCard(whatsNew)}
       ${activeTags.length ? '' : welcomeCard(welcome)}
       ${activeTags.length ? '' : inboxSection(inbox)}
-      ${filter}
+      <div class="list-head">
+        <h2 class="list-label">${activeTags.length ? 'Stories with those tags' : 'All stories'}${stories.length ? ` <span class="list-count">${stories.length}</span>` : ''}</h2>
+        ${filter}
+      </div>
       <div class="chapter-list">${rows}</div>
       ${foldedBlock}
       ${activeTags.length ? '' : activityStrip(activity)}

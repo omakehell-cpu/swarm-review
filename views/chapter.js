@@ -93,6 +93,7 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = 
       ${history ? `<p class="note-histories">${history}</p>` : ''}
       ${c.body ? `<p class="comment-body">${escapeHtml(c.body)}</p>` : ''}
       ${about}
+      ${canApply || (isChapterAuthor && !praise) ? `
       <div class="comment-actions" role="group" aria-label="${escapeHtml(`What to do with the note by ${c.author_name}`)}">
         ${canApply ? `
           <form method="post" action="/comments/${c.id}/apply" class="inline-form"
@@ -108,27 +109,28 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = 
           <form method="post" action="/comments/${c.id}/reopen" class="inline-form">
             <button class="btn small ghost" type="submit">Reopen</button>
           </form>` : ''}
+      </div>` : ''}
+      ${repliesHtml}
+      <div class="comment-foot" role="group" aria-label="${escapeHtml(`More on the note by ${c.author_name}`)}">
+        <details class="reply-box" aria-label="Reply to ${escapeHtml(c.author_name)}">
+          <summary aria-label="Reply to ${escapeHtml(c.author_name)}">Reply</summary>
+          <form method="post" action="/comments/${c.id}/reply" class="reply-form">
+            <input type="text" name="body" placeholder="Reply..." required maxlength="2000" aria-label="Reply to ${escapeHtml(c.author_name)}">
+            <button type="submit" class="btn small ghost">Reply</button>
+          </form>
+        </details>
         ${isCommentAuthor ? `
-          <form method="post" action="/comments/${c.id}/retract" class="inline-form" data-confirm="Retract this comment?">
-            <button class="btn small ghost" type="submit">Retract</button>
-          </form>` : ''}
-      </div>
-      ${isCommentAuthor ? `
         <details class="edit-comment" aria-label="Edit your note">
           <summary>Edit</summary>
           <form method="post" action="/comments/${c.id}/edit">
             <textarea name="body" maxlength="4000"${hasSuggestion || praise ? '' : ' required'}>${escapeHtml(c.body)}</textarea>
             <button type="submit" class="btn small">Save</button>
           </form>
-        </details>` : ''}
-      ${repliesHtml}
-      <details class="reply-box" aria-label="Reply to ${escapeHtml(c.author_name)}">
-        <summary aria-label="Reply to ${escapeHtml(c.author_name)}">Reply</summary>
-        <form method="post" action="/comments/${c.id}/reply" class="reply-form">
-          <input type="text" name="body" placeholder="Reply..." required maxlength="2000" aria-label="Reply to ${escapeHtml(c.author_name)}">
-          <button type="submit" class="btn small ghost">Reply</button>
-        </form>
-      </details>`;
+        </details>
+        <form method="post" action="/comments/${c.id}/retract" class="inline-form comment-retract" data-confirm="Retract this note?">
+          <button class="linklike" type="submit">Retract</button>
+        </form>` : ''}
+      </div>`;
 
   const gist = c.body || (hasSuggestion ? `\u2192 ${c.suggestion}` : (praise ? '\u2665' : ''));
 
@@ -378,7 +380,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
 
   const versionOptions = versions.map((v) => `
     <option value="${v.version_number}" ${v.id === currentVersion.id ? 'selected' : ''}>
-      v${v.version_number}${v.id === versions[0].id ? ' (latest)' : ''}
+      Version ${v.version_number}${v.id === versions[0].id ? ' (latest)' : ''}
     </option>`).join('');
 
   // Two different things wearing one heading: a note on a passage, which
@@ -418,26 +420,26 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       ${chapterNav(chapter, neighbours, { compact: true })}
     </div>
     <div class="chapter-header" data-kicker="LOG ${String(chapter.chapter_number).padStart(2, '0')} // ${escapeHtml(chapter.story_title).toUpperCase()} // V${currentVersion.version_number}${currentVersion.word_count ? ` // ${currentVersion.word_count} W` : ''}">
-      <h1 id="chapter-title">Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</h1>
-      <p class="muted byline">by ${personLink(chapter.author_username, chapter.author_name)} &middot; ${timeHtml(chapter.created_at)}${
+      <h1 id="chapter-title"><span class="chapter-kicker">Chapter ${chapter.chapter_number}${
+        neighbours && neighbours.total > 1 ? `<span class="chapter-kicker-of"> of ${neighbours.total}</span>` : ''
+      }<span class="sr-only">:</span></span> ${escapeHtml(chapter.title)}</h1>
+      <p class="muted byline">by ${personLink(chapter.author_username, chapter.author_name)}${
         currentVersion.word_count ? ` &middot; ${wordCount(currentVersion.word_count)}` : ''
-      }${
-        neighbours && neighbours.total > 1 ? ` &middot; <a href="/stories/${chapter.story_id}">chapter ${neighbours.position} of ${neighbours.total}</a>` : ''
-      }${
+      } &middot; ${timeHtml(chapter.created_at)}${
         // Who has read it belongs to the same line as who wrote it: one
         // line of facts under the title rather than two.
         isChapterAuthor ? ` &middot; ${readersLine(readers, currentVersion.version_number)}` : ''
       }</p>
       ${chapter.summary ? `<p class="summary">${escapeHtml(chapter.summary)}</p>` : ''}
       <div class="version-bar">
+        ${versions.length > 1 ? `
         <div class="version-context">
-          <label>Version:
+          <label><span class="sr-only">Version</span>
             <select id="version-select">${versionOptions}</select>
           </label>
-          ${timeHtml(currentVersion.created_at, 'version-ts')}
           ${currentVersion.changelog ? `<span class="changelog muted">&ldquo;${escapeHtml(currentVersion.changelog)}&rdquo;</span>` : ''}
-          ${versions.length > 1 ? `<a class="version-compare" href="/chapters/${chapter.id}/diff?to=${currentVersion.version_number}">What changed?</a>` : ''}
-        </div>
+          <a class="version-compare" href="/chapters/${chapter.id}/diff?to=${currentVersion.version_number}">What changed?</a>
+        </div>` : ''}
         <div class="version-actions" id="reading-controls" data-has-comments="${comments.length ? '1' : '0'}" data-read-first="${user.read_first ? '1' : '0'}">
           <div class="mode-switch" role="group" aria-label="How to view this chapter">
             <button type="button" data-mode="read" aria-pressed="false">Read</button>
@@ -471,6 +473,14 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
                   <button type="button" data-pref="reading-leading" data-value="2.05" aria-label="Loose, line spacing">Loose</button>
                 </div>
               </div>
+              ${user.plain_names ? '' : `
+              <div class="reading-prefs-row">
+                <span>Names</span>
+                <div class="reading-prefs-options" role="group" aria-label="Names in the text">
+                  <button type="button" data-wiki-links="on" aria-label="Linked, names in the text">Linked</button>
+                  <button type="button" data-wiki-links="off" aria-label="Plain, names in the text">Plain</button>
+                </div>
+              </div>`}
               <div class="reading-prefs-row fill-row">
                 <span>Page width</span>
                 <div class="reading-prefs-options" role="group">
@@ -508,7 +518,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       </article>
       <aside class="comments-pane" aria-label="Notes on this chapter">
         ${nameCard()}
-        <h2>Comments</h2>
+        <h2>Notes${topLevel.some((x) => !x.deleted_at) ? ` <span class="notes-count">${topLevel.filter((x) => !x.deleted_at).length}</span>` : ''}</h2>
         ${appliedFrom ? `<p class="flash-inline" role="status">${ICONS.tick}The rewrite from ${escapeHtml(appliedFrom)} is in the text. This is the new version; the one before it is still in the history.</p>` : ''}
         ${isLatest ? leftBehindNotice(leftBehind) : ''}
         <div id="comment-list">${topLevel.length ? anchoredHtml : commentsHtml}</div>

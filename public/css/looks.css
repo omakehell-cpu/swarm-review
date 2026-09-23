@@ -83,9 +83,10 @@
 [data-look="literary"] .topbar nav > a { font-family: var(--font-prose); font-size: 0.95rem; }
 /* Section labels become italic headings rather than spaced capitals. */
 [data-look="literary"] .welcome h2,
-[data-look="literary"] .inbox-group h3,
-[data-look="literary"] .activity-strip h3,
+[data-look="literary"] .inbox-group h2,
+[data-look="literary"] .activity-strip h2,
 [data-look="literary"] .comments-pane h2,
+[data-look="literary"] .list-head .list-label,
 [data-look="literary"] .writer-section-label {
   font-family: var(--font-prose); font-style: italic; text-transform: none;
   letter-spacing: 0; font-size: 1.05rem; font-weight: 500;
@@ -108,12 +109,11 @@
 }
 [data-look="literary"] .story-row:not(:has(.story-cover)) { border-top: 2px solid var(--border-strong) !important; padding-top: var(--s-5); }
 [data-look="literary"] .story-row h3 { font-size: 1.3rem; }
-[data-look="literary"] .story-row .chapter-row-main p {
+[data-look="literary"] .story-row .story-blurb {
   font-family: var(--font-prose); font-size: 0.95rem;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
-[data-look="literary"] .story-row .chapter-row-meta { flex-wrap: wrap; gap: var(--s-2) var(--s-5); white-space: normal; font-size: var(--t-xs); }
-[data-look="literary"] .story-row .story-progress { max-width: none; }
+[data-look="literary"] .story-row .story-facts { font-size: var(--t-xs); }
 @media (max-width: 720px) {
   [data-look="literary"] .chapter-list:has(> .story-row) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-8) var(--s-5); }
   [data-look="literary"] .story-row .story-cover { width: 100%; height: auto; }
@@ -185,13 +185,14 @@
 }
 [data-look="swarm"] .byline, [data-look="swarm"] .chapter-row-meta, [data-look="swarm"] .breadcrumb { font-size: var(--t-xs); }
 /* Section labels read as console headings. */
-[data-look="swarm"] .welcome h2, [data-look="swarm"] .inbox-group h3,
-[data-look="swarm"] .activity-strip h3, [data-look="swarm"] .comments-pane h2,
+[data-look="swarm"] .welcome h2, [data-look="swarm"] .inbox-group h2,
+[data-look="swarm"] .activity-strip h2, [data-look="swarm"] .comments-pane h2,
+[data-look="swarm"] .list-head .list-label,
 [data-look="swarm"] .writer-section-label {
   font-family: var(--font-mono); color: var(--accent); border-top: 0;
 }
-[data-look="swarm"] .welcome h2::before, [data-look="swarm"] .inbox-group h3::before,
-[data-look="swarm"] .activity-strip h3::before { content: "\25B8  "; content: "\25B8  " / ""; }
+[data-look="swarm"] .welcome h2::before, [data-look="swarm"] .inbox-group h2::before,
+[data-look="swarm"] .activity-strip h2::before, [data-look="swarm"] .list-head .list-label::before { content: "\25B8  "; content: "\25B8  " / ""; }
 /* Panels with a lit corner. */
 [data-look="swarm"] .welcome, [data-look="swarm"] .inbox, [data-look="swarm"] .activity-strip {
   position: relative; padding: var(--s-5) var(--s-6); background: var(--bg-elevated);
@@ -269,8 +270,9 @@
 [data-look="literary"] h1 { font-weight: 500; letter-spacing: -0.02em; }
 [data-look="literary"] .topbar .brand { font-family: 'Fraunces', var(--font-prose); font-weight: 500; font-size: 1.4rem; }
 [data-look="literary"] .welcome h2::before,
-[data-look="literary"] .inbox-group h3::before,
-[data-look="literary"] .activity-strip h3::before,
+[data-look="literary"] .inbox-group h2::before,
+[data-look="literary"] .activity-strip h2::before,
+[data-look="literary"] .list-head .list-label::before,
 [data-look="literary"] .toc-heading::before { content: "\2767\00a0 "; content: "\2767\00a0 " / ""; color: var(--accent); font-style: normal; }
 [data-look="literary"] .toc-heading {
   font-family: 'Fraunces', var(--font-prose); font-style: italic; text-transform: none; letter-spacing: 0;
@@ -350,3 +352,12 @@
 [data-look="swarm"] .desk-scene-words, [data-look="swarm"] .desk-snap-meta { font-family: var(--font-mono); }
 [data-look="swarm"] .desk-tabs button[aria-pressed="true"] { background: var(--accent); color: var(--btn-text); }
 [data-look="literary"] .desk-scene-open, [data-look="literary"] .desk-snap-name { font-family: 'Fraunces', var(--font-prose); }
+
+/* The chapter kicker: Literary says it in small italic above the title;
+   The Swarm already prints it as the log line, so there it is only heard. */
+[data-look="literary"] .chapter-kicker { font-family: var(--font-display, var(--font-prose)); font-style: italic; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: var(--t-md); }
+[data-look="swarm"] .chapter-header[data-kicker] .chapter-kicker {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+[data-look="literary"] .story-row .story-audience { font-size: var(--t-xs); gap: var(--s-1) var(--s-4); }
+[data-look="literary"] .story-row .story-progress-wrap .story-progress { width: 40px; }
