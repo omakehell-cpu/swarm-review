@@ -5,7 +5,8 @@ Short answers to the things that come up, with a link to the longer one.
 ## Reading and notes
 
 **I opened a chapter and there are no notes, but I know there are some.**
-You are in **Read** mode. Press **Review**, under the title. If you want
+You are in **Read** mode. Press **Review** (**Revise**, on your own
+chapter), under the title. If you want
 every chapter to open in Read on purpose, that is a setting on your
 [account page](/help/your-account).
 

@@ -133,7 +133,7 @@ better for it.
 ## On the chapter page
 
 The author also has the same panel on the chapter page, folded into one
-line above the text: *Readability · Grade 5 · 18 flagged*. It is there in
-**Revise**, the third position of the switch under the title (Read,
-Review, Revise), which marks the text as the editor does; Read and Review
-leave the text alone. Open the line for the cards.
+line above the text: *Writing style checks · Grade 5 · 18 flagged*. It is
+there in **Revise**, the other side of the Read switch under the title,
+which marks the text as the editor does; Read leaves the text alone. Open
+the line for the cards.

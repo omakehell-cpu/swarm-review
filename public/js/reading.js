@@ -34,12 +34,14 @@
   // Somebody who has asked, on their account page, for chapters to open
   // ready to read gets that every time, whatever this browser remembers.
   const readFirst = bar.dataset.readFirst === '1';
-  // Three ways to have the page, one switch: Read (the story alone),
-  // Review (the story and the notes) and, for its author, Revise (the
-  // notes and the writing checks on the text as well).
+  // Two ways to have the page, one switch: Read, the story alone, and the
+  // other one -- Review (the story and the notes) for a reader, Revise (the
+  // notes and the writing checks as well) for its author. A choice stored
+  // as the one means the other on a page that offers the other.
   const offered = Array.from(bar.querySelectorAll('[data-mode]')).map((b) => /** @type {HTMLElement} */ (b).dataset.mode);
-  let mode = readFirst ? 'read' : (store.get(MODE_KEY, '') || (hasComments ? 'review' : 'read'));
-  if (offered.indexOf(mode) === -1) mode = mode === 'revise' ? 'review' : 'read';
+  const working = offered.indexOf('revise') >= 0 ? 'revise' : 'review';
+  let mode = readFirst ? 'read' : (store.get(MODE_KEY, '') || (hasComments ? working : 'read'));
+  if (mode !== 'read') mode = working;
 
   function applyMode() {
     main.dataset.reading = mode;
@@ -60,7 +62,9 @@
     const btn = /** @type {HTMLElement|null} */ (/** @type {Element} */ (ev.target).closest('[data-mode]'));
     if (!btn) return;
     mode = btn.dataset.mode;
-    store.set(MODE_KEY, mode);
+    // Remembered as "notes on" or "off", so an author's Revise is a
+    // reader's Review on somebody else's chapter.
+    store.set(MODE_KEY, mode === 'read' ? 'read' : 'review');
     applyMode();
   });
 
