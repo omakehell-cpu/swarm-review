@@ -40,8 +40,11 @@ On a screen with room for it the editor is two columns. On the left, the
 title, the row of buttons and the text. On the right, the
 [writing checks](/help/writing-checks) -- the reading grade and a coloured
 card for each kind of trouble -- and, under them, the notes the chapter has
-been given, for reference while you rewrite. Answering those notes happens
-on the chapter page, not here.
+been given. The ones still waiting can be answered right there -- go to
+their words, put a suggested rewrite into the text, accept or turn them
+down -- and **Alt+J** / **Alt+K** step from one to the next. Replies are
+on the chapter page. See [what the author does with a
+note](/help/reading-and-reviewing).
 
 @figure chapter-editor.png | The editor: the text on the left, the writing checks and the notes on the right.
 

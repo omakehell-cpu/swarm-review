@@ -143,6 +143,15 @@ in and half out of some italics, is refused with nothing changed, and the
 author makes that edit by hand. **Accept only** is for when they already
 have.
 
+**In the editor**, the notes are beside the text, and the ones still
+waiting can be answered there, while you rewrite: **Go to the words**
+selects the passage in the editor; **Put it in the text** puts a suggested
+rewrite in place of the passage (it goes out with your next Publish, like
+any other edit) and accepts the note; **Accept** and **Turn down** answer
+it. **Alt+J** and **Alt+K** (Option on a Mac), or **Next** and **Previous**
+above the notes, step through the ones still waiting, selecting each one's
+words as they go.
+
 Answering a note does not reload the page. On a chapter with forty of
 them, dealing with the eleventh used to put you back at the top to find
 the twelfth; now the note changes where it stands, your place is kept, and

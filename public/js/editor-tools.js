@@ -660,6 +660,22 @@
       textarea.setSelectionRange(offset, offset);
       centreCaret(true);
     },
+    // For the notes beside the editor (public/js/editor-notes.js): select a
+    // passage by its place in the Markdown, and put new words in its place.
+    // Both work on the Markdown, so Visual hands over to it first.
+    async selectText(start, end) {
+      if (mode === 'visual') await setMode('markdown');
+      textarea.focus();
+      textarea.setSelectionRange(start, end);
+      centreCaret(true);
+    },
+    async replaceText(start, end, text) {
+      if (mode === 'visual') await setMode('markdown');
+      textarea.focus();
+      textarea.setRangeText(text, start, end, 'select');
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      centreCaret(true);
+    },
   };
   document.dispatchEvent(new CustomEvent('swarm-editor-ready'));
 }());

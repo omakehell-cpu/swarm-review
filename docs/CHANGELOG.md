@@ -4,6 +4,11 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — Answering notes where you rewrite
+
+- **The notes beside the editor can be answered there.** Go to a note's words and they are selected in the text; put a suggested rewrite straight into the text; accept or turn a note down -- all without leaving the chapter you are rewriting.
+- **Alt+J and Alt+K** (Option on a Mac), or Next and Previous above the notes, step through the notes still waiting, one passage at a time.
+
 ## 2026-09-23 — Small things, done properly
 
 - **Pick up where you stopped.** Come back to a chapter you did not finish and a line above the text offers to take you to the paragraph you stopped at. It follows you from the phone to the laptop, and it is forgotten once you reach the end.

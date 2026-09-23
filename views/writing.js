@@ -179,6 +179,38 @@ function draftNotice(chapter, draft, justDrafted, publishedVersionNumber) {
     </div>`;
 }
 
+// A note beside the editor, as something to act on while rewriting. The
+// reference copy (renderCommentReadOnly) with the author's answers under
+// it: go to the words, put a suggested rewrite into the text, accept,
+// turn down. The forms work without a script (they go to the chapter
+// page); editor-notes.js does them in place so the rewrite is not left.
+function editorNote(c, replies) {
+  const inner = renderCommentReadOnly(c, { replies });
+  if (c.deleted_at || c.kind === 'praise') return inner;
+  const pending = c.status === 'pending';
+  const hasSuggestion = c.suggestion != null;
+  const attrs = ` data-comment-id="${c.id}" data-status="${escapeHtml(c.status)}"`
+    + `${c.quoted_text ? ` data-quoted="${escapeHtml(c.quoted_text)}"` : ''}`
+    + `${hasSuggestion ? ` data-suggestion="${escapeHtml(c.suggestion)}"` : ''}`;
+  const who = escapeHtml(c.author_name);
+  const actions = pending ? `
+      <div class="editor-note-actions" role="group" aria-label="What to do with the note by ${who}">
+        ${c.quoted_text ? '<button type="button" class="btn tiny ghost note-find" hidden>Go to the words</button>' : ''}
+        ${hasSuggestion ? '<button type="button" class="btn tiny note-use" hidden>Put it in the text</button>' : ''}
+        <form method="post" action="/comments/${c.id}/status" class="inline-form note-answer">
+          <button name="status" value="accepted" class="btn tiny" type="submit">Accept</button>
+          <button name="status" value="rejected" class="btn tiny ghost" type="submit">Turn down</button>
+        </form>
+      </div>` : `
+      <div class="editor-note-actions" role="group" aria-label="What to do with the note by ${who}">
+        <form method="post" action="/comments/${c.id}/reopen" class="inline-form note-answer">
+          <button class="btn tiny ghost" type="submit">Reopen</button>
+        </form>
+      </div>`;
+  // The reference copy is one element; the actions go inside it, at the end.
+  return inner.replace(/^(\s*<div class="comment[^"]*")/, `$1${attrs}`).replace(/<\/div>\s*$/, `${actions}\n    </div>`);
+}
+
 /** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, conflict?: any, latestVersionNumber?: number, publishedVersionNumber?: number, draft?: Row|null, justDrafted?: boolean, desk?: any, vocabulary?: any, siblings?: Row[], castList?: Row[], values?: FormValues }} props */
 function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, conflict = null, latestVersionNumber = 0, publishedVersionNumber = 0, draft = null, justDrafted = false, desk = null, vocabulary = {}, siblings = [], castList = [], values = /** @type {FormValues} */ ({}) }) {
   const published = publishedVersionNumber || latestVersionNumber;
@@ -189,8 +221,9 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
   });
   const hasComments = topLevelComments.length > 0;
   const commentsHtml = topLevelComments
-    .map((c) => renderCommentReadOnly(c, { replies: repliesByParent[c.id] || [] }))
+    .map((c) => editorNote(c, repliesByParent[c.id] || []))
     .join('');
+  const pendingCount = topLevelComments.filter((c) => c.status === 'pending' && !c.deleted_at && c.kind !== 'praise').length;
   // Data for the editor's best-effort inline highlight -- see
   // resolveCommentRanges in writing-analyzer.js for why this is a plain
   // substring search rather than an exact offset mapping.
@@ -242,10 +275,16 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
   // just gets the plain, maximally wide editor, same as before this
   // feature existed.
   const mainHtml = editorGrid(writerCard, hasComments ? `
-      <section class="editor-notes" aria-labelledby="editor-notes-title">
-        <h2 id="editor-notes-title">Notes</h2>
-        <p class="hint">For reference while you edit. Reply, accept or reject from the chapter page.</p>
-        <div id="comment-list">${commentsHtml}</div>
+      <section class="editor-notes" aria-labelledby="editor-notes-title" data-pending="${pendingCount}">
+        <div class="editor-notes-head">
+          <h2 id="editor-notes-title">Notes <span class="notes-count">${pendingCount} pending</span></h2>
+          <span class="editor-notes-step" hidden>
+            <button type="button" class="btn tiny ghost" data-step="-1" title="Previous note waiting (Alt+K)">&uarr; Previous</button>
+            <button type="button" class="btn tiny ghost" data-step="1" title="Next note waiting (Alt+J)">Next &darr;</button>
+          </span>
+        </div>
+        <p class="hint">Go to each note's words, rewrite, and answer it here. Replies are on the chapter page.</p>
+        <div id="editor-note-list">${commentsHtml}</div>
       </section>` : '') + (hasComments ? `
     <script type="application/json" id="chapter-comments-data">${toScriptJson(commentsData)}</script>` : '');
 
