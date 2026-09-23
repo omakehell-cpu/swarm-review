@@ -2917,6 +2917,12 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .release-date { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .release-title { color: var(--text); }
 .release .doc-body h2 { border-top: 0; padding-top: 0; margin-top: var(--s-7); }
+/* A day's changes, by part of the site: small labels, not more headlines. */
+.release .doc-body h3 {
+  margin: var(--s-7) 0 var(--s-3); border: 0; padding: 0;
+  font-family: var(--font-ui); font-size: var(--t-2xs); font-weight: 700;
+  text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
 .ent-badge.status-private { color: var(--accent); border-color: var(--accent); }
 .bible-privacy {
   display: flex; flex-wrap: wrap; gap: var(--s-5); align-items: baseline;

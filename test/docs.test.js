@@ -129,3 +129,18 @@ test('every link from one how-to to another goes somewhere', () => {
   }
   assert.ok(links >= 10, 'the how-tos point at each other');
 });
+
+test('a day that gains a line after you read it is news again; one that did not, is not', () => {
+  const [newest, older] = docs.listReleases();
+  assert.ok(newest && older);
+  // Read the newest day exactly as it is: nothing new.
+  assert.deepStrictEqual(docs.unseenReleases({ changelog_seen_key: docs.releaseKey(newest) }), []);
+  // Read it when it had one line fewer: it is back.
+  const [day, heading, count] = docs.releaseKey(newest).split('|');
+  const before = `${day}|${heading}|${Number(count) - 1}`;
+  assert.deepStrictEqual(docs.unseenReleases({ changelog_seen_key: before }).map((r) => r.date), [newest.date]);
+  // Read it under an old-style key (date and title only): read.
+  assert.deepStrictEqual(docs.unseenReleases({ changelog_seen_key: `${day}|Some old title` }), []);
+  // Read the day before: only the newest.
+  assert.deepStrictEqual(docs.unseenReleases({ changelog_seen_key: docs.releaseKey(older) }).map((r) => r.date), [newest.date]);
+});
