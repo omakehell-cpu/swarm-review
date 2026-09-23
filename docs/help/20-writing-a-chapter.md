@@ -4,7 +4,7 @@ Starting a story, adding chapters, and what the editor is telling you.
 
 ## A story, then chapters
 
-**New story** takes the story's title and its first chapter in one go: a
+**+ Write**, in the top bar, starts a new story. It takes the story's title and its first chapter in one go: a
 story here is never empty. Everything else — the description, the tags, the
 synopsis — can wait, and is on **Edit details** afterwards.
 

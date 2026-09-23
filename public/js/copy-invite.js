@@ -21,7 +21,7 @@
     link.searchParams.set('code', code);
     if (username) link.searchParams.set('username', username);
     const lines = [
-      "You're invited to The Swarm Review, our writing group's site.",
+      "You're invited to Swarm Review, our writing group's site.",
       '',
       `Sign up here: ${link.href}`,
       `Invite code: ${code}`,

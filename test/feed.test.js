@@ -44,7 +44,7 @@ test('the feed is well formed, and its updated stamp is the newest entry', () =>
   const xml = buildAtom({
     origin: 'http://swarm.example',
     selfUrl: 'http://swarm.example/feed/abc.atom',
-    title: 'The Swarm Review',
+    title: 'Swarm Review',
     subtitle: 'What is waiting on Ana',
     entries: [
       { id: 'tag:a', title: 'Older', url: 'http://swarm.example/chapters/1', updated: '2026-09-10 10:00:00', summary: 'one' },

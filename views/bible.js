@@ -28,8 +28,9 @@ function entityBadges(entity) {
 // much of it they are in.
 function appearanceSummary(entity) {
   if (!entity.appearances) return '<span class="ent-none">Not named in any chapter</span>';
-  if (entity.appearances === 1) return `Chapter ${entity.first_chapter}`;
-  return `Chapters ${entity.first_chapter}&ndash;${entity.last_chapter} &middot; ${entity.appearances} of them`;
+  if (entity.appearances === 1) return `In chapter ${entity.first_chapter}`;
+  if (entity.appearances === entity.last_chapter - entity.first_chapter + 1) return `In chapters ${entity.first_chapter}&ndash;${entity.last_chapter}`;
+  return `In ${entity.appearances} chapters, ${entity.first_chapter}&ndash;${entity.last_chapter}`;
 }
 
 
@@ -63,7 +64,7 @@ function entityRow(entity, cover) {
       <div class="chapter-row-main">
         <h3>${escapeHtml(entity.name)} ${entityBadges(entity)}</h3>
         ${entity.summary ? `<p class="muted">${escapeHtml(entity.summary)}</p>` : ''}
-        ${entity.alias_list ? `<p class="entry-categories">a.k.a. ${escapeHtml(entity.alias_list)}</p>` : ''}
+        ${entity.alias_list ? `<p class="entity-aka">Also ${escapeHtml(entity.alias_list)}</p>` : ''}
       </div>
       <div class="chapter-row-meta">
         <span>${appearanceSummary(entity)}</span>
@@ -133,15 +134,17 @@ function bibleIndexPage({
   user, story, entities = [], counts = {}, total = 0, kind = '', canWrite = false,
   conflicts = [], notice = '', covers = new Map(), sort = 'name', isOwner = false,
 }) {
+  // The kinds are a row of tabs with their counts, not five big numbers:
+  // on a young bible those were mostly zeros, and the biggest thing on the
+  // page. What each kind holds is the tab's tooltip.
   const door = (k) => `
-    <a class="glossary-door${k === kind ? ' current' : ''}" href="/stories/${story.id}/bible?kind=${k}">
-      <span class="door-count">${counts[k] || 0}</span>
-      <h2>${escapeHtml(bible.KIND_PLURALS[k])}</h2>
-      <p class="muted">${escapeHtml(bible.KIND_BLURBS[k])}</p>
+    <a class="tag-chip kind-tab${k === kind ? ' current' : ''}${counts[k] ? '' : ' is-empty'}" href="/stories/${story.id}/bible?kind=${k}"
+       title="${escapeHtml(bible.KIND_BLURBS[k])}"${k === kind ? ' aria-current="page"' : ''}>
+      ${escapeHtml(bible.KIND_PLURALS[k])}<span class="tag-chip-count">${counts[k] || 0}</span>
     </a>`;
 
   const list = entities.length
-    ? `<div class="chapter-list" id="glossary-list">${entities.map((e) => entityRow(e, covers.get(e.id))).join('')}</div>
+    ? `<h2 class="sr-only">Entries</h2><div class="chapter-list" id="glossary-list">${entities.map((e) => entityRow(e, covers.get(e.id))).join('')}</div>
        <p class="no-matches" id="glossary-no-matches" hidden>Nothing here matches.</p>`
     : emptyState({
       art: 'sheets',
@@ -174,12 +177,14 @@ function bibleIndexPage({
       ${biblePrivacyBlock(story, isOwner)}
       ${bibleConflictNotice(conflicts)}
       ${total ? `
-        <div class="glossary-doors bible-doors">${KIND_ORDER.map(door).join('')}</div>
+        <nav class="kind-tabs" aria-label="Kinds of entry">
+          <a class="tag-chip kind-tab${kind ? '' : ' current'}" href="/stories/${story.id}/bible"${kind ? '' : ' aria-current="page"'}>Everything<span class="tag-chip-count">${total}</span></a>
+          ${KIND_ORDER.map(door).join('')}
+        </nav>
         <form method="get" action="/stories/${story.id}/bible" class="inline-form glossary-search">
           <input type="search" id="glossary-filter" name="q" placeholder="Filter by name, alias or summary..." autocomplete="off">
           ${kind ? `<input type="hidden" name="kind" value="${escapeHtml(kind)}">` : ''}
           <button class="btn ghost small" type="submit">Filter</button>
-          ${kind ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Everything</a>` : ''}
         </form>
         ${bibleSortBar(story, kind, sort)}
         <p class="muted"><span id="glossary-count">${entities.length} entr${entities.length === 1 ? 'y' : 'ies'}</span>${kind ? ` &middot; ${escapeHtml(bible.KIND_PLURALS[kind])}` : ''}.</p>` : ''}

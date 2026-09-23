@@ -3,12 +3,10 @@
 // A reader, in Review: click (or tap) a paragraph, or select some words
 // and press R, and a small bar offers four reactions -- Hooked, Lost me,
 // Dragged, Didn't buy it. Each is a switch; pressing it again takes it
-// back. Paragraphs you have reacted to carry a thin mark in the margin.
+// back, and opening the bar again shows what you said.
 //
-// The author, in Review: the same paragraphs are shaded by what readers
-// felt there -- the colour of the reaction most had, stronger the more
-// readers had it -- with the counts beside them, and a line above the
-// text lists the paragraphs where the most readers were lost.
+// The author: a summary beside the text, How it read, with the paragraphs
+// where readers were hooked or lost. Nothing is drawn on the text itself.
 //
 // Nothing is ever put inside the text itself: the paragraph elements get a
 // class and a data attribute, which changes no offsets, so notes anchored
@@ -33,19 +31,9 @@
 
   // --------------------------------------------------------------- author
   if (data.mode === 'author') {
-    const by = data.map && data.map.byParagraph ? data.map.byParagraph : {};
-    const readers = Math.max(1, (data.map && data.map.readers) || 1);
-    Object.keys(by).forEach((key) => {
-      const block = blocks[Number(key) - 1];
-      if (!block) return;
-      const counts = by[key];
-      const top = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
-      const total = Object.values(counts).reduce((s, n) => s + Number(n), 0);
-      block.classList.add('reacted-heat', `heat-${top}`);
-      block.style.setProperty('--heat', String(Math.min(1, 0.35 + 0.65 * (counts[top] / readers))));
-      block.dataset.heatLabel = KINDS.filter(([k]) => counts[k]).map(([k, l]) => `${l} ${counts[k]}`).join(' · ');
-      block.dataset.heatTotal = String(total);
-    });
+    // The reactions live in the summary beside the text, not on it: the
+    // text is for the writing checks. The summary's links still take you
+    // to the paragraph and light it for a moment.
     // The summary above the text: its links go to the paragraph.
     document.addEventListener('click', (ev) => {
       const link = /** @type {HTMLElement} */ (ev.target).closest('[data-para]');
@@ -65,14 +53,9 @@
   // --------------------------------------------------------------- reader
   const mine = data.mine || {};
   const token = (document.querySelector('meta[name="csrf-token"]') || { getAttribute: () => '' }).getAttribute('content') || '';
-  function markMine(index) {
-    const block = blocks[index - 1];
-    if (!block) return;
-    const kinds = mine[index] || [];
-    block.classList.toggle('reacted-mine', kinds.length > 0);
-    KINDS.forEach(([k]) => block.classList.toggle(`mine-${k}`, kinds.includes(k)));
-  }
-  Object.keys(mine).forEach((k) => markMine(Number(k)));
+  // What you said about a paragraph is shown when you open its bar again,
+  // not as a mark in the margin: the margin is the notes'.
+  function markMine(_index) { /* nothing drawn on the text */ }
 
   const bar = document.createElement('div');
   bar.className = 'react-bar';

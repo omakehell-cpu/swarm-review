@@ -241,7 +241,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           <span>by ${escapeHtml(c.author_name)}</span>
           <span>v${c.latest_version}</span>
           ${timeHtml(c.created_at)}
-          ${c.pending_comments > 0 ? `<span class="badge pending">${c.pending_comments} pending</span>` : ''}
+          ${c.pending_comments > 0 ? `<span class="badge pending">${c.pending_comments} waiting</span>` : ''}
         </div>
       </a>
       ${isStoryAuthor ? chapterReorderButtons(c, i, chapters.length) : ''}
@@ -273,7 +273,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           <p class="title-page-kicker">A story ${bylineWith(story.author_name, coauthors, story.author_username)}</p>
           <h1>${escapeHtml(story.title)}</h1>
           ${story.description ? `<p class="title-page-blurb">${escapeHtml(story.description)}</p>` : ''}
-          <p class="title-page-facts">${storyStateBadge(story)} ${chapters.length} chapter${chapters.length === 1 ? '' : 's'}${stats && stats.words ? ` &middot; ${wordCount(stats.words)}` : ''} &middot; begun ${timeHtml(story.created_at)}</p>
+          <p class="title-page-facts">${storyStateBadge(story)} ${chapters.length} chapter${chapters.length === 1 ? '' : 's'}${stats && stats.words ? ` &middot; ${wordCount(stats.words)}` : ''} &middot; started ${timeHtml(story.created_at)}</p>
           ${tagChips(tags)}
           <div class="title-page-actions">
             ${start ? `<a class="btn" href="/chapters/${start.chapter.id}">${ICONS.book}${escapeHtml(start.label)}</a>` : ''}
@@ -288,9 +288,15 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
         ${bibleVisible ? `<a href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
         ${isStoryAuthor ? `<a href="/stories/${story.id}/edit">Edit details</a>` : ''}
         ${isStoryAuthor ? `
-          <form method="post" action="/stories/${story.id}/archive" class="inline-form">
-            <button class="linklike" type="submit">Archive story</button>
-          </form>` : ''}
+          <details class="menu story-more">
+            <summary aria-label="More for this story: archiving">More</summary>
+            <div class="menu-panel">
+              <form method="post" action="/stories/${story.id}/archive" class="inline-form"
+                    data-confirm="Archive this story? It leaves the front page and stays readable from the archived stories.">
+                <button class="menu-danger" type="submit">Archive story</button>
+              </form>
+            </div>
+          </details>` : ''}
       </nav>
       <details class="story-numbers">
         <summary>The story in numbers</summary>

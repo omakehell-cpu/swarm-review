@@ -5,7 +5,7 @@ admins touch.
 
 ## Your account
 
-**Account**, from your name in the top bar, is everything about the site
+**Account**, in the menu behind your name in the top bar, is everything about the site
 that is yours to set. From the top:
 
 - **Your name** -- the name people see. Your username is how you log in

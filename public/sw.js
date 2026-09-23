@@ -11,7 +11,7 @@
 (function () {
 'use strict';
 
-const STATIC = 'swarm-static-v2';
+const STATIC = 'swarm-static-v3';
 const PAGES = 'swarm-pages-v1';
 const KEEP_PAGES = 40;
 const OFFLINE = '/offline.html';

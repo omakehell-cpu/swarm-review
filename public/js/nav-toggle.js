@@ -11,8 +11,11 @@
   const button = document.getElementById('nav-toggle');
   const bar = button && button.closest('.topbar');
   if (!button || !bar) return;
+  const menu = /** @type {HTMLDetailsElement|null} */ (bar.querySelector('.user-menu'));
   const set = (open) => {
     bar.classList.toggle('nav-open', open);
+    // On a phone the menu behind your name is part of the list.
+    if (menu) menu.open = open;
     button.setAttribute('aria-expanded', open ? 'true' : 'false');
     button.textContent = open ? 'Close' : 'Menu';
   };
@@ -20,4 +23,19 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape' && bar.classList.contains('nav-open')) { set(false); button.focus(); }
   });
+
+  // The menu behind your name, on a wide screen: a click anywhere else or
+  // Escape closes it, as any menu does.
+  if (menu) {
+    document.addEventListener('click', (ev) => {
+      if (menu.open && !bar.classList.contains('nav-open') && !menu.contains(/** @type {Node} */ (ev.target))) menu.open = false;
+    });
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && menu.open && !bar.classList.contains('nav-open')) {
+        menu.open = false;
+        const summary = menu.querySelector('summary');
+        if (summary) summary.focus();
+      }
+    });
+  }
 }());

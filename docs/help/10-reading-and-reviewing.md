@@ -10,10 +10,11 @@ a switch between two ways of having the page.
 
 **Read** gives you the chapter and nothing else: no notes, no highlights,
 no margin, and selecting words offers nothing -- it is just the story.
-**Review** brings the notes back: the passages people have left notes on
-are underlined, the notes sit beside them, and selecting words lets you
-leave one. Nobody thinks well about a sentence while the sentence has
-three coloured underlines on it, so read it once first.
+**Review** brings the notes back: a dot in the margin marks each line a
+note is about -- red while it waits for an answer, ink once taken, an
+empty ring once turned down -- the notes are listed beside the text, and
+selecting words lets you leave one. Point at a dot and its words light
+up; click it and you are taken to the note.
 
 On your own chapter the second is **Revise** instead: the notes, and the
 [writing checks](/help/writing-checks) marked in the text as well.
@@ -74,11 +75,10 @@ so does everything if JavaScript is off: it is a link, and it stays a link.
 ## Leaving a note
 
 **Select the words you mean** and a button offers to comment on them;
-click it and the note box opens beside the passage. That is the whole
-gesture. If you were in Read, the page switches to Review for you. The
-note then sits in the margin beside the passage it is about, joined to it
-by a line, and the passage is underlined so the author can see at a
-glance where the notes fall.
+click it and the note box opens beside the text. That is the whole
+gesture (in Review; Read offers nothing). The note joins the list beside
+the text, and a dot in the margin marks the line it is about, so the author
+can see at a glance where the notes fall.
 
 **From the keyboard**, it is the same gesture: select the passage with
 shift and the arrow keys, and then press **C**. The offer is announced
@@ -102,8 +102,8 @@ place. The author sees exactly what you changed -- the words that go struck
 through, the ones that arrive underlined -- and can put it into the chapter
 with one click.
 
-If what you want to say is not about one passage, use **General comment (no
-text selected)** at the foot of the notes.
+If what you want to say is not about one passage, use **A note on the
+whole chapter** at the foot of the notes.
 
 **Name somebody** with **@** and their username -- *@luis, is this the same
 Kessler?* Type **@** and the start of a name, and the people there are to
@@ -120,17 +120,15 @@ those four -- **Hooked**, **Lost me**, **Dragged**, **Didn't buy it**. Each
 is a switch; press it again to take it back. From the keyboard, select a
 few words of the paragraph and press **R**.
 
-Paragraphs you have reacted to carry a thin line in the margin, in the
-colour of the reaction. Nobody else sees yours: the other readers do not
-see anyone's, so nobody is told where to be lost.
+Open the bar on a paragraph again and it shows what you said. Nobody else
+sees yours: the other readers do not see anyone's, so nobody is told where
+to be lost. Nothing is drawn on the text.
 
-**The author** sees them added up. Above the text, *How it read* says how
-many readers reacted and which paragraphs most of them were hooked by, lost
-in, bored by or unconvinced by, each a link to the paragraph. In the text,
-each paragraph readers reacted to has a bar in the margin in the colour of
-the reaction most of them had -- stronger the more of them had it -- and
-the counts underneath. It is the map a note cannot draw: where the chapter
-holds and where it lets go.
+**The author** sees them added up, at the top of the notes column: *How
+it read* says how many readers reacted and which paragraphs most of them
+were hooked by, lost in, bored by or unconvinced by, each a link that
+takes you to the paragraph. It is the map a note cannot draw: where the
+chapter holds and where it lets go.
 
 ### Under every note
 
@@ -185,7 +183,7 @@ decided, so that a note stops being a thing hanging over them. Accepted and
 rejected notes stay on the page, in a quieter colour, because the
 conversation is part of the record. A note can be **Reopen**ed later.
 
-@figure note-in-margin.png | A note sits beside the passage it is about, joined to it by a line. Accept and Reject are the author's.
+@figure note-in-margin.png | The notes beside the text, and a dot in the margin for each line they are about. Accept and Reject are the author's.
 
 The count of notes still **pending** is on the story's contents and on the
 front page, so nobody has to open ten chapters to find out where the work

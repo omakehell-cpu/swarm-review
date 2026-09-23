@@ -541,14 +541,18 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         </div>
       </div>
     </div>
-    ${reviewHtml}
-    ${reactions && reactions.mode === 'author' ? reactionSummary(reactions.map) : ''}
+    ${isChapterAuthor ? '' : reviewHtml}
     <div class="chapter-body-grid">
       <article class="reading-pane" aria-labelledby="chapter-title">
         <div id="chapter-text" tabindex="-1" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}"${place ? ` data-place="${place.paragraph}" data-place-of="${place.total}"` : ''} data-story-id="${chapter.story_id}" data-can-edit-dictionary="${isChapterAuthor ? '1' : '0'}" data-is-author="${isChapterAuthor ? '1' : '0'}">${highlighted}</div>
       </article>
       <aside class="comments-pane" id="notes" aria-label="Notes on this chapter">
         ${nameCard()}
+        ${isChapterAuthor ? `
+        <div class="notes-tools">
+          ${reactions && reactions.mode === 'author' ? reactionSummary(reactions.map) : ''}
+          ${reviewHtml}
+        </div>` : ''}
         <h2>Notes${topLevel.some((x) => !x.deleted_at) ? ` <span class="notes-count">${topLevel.filter((x) => !x.deleted_at).length}</span>` : ''}</h2>
         ${notice ? `<p class="flash-inline" role="status">${escapeHtml(notice)}</p>` : ''}
         ${appliedFrom ? `<p class="flash-inline" role="status">${ICONS.tick}The rewrite from ${escapeHtml(appliedFrom)} is in the text. This is the new version; the one before it is still in the history.</p>` : ''}
@@ -565,14 +569,14 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
             <input type="hidden" name="quoted" id="nc-quoted">
             ${noteKindPicker('nc')}
             ${entityPicker(entities)}
-            <textarea name="body" id="nc-body" maxlength="4000" placeholder="Comment on the selected passage" aria-label="Your note"></textarea>
+            <textarea name="body" id="nc-body" maxlength="4000" placeholder="Your note on these words" aria-label="Your note"></textarea>
             <label class="suggest-toggle"><input type="checkbox" name="suggestSend" value="1" id="nc-suggest-toggle"> Suggest a rewrite of the passage</label>
             <label class="suggest-field">How you would write it
               <textarea name="suggestion" id="nc-suggestion" maxlength="4000" rows="3"></textarea>
               <span class="hint">Change the words in place. The author sees exactly what you changed and can put it into the text with one click.</span>
             </label>
             <div class="row">
-              <button type="submit" class="btn small">Comment</button>
+              <button type="submit" class="btn small">Add note</button>
               <button type="button" class="btn small ghost" id="nc-cancel">Cancel</button>
             </div>
           </form>
@@ -588,12 +592,12 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
           </form>
         </details>` : ''}
         <details class="general-comment" aria-label="A note on the whole chapter">
-          <summary>General comment (no text selected)</summary>
+          <summary>A note on the whole chapter</summary>
           <form method="post" action="/chapters/${chapter.id}/comments">
             <input type="hidden" name="versionId" value="${currentVersion.id}">
             ${noteKindPicker('gc')}
-            <textarea name="body" maxlength="4000" placeholder="General comment about this version" aria-label="Your note"></textarea>
-            <button type="submit" class="btn small">Comment</button>
+            <textarea name="body" maxlength="4000" placeholder="What you thought of the chapter as a whole" aria-label="Your note"></textarea>
+            <button type="submit" class="btn small">Add note</button>
           </form>
         </details>
       </aside>
@@ -602,7 +606,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     ${missingNamesBlock(missingNames, chapter.story_id, `/chapters/${chapter.id}`, entities)}
     ${chapterNav(chapter, neighbours, { canWrite })}
     ${chapterFloatNav(chapter, neighbours)}
-    <button id="selection-toast" class="selection-toast hidden" type="button">+ Comment on selection</button>
+    <button id="selection-toast" class="selection-toast hidden" type="button">+ Note on these words</button>
     <script type="application/json" id="chapter-meta">${toScriptJson({ chapterId: chapter.id })}</script>
     ${reactions ? `<script type="application/json" id="reactions-data">${toScriptJson(reactions)}</script>` : ''}
     ${mentionable.length ? `<script type="application/json" id="mention-people">${toScriptJson(mentionable.map((p) => ({ u: p.username, n: p.display_name })))}</script>` : ''}

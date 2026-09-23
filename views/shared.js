@@ -69,6 +69,7 @@ const EMPTY_ART = {
   margin: '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="8" y="12" width="48" height="34" rx="3"/><line x1="17" y1="23" x2="39" y2="23"/><line x1="17" y1="31" x2="33" y2="31"/><path d="M20 46 L20 55 L29 46"/></svg>',
   glass: '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="28" cy="27" r="15"/><line x1="39" y1="38" x2="52" y2="51"/><line x1="21" y1="24" x2="35" y2="24"/><line x1="21" y1="31" x2="30" y2="31"/></svg>',
   label: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M8 20 L34 20 L52 32 L34 44 L8 44 Z"/><circle cx="18" cy="32" r="2.6"/></svg>',
+  book: '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 16 L14 8 L6 13 L6 47 L14 52 L32 58 Z"/><path d="M32 16 L50 8 L58 13 L58 47 L50 52 L32 58 Z"/><line x1="13" y1="22" x2="25" y2="27"/><line x1="13" y1="30" x2="25" y2="35"/><line x1="39" y1="27" x2="51" y2="22"/></svg>',
 };
 
 

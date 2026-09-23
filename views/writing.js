@@ -170,7 +170,7 @@ function draftNotice(chapter, draft, justDrafted, publishedVersionNumber) {
   return `
     <div class="draft-notice${justDrafted ? ' just-saved' : ''}" role="status">
       <p><strong>${justDrafted ? 'Draft saved.' : 'This is your unpublished draft.'}</strong>
-      Last saved ${timeHtml(draft.updated_at)}. Readers still see version ${publishedVersionNumber}; nobody sees this until you publish it.</p>
+      Saved ${timeHtml(draft.updated_at)}; readers still see version ${publishedVersionNumber}. <a href="/help/writing-a-chapter" class="muted">How drafts work</a></p>
       ${behind ? `<p class="draft-behind">Version ${publishedVersionNumber} was published after you started this draft (from v${draft.base_version}). <a href="/chapters/${chapter.id}/diff?from=${draft.base_version}&to=${publishedVersionNumber}" target="_blank" rel="noopener noreferrer">See what changed &#8599;</a> Publishing will ask before it goes on top.</p>` : ''}
       <form method="post" action="/chapters/${chapter.id}/draft/discard" class="inline-form"
             data-confirm="Throw this draft away and go back to version ${publishedVersionNumber}? The draft cannot be recovered.">
@@ -233,11 +233,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
 
   const writerCard = `
     <div class="writer-card">
-      <h1>Edit chapter</h1>
-      <details class="writer-intro-fold">
-        <summary>Drafts and versions, in two lines</summary>
-        <p class="muted">Your writing is kept as a <strong>draft</strong> while you work &mdash; every few seconds, and on this device and your others. Only you see it. <strong>Publish</strong> turns it into the next version: readers see it, notes still waiting on the passage follow it there, and the old version stays in the history.</p>
-      </details>
+      <h1 class="sr-only">Edit chapter ${chapter.chapter_number}</h1>
       ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
       ${conflict ? conflictNotice(chapter, conflict) : ''}
       ${conflict ? '' : draftNotice(chapter, draft, justDrafted, published)}
@@ -245,8 +241,8 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
             data-draft-url="/chapters/${chapter.id}/draft"${desk ? ' data-desk' : ''}>
         ${desk ? `<script type="application/json" id="desk-data">${toScriptJson(desk)}</script>` : ''}
         <input type="hidden" name="baseVersion" value="${conflict ? conflict.version : (latestVersionNumber || '')}">
-        <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
-        <div class="main-field"><label for="chapter-content">Chapter text</label><textarea id="chapter-content" name="content" rows="24" data-story-id="${chapter.story_id}" data-editor-tools>${escapeHtml(values.content ?? latestContent)}</textarea>
+        <label class="title-field"><span class="sr-only">Chapter title</span><input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required placeholder="Chapter title"></label>
+        <div class="main-field"><label for="chapter-content" class="sr-only">Chapter text</label><textarea id="chapter-content" name="content" rows="24" data-story-id="${chapter.story_id}" data-editor-tools>${escapeHtml(values.content ?? latestContent)}</textarea>
           ${markdownHint()}
         </div>
         ${uploadVersionField()}

@@ -138,18 +138,19 @@
   --editor-padding: var(--s-5) var(--s-6);
 }
 
-/* Dark is the same drawing with the ink and the paper exchanged: the
-   hairline and the ink rule swap ends, and the red lifts far enough to
-   stay legible on near-black without turning pink. */
+/* Dark is the same drawing with the ink and the paper exchanged, on a
+   charcoal rather than a black: pure black under near-white type and
+   white rules was harsh for a long chapter at night. The red lifts far
+   enough to stay legible without turning pink. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f0f0e;
-    --bg-elevated: #0f0f0e;
-    --bg-sunken: #1a1a18;
-    --border: #2e2e2b;
-    --border-strong: #f0f0ec;
-    --text: #f0f0ec;
-    --text-muted: #96948e;
+    --bg: #1a1a19;
+    --bg-elevated: #1f1f1e;
+    --bg-sunken: #252523;
+    --border: #3a3a37;
+    --border-strong: #d6d5cf;
+    --text: #ecebe6;
+    --text-muted: #a8a69f;
     --accent: #ff4b3e;
     --accent-strong: #ff6f64;
     --accent-rgb: 255, 75, 62;
@@ -159,20 +160,20 @@
     --accepted-rgb: 240, 240, 236;
     --rejected: #96948e;
     --rejected-rgb: 150, 148, 142;
-    --btn-text: #0f0f0e;
+    --btn-text: #1a1a19;
     --code-bg: rgba(240, 240, 236, 0.09);
     --shadow: rgba(0, 0, 0, 0.6);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #0f0f0e;
-  --bg-elevated: #0f0f0e;
-  --bg-sunken: #1a1a18;
-  --border: #2e2e2b;
-  --border-strong: #f0f0ec;
-  --text: #f0f0ec;
-  --text-muted: #96948e;
+  --bg: #1a1a19;
+  --bg-elevated: #1f1f1e;
+  --bg-sunken: #252523;
+  --border: #3a3a37;
+  --border-strong: #d6d5cf;
+  --text: #ecebe6;
+  --text-muted: #a8a69f;
   --accent: #ff4b3e;
   --accent-strong: #ff6f64;
   --accent-rgb: 255, 75, 62;
@@ -182,7 +183,7 @@
   --accepted-rgb: 240, 240, 236;
   --rejected: #96948e;
   --rejected-rgb: 150, 148, 142;
-  --btn-text: #0f0f0e;
+  --btn-text: #1a1a19;
   --code-bg: rgba(240, 240, 236, 0.09);
   --shadow: rgba(0, 0, 0, 0.6);
 }
@@ -265,7 +266,7 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.02em; line-height: 1.25; }
      wide screen. */
   padding: 0 calc(max(0px, (100% - 1400px) / 2) + var(--s-8));
   min-height: 52px;
-  border-bottom: 2px solid var(--border-strong);
+  border-bottom: 1px solid var(--border);
   background: var(--bg);
 }
 .topbar .brand {
@@ -331,7 +332,7 @@ h3 { font-size: var(--t-lg); letter-spacing: -0.02em; line-height: 1.25; }
 .flash {
   padding: var(--s-5) var(--s-8); text-align: center; font-size: var(--t-md);
   background: var(--bg-sunken); color: var(--text);
-  border-bottom: 2px solid var(--border-strong);
+  border-bottom: 1px solid var(--border);
 }
 .flash.error { border-bottom-color: var(--accent); }
 .flash.info { border-bottom-color: var(--border-strong); }
@@ -390,7 +391,7 @@ h1 { margin-top: 0; }
 /* --- auth --- */
 .auth-card {
   max-width: 440px; margin: var(--s-10) auto var(--s-12); background: var(--bg);
-  border: 0; border-top: 2px solid var(--border-strong); padding: var(--s-8) 0 0;
+  border: 0; border-top: 1px solid var(--border); padding: var(--s-8) 0 0;
 }
 .auth-card h1 { font-size: var(--t-2xl); margin-bottom: var(--s-2); }
 .auth-card form { display: flex; flex-direction: column; gap: var(--s-6); margin-top: var(--s-7); }
@@ -593,7 +594,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
    hairline under the controls closes it, and everything between belongs
    to the piece rather than to the app. */
 .chapter-header {
-  border-top: 2px solid var(--border-strong); padding-top: var(--s-5);
+  border-top: 1px solid var(--border); padding-top: var(--s-5);
   border-bottom: 1px solid var(--border); padding-bottom: var(--s-6); margin-bottom: var(--s-8);
 }
 .chapter-header h1 { font-size: var(--t-3xl); margin-bottom: var(--s-4); }
@@ -1009,7 +1010,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 .glossary-doors {
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 0; margin: var(--s-8) 0 var(--s-10);
-  border-top: 2px solid var(--border-strong); border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
 }
 .glossary-door {
   display: block; padding: var(--s-7) var(--s-7) var(--s-8) 0;
@@ -1041,7 +1042,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 }
 .family {
   break-inside: avoid; margin: 0 0 var(--s-8);
-  border-top: 1px solid var(--border-strong); padding-top: var(--s-4);
+  border-top: 1px solid var(--border); padding-top: var(--s-4);
 }
 .family-head {
   margin: 0 0 var(--s-4); font-size: var(--t-2xs); font-weight: 700;
@@ -1059,7 +1060,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 .family-n { color: var(--text-muted); font-variant-numeric: tabular-nums; font-size: var(--t-xs); }
 .directory-foot {
   margin-top: var(--s-6); padding-top: var(--s-5);
-  border-top: 2px solid var(--border-strong);
+  border-top: 1px solid var(--border);
   font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
@@ -1078,7 +1079,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   display: flex; flex-wrap: wrap; gap: 0;
   position: sticky; top: 0; z-index: 3;
   background: var(--bg);
-  border-top: 2px solid var(--border-strong);
+  border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   padding: var(--s-3) 0; margin-bottom: var(--s-8);
 }
@@ -1179,7 +1180,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 .arc-head {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: var(--s-4) var(--s-7); flex-wrap: wrap;
-  border-top: 2px solid var(--border-strong);
+  border-top: 1px solid var(--border);
   padding-top: var(--s-5); margin-bottom: var(--s-3);
 }
 .arc-title {
@@ -1199,7 +1200,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 /* ---- somebody's own page ---- */
 .profile-section { margin-top: var(--s-10); }
 .profile-section > h2 {
-  border-top: 2px solid var(--border-strong);
+  border-top: 1px solid var(--border);
   padding-top: var(--s-5); margin-bottom: var(--s-5);
 }
 .admin-user-main .small-meta { margin: var(--s-2) 0 0; font-size: var(--t-sm); }
@@ -1222,7 +1223,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 /* --- writer card (new story / new chapter / edit chapter) --- */
 .writer-card {
   max-width: 1300px; margin: 0 auto; background: transparent;
-  border: 0; border-top: 2px solid var(--border-strong); border-radius: 0; padding: var(--s-7) 0 0;
+  border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: var(--s-7) 0 0;
   box-shadow: none;
   transition: max-width 0.2s ease;
 }
@@ -2416,7 +2417,7 @@ main[data-reading="read"] .chapter-body-grid > .reading-pane {
 .entity-main { min-width: 0; }
 .entity-description { border: 0; padding: 0; background: transparent; max-width: 60ch; }
 .entity-secret {
-  margin-top: var(--s-8); border-top: 2px solid var(--border-strong); padding-top: var(--s-4);
+  margin-top: var(--s-8); border-top: 1px solid var(--border); padding-top: var(--s-4);
 }
 .entity-secret > summary {
   cursor: pointer; list-style: none; padding: var(--s-2) 0;
@@ -2432,7 +2433,7 @@ main[data-reading="read"] .chapter-body-grid > .reading-pane {
 .side-head {
   margin: 0 0 var(--s-4); font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking);
-  border-top: 2px solid var(--border-strong); padding-top: var(--s-4);
+  border-top: 1px solid var(--border); padding-top: var(--s-4);
 }
 .appearance-list, .relation-list, .cast-line {
   list-style: none; margin: 0; padding: 0; font-size: var(--t-sm);
@@ -2470,7 +2471,7 @@ main[data-reading="read"] .chapter-body-grid > .reading-pane {
 
 /* On a chapter, who is in it -- the payoff of the whole scan. */
 .chapter-cast {
-  margin: var(--s-10) 0 0; border-top: 2px solid var(--border-strong); padding-top: var(--s-4);
+  margin: var(--s-10) 0 0; border-top: 1px solid var(--border); padding-top: var(--s-4);
 }
 .chapter-cast .side-head { border-top: 0; padding-top: 0; }
 .cast-line { display: flex; flex-wrap: wrap; gap: var(--s-4) var(--s-7); }
@@ -2542,7 +2543,7 @@ main[data-reading="read"] .chapter-body-grid > .reading-pane {
 .glossary-row .chapter-row-meta { text-align: right; flex: 0 0 auto; }
 
 .entity-pictures { margin-top: var(--s-10); }
-.entity-pictures .side-head { border-top: 2px solid var(--border-strong); }
+.entity-pictures .side-head { border-top: 1px solid var(--border); }
 .figure-strip {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: var(--s-7); margin: 0 0 var(--s-7);
@@ -2716,13 +2717,13 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
    them rather than opening a third column beside them. */
 .editor-side { min-width: 0; display: flex; flex-direction: column; gap: var(--s-9); }
 .editor-side .beside-pane {
-  border-top: 2px solid var(--border-strong); padding-top: var(--s-4);
+  border-top: 1px solid var(--border); padding-top: var(--s-4);
   max-height: 60vh; overflow-y: auto;
 }
 .editor-split.is-split .beside-pane {
   position: sticky; top: var(--s-6);
   max-height: calc(100vh - 6rem); overflow-y: auto;
-  border-top: 2px solid var(--border-strong); padding-top: var(--s-4);
+  border-top: 1px solid var(--border); padding-top: var(--s-4);
 }
 .beside-pane-head {
   display: flex; gap: var(--s-5); align-items: baseline; justify-content: space-between;
@@ -2861,7 +2862,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .missing-list select { margin-left: auto; }
 
 .editor-bible {
-  margin-top: var(--s-10); border-top: 2px solid var(--border-strong); padding-top: var(--s-4);
+  margin-top: var(--s-10); border-top: 1px solid var(--border); padding-top: var(--s-4);
 }
 .editor-bible .side-head { border-top: 0; padding-top: 0; }
 .quick-entry { display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: center; }
@@ -2893,17 +2894,17 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .doc-nav {
   display: flex; justify-content: space-between; gap: var(--s-7);
   margin-top: var(--s-11); padding-top: var(--s-5);
-  border-top: 2px solid var(--border-strong);
+  border-top: 1px solid var(--border);
   font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
-.changelog-row { border-top: 2px solid var(--border-strong); margin-top: var(--s-8); }
+.changelog-row { border-top: 1px solid var(--border); margin-top: var(--s-8); }
 
 .release { margin-top: var(--s-10); }
 .release-head {
   display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: baseline;
   margin: 0 0 var(--s-5); padding-top: var(--s-4);
-  border-top: 2px solid var(--border-strong);
+  border-top: 1px solid var(--border);
   font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
@@ -2988,7 +2989,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .outline-totals {
   display: flex; flex-wrap: wrap; gap: var(--s-4) var(--s-8);
   margin: var(--s-7) 0; padding: var(--s-4) 0;
-  border-top: 2px solid var(--border-strong); border-bottom: 1px solid var(--border);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
   font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking);
   font-variant-numeric: tabular-nums;
@@ -2998,7 +2999,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .outline { width: 100%; border-collapse: collapse; }
 .outline th {
   text-align: left; padding: var(--s-3) var(--s-5) var(--s-3) 0;
-  border-bottom: 2px solid var(--border-strong);
+  border-bottom: 1px solid var(--border);
   font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
   white-space: nowrap;
@@ -3050,7 +3051,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 
 /* ---- compiling the whole story ---- */
 .compile { margin-top: var(--s-10); }
-.compile .side-head { border-top: 2px solid var(--border-strong); }
+.compile .side-head { border-top: 1px solid var(--border); }
 .compile p { margin: 0 0 var(--s-5); max-width: 60ch; }
 .compile-links { display: flex; flex-wrap: wrap; gap: var(--s-4); }
 /* The layout is chosen where the file is asked for, because it is a fact
@@ -3097,7 +3098,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
   gap: var(--s-11) var(--s-12); margin-top: var(--s-9);
 }
 .chart { min-width: 0; }
-.chart .side-head { border-top: 2px solid var(--border-strong); }
+.chart .side-head { border-top: 1px solid var(--border); }
 .chart-note { margin: 0 0 var(--s-5); font-size: var(--t-sm); max-width: 52ch; }
 .chart-wide { margin-top: var(--s-11); }
 
@@ -3273,7 +3274,7 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .review-question { display: block; margin-top: var(--s-2); font-family: var(--font-prose); font-style: italic; font-size: var(--t-lg); }
 .review-done-form { display: flex; gap: var(--s-4); flex-wrap: wrap; align-items: center; }
 .review-done-form input { flex: 1; min-width: 14rem; }
-.review-requests { margin: 0 0 var(--s-8); padding: var(--s-4) 0; border-top: 1px solid var(--border-strong); }
+.review-requests { margin: 0 0 var(--s-8); padding: var(--s-4) 0; border-top: 1px solid var(--border); }
 .review-list { list-style: none; margin: 0 0 var(--s-4); padding: 0; display: grid; gap: var(--s-3); font-size: var(--t-md); }
 .review-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2) var(--s-4); }
 .review-state { font-size: var(--t-sm); color: var(--text-muted); }
@@ -3404,7 +3405,7 @@ body.writing-focus textarea[data-editor-tools] { min-height: 70vh; }
 .welcome h2 {
   margin: 0 0 var(--s-4); font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
   letter-spacing: var(--label-tracking); color: var(--text-muted);
-  padding-top: var(--s-3); border-top: 2px solid var(--border-strong);
+  padding-top: var(--s-3); border-top: 1px solid var(--border);
 }
 
 /* The welcome card. Ruled like every section; the steps as a checklist
@@ -3542,7 +3543,7 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
    ====================================================================== */
 .title-page {
   display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-10);
-  align-items: end; padding: var(--s-6) 0 var(--s-10); border-bottom: 2px solid var(--border-strong);
+  align-items: end; padding: var(--s-6) 0 var(--s-10); border-bottom: 1px solid var(--border);
 }
 .title-page.has-cover { grid-template-columns: 220px minmax(0, 1fr); }
 .title-page .story-page-cover { width: 220px; height: 293px; box-shadow: 8px 10px 0 -2px var(--bg-sunken); }
@@ -3585,15 +3586,8 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
   .toc-leader { display: none; }
 }
 
-/* Pages arrive rather than appear: a short fade and a few pixels of rise.
-   Nothing for anybody who has asked their system for less motion. */
-@media (prefers-reduced-motion: no-preference) {
-  main.container { animation: page-in 0.22s ease-out both; }
-  @keyframes page-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-}
-
-/* The emblem only one look shows (see looks.css). */
-.brand-emblem { display: none; }
+/* Pages appear. (They used to fade in, which for a moment made every
+   page -- the log-in above all -- look greyed out and disabled.) */
 
 /* ======================================================================
    The writing desk: the visual editor, typewriter, the session count and
@@ -3782,7 +3776,7 @@ main:focus { outline: none; }
 .list-head {
   display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
   gap: var(--s-2) var(--s-6); margin: var(--s-9) 0 0; padding-bottom: var(--s-3);
-  border-bottom: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border);
 }
 .list-head .list-label {
   margin: 0; font-family: var(--font-ui); font-size: var(--t-2xs); font-weight: 700;
@@ -3899,31 +3893,31 @@ main:focus { outline: none; }
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --wa-fill-hard: #4a4220;
-    --wa-fill-veryhard: #55292d;
-    --wa-fill-adverb: #1d3c52;
-    --wa-fill-passive: #2c4a22;
-    --wa-fill-complex: #472b50;
-    --wa-fill-spell: #1c4543;
-    --wa-fill-filler: #4f2537;
-    --wa-fill-echo: #503319;
-    --wa-fill-filter: #27325a;
-    --wa-fill-dialogue: #403a21;
-    --wa-fill-opening: #3a3a37;
+    --wa-fill-hard: #5c4f1a;
+    --wa-fill-veryhard: #6a2b31;
+    --wa-fill-adverb: #1f4d6d;
+    --wa-fill-passive: #2f5a24;
+    --wa-fill-complex: #573263;
+    --wa-fill-spell: #1d5552;
+    --wa-fill-filler: #5f2a43;
+    --wa-fill-echo: #5f3d1b;
+    --wa-fill-filter: #2d3a6b;
+    --wa-fill-dialogue: #4d4722;
+    --wa-fill-opening: #45453f;
   }
 }
 :root[data-theme="dark"] {
-  --wa-fill-hard: #4a4220;
-  --wa-fill-veryhard: #55292d;
-  --wa-fill-adverb: #1d3c52;
-  --wa-fill-passive: #2c4a22;
-  --wa-fill-complex: #472b50;
-  --wa-fill-spell: #1c4543;
-  --wa-fill-filler: #4f2537;
-  --wa-fill-echo: #503319;
-  --wa-fill-filter: #27325a;
-  --wa-fill-dialogue: #403a21;
-  --wa-fill-opening: #3a3a37;
+  --wa-fill-hard: #5c4f1a;
+  --wa-fill-veryhard: #6a2b31;
+  --wa-fill-adverb: #1f4d6d;
+  --wa-fill-passive: #2f5a24;
+  --wa-fill-complex: #573263;
+  --wa-fill-spell: #1d5552;
+  --wa-fill-filler: #5f2a43;
+  --wa-fill-echo: #5f3d1b;
+  --wa-fill-filter: #2d3a6b;
+  --wa-fill-dialogue: #4d4722;
+  --wa-fill-opening: #45453f;
 }
 mark.wa-sentence.wa-yellow { background: var(--wa-fill-hard); }
 mark.wa-sentence.wa-red { background: var(--wa-fill-veryhard); }
@@ -4198,3 +4192,330 @@ main[data-reading="read"] .missing-names { display: none; }
 .reaction-sum-slow strong::before { background: var(--react-slow); }
 .reaction-sum-unconvinced strong::before { background: var(--react-unconvinced); }
 main:not([data-reading="read"]) #chapter-text > .reacted-heat::after { color: var(--text-muted); }
+
+/* ======================================================================
+   THE SYSTEM
+   One set of rules for the things every page has, applied last so that it
+   wins over whatever each page grew on its own. Four decisions:
+
+   1. Chosen is ink. Anything selected, pressed or current -- a mode, a
+      sort, a size, a tab, a filter -- is filled with the text colour and
+      written in the page colour. Not a red outline, not a pink wash.
+   2. Red is waiting. Only a note, a request or a count that needs you is
+      red. Links, titles, rules, filters and badges are not.
+   3. Three buttons. Primary (a block of ink), secondary (an ink outline)
+      and quiet (a word, underlined on hover). Size is separate from kind.
+   4. One rule. A 1px hairline divides; space does the rest.
+   ====================================================================== */
+
+/* 1. Chosen is ink. */
+.chip, .tag-chip, .reading-prefs-options button, .list-sort a, .list-sort-current {
+  border: 1px solid var(--border); background: transparent; color: var(--text-muted);
+}
+.mode-switch button[aria-pressed="true"],
+.reading-prefs-options button[aria-pressed="true"],
+.tag-chip.current, .list-sort-current,
+.editor-tool[aria-pressed="true"], .desk-tabs button[aria-pressed="true"],
+.az-bar a.current, .mention-list li[aria-selected="true"] {
+  background: var(--text); color: var(--bg); border-color: var(--text);
+}
+.tag-chip.current .tag-chip-count { color: inherit; opacity: 0.7; }
+.list-sort { gap: 0; }
+.list-sort a, .list-sort-current {
+  padding: var(--s-2) var(--s-5); text-decoration: none; font-weight: 600;
+}
+.list-sort a + a, .list-sort a + span, .list-sort span + a { border-left: 0; }
+.list-sort a:hover { color: var(--text); border-color: var(--border-strong); }
+.glossary-door.current .door-count, .glossary-door.current h2 { color: var(--text); }
+.glossary-door.current { box-shadow: inset 0 2px 0 var(--text); }
+
+/* 2. Red is waiting. */
+.topbar .brand-mark { color: inherit; }
+#chapter-text a { color: inherit; }
+.glossary-content a { color: inherit; }
+.ent-badge.first-here { color: var(--text); border-color: var(--text); }
+.state-hiatus, .stage-draft { color: var(--text-muted); }
+.tag-pick input[type="checkbox"]:checked { background: var(--text); border-color: var(--text); }
+.tag-pick:has(input:checked) { border-color: var(--text); background: var(--bg-sunken); }
+.name-card { border-top: 1px solid var(--border-strong); }
+.name-card:focus-visible { outline-color: var(--text); }
+.missing-names { border-top: 1px solid var(--border); }
+.diff-added { border-left-color: var(--text); }
+.btn.danger, .btn.danger:hover { color: var(--text); border-color: var(--border-strong); background: transparent; }
+.btn.danger:hover { background: var(--bg-sunken); }
+
+input[type="checkbox"]:checked, input[type="radio"]:checked { background: var(--text); border-color: var(--text); }
+.new-comment-box { border-color: var(--border-strong); }
+.diff-body ins, .suggestion ins { box-shadow: inset 0 -2px 0 var(--text); }
+mark.search-hit { box-shadow: none; background: var(--bg-sunken); color: inherit; font-weight: 600; }
+/* What is red and stays red: waiting on you, and warnings -- each a 1px
+   rule, never a heavy one. */
+.inbox, .review-ask, .left-behind, .bible-conflicts, .draft-rescue, .conflict-notice { border-top-width: 1px; }
+
+/* 3. Three buttons. */
+.btn {
+  background: var(--text); color: var(--bg); border: 1px solid var(--text);
+  font-weight: 600; font-size: var(--t-sm); padding: var(--s-4) var(--s-6);
+}
+.btn:hover { background: color-mix(in srgb, var(--text) 84%, var(--bg)); color: var(--bg); border-color: var(--text); }
+.btn.ghost, .btn.reject, .btn.secondary {
+  background: transparent; color: var(--text); border-color: var(--border-strong);
+}
+.btn.ghost:hover, .btn.reject:hover, .btn.secondary:hover { background: var(--bg-sunken); color: var(--text); }
+.btn.accept { background: var(--text); color: var(--bg); }
+/* Quiet: a word. The small, boxed buttons -- Reopen, Discard the draft,
+   Add, Not a name -- were a fourth and fifth kind; they are this now. */
+.btn.tiny, .btn.quiet {
+  background: transparent; color: var(--text); border-color: transparent;
+  padding: var(--s-1) var(--s-3); font-size: var(--t-sm); font-weight: 600;
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+.btn.tiny:hover, .btn.quiet:hover { background: transparent; color: var(--text); border-color: transparent; text-decoration-color: currentColor; }
+.btn.small { padding: var(--s-3) var(--s-5); }
+.btn.tiny.accept, .btn.tiny:not(.ghost):not(.reject):not(.danger):not(.quiet) { text-decoration: none; }
+.btn.tiny:not(.ghost):not(.reject):not(.danger):not(.quiet) {
+  background: var(--text); color: var(--bg); border-color: var(--text); padding: var(--s-1) var(--s-4);
+}
+.linklike { color: inherit; }
+
+/* 4. One rule. */
+hr { border: 0; border-top: 1px solid var(--border); }
+
+/* Links: one kind. A reference in the prose -- a name from the bible or
+   the glossary -- is the same thin rule as any other link. */
+.wiki-link, #chapter-text a.wiki-link {
+  text-decoration-style: solid; text-decoration-thickness: 1px; text-underline-offset: 0.22em;
+  text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+.chapter-row h3 a, .story-row h3 a, .topbar a, .btn { text-decoration: none; }
+
+/* Placeholders that can be read. */
+::placeholder { color: var(--text-muted); opacity: 1; }
+
+/* ---- the top bar ----
+   Three places (Stories, Glossary, Help), a search, one button to write,
+   and you: your page, your account, the tags, admin and the way out are
+   behind your name. The moon is last and big enough to find. */
+.topbar { min-height: 60px; gap: var(--s-4) var(--s-9); }
+.topbar .brand {
+  display: inline-flex; align-items: center; gap: var(--s-4);
+  text-transform: none; letter-spacing: -0.01em; font-size: var(--t-lg); font-weight: 700;
+}
+.brand-logo { display: inline-flex; color: var(--text); }
+.brand-logo svg { display: block; }
+.brand-spine { stroke: var(--accent); }
+.topbar nav { flex: 1; gap: var(--s-4) var(--s-6); }
+.topbar-places { display: flex; gap: var(--s-2) var(--s-3); margin-right: auto; }
+.topbar-places > a {
+  color: var(--text-muted); font-size: var(--t-md); font-weight: 500;
+  padding: var(--s-3) var(--s-4); text-decoration: none; position: relative;
+}
+.topbar-places > a:hover { color: var(--text); }
+.topbar-places > a.current { color: var(--text); font-weight: 600; box-shadow: inset 0 -2px 0 var(--text); }
+.topbar-search { margin-left: 0; }
+.topbar-search input[type="search"] { width: 190px; height: 34px; font-size: var(--t-sm); }
+.topbar-search input[type="search"]:focus { width: 240px; }
+.topbar-write { white-space: nowrap; height: 34px; }
+.topbar-write.current { outline: 2px solid var(--text); outline-offset: 2px; }
+.user-menu { position: relative; }
+.user-menu > summary {
+  list-style: none; cursor: pointer; display: flex; align-items: center; gap: var(--s-4);
+  font-size: var(--t-sm); font-weight: 600; color: var(--text); padding: var(--s-2) 0;
+}
+.user-menu > summary::-webkit-details-marker { display: none; }
+.user-menu > summary::after { content: "\25BE"; content: "\25BE" / ""; color: var(--text-muted); font-size: var(--t-xs); }
+.user-avatar {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--text); color: var(--bg); font-size: var(--t-xs); font-weight: 700;
+}
+.user-menu-panel {
+  position: absolute; right: 0; top: calc(100% + var(--s-3)); z-index: 60; min-width: 190px;
+  display: flex; flex-direction: column; padding: var(--s-3) 0;
+  background: var(--bg); border: 1px solid var(--border-strong); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12);
+}
+.user-menu-panel > a, .user-menu-out .linklike {
+  display: block; width: 100%; text-align: left; padding: var(--s-4) var(--s-6);
+  color: var(--text); font-size: var(--t-sm); text-decoration: none;
+}
+.user-menu-panel > a:hover, .user-menu-out .linklike:hover { background: var(--bg-sunken); text-decoration: none; }
+.user-menu-panel > a[aria-current="page"] { font-weight: 700; }
+.user-menu-out { border-top: 1px solid var(--border); margin-top: var(--s-3); padding-top: var(--s-3); }
+.theme-toggle { width: 36px; height: 36px; font-size: var(--t-xl); color: var(--text); border: 1px solid var(--border); }
+.theme-toggle:hover { border-color: var(--border-strong); }
+.nav-dot { position: absolute; top: 4px; right: 0; }
+
+@media (max-width: 720px) {
+  .topbar { padding: var(--s-4) var(--s-6); min-height: 56px; }
+  .js .nav-toggle {
+    font-size: var(--t-sm); font-weight: 600; text-transform: none; letter-spacing: 0;
+    border: 1px solid var(--border-strong); padding: var(--s-3) var(--s-5);
+  }
+  .js .topbar:not(.nav-open) nav > :not(.nav-toggle):not(.theme-toggle) { display: none; }
+  .js .topbar.nav-open .topbar-places { flex-direction: column; margin: 0; }
+  .js .topbar.nav-open .topbar-places > a { padding: var(--s-5) 0; border-bottom: 1px solid var(--border); font-size: var(--t-md); box-shadow: none; }
+  .js .topbar.nav-open .topbar-write { margin: var(--s-5) 0; height: auto; padding: var(--s-5); }
+  .js .topbar.nav-open .user-menu > summary { display: none; }
+  .js .topbar.nav-open .user-menu-panel { position: static; display: flex; border: 0; box-shadow: none; padding: 0; }
+  .js .topbar.nav-open .user-menu-panel > a, .js .topbar.nav-open .user-menu-out .linklike { padding: var(--s-5) 0; border-bottom: 1px solid var(--border); font-size: var(--t-md); }
+  .js .topbar.nav-open .user-menu-out { border: 0; margin: 0; padding: 0; }
+  .js .topbar.nav-open .theme-toggle { top: var(--s-4); right: calc(var(--s-6) + 84px); }
+  .brand-name { font-size: var(--t-md); }
+}
+
+/* ---- type: the titles are in the book face ----
+   The things people wrote -- a story's title, a chapter's -- and a page's
+   own name are set in Literata, like the prose; the interface around them
+   stays in the grotesque. */
+h1, .story-row h3, .chapter-row h3, .title-page h1, .toc-title, .chapter-nav-title {
+  font-family: var(--font-prose); font-weight: 600; letter-spacing: -0.015em;
+}
+h1 { font-size: var(--t-3xl); line-height: 1.12; }
+
+/* ---- badges: one kind, in sentence case ---- */
+.badge { text-transform: none; letter-spacing: 0; font-size: var(--t-xs); font-weight: 600; }
+
+/* ---- the front page's stories ---- */
+.story-cover { width: 84px; height: 112px; }
+@media (max-width: 720px) { .story-cover { width: 64px; height: 86px; } }
+.story-facts, .story-audience { font-size: var(--t-sm); color: var(--text-muted); }
+.story-facts > span + span::before, .story-facts > time::before { content: none; }
+.story-progress-wrap { gap: var(--s-4); }
+.story-progress-wrap .story-progress {
+  width: 80px; height: 4px; background: var(--bg-sunken); box-shadow: inset 0 0 0 1px var(--border);
+}
+/* A row under the pointer says so by its title, not by a rule that
+   thickens and makes the list jump. */
+.chapter-row:hover { box-shadow: none; }
+.chapter-row:hover h3 a, a.chapter-row:hover h3 { text-decoration: underline; text-decoration-color: currentColor; }
+.topbar .topbar-write, .topbar .topbar-write:hover { color: var(--bg); }
+
+/* ---- the chapter page: the text first ----
+   The author's tools (the writing checks, How it read, asking someone to
+   read) sit at the top of the notes column, not between the title and
+   the first line. On the text itself the writing checks are the only
+   colour; a passage with a note on it is marked by a dot in the margin,
+   and the notes are a plain list beside the text. */
+.chapter-header { margin-bottom: var(--s-7); }
+.reading-pane { position: relative; }
+.hl, .hl-pending, .hl-accepted, .hl-rejected { box-shadow: none; opacity: 1; }
+.hl.hl-lit, .hl.flash-highlight { background: color-mix(in srgb, var(--text) 9%, transparent); }
+.note-dots { position: absolute; inset: 0; pointer-events: none; }
+.note-dot {
+  position: absolute; left: -18px; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%;
+  pointer-events: auto; cursor: pointer; background: var(--text-muted);
+}
+.note-dot-pending { background: var(--accent); }
+.note-dot-accepted { background: var(--text); }
+.note-dot-rejected { background: transparent; box-shadow: inset 0 0 0 1.5px var(--text-muted); }
+.note-dot:hover { transform: scale(1.35); }
+@media (max-width: 720px) { .note-dot { left: -12px; width: 7px; height: 7px; } }
+main[data-reading="read"] .note-dots { display: none; }
+/* No more heat or reader lines on the paragraphs. */
+.reacted-heat, .reacted-mine { box-shadow: none !important; background: none !important; }
+.reacted-heat::after, .reacted-mine::after, .reacted-heat::before, .reacted-mine::before { content: none !important; }
+.heat-flash { background: color-mix(in srgb, var(--text) 7%, transparent); transition: background 0.4s ease; }
+.margin-links { display: none; }
+
+/* The notes column: tools, then the notes, one after another. */
+.comments-pane { gap: var(--s-6); }
+.notes-tools { display: flex; flex-direction: column; gap: var(--s-6); padding-bottom: var(--s-6); border-bottom: 1px solid var(--border); }
+.notes-tools:empty { display: none; }
+.notes-tools .wa-panel-chapter { max-width: none; margin: 0; }
+.notes-tools .wa-panel-chapter .wa-panel-cards { display: flex; flex-direction: column; }
+.notes-tools .reaction-summary { max-width: none; margin: 0; padding: 0; border: 0; }
+.notes-tools .reaction-summary ul { flex-direction: column; gap: var(--s-2); }
+.notes-tools .review-requests { margin: 0; padding: 0; border: 0; max-width: none; }
+.comment { border-top: 1px solid var(--accent); padding-top: var(--s-5); }
+.comment.status-accepted, .comment.kind-praise { border-top-color: var(--border-strong); }
+.comment.status-rejected { border-top-color: var(--border); }
+.comment.settled { border-top-color: var(--border); padding: var(--s-4) 0 var(--s-2); }
+.comment.settled > .comment-summary { color: var(--text-muted); font-size: var(--t-sm); }
+.comment.settled > .comment-summary strong { color: var(--text); font-weight: 600; }
+
+/* ---- the story page ---- */
+.story-more { margin-left: auto; }
+.story-more > summary { color: var(--text-muted); font-size: var(--t-sm); }
+.story-more > summary:hover { color: var(--text); }
+.menu-panel { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.12); }
+.story-tools a .btn-count { opacity: 1; color: var(--text-muted); font-weight: 400; }
+/* The reorder arrows sit inside the column, to the left of the number,
+   and wait until the row is pointed at (always there on a touch screen). */
+/* The rule under a chapter runs under its arrows too, so the arrows are
+   part of the row rather than debris beside the list. */
+.chapter-row-outer { border-bottom: 1px solid var(--border); }
+.chapter-list > .chapter-row-outer:first-child { border-top: 1px solid var(--border); }
+.chapter-row-outer .chapter-row, .chapter-list > .chapter-row-outer:first-child .chapter-row { border-top: 0; border-bottom: 0; }
+.chapter-row-reorder { opacity: 0; border-radius: 0; }
+.chapter-row-outer:hover .chapter-row-reorder, .chapter-row-reorder:focus-within { opacity: 1; }
+@media (hover: none), (max-width: 720px) { .chapter-row-reorder { opacity: 1; } }
+.chapter-row-reorder button:focus-visible { box-shadow: inset 0 0 0 2px var(--text); }
+
+/* ---- the editor ----
+   The title is written where it will be read, as a heading; the draft
+   says where it stands in one quiet line; then the tools and the text. */
+.title-field { display: block; margin: 0 0 var(--s-4); }
+.title-field input {
+  width: 100%; padding: var(--s-2) 0; border: 0; border-bottom: 1px solid transparent; background: transparent;
+  font-family: var(--font-prose); font-size: var(--t-3xl); font-weight: 600; letter-spacing: -0.015em; line-height: 1.15;
+  color: var(--text);
+}
+.title-field input:hover { border-bottom-color: var(--border); }
+.title-field input:focus { outline: none; border-bottom-color: var(--border-strong); box-shadow: none; }
+.draft-notice {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-2) var(--s-5);
+  margin: 0 0 var(--s-5); padding: 0; border: 0; font-size: var(--t-sm); color: var(--text-muted);
+}
+.draft-notice p { margin: 0; }
+.draft-notice strong { color: var(--text); font-weight: 600; }
+.draft-notice .inline-form .btn { padding: 0; }
+.draft-notice.just-saved strong::before { content: "\2713\00a0"; content: "\2713\00a0" / ""; }
+/* The toolbar: the formatting is a row of keys; everything else is a word. */
+.editor-tools { gap: var(--s-2); margin: 0 0 var(--s-3); }
+.editor-tool.tool-secondary, .editor-tool.tool-preview, .editor-tool.tool-checks, .editor-tool.tool-where {
+  border-color: transparent; font-family: var(--font-ui); font-size: var(--t-sm); font-weight: 500;
+  text-transform: none; letter-spacing: 0; color: var(--text-muted);
+}
+.editor-tool.tool-secondary:hover, .editor-tool.tool-preview:hover, .editor-tool.tool-checks:hover, .editor-tool.tool-where:hover { color: var(--text); border-color: var(--border); }
+.editor-tool.tool-preview { margin-left: var(--s-5); }
+.editor-tool[aria-pressed="true"], .editor-tool[aria-expanded="true"] { color: var(--bg); background: var(--text); border-color: var(--text); }
+.editor-tool:focus-visible { outline-color: var(--text); }
+.session-count { font-size: var(--t-xs); color: var(--text-muted); margin-right: var(--s-3); }
+/* The checks beside it: compact, so the notes are on the first screen. */
+.editor-side .wa-panel { gap: var(--s-3); }
+.editor-side .wa-grade-num { font-size: var(--t-xl); }
+.editor-side .wa-pcard { padding: var(--s-2) var(--s-4); font-size: var(--t-xs); }
+.editor-side .wa-pcard strong { font-size: var(--t-sm); }
+.editor-side .wa-panel-cards { gap: 3px; }
+.editor-side { gap: var(--s-7); }
+
+.toc-words, .toc-num { font-family: var(--font-ui); font-weight: 400; letter-spacing: 0; }
+.state-badge { text-transform: none; letter-spacing: 0; font-size: var(--t-xs); font-weight: 600; }
+
+/* ---- the bible's index ---- */
+.kind-tabs { display: flex; flex-wrap: wrap; gap: var(--s-3); margin: var(--s-7) 0 var(--s-5); }
+.kind-tab { text-decoration: none; padding: var(--s-2) var(--s-5); font-size: var(--t-sm); font-weight: 600; }
+.kind-tab.is-empty:not(.current) { color: var(--text-muted); }
+.kind-tab:hover { border-color: var(--border-strong); color: var(--text); }
+.glossary-search { display: flex; gap: var(--s-3); max-width: 480px; margin-bottom: var(--s-5); }
+.glossary-search input[type="search"] { flex: 1; min-width: 0; }
+.entity-aka { margin: var(--s-1) 0 0; font-size: var(--t-sm); color: var(--text-muted); }
+
+/* ---- the account page: one column, title included ---- */
+.account-page { max-width: 560px; }
+.account-page .auth-card { margin: var(--s-10) 0 0; max-width: none; }
+.account-page > h1 { margin-bottom: 0; }
+
+/* ---- empty states ---- */
+.empty-state { max-width: 56ch; }
+
+/* ---- phones: the chapter's controls in one compact row ---- */
+@media (max-width: 720px) {
+  .chapter-header .version-actions .btn, .chapter-header .mode-switch button,
+  .chapter-header .reading-prefs > summary, .chapter-header .menu > summary { min-height: 40px; }
+  .chapter-header .mode-switch button { padding: 0 var(--s-5); }
+  .chapter-header .version-actions { gap: var(--s-3); }
+  .reading-pane { padding-left: 0; padding-right: 0; }
+}
+/* Forms in the account column: a button is as wide as its words. */
+.account-page .auth-card form .btn { align-self: flex-start; padding-left: var(--s-8); padding-right: var(--s-8); }

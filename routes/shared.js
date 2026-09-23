@@ -110,7 +110,7 @@ function handleFeed(req, res, token) {
   const xml = feeds.buildAtom({
     origin,
     selfUrl,
-    title: 'The Swarm Review',
+    title: 'Swarm Review',
     subtitle: `What is waiting on ${user.display_name}`,
     entries: items.map((item) => ({
       id: feeds.tagUri(req.headers.host, item.kind, item.key),

@@ -17,7 +17,8 @@ const { ACCEPT_ATTRIBUTE } = require('../lib/entity-images');
 function storyProgress(s) {
   if (!s.word_goal || s.word_goal <= 0) return '';
   const percent = Math.round(Math.max(0, Math.min(1, (s.word_count || 0) / s.word_goal)) * 100);
-  return `<span class="story-progress-wrap"><span class="story-progress" aria-hidden="true"><span class="story-progress-fill" style="width: ${percent}%"></span></span>${percent}% of ${wordCount(s.word_goal)}</span>`;
+  // Words against the goal, said in words: "0%" read as a broken bar.
+  return `<span class="story-progress-wrap"><span class="story-progress" aria-hidden="true"><span class="story-progress-fill" style="width: ${percent}%"></span></span>${(s.word_count || 0).toLocaleString('en-GB')} of ${wordCount(s.word_goal)}</span>`;
 }
 
 // Whether anybody is reading, in words, on one quiet line with the goal.
@@ -47,7 +48,7 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } 
           <span>${s.chapter_count} chapter${s.chapter_count === 1 ? '' : 's'}${s.word_count ? ` &middot; ${wordCount(s.word_count)}` : ''}</span>
           ${timeHtml(s.last_chapter_at || s.created_at)}
           ${storyState(s) === 'ongoing' ? '' : storyStateBadge(s)}
-          ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} pending</span>` : ''}
+          ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} waiting</span>` : ''}
         </p>
         ${s.description ? `<p class="story-blurb">${escapeHtml(s.description)}</p>` : ''}
         ${storyAudience(s)}
@@ -82,7 +83,7 @@ function inboxSection(inbox) {
           <li>
             <a href="/chapters/${row.chapter_id}">
               <span class="inbox-count">${row.pending}</span>
-              <span class="inbox-what">comment${row.pending === 1 ? '' : 's'} to accept or reject</span>
+              <span class="inbox-what">note${row.pending === 1 ? '' : 's'} to answer</span>
               <span class="inbox-where">${escapeHtml(row.story_title)} &middot; chapter ${row.chapter_number}: ${escapeHtml(row.chapter_title)}</span>
             </a>
           </li>`).join('')}
@@ -306,8 +307,7 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
     current: 'stories',
     body: `
       <div class="page-head">
-        <h1>The Swarm stories</h1>
-        <a class="btn" href="/stories/new">New story</a>
+        <h1>Stories</h1>
       </div>
       ${activeTags.length ? '' : whatsNewCard(whatsNew)}
       ${activeTags.length ? '' : welcomeCard(welcome)}
