@@ -1,275 +1,121 @@
 # What's new
 
-Every batch of changes, newest first, in plain language. The dates are when
-the work landed, not when the server picked it up -- if something here is
-missing on the site, it has not been restarted yet.
+What changed, one day at a time, newest first, in plain language. The dates
+are when the work landed, not when the server picked it up -- if something
+here is missing on the site, it has not been restarted yet.
 
-## 2026-09-23 — Another name for
+## 2026-09-23 — A desk to write at, and a page to read on
 
-- **Colonel Jack is Jack.** In the list of names not in the bible, a name can now be added as *another name for* somebody already there -- it becomes one of their aliases, and is linked in the text from then on. When the name shares a word with an entry, that entry is chosen for you. The same in the editor's list.
-- **Opening a name no longer moves the chapter.** The card floats beside the text instead of opening a column, in Read and in Review.
-- **Answering a name stays put.** Add, another name for, or Not a name: the row says what happened and the page no longer reloads to the top.
-- **Preview keeps the box's size**: the same width and height as the text you were writing, scrolled to the same place.
+### Writing
 
-## 2026-09-23 — One place to write
+- **One place to write.** The editor is a single box, in Markdown, with the writing checks drawn behind the words. **Preview** shows the chapter as it will read, in the same box at the same size; press it again, or Escape, to go on writing.
+- **Letters appear the moment you type them**, however long the chapter. The checks catch up behind the text instead of the text waiting for them.
+- **Checks like Hemingway.** A panel beside the text: the reading grade in large type, then one coloured card per kind of trouble -- "4 adverbs. Aim for 1 or fewer." Yellow and red sentences, blue adverbs, green passive voice, purple words with a simpler alternative; the craft checks are underlined. Click a card to hide its marks; **Write** hides them all while you draft, **Revise** brings them back.
+- **Checks as a list**, above the text: the counts, then every check in order, each one selecting its words.
+- **Answer notes where you rewrite.** The notes beside the editor take you to their words, put a suggested rewrite straight into the text, and can be accepted or turned down there. **Alt+J** / **Alt+K** step through the ones still waiting.
+- **Focus, Typewriter, and a count.** Focus fades out everything but the writing, without moving anything; Typewriter keeps the line you are writing at the same height; beside them, how much you have written this session and, with a daily goal, today.
+- **Scenes & snapshots**, a drawer beside the editor: the chapter's scenes with a private note on each, and named copies of the text to compare with or put back.
+- On a phone the editor's buttons are one row -- the formatting, Preview, and **…** for the rest -- so the text starts on the first screen.
+- Fixed: a rescued draft showed blank lines until you typed; clicking the bar of *Checks as a list* typed four asterisks into the chapter.
 
-- **The editor is one box again, in Markdown**, with the writing checks behind the words. **Preview** shows the chapter as it will read; press it again, or Escape, to go on writing. The Visual editor, and the side-by-side preview in Editor settings, are gone.
-- **Focus no longer moves the page.** Everything else fades out where it stands, so the Focus button stays under your pointer and keeps its name.
-- **Fixed: clicking the bar of *Checks as a list* typed four asterisks** into the chapter. The click was being passed on to the Bold button.
+### Reading and notes
 
-## 2026-09-23 — Typing without the wait
+- **Read, Review, Revise.** One switch under the title. Read is the story alone; Review is the story and the notes; Revise, on your own chapter, adds the writing checks.
+- **How it read.** In Review, click a paragraph -- or select a few words and press R -- and say how it read: **Hooked**, **Lost me**, **Dragged** or **Didn't buy it**. The author gets them summed up above the text and marked in the margin.
+- **Pick up where you stopped**, on any device; forgotten once you reach the end.
+- **Name somebody in a note** with @: it lands under *Replies and mentions* on their front page and in their feed.
+- **Word, both ways.** Download a chapter with its notes as Word comments, and bring Word comments back as notes on the same words.
+- **A quieter chapter page.** Its place in the story above the title, one row of controls, the version picker only when there is more than one version, lighter notes, and the next chapter in large type at the end. *Page width* is gone from **Aa**.
+- **Opening a name moves nothing**: the card floats beside the text, in Read and in Review.
 
-- **Letters appear the moment you type them** in the Markdown view of the editor. The text used to be drawn by the writing checks, so each key waited for them; now the checks only paint their marks behind the text, and keep them on their words as you type.
-- **One switch on the chapter page: Read, Review, Revise.** Read is the story alone -- no notes, and selecting words offers nothing. Review is the story and the notes. Revise, on your own chapter, adds the writing checks, and replaces the separate Revise/Write pair that used to sit above the text.
-- **Not a name.** In the list of names a chapter uses that are not in the bible, a word that is not a name at all can be put away for the whole story. The story page lists them, to bring one back.
-- **Page width is gone** from the Aa menu; it never quite worked.
+### The bible
 
-## 2026-09-23 — The Swarm by day and by night
+- **Another name for.** In the list of names not in the bible, *Colonel Jack* can be added as another name for Jack; when a name shares a word with an entry, that entry is already chosen.
+- **Not a name.** A false alarm is put away for the whole story; the story page lists them, to bring one back.
+- Answering a name happens in its row: the page no longer reloads to the top.
 
-- **The Swarm now has a light and a dark version**, on the moon button like the other looks: a pale bridge in steel and ink by day, the dark console by night.
-- **At night the chapter is on a dark page too**, instead of the lit paper panel: softer text and a little more space between the lines, so long chapters do not glare. The editor and the writing checks follow it.
+### The site
 
-## 2026-09-23 — Word, both ways
+- **Each look has its own type**, and *The Swarm* now has a day and a night version, with the chapter on a dark page at night.
+- **The story page is set like the front of a book**: cover, title, blurb and *Start reading* (or *Continue*), then the contents with a dotted leader to each chapter's length.
+- **The front page**: what changed since you last came is said once; the stories can be ordered and found; *Lately* sits below them; each story reads top to bottom.
+- **An app on your phone**: add it to the home screen, and chapters you have opened recently can be read without a connection.
+- **Invites ready to send**: a *Copy the invite* button with a link that fills in the code.
+- **A better Help**: *Finding your way round*, *The writing checks*, *Keys* and *Questions people ask*, and the rest brought up to date.
 
-- **Download a chapter with its notes as Word comments**, each on the words it was left on, replies included (More, above the text).
-- **Bring Word comments back as notes.** Comment in Word, then *Notes from a Word file* at the foot of the notes: each comment becomes a note by you on the same words, or on the chapter as a whole if those words have since been rewritten. The notes that came along in the download are not added twice.
+### For a reader who listens, or zooms
 
-## 2026-09-23 — Checks in Visual too
+- **Skip links**, and two account settings: open every chapter in Read, and no links in the prose.
+- **Notes you can walk** by heading, passages announced as highlighted, scene breaks read as scene breaks, and every control saying what it is.
+- **Nothing scrolls sideways at 400%**, and nothing pinned hides what you are on.
+- More contrast when the system asks, and Windows high contrast keeps every underline. A help page: *With a screen reader or the keyboard*. The whole site passes an automated WCAG 2.2 AA check in every look.
 
-- **The writing checks now mark the text in Visual** as well as in Markdown: yellow and red sentences, blue adverbs, green passive voice and the rest, painted over the formatted chapter by the browser without touching what you type. Hover a mark to see what it is.
+### Behind the scenes
 
-## 2026-09-23 — How it read
+- **Every form now carries a token** only this site's pages know, so another website cannot post here in your name. If a page open for days says it is out of date, reload it -- what you typed is still there.
+- **Admins can put a backup back** from the admin page (type RESTORE); a copy is taken first.
+- The server's log is trimmed past 2 MB, and the glossary's full listing comes a letter at a time.
 
-- **Reactions.** In Review, click or tap a paragraph -- or select a few words and press R -- and say how it read: **Hooked**, **Lost me**, **Dragged** or **Didn't buy it**. One tap, no words. You see your own as a thin line in the margin; nobody else sees them.
-- **A heat map for the author.** On your own chapter, *How it read* sums up the reactions and links to the paragraphs where most readers were hooked or lost, and the text itself is marked in the margin by what readers felt there.
+## 2026-09-22 — Three looks, and reading each other
 
-## 2026-09-23 — Answering notes where you rewrite
+### Reading and notes
 
-- **The notes beside the editor can be answered there.** Go to a note's words and they are selected in the text; put a suggested rewrite straight into the text; accept or turn a note down -- all without leaving the chapter you are rewriting.
-- **Alt+J and Alt+K** (Option on a Mac), or Next and Previous above the notes, step through the notes still waiting, one passage at a time.
+- **Readers can see the notes, and leave them, from the first visit.**
+- **Suggest a rewrite.** Select a passage, tick *Suggest a rewrite*, change the words in place; the author sees the difference and **Apply change** makes it a new version.
+- **Say what kind of note it is**: Typo, Pacing, Continuity, Question -- or **♥ Love it**.
+- **Notes follow the text** to a new version when their words are still there.
+- **Ask somebody to read**, with the question you want answered; it waits on their front page until they have.
+- **On a phone, tapping an underlined passage brings its note up** from the bottom of the screen.
 
-## 2026-09-23 — Small things, done properly
+### Writing
 
-- **Pick up where you stopped.** Come back to a chapter you did not finish and a line above the text offers to take you to the paragraph you stopped at. It follows you from the phone to the laptop, and it is forgotten once you reach the end.
-- **Name somebody in a note** with @ and their username. Typing @ offers the people there are; the note lands under *Replies and mentions* on their front page and in their feed.
-- **The front page can be ordered** -- Latest, A–Z, or only the stories you write in -- and narrowed with a *Find a story* box, once there are enough stories for it to matter.
-- **The editor's buttons on a phone** are one row: the formatting, the two views, and **…** for the rest. The text starts on the first screen.
-- **The writing checks on the chapter page** are the same panel as in the editor, folded to one line above the text, for the author, in Review.
-- **An app on your phone.** The site can be added to the home screen, with its own icon, and chapters you have opened recently can be read without a connection.
+- **Drafts** kept on the server as you write, seen by nobody until you **Publish**.
+- **Buttons and keys in the editor**: bold, italic, quote, heading, scene break; **Focus** until Escape.
 
-## 2026-09-23 — Housekeeping
+### The site
 
-Things nobody sees until the day they matter.
+- **Three looks**, on your account page: *Clean*, *Literary* and *The Swarm*. Yours alone, on every device.
+- **A quieter page**: red means something is waiting for you, fewer capitals, calmer writing checks.
+- **The front page shows the group**: the last things that happened, progress towards each story's goal, and how many have read it.
+- **Covers** for stories, and **a welcome** for somebody new.
 
-- **Every form and every script that changes something now carries a token** only this site's own pages know. Another website could previously make your browser post here while you were signed in; the browser's cookie rules were the only thing stopping it. If a page has been open for days and says it is out of date, reload it -- what you typed is still in the box.
-- **Admins can put a backup back** from the admin page: pick the copy, type RESTORE. A copy of the site as it stands is taken first, so a restore can be undone the same way.
-- **The server's log is trimmed** once it passes 2 MB, keeping the last three copies.
-- **The glossary's full listing comes a letter at a time** once it is long, instead of half a megabyte in one go. Searching still looks through everything.
+## 2026-09-16 — Books, feeds, and a safer editor
 
-## 2026-09-23 — A better Help
+### Writing
 
-- **Four new pages**: *Finding your way round* (the front page, a story and a chapter, part by part), *The writing checks* (every colour and every check, and what to do about each), *Keys* (every shortcut on one page), and *Questions people ask*.
-- **The rest brought up to date** with the new chapter page, the notes, the editor, the account page and the invites, with fresh pictures.
-- **Leaving a note from Read mode** now switches to Review for you, instead of opening a box you could not see.
+- **Replace a chapter with a file** (.md, .txt or .docx), as a new version, from under the text box.
+- **The writing checks moved off the page's thread**, so typing stopped stuttering on long chapters.
+- **Writing from a phone**: Save rides along the bottom of the screen, and the extras fold away.
+- **Open something beside this**: the chapter before, or a bible entry, next to the text.
+- **Your draft is kept in the browser** while you type, and offered back if the tab closes.
+- **A save can no longer land on top of somebody else's** without you knowing.
+- The editor shows a **reading grade**.
 
-## 2026-09-23 — Checks like Hemingway
+### Reading and notes
 
-The writing checks had got too quiet to be useful. They are back, laid out the way Hemingway does it.
+- **Click a name while reading** and its entry opens beside the chapter, picture and all.
+- **Answering notes happens in place**, and a passage can be commented on from the keyboard (select, then **C**).
+- **A search that matches words**, best first, phrases in quotes, accents folded.
+- **A private feed** of what is waiting for you, for any feed reader.
 
-- **A panel beside the text**: the reading grade in large type, words, sentences and reading time, then one coloured card for each kind of trouble -- "1 of 9 sentences is very hard to read", "4 adverbs. Aim for 1 or fewer."
-- **Colour in the text again**, in Hemingway's colours: yellow and red sentences, blue adverbs, green passive voice, purple words with a simpler alternative. Solid, so a blue word in a yellow sentence is two clear colours, not mud. The craft checks this site adds stay underlined, as a second layer.
-- **Click a card** to hide or show its marks. The count stays, so you know what you have hidden.
-- **Write and Revise.** Write takes every mark away while you draft; Revise brings them back.
-- The notes you were given sit in the same column, under the checks. Editor width and the Markdown preview are under *Editor settings* at the bottom of the panel. On a phone the panel is a single line above the text.
+### Stories
 
-## 2026-09-23 — Less in the way
-
-The front page and the chapter page, with fewer things between you and what you came for.
-
-- **The chapter starts sooner.** The title comes with its place in the story above it (*Chapter 1 of 2*), then who wrote it, then one row of controls: Read or Review, Aa, and More. The version picker only appears once a chapter has more than one version. The separate Comments and Wiki switches are gone: Review shows the notes, Read hides them, and linked or plain names are now a setting under Aa.
-- **Notes are lighter.** Each note ends in one quiet line -- Reply, Edit, Retract -- instead of a stack of buttons. Accept and Reject stay as buttons, for the author, because they are the work. The margin says how many notes there are.
-- **The end of a chapter** points on to the next one in large type, with *All chapters* between.
-- **Stories read top to bottom.** Who wrote it, how long it is and when it last moved sit right under the title, then the blurb, then who is reading it. A word goal says its percentage in words instead of being a bare line.
-- **A heading over the list**, with the tag filter beside it rather than floating above it.
-
-## 2026-09-23 — News, and invites to send
-
-- **Told once.** When the site has changed since you last came by, the front page says what changed, in a few lines, the first time you open it. After that it keeps quiet until there is something newer. Everything stays under Help, in What's new.
-- **Lately moves down**, below the stories: the last three things people did are still on the front page, just out of the way.
-- **Invites ready to send.** On the admin page, every invite code that still works has a **Copy the invite** button. It copies a short message with a link that fills in the code (and the username, for an invite made for one person), ready to paste into a chat or an email.
-
-## 2026-09-23 — Up close
-
-For anybody reading with the screen zoomed in a long way.
-
-- **Nothing scrolls sideways at 400%.** The one exception is the outline table, which scrolls inside its own box, and the keyboard can reach that box. The story page puts the cover above the title on a narrow screen instead of squeezing the title into a narrow column.
-- **Nothing pinned hides what you are on.** On a very short screen, the bars that normally stay put (the Save and Publish row, the A-Z bar in the glossary) scroll with the page.
-- **The reorder arrows** on a story's contents are at full strength on a touch screen or a narrow window, rather than waiting for a mouse to point at them.
-- **Note buttons say whose note they are for** when you Tab into them, and the dictionary's remove buttons say which word they remove.
-- On a Mac, the editor now says **Option+F** where it used to say Alt+F. It is the same key.
-
-## 2026-09-23 — For a reader who listens
-
-The first round of accessibility work, shaped by a writer in the group who reads and writes with a screen reader. The whole site now passes an automated WCAG 2.2 AA check in every look, light and dark; the rest is what no checker can find.
-
-- **Skip links.** The first thing Tab reaches on every page skips the navigation; on a chapter it goes straight to the first line of the text.
-- **Nothing between you and the book.** Two new settings on the account page: open every chapter in Read mode, and no links in the prose -- names read as the words they are. Read mode also leaves out the list of who is in the chapter.
-- **Notes you can walk.** Each note starts with a heading -- whose, what kind, where it stands, what it is about -- and has a link back to its passage. In Review, a passage with notes on it is announced as highlighted; in Read, it is not.
-- **Formatting is said.** Scene breaks are read as scene breaks. In the visual editor the formatting buttons say whether they are on where the caret is, and Alt+F says the formatting and the scene in one sentence.
-- **The writing checks as a list**, for anybody who cannot see coloured underlines: counts first, then every check in order, each one selecting its words.
-- **Every control says what it is.** The reading settings (now "Large, type size" rather than "L"), the More menu, the reply and edit folds, the navigation, the panels. The two chapter navigations are told apart, and the decorative arrows and ornaments are no longer read out.
-- **More contrast when the system asks for it**, and Windows high-contrast mode keeps every underline and border.
-- A new help page: *With a screen reader or the keyboard*.
-- For whoever maintains the site: `npm run a11y` runs the automated check (it needs playwright and axe-core installed; see the top of scripts/a11y-audit.js).
-
-## 2026-09-23 — A desk to write at
-
-- **Visual or Markdown.** A switch above the editor shows the chapter as it reads while you write it -- italics in italics, scene breaks as breaks, no asterisks. Underneath it is still the same Markdown: switch back at any time and it is there, and nothing is rewritten unless you change it. The site remembers which you prefer.
-- **Typewriter.** The line you are writing stays at the same height on the screen, and in the visual editor the paragraphs around it fade. Best with *Focus*.
-- **How much you have written this session**, beside the buttons -- and, if you have a daily goal, how far along today is.
-- **Scenes & snapshots**, a drawer beside the editor. *Scenes* lists the chapter's scenes (split where it has scene breaks) with their opening words and length; click one to go there, and keep a note on each -- what it is for, what has to happen in it. The notes are yours alone. *Snapshots* keeps a named copy of the text whenever you ask, to compare with the chapter as it stands or to put back in the editor. Neither is a version, and nobody else ever sees them.
-- **The story page is set like the front of a book:** a title page with the cover, the title, the blurb and one button -- *Start reading*, or *Continue with chapter 4* if you have read the first three -- then the contents, one line per chapter with a dotted leader to its length. The tools (outline, analysis, bible, details) are on a quieter row underneath.
-- **Each look has its own type.** *Literary* sets its headings in Fraunces, with ornaments and a centred title page; *The Swarm* uses Space Grotesk and IBM Plex Mono, an emblem in the bar, a chapter heading that reads as a log entry and a story page that reads as a file. All self-hosted, like the rest.
-- **Fixed:** putting back a draft the browser had rescued showed blank lines instead of the text until you typed.
-
-## 2026-09-22 — Three looks
-
-- **Pick how the site looks, on your account page:** *Clean* (as it has been), *Literary* (paper, serif headings, the stories as a shelf of covers, a drop capital at the start of each chapter) or *The Swarm* (a dark console with the prose on a lit page).
-- It is yours alone, and it follows you to every device you sign in on. The moon button still switches Literary between day and night; The Swarm is always dark.
-
-## 2026-09-22 — A quieter page
-
-- **Red means one thing again: something is waiting for you.** Links, the page you are on, pressed buttons and the box you are typing in are ink now.
-- **Fewer capitals.** Buttons, bylines, breadcrumbs, the menu and the details at the end of a row are in ordinary letters at a size you can read; small capitals are kept for the labels over a section.
-- **The chapter heading is shorter:** who has read it joins the byline, and *Fill screen* moved into **Aa**.
-- **The writing checks are calmer:** folded until you open them, no coloured wash behind flagged words, no tinted buttons.
-- **On a phone, tapping an underlined passage brings its note up from the bottom of the screen**, over the text; *Close* or Escape puts it back. Buttons and folds are big enough for a thumb.
-- The search box is square like everything else, the log-in and account pages are centred, and the rule down the side of the chapter is gone.
-
-## 2026-09-22 — Reading each other, and saying so
-
-The group's whole point is reading each other's chapters and answering them. The archive had forty-four chapters and four notes. This batch is about that gap.
-
-- **Readers can see the notes, and leave them, from the first visit.** The notes column used to start hidden for everyone but the author, so a reader could select a passage and nothing happened -- no button, no box. It starts shown now, for everybody; the switch to hide it is where it was.
-- **Suggest a rewrite.** Select a passage, tick *Suggest a rewrite*, and change the words in place. The author sees what changed, word by word, and **Apply change** puts it into the chapter as a new version. It refuses, with nothing changed, when the rewrite would break the formatting around it.
-- **Say what kind of note it is:** Typo, Pacing, Continuity (which can name the bible entry), Question -- or **♥ Love it**, which needs no words and never waits on the author.
-- **Notes follow the text.** Publishing a new version used to leave every pending note behind on the old one. Now each note whose words are still there moves to the new version, replies and all; one whose passage was rewritten stays where it was, and the new version says how many are waiting back there.
-- **Ask somebody to read.** From your own chapter: tick the people, write the question you want answered. It sits at the top of their front page, and above the chapter, until they press *I've finished reading* -- with a line for you if they want.
-- **Drafts.** The editor keeps your text as a draft on the server as you write, so it follows you between devices, and nobody sees it until you **Publish**. *Save draft* does it on purpose. The editor says whenever you are looking at a draft rather than what readers see.
-- **Buttons and keys in the editor:** bold, italic, quote, heading, scene break; Ctrl+B, Ctrl+I, Ctrl+Enter. **Focus** hides everything but the writing, until Escape.
-- **The front page shows the group:** the last three things that happened -- who read, who noted, who posted -- under what is waiting for you, and **All activity** for the rest. Each story shows a hairline of progress towards its word goal, and how many people have read it.
-- **Covers.** A story's author can upload a cover from *Edit details*, and click where the thumbnail should centre. A story without one is listed as text, as before.
-- **A welcome for somebody new:** three steps -- read a chapter, leave a note, put something up -- ticked off as they happen. It goes away when they are done, or when they say they know their way round.
-- **On a phone** the top bar is one *Menu* button, and the writing checks start folded so the text is on the first screen.
-- **Names in the text are ink now, not red.** Red in the prose means one thing -- a note is waiting on this passage -- and a red name with a red line under it looked exactly like one.
-
-## 2026-09-16 — A chapter you wrote somewhere else
-
-- **Replace this chapter with a file**, under the text box in the editor: choose a `.md`, `.txt` or `.docx`, press **Upload and publish**, and that file becomes a new version straight away.
-- It could always be done -- there was a field for it -- but it was folded inside *Optional details*, called "Or upload a file instead", and it did its work when you pressed Save. Nobody found it, and anybody who did had no way of telling what it was about to do. It is now its own control with its own button, and it asks before it replaces an hour of typing.
-- Nothing is lost: the version you replaced keeps its place in the history and its notes, exactly as with any other save.
-- Pressing it with no file chosen now says so instead of quietly saving the chapter.
-
-## 2026-09-16 — Who was that again?
-
-- **Click a name while you are reading and it opens beside the chapter**, at the top of the column the notes are in: who they are, the line of summary, and as much of the entry as fits. You have not left the page and you have not lost your paragraph.
-- It works for both kinds of name: the people and places in this story's **bible**, and the pages of the shared **glossary**.
-- **In Read as well as in Review.** Read mode takes the second column away; the card is the one thing that brings it back, for as long as it is open and with none of the notes in it.
-- **With the picture, if the entry has one**, cropped where the entry was cropped.
-- **The name at the top of the card is the way on** to the entry itself, and so is *Open the whole entry*. **Escape** closes it and puts you back on the word you clicked.
-- On a phone, holding Ctrl or Cmd, or with JavaScript off, the name does what it always did and takes you to the page. It is a link and it stays a link.
-- **Pressing Save no longer asks whether you meant to leave the page.** The editor keeps a copy of your writing in the browser and warns before you abandon it -- and a form post is leaving the page as far as a browser is concerned, so it asked every time anybody published anything. Closing the tab on top of real unsaved writing still asks, which is the case it exists for.
-
-## 2026-09-16 — A book, and a manuscript
-
-- **The story compiles to PDF and to EPUB**, alongside the .docx, .md and .txt that were already there.
-- **You choose a layout first, and the two are different documents.** *Manuscript* is what a competition or an agent asks for: double-spaced, ragged right, an inch of margin, your surname and the page number in the corner, every chapter a third of the way down a fresh page. *Book* is the one to read: justified, first lines indented except after a chapter head or a scene break, chapters opening on a right-hand page, scene breaks as `* * *`.
-- **In the book layout the quotes curl.** A keyboard has one quote key and one apostrophe key; a book has four marks, and using the keyboard's two is, along with an unindented first line, what most gives a page away as typed rather than set. The manuscript layout leaves them exactly as you typed them, because a manuscript is your file and not our idea of it.
-- The PDF is **typeset, not a printed web page** -- the difference is a page that looks like a book rather than a page that looks like a browser with the toolbars hidden.
-- **The EPUB deliberately does less.** It carries the structure -- a working table of contents, one file per chapter, arcs as parts -- and leaves typeface, size and margins to the e-reader, because a book that overrules them is a worse book on somebody's phone.
-- Compiling the same story twice gives you **the same file, byte for byte**, so you can tell whether anything actually changed.
-- **The editor now shows a reading grade** beside the word count: the school year that would follow the text on a first read. It is the one number in that strip that is not a count of things to fix, and it has no colour on purpose -- there is no grade that is wrong.
-
-## 2026-09-16 — Notes you can answer without losing your place
-
-- **Accept, turn down, retract, reopen and reply happen in place.** On a chapter with forty notes, answering the eleventh used to send you back to the top of the page to find the twelfth.
-- **Leaving a note on a passage now works from the keyboard.** Select it with shift and the arrow keys, then press **C**. It was the heart of this app and the one thing in it that could only be done with a mouse -- the offer appeared when you let go of the button and nowhere else.
-- **And it says what it did.** The selection announces itself, and answering a note announces the answer, instead of a reload reading the whole page out again from the title down. This is the first of the accessibility work, and the part that was most in the way.
-- All of it still works with JavaScript off, exactly as before: every control is a real form posting to a real address, and the page reloads.
-
-## 2026-09-16 — A search that matches words
-
-- **Searching for a word now finds that word.** It used to look for the letters anywhere: on this archive, a search for "art" returned **355 of the 691 glossary pages** -- part, start, particular, Martin. It returns 8.
-- **Phrases work**, in quotes: `"held its breath"` finds the sentence and not the three words scattered about. **A half-typed name works too**: "Kessl" finds Kessler.
-- **Results come back best first** instead of alphabetically, each with the line it was found in and the word marked.
-- Accents fold, so "Tampaad" finds "Tampáad" and nobody has to guess which spelling was used.
-- What has not changed: archived work is still left out, only each chapter's current version is searched, and a private bible is still private.
-
-## 2026-09-16 — Typing stopped waiting for the checks
-
-- **The writing checks and the spellchecker moved off the thread that draws the page.** On a four-thousand-word chapter they were taking about 48 milliseconds of it every time you paused -- on a desktop. On a phone that is the stutter you have felt. It is 0.08 now: the work is the same, it just happens somewhere else.
-- Nothing about the checks changed, and there is no second copy of them. The same file runs in both places; in the new one there is simply no page for it to draw on.
-- If the browser will not have a worker, or the worker fails, it goes back to doing the work in the page exactly as before. Nothing on the page knows which of the two answered.
-
-## 2026-09-16 — Writing from a phone
-
-- **Save is reachable.** It was at the bottom of a page three screens tall; now it rides along the bottom of the screen while you are in the form, as two buttons big enough to hit.
-- **Markdown is supported** and **Optional details** fold shut on a narrow screen and are one tap from open. On a screen with room for them they stay open exactly as before: nothing was removed, it was put where it fits.
-- The text box is sized against what is left of the screen with a keyboard up, rather than against the whole of it.
-- Reading and commenting on a phone already worked. This is the other half.
-
-## 2026-09-16 — Writing with something open beside it
-
-- **Open something beside this**, under the chapter editor: the chapter before this one, or a bible entry, in a column next to the text. Scrivener's split, in the shape this app is already in.
-- Everything in the picker is an ordinary link. With JavaScript off it opens in a new tab and your draft stays put; with it on, the same page is fetched into the column instead.
-- On a chapter that already has notes down the side, the panel shares that column rather than opening a third one.
-- A closed bible is closed here too. The panel is a shortcut to pages, not a way round the rules on them.
-
-## 2026-09-16 — A timeline, for when things actually happen
-
-- **Chapters and bible entries can say when they happen**, in the story's own calendar: a few words for what the story calls the moment, and a number to put it in line. Both optional, on the chapter editor and on the entry form.
-- **Timeline**, next to *Outline* and *Analysis*: everything that has been given a day, in order, with the distance between one row and the next. The number is only ever used for sorting and for that distance, so the scale is yours -- days, years, winters of a war.
-- **A chapter that goes backwards is marked "told out of order".** That is a flashback, which is a decision and not a mistake, so the page says so and leaves it alone.
-- Undated is not day zero. A chapter nobody has dated stays off the line rather than being dragged to the front of it; one with words but no number is listed underneath, waiting for one.
-- Fixed while in there: editing a bible entry without saying who was asking would fail inside the story dictionary, and then have that failure replaced by "cannot rollback" -- a much less useful sentence. The work that happens after the commit is outside the transaction now, where it belongs.
-
-## 2026-09-16 — A feed, so a note stops waiting in silence
-
-- **You can be told that something is waiting**, without this app ever reaching out to the network. Your account page will make you a private feed: notes waiting on your chapters, replies to notes you left, and chapters you have not opened. Paste the address into whatever you read feeds in.
-- It is a feed rather than an email on purpose. An email would mean a mail server and would make this the only part of the app that talks to the outside world; a feed sits still until your reader comes and asks for it.
-- **The address is the password.** Anyone holding it can read your feed without logging in -- which is exactly what makes it work in a reader. It is not created until you ask for one, *Make a new link* replaces it the moment you think it has got out, and *Turn it off* removes it.
-
-## 2026-09-16 — Two things the cast list was doing badly
-
-- **You choose what a thumbnail keeps.** A picture is rarely square and a face is rarely in the middle of one, so the crop was cutting people's heads off. Click the spot on the picture; the square underneath shows the result at the size it is actually used. The two numbers beside it are the same setting typed out, for anybody who would rather type, and they are what gets saved. The entry's own page and the cast list are cut the same way.
-- **Entries without a picture keep the box.** An initial in it, the same size and place as a thumbnail, so a half-illustrated cast reads as one column of names instead of two ragged ones. The names line up as well now, which they did not: the middle of each row was sized to fit and so started wherever that row's own meta line left off.
-- On a phone the cast list keeps the picture beside the name instead of stacking it on top and centring everything.
-
-## 2026-09-16 — Targets, and the story counted
-
-- **A story can have a word target.** Set it on *Edit details* and a bar appears on the story page and on the analysis, saying where the draft is against it. No target, no bar: nothing nags at you unless you asked it to.
-- **A daily target of your own**, on your account page, with what you have written today, this week, and how many days in a row you have hit it. It counts words added, so a day spent cutting is an honest zero rather than a negative.
-- **Analysis**, next to *Outline* on the story page: the length of every chapter, the weight of each arc, who the story is told through, what each strand carries, which notes are still waiting, and a grid of who is named in what. Nothing on that page is set by hand -- it is the chapters, the bible and the notes, added up.
-- **Chapters can say whose point of view they are, and which strand they belong to.** Both optional, both free text, both offered back to you from what the story has used before, so a vocabulary settles on its own. They show up on the outline, and they are what the point of view and strand charts are counting.
-
-## 2026-09-16 — An outline, and the whole story in one file
-
-- **Every story has an outline**, from the story page: all its chapters on one line each, with what happens, who is in it, how long it is and what notes are still waiting. **Drag a row** to move a chapter, and **edit a summary where it sits**.
-- **Compile the whole story** into one .docx, .md or .txt. Chapters in order, arcs as parts, a title page. Until now the only thing you could download was one chapter at a time.
-
-## 2026-09-16 — Three ways your work was at risk
-
-- **The editor keeps your draft in your browser while you type.** If the tab closes, the browser falls over or the session drops, the text is offered back when you come back. It is a rescue, not a sync: it never replaces what the server has without you saying so, and it is thrown away the moment a real save lands.
-- **A save can no longer land silently on top of somebody else's.** If a chapter gained a version while you had the editor open (another tab, another person), the save is refused once: your text stays in the box, theirs is shown underneath, and saving again is a decision rather than an accident.
-- **The database now backs itself up.** Daily, into `data/backups`, keeping the last fourteen, plus a "take one now" button on the admin page. That protects against a mistake; point a cloud folder or a second disk at that directory to be protected against the machine.
-
-## 2026-09-15 — Help, and a bible you can close
+- **Compile to PDF and EPUB**, as a *Manuscript* or as a *Book*, besides .docx, .md and .txt.
+- **An outline** you can reorder by dragging, and the whole story in one file.
+- **A timeline** in the story's own calendar, marking what is told out of order.
+- **Word targets** for a story and for your day, and an **Analysis** page.
+- Cast thumbnails crop where you say, and entries without a picture keep the box.
+- **The database backs itself up** daily, with a button for one now.
+
+## 2026-09-15 — The story bible, and Help
+
+### Help, and a bible you can close
 
 - **A Help section**, from the top bar: six how-tos, one per part of the site, with screenshots.
 - **This changelog**, inside it, marking anything published since you last looked.
 - **A story bible can be made private.** The owner's switch, at the top of the bible page, and only the owner sees it. Closed, only the people who write the story can see the bible -- and the chapters stop linking names or listing who is in them, so nothing leaks through the back.
 
-## 2026-09-15 — The story bible
+### The story bible
 
 - **Every story now has a bible**: the people, places, groups, things and events it is made of, at *Bible* on the story page. Each entry takes a name, other names it answers to, a one-line summary, a role and a status, a description, and a spoiler section that stays folded.
 - **You do not tag appearances.** Which chapters an entry turns up in is read out of the chapters themselves, by name and alias, and re-read whenever a chapter changes. Take a name out of a scene and that scene leaves the entry.
@@ -281,14 +127,14 @@ The group's whole point is reading each other's chapters and answering them. The
 - **The chapter page says who is in it**, and marks who is new there.
 - Bibles are in the site search, and the index sorts by presence, role or last change.
 
-## 2026-09-15 — The glossary, reorganised
+### The glossary, reorganised
 
 - The glossary front page is a **directory**, not a list: three doors (the world, stories, authors) and the wiki's subject categories gathered into families.
 - Every listing is cut into **A–Z sections** with a jump bar, and filters as you type.
 - How finished a page is (Canon, Stub, Temporary) moved off the subject row into its own filter, and the wiki's housekeeping categories are out of the way.
 - A glossary entry shows **previews of what it links to** in the margin, once per term.
 
-## 2026-09-15 — Arcs, states, and who did what
+### Arcs, states, and who did what
 
 - A story can be cut into **arcs** ("Book One"), shown in the chapter index and the statistics.
 - A story has a **state** — ongoing, asking for revisions, complete, dropped — and goes to *hiatus* on its own after six months of silence.
