@@ -5,8 +5,10 @@
 // reading a page, and coming back to find your place -- for a name you
 // wanted one line about.
 //
-// So the link opens the same page, in the column that is already beside
-// the text, and the card's heading is the way on to the page itself. The
+// So the link opens the same page on a card that floats beside the text,
+// and the card's heading is the way on to the page itself. The card sits
+// over the page rather than in it: opening it moves nothing -- not the
+// text, not the notes, not the place you were reading. The
 // link is never touched: with this file missing, with JavaScript off, on a
 // phone, or if the fetch fails, clicking a name goes to the entry exactly
 // as it did before. Nothing here is a second copy of anything -- the card
@@ -18,11 +20,9 @@
   const text = document.getElementById('chapter-text');
   if (!card || !text) return;
   const body = card.querySelector('[data-name-card-body]');
-  // Read mode takes the second column away entirely -- there are no notes
-  // to show and the text gets the room. The card is the one thing that
-  // brings it back, so it says when it is open and the stylesheet does
-  // the rest; in review mode the class changes nothing.
-  const grid = card.closest('.chapter-body-grid');
+  // Out of the notes column and onto the page itself, so that it is there
+  // in Read (where that column is put away) and changes no layout at all.
+  document.body.appendChild(card);
   const onwards = Array.prototype.slice.call(card.querySelectorAll('[data-name-card-link]'));
   const closeButton = card.querySelector('[data-name-card-close]');
   if (!body) return;
@@ -47,9 +47,30 @@
   // back on the word they clicked rather than at the top of the document.
   let opener = null;
 
+  // Beside the text where there is room for it -- right of the column,
+  // level with the top of the window -- and over the edge of it where
+  // there is not.
+  function place() {
+    const box = text.getBoundingClientRect();
+    const top = Math.max(16, Math.min(96, box.top));
+    const room = window.innerWidth - box.right - 56;
+    const width = Math.min(400, room);
+    if (width >= 280) {
+      card.style.left = `${Math.round(box.right + 32)}px`;
+      card.style.right = '';
+      card.style.width = `${Math.round(width)}px`;
+    } else {
+      card.style.left = '';
+      card.style.right = '24px';
+      card.style.width = `${Math.min(360, window.innerWidth - 48)}px`;
+    }
+    card.style.top = `${Math.round(top)}px`;
+    card.style.maxHeight = `${Math.round(window.innerHeight - top - 24)}px`;
+  }
+  window.addEventListener('resize', () => { if (!card.hidden) place(); });
+
   function shut(moveFocus) {
     card.hidden = true;
-    if (grid) grid.classList.remove('name-card-open');
     body.innerHTML = '';
     if (moveFocus && opener && document.contains(opener)) opener.focus();
     opener = null;
@@ -70,10 +91,11 @@
 
     for (const a of onwards) a.setAttribute('href', href);
     body.innerHTML = '<p class="muted">Looking that up&hellip;</p>';
+    place();
     card.hidden = false;
-    if (grid) grid.classList.add('name-card-open');
     opener = link;
-    card.focus();
+    // Focus without scrolling: the reader stays exactly where they were.
+    card.focus({ preventScroll: true });
 
     let res;
     try {
@@ -101,7 +123,7 @@
       heading.textContent = '';
       heading.appendChild(anchor);
     }
-    body.scrollTop = 0;
+    card.scrollTop = 0;
     // Where it came from matters to somebody who cannot see which column
     // it landed in: this story's own bible is not the shared glossary.
     const where = href.indexOf('/bible/') === 0 ? 'from the bible' : 'from the glossary';

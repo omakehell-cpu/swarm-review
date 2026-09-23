@@ -171,3 +171,18 @@ test('candidates come back commonest first, alphabetical on a tie', () => {
   const found = bible.findProperNames('Ana saw Prado. Prado saw Ana and Sein. Prado shrugged. Ana left.');
   assert.deepStrictEqual(found.map((c) => [c.name, c.count]), [['Ana', 3], ['Prado', 3], ['Sein', 1]]);
 });
+
+test('another name for somebody: the likeliest entry is the one sharing a word', () => {
+  const entries = [
+    { id: 1, name: 'Jack Harlan', alias_list: null },
+    { id: 2, name: 'Mara Voss', alias_list: 'the Widow' },
+    { id: 3, name: 'Kestrel Anchorage', aliases: ['the Kestrel'] },
+  ];
+  assert.strictEqual(bible.likelySameAs('Colonel Jack', entries), 1, 'a title is not the name');
+  assert.strictEqual(bible.likelySameAs('uncle Jack', entries), 1);
+  assert.strictEqual(bible.likelySameAs("Harlan's", entries), 1, 'a possessive is the same person');
+  assert.strictEqual(bible.likelySameAs('Widow Voss', entries), 2, 'aliases count too');
+  assert.strictEqual(bible.likelySameAs('Kestrel', entries), 3);
+  assert.strictEqual(bible.likelySameAs('Captain Obi', entries), null, 'nobody, and no guess');
+  assert.strictEqual(bible.likelySameAs('Colonel', entries), null, 'a title alone says nothing');
+});

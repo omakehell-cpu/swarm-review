@@ -128,7 +128,12 @@ You do not have to type a hundred forms. The bible finds people you have
 written down, but it also **finds the names you have not**: open a chapter
 and look under the text for *names here are not in the bible*. It is
 guesswork over the prose, so some of it will be wrong — the top of the list
-is usually your cast, and one click writes the entry. A word that is not
+is usually your cast, and one click writes the entry. A name that is
+somebody you already have -- *Colonel Jack*, *uncle Jack*, *Jack Harlan*
+for Jack -- is added as **another name for** them: pick them in the same
+list, under *Another name for*, and it becomes one of their aliases, linked
+in the text like the name itself. When a name shares a word with an entry,
+that entry is already chosen for you. A word that is not
 a name at all gets **Not a name**, and is not offered again anywhere in
 the story; the story page lists what you have put away, under *Not names*,
 so one clicked by mistake can be brought back. The same panel is in the

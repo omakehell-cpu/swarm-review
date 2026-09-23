@@ -542,12 +542,28 @@ function entityFormPage({ user, story, entity = null, aliases = [], fields = [],
 // Names the chapter uses that the bible has never heard of. A suggestion,
 // not a decision: one click writes the entry, and the entry is a stub with
 // the name in it, which is the part that was stopping anybody.
-function missingNamesBlock(names, storyId, returnTo) {
+// What a name found in the text is: a new entry of some kind, or another
+// name for somebody already in the bible -- with the likeliest one, if any
+// shares a word with it, chosen to begin with.
+function nameKindSelect(name, entities) {
+  const guess = bible.likelySameAs(name, entities);
+  return `
+    <select name="kind" aria-label="What ${escapeHtml(name)} is">
+      <optgroup label="A new entry">
+        ${bible.KINDS.map((k) => `<option value="${k}">${escapeHtml(bible.KIND_LABELS[k])}</option>`).join('')}
+      </optgroup>
+      ${entities.length ? `<optgroup label="Another name for">
+        ${entities.map((e) => `<option value="alias:${e.id}"${e.id === guess ? ' selected' : ''}>${escapeHtml(e.name)}</option>`).join('')}
+      </optgroup>` : ''}
+    </select>`;
+}
+
+function missingNamesBlock(names, storyId, returnTo, entities = []) {
   if (!names.length) return '';
   return `
     <section class="missing-names">
       <h2 class="side-head">${names.length} name${names.length === 1 ? '' : 's'} here ${names.length === 1 ? 'is' : 'are'} not in the bible</h2>
-      <p class="muted">Proper names this chapter uses that no entry, glossary page or dictionary word accounts for. Guesswork, so some of it will be wrong: <strong>Not a name</strong> puts a false alarm away for the whole story.</p>
+      <p class="muted">Proper names this chapter uses that no entry, glossary page or dictionary word accounts for. Guesswork, so some of it will be wrong. Add one as a new entry, or as <strong>another name for</strong> somebody already there (Colonel Jack is Jack); <strong>Not a name</strong> puts a false alarm away for the whole story.</p>
       <ul class="missing-list">
         ${names.map((n) => `
           <li>
@@ -556,9 +572,7 @@ function missingNamesBlock(names, storyId, returnTo) {
               <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}">
               <span class="missing-name">${escapeHtml(n.name)}</span>
               <span class="missing-count">${n.count}&times;</span>
-              <select name="kind" aria-label="What ${escapeHtml(n.name)} is">
-                ${bible.KINDS.map((k) => `<option value="${k}">${escapeHtml(bible.KIND_LABELS[k])}</option>`).join('')}
-              </select>
+              ${nameKindSelect(n.name, entities)}
               <button class="btn ghost tiny" type="submit">Add</button>
               <button class="btn ghost tiny missing-dismiss" type="submit" formaction="/stories/${storyId}/bible/not-names"
                       aria-label="${escapeHtml(n.name)} is not a name">Not a name</button>

@@ -119,6 +119,9 @@
     for (const a of Array.from(preview.querySelectorAll('a'))) a.removeAttribute('href');
   }
 
+  // A window resized while the preview shows: back to the column's width.
+  window.addEventListener('resize', () => { if (mode === 'preview') preview.style.width = ''; });
+
   async function setMode(next, { quiet = false } = {}) {
     if (next === mode) return;
     if (next === 'preview') {
@@ -128,14 +131,19 @@
         if (!quiet) announce('The preview could not be made just now.');
         return;
       }
-      // The same place in the chapter, roughly: as far down the preview
-      // as the text was scrolled down the box.
+      // The same box, the same size, in the same place: the preview takes
+      // exactly the room the text had, scrolls inside itself as the text
+      // does, and opens as far down as the text was scrolled.
+      const view = markdownView();
+      const size = view.getBoundingClientRect();
       const room = textarea.scrollHeight - textarea.clientHeight;
       const share = room > 0 ? textarea.scrollTop / room : 0;
-      markdownView().hidden = true;
+      preview.style.width = `${Math.round(size.width)}px`;
+      preview.style.height = `${Math.round(size.height)}px`;
+      view.hidden = true;
       preview.hidden = false;
       mode = 'preview';
-      if (share) window.scrollBy({ top: share * Math.max(0, preview.offsetHeight - window.innerHeight * 0.6) });
+      preview.scrollTop = share * Math.max(0, preview.scrollHeight - preview.clientHeight);
       preview.focus({ preventScroll: true });
     } else {
       preview.hidden = true;

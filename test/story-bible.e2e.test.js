@@ -553,6 +553,36 @@ test('returnTo cannot be pointed off the site', async () => {
   assert.strictEqual(res.headers.get('location'), `/stories/${storyId}/bible`);
 });
 
+test('a name can be added as another name for somebody already there', async () => {
+  // The list offers the entries, with the likeliest chosen.
+  const res = await owner.request(`/stories/${storyId}/bible/unknown-names`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ text: 'Colonel Kessler Varn came in. Colonel Kessler Varn sat down.' }),
+  });
+  const data = await res.json();
+  assert.ok(data.entries.some((e) => e.id === kesslerId), 'the entries are offered');
+  const offered = data.names.find((n) => /Varn/.test(n.name));
+  assert.ok(offered, `the new name is offered: ${data.names.map((n) => n.name).join(', ')}`);
+  assert.strictEqual(offered.sameAs, kesslerId, 'and Kessler is the guess');
+
+  // Somebody else's story's entry is refused.
+  const bad = await owner.request(`/stories/${storyId}/bible/quick`, {
+    method: 'POST', ...form([['name', 'Anyone'], ['kind', 'alias:999999']]),
+  });
+  assert.strictEqual(bad.status, 302);
+  assert.ok(!models.getStoryEntity(999999));
+
+  const added = await owner.request(`/stories/${storyId}/bible/quick`, {
+    method: 'POST', ...form([['name', offered.name], ['kind', `alias:${kesslerId}`], ['returnTo', `/chapters/${chapterOne}`]]),
+  });
+  assert.strictEqual(added.status, 302);
+  assert.strictEqual(added.headers.get('location'), `/chapters/${chapterOne}`);
+  assert.ok(models.listEntityAliases(kesslerId).includes(offered.name), 'it is one of her aliases now');
+  assert.ok(!models.getStoryEntityByName(storyId, offered.name) || models.getStoryEntityByName(storyId, offered.name).id === kesslerId,
+    'and not an entry of its own');
+});
+
 test('a false alarm can be put away, and brought back', async () => {
   const text = 'Yevgenia Bru waited. Somewhere Quiet was the name of nothing at all.';
   const ask = async () => (await (await owner.request(`/stories/${storyId}/bible/unknown-names`, {

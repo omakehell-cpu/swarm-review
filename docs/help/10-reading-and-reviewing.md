@@ -51,19 +51,17 @@ it is forgotten once you reach the end.
 ## A name you do not remember
 
 Characters and places from the story's bible, and names from the shared
-glossary, are underlined in the text. **Click one and it opens beside the
-chapter**, at the top of the column the notes are in: what it is, the line
-of summary, and as much of the entry as fits. You have not gone anywhere --
-the chapter is still there, at the paragraph you were on.
+glossary, are underlined in the text. **Click one and a card opens beside
+the chapter**: what it is, the line of summary, and as much of the entry
+as fits. You have not gone anywhere, and nothing on the page moves -- the
+card floats over the margin, and the chapter is still there, at the
+paragraph you were on.
 
 If the entry has a **picture**, it is on the card, cropped where whoever
 wrote the entry cropped it. Half of what a bible is for is recognising
 somebody, and a face does that faster than a line of summary.
 
-This works in **Read** as well as in **Review**. Read mode takes the second
-column away, and the card is the one thing that brings it back: while it is
-open the text makes room for it, with none of the notes, and when you close
-it the chapter has the page to itself again.
+This works in **Read** as well as in **Review**.
 
 If that is not enough, **the name at the top of the card is the way on**:
 click it, or *Open the whole entry*, and you get the entry itself.
