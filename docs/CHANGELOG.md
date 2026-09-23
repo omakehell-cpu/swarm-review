@@ -4,6 +4,16 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — Up close
+
+For anybody reading with the screen zoomed in a long way.
+
+- **Nothing scrolls sideways at 400%.** The one exception is the outline table, which scrolls inside its own box, and the keyboard can reach that box. The story page puts the cover above the title on a narrow screen instead of squeezing the title into a narrow column.
+- **Nothing pinned hides what you are on.** On a very short screen, the bars that normally stay put (the Save and Publish row, the A-Z bar in the glossary) scroll with the page.
+- **The reorder arrows** on a story's contents are at full strength on a touch screen or a narrow window, rather than waiting for a mouse to point at them.
+- **Note buttons say whose note they are for** when you Tab into them, and the dictionary's remove buttons say which word they remove.
+- On a Mac, the editor now says **Option+F** where it used to say Alt+F. It is the same key.
+
 ## 2026-09-23 — For a reader who listens
 
 The first round of accessibility work, shaped by a writer in the group who reads and writes with a screen reader. The whole site now passes an automated WCAG 2.2 AA check in every look, light and dark; the rest is what no checker can find.

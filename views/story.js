@@ -31,7 +31,7 @@ function storyDictionarySection(story, dictionary) {
         <li>
           <span class="invite-code-inline">${escapeHtml(entry.word)}</span>
           <form method="post" action="/stories/${story.id}/dictionary/${entry.id}/delete" class="inline-form">
-            <button class="btn tiny ghost" type="submit" title="Remove">&times;</button>
+            <button class="btn tiny ghost" type="submit" title="Remove" aria-label="Remove ${escapeHtml(entry.word)} from the dictionary">&times;</button>
           </form>
         </li>
       `).join('')}

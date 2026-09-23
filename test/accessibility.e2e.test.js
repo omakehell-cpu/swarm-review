@@ -83,3 +83,12 @@ test('a reader can ask for chapters with no links in the prose, opening in Read 
   assert.match(account, /name="plainNames" value="1" checked/);
   assert.match((await (await ana.request(`/chapters/${chapterId}`)).text()), /class="wiki-link/, 'only for the person who asked');
 });
+
+test('a wide table scrolls in its own box, which the keyboard can reach', async () => {
+  const story = models.listStories()[0];
+  const outline = await (await ana.request(`/stories/${story.id}/outline`)).text();
+  assert.match(outline, /<div class="outline-wrap" role="region" aria-label="[^"]+" tabindex="0">/);
+  const { wikitextToHtml } = require('../lib/wiki');
+  const html = wikitextToHtml('{|\n|+ Ranks\n! Rank !! Pay\n|-\n| One || Two\n|}');
+  assert.match(html, /<div class="wiki-table-wrap" role="region" tabindex="0" aria-label="Ranks">/);
+});

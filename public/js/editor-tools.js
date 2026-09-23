@@ -20,6 +20,9 @@
 (function () {
   'use strict';
 
+  // The same key on both: on a Mac it is labelled Option.
+  const FKEY = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? 'Option+F' : 'Alt+F';
+
   const textarea = /** @type {HTMLTextAreaElement|null} */ (document.querySelector('textarea[data-editor-tools]'));
   if (!textarea) return;
   const form = textarea.form;
@@ -155,7 +158,7 @@
     document.body.classList.toggle('editor-visual', mode === 'visual');
     updateFormatState();
     if (remember) announce(mode === 'visual'
-      ? 'Visual view: the chapter as it reads. Alt+F says the formatting where the caret is.'
+      ? `Visual view: the chapter as it reads. ${FKEY} says the formatting where the caret is.`
       : 'Markdown view: the formatting marks are part of the text.');
     if (remember) store.set('editor-mode', mode);
   }
@@ -334,7 +337,7 @@
   });
   bar.appendChild(modeGroup);
 
-  const whereBtn = button('tool-where', 'Formatting here', 'Say the formatting and the scene where the caret is (Alt+F)');
+  const whereBtn = button('tool-where', 'Formatting here', `Say the formatting and the scene where the caret is (${FKEY})`);
   whereBtn.addEventListener('click', whereAmI);
   bar.appendChild(whereBtn);
 

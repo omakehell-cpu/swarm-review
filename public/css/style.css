@@ -1214,8 +1214,8 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 .admin-inline-form summary:hover { color: var(--text); }
 .admin-inline-form form { display: flex; gap: var(--s-3); margin-top: var(--s-3); }
 .admin-inline-form input { padding: var(--s-3) var(--s-4); font-size: var(--t-sm); }
-.named-invite-form { display: flex; gap: var(--s-4); margin-bottom: var(--s-5); max-width: 420px; }
-.named-invite-form input { flex: 1; padding: var(--s-3) var(--s-4); font-size: var(--t-md); }
+.named-invite-form { display: flex; flex-wrap: wrap; gap: var(--s-4); margin-bottom: var(--s-5); max-width: 420px; }
+.named-invite-form input { flex: 1 1 12ch; min-width: 0; padding: var(--s-3) var(--s-4); font-size: var(--t-md); }
 .invite-code-inline { font-family: monospace; }
 
 
@@ -3766,3 +3766,32 @@ main:focus { outline: none; }
 .checks-words { font-family: var(--font-prose); font-size: var(--t-md); }
 .checks-why { grid-column: 2; font-size: var(--t-xs); color: var(--text-muted); }
 @media (max-width: 720px) { .checks-item { grid-template-columns: 1fr; } .checks-why { grid-column: 1; } }
+
+/* ---- Zoom and reflow -------------------------------------------------
+   At 400% zoom a laptop screen is 320 CSS pixels wide (WCAG 1.4.10).
+   Nothing but a data table may need sideways scrolling there, and a
+   table that does scrolls inside its own box, which the keyboard can
+   reach. The box is positioned so visually hidden text in the table
+   cannot escape it and widen the whole page. */
+.outline-wrap, .wiki-table-wrap { position: relative; }
+.outline-wrap:focus-visible, .wiki-table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The reorder arrows wait at low strength until pointed at; a touch
+   screen cannot point, and someone at high zoom should not have to hunt. */
+@media (hover: none), (max-width: 720px) {
+  .chapter-row-reorder { opacity: 1; }
+}
+/* A phone, or a laptop at 300-400%: the cover sits above the title
+   instead of squeezing it into a column a few words wide. */
+@media (max-width: 520px) {
+  .title-page.has-cover { grid-template-columns: minmax(0, 1fr); gap: var(--s-5); }
+  .title-page .story-page-cover { width: 120px; height: 160px; }
+  .title-page h1 { font-size: clamp(2rem, 9vw, 2.5rem); }
+}
+/* A laptop at 400% is also only about 250 CSS pixels tall. A bar pinned
+   to the top or bottom would then cover a good part of the page and
+   could hide whatever has keyboard focus (WCAG 2.4.11), so on a screen
+   that short the pinned bars scroll with everything else. */
+@media (max-height: 420px) {
+  .az-bar, .writer-actions, .comments-pane { position: static; }
+  .comments-pane { max-height: none; }
+}

@@ -306,7 +306,7 @@ function outlinePage({ user, story, chapters = [], castByChapter = new Map(), ca
         ${noSummary ? `<span class="muted">${noSummary} without a summary</span>` : ''}
       </p>
       ${chapters.length ? `
-        <div class="outline-wrap">
+        <div class="outline-wrap" role="region" aria-label="Outline table, scrolls sideways on a narrow screen" tabindex="0">
           <table class="outline" id="outline">
             <thead>
               <tr>
