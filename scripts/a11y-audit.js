@@ -3,7 +3,7 @@
 //
 // Runs axe-core (the engine behind Microsoft Accessibility Insights and
 // most other checkers) over the main pages of a running copy of the site,
-// in every look and in light and dark, against WCAG 2.2 A and AA plus
+// in light and dark, against WCAG 2.2 A and AA plus
 // axe's best practices, and prints what fails and where.
 //
 // This catches the mechanical half: contrast, names, labels, landmarks,
@@ -14,9 +14,8 @@
 //   npm install --no-save playwright axe-core && npx playwright install chromium
 // Then, with the server running:
 //   A11Y_USER=you A11Y_PASSWORD=secret npm run a11y
-// A11Y_BASE defaults to http://localhost:3000. Use a copy of the site, not
-// the live one: it switches the account's look while it works (and puts
-// it back to the default at the end).
+// A11Y_BASE defaults to http://localhost:3000. It only reads pages, but a
+// copy of the site is still the better place to run it.
 'use strict';
 
 let chromium;
@@ -39,28 +38,20 @@ if (!USER || !PASSWORD) {
 }
 const PAGES = (process.env.A11Y_PAGES || '/,/help,/account,/tags,/glossary,/activity,/stories/new,/search?q=the')
   .split(',').filter(Boolean);
-const COMBOS = [['', 'light'], ['', 'dark'], ['literary', 'light'], ['literary', 'dark'], ['swarm', 'light'], ['swarm', 'dark']];
+const SCHEMES = ['light', 'dark'];
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 
 (async () => {
   const axe = fs.readFileSync(axePath, 'utf8');
   const browser = await chromium.launch();
   const found = new Map();
-  for (const [look, scheme] of COMBOS) {
+  for (const scheme of SCHEMES) {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: scheme, bypassCSP: true });
     const page = await context.newPage();
     await page.goto(`${BASE}/login`);
     await page.fill('input[name=username]', USER);
     await page.fill('input[name=password]', PASSWORD);
     await Promise.all([page.waitForNavigation(), page.click('button[type=submit]')]);
-    // Posting needs the page's CSRF token, as any script here does.
-    const csrf = await page.evaluate(() => {
-      // eslint-disable-next-line no-undef
-      const meta = document.querySelector('meta[name="csrf-token"]');
-      return meta ? meta.getAttribute('content') : '';
-    });
-    const headers = { 'x-csrf-token': csrf || '' };
-    await page.request.post(`${BASE}/account/look`, { form: { look }, headers });
     // The story and chapter pages of whatever is newest on the front page.
     const home = await (await page.goto(`${BASE}/`)).text();
     const story = (home.match(/href="(\/stories\/\d+)/) || [])[1];
@@ -81,12 +72,11 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
         .map((v) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.map((n) => n.target.join(' ')) })), TAGS);
       for (const v of violations) {
         const entry = found.get(v.id) || { impact: v.impact, help: v.help, where: new Set(), nodes: new Set() };
-        entry.where.add(`${path} (${look || 'clean'}, ${scheme})`);
+        entry.where.add(`${path} (${scheme})`);
         v.nodes.slice(0, 5).forEach((n) => entry.nodes.add(n));
         found.set(v.id, entry);
       }
     }
-    await page.request.post(`${BASE}/account/look`, { form: { look: '' }, headers });
     await context.close();
   }
   await browser.close();

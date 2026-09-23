@@ -1230,7 +1230,6 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
    the whole card past its usual 1300px cap, up to .container-wide's own
    1500px, rather than just the textarea, since a wider textarea alone
    inside an unchanged, narrower card would just overflow it. */
-.writer-card.wa-fullwidth { max-width: none; }
 .writer-card h1 { font-size: var(--t-2xl); margin-bottom: var(--s-4); }
 .writer-card .writer-intro { margin-top: 0; }
 .writer-card .chapter-form { max-width: none; gap: var(--s-7); }
@@ -1331,11 +1330,6 @@ input:focus, textarea:focus, select:focus {
   background: none; box-shadow: none; cursor: text; padding: 0; border-radius: 0;
 }
 
-.wa-width-bar { display: flex; align-items: center; gap: var(--s-4); margin-bottom: var(--s-4); }
-.wa-width-label {
-  font-size: var(--t-2xs); color: var(--text-muted); font-weight: 700;
-  text-transform: uppercase; letter-spacing: var(--label-tracking);
-}
 .wa-split { display: block; }
 .wa-editor-wrap {
   position: relative;
@@ -1376,7 +1370,7 @@ input:focus, textarea:focus, select:focus {
      the textarea past its container regardless of what pixel value it
      actually holds. */
   max-width: 100%;
-  border: none !important; border-radius: 0 !important; resize: both;
+  border: none !important; border-radius: 0 !important; resize: vertical;
   background: transparent !important; color: var(--text) !important; caret-color: var(--text);
 }
 .wa-textarea:focus { box-shadow: none; border-color: transparent; }
@@ -3369,7 +3363,6 @@ body.writing-focus .topbar,
 body.writing-focus .breadcrumb,
 body.writing-focus .writer-intro-fold,
 body.writing-focus .wa-card,
-body.writing-focus .wa-width-bar,
 body.writing-focus .writer-section,
 body.writing-focus .comments-pane,
 body.writing-focus .upload-version,
@@ -3537,7 +3530,7 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
 }
 
 /* The last few capitals that were really sentences. */
-.chapter-nav-arrow, .chapter-nav-dir, .version-bar label, .wa-width-label,
+.chapter-nav-arrow, .chapter-nav-dir, .version-bar label,
 .editor-tool.tool-focus, .review-form summary, .general-comment summary {
   text-transform: none !important; letter-spacing: 0 !important; font-size: var(--t-sm) !important; font-weight: 500;
 }
@@ -3706,15 +3699,12 @@ main[data-reading="read"] .chapter-cast { display: none; }
    become rules. */
 @media (prefers-contrast: more) {
   :root { --text-muted: #45433f; --border: #8a8883; }
-  :root[data-look="swarm"] { --text-muted: #3a4658; --border: #7d8ba0; }
-  :root[data-look="swarm"][data-theme="dark"] { --text-muted: #a9b6c9; --border: #4a5a70; }
-  :root[data-look="literary"] { --text-muted: #4a4339; --border: #8f8674; }
 }
 /* Windows high contrast: keep every boundary and mark visible in the
    system's own colours. */
 @media (forced-colors: active) {
   .hl-pending, .hl-accepted, .hl-rejected { text-decoration: underline; box-shadow: none; }
-  .btn, .editor-tool, .note-kind span, .look-option { border: 1px solid CanvasText; }
+  .btn, .editor-tool, .note-kind span { border: 1px solid CanvasText; }
   .story-progress-fill, .goal-fill { background: Highlight; forced-color-adjust: none; }
 }
 
@@ -3891,14 +3881,21 @@ main:focus { outline: none; }
    very hard one, blue adverbs, green passive voice, purple for a word
    with a simpler alternative. Solid, so an adverb inside a hard sentence
    is a blue block on a yellow one rather than a muddy mix of the two.
-   The craft checks and spelling stay underlines (set inline by
-   writing-analyzer.js), a second and quieter layer. */
+   The checks this site adds -- spelling, filler words, repeated words,
+   filter verbs, dialogue tags, repeated openings -- are fills too, each in
+   a colour of its own, by day and by night. */
 :root {
   --wa-fill-hard: #f6eab0;
   --wa-fill-veryhard: #f1c4c6;
   --wa-fill-adverb: #c6e2f3;
   --wa-fill-passive: #cdeaae;
   --wa-fill-complex: #e5c8ec;
+  --wa-fill-spell: #c9ecea;
+  --wa-fill-filler: #f9d2e1;
+  --wa-fill-echo: #fcdcbf;
+  --wa-fill-filter: #d4dbf4;
+  --wa-fill-dialogue: #e9e3c6;
+  --wa-fill-opening: #e2e2de;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -3907,6 +3904,12 @@ main:focus { outline: none; }
     --wa-fill-adverb: #1d3c52;
     --wa-fill-passive: #2c4a22;
     --wa-fill-complex: #472b50;
+    --wa-fill-spell: #1c4543;
+    --wa-fill-filler: #4f2537;
+    --wa-fill-echo: #503319;
+    --wa-fill-filter: #27325a;
+    --wa-fill-dialogue: #403a21;
+    --wa-fill-opening: #3a3a37;
   }
 }
 :root[data-theme="dark"] {
@@ -3915,12 +3918,24 @@ main:focus { outline: none; }
   --wa-fill-adverb: #1d3c52;
   --wa-fill-passive: #2c4a22;
   --wa-fill-complex: #472b50;
+  --wa-fill-spell: #1c4543;
+  --wa-fill-filler: #4f2537;
+  --wa-fill-echo: #503319;
+  --wa-fill-filter: #27325a;
+  --wa-fill-dialogue: #403a21;
+  --wa-fill-opening: #3a3a37;
 }
 mark.wa-sentence.wa-yellow { background: var(--wa-fill-hard); }
 mark.wa-sentence.wa-red { background: var(--wa-fill-veryhard); }
 mark.wa-word.wa-adverb { background: var(--wa-fill-adverb); }
 mark.wa-word.wa-passive { background: var(--wa-fill-passive); }
 mark.wa-word.wa-complex { background: var(--wa-fill-complex); }
+mark.wa-word.wa-spell { background: var(--wa-fill-spell); }
+mark.wa-word.wa-filler { background: var(--wa-fill-filler); }
+mark.wa-word.wa-echo { background: var(--wa-fill-echo); }
+mark.wa-word.wa-filter { background: var(--wa-fill-filter); }
+mark.wa-word.wa-dialogue { background: var(--wa-fill-dialogue); }
+mark.wa-word.wa-opening { background: var(--wa-fill-opening); }
 mark.wa-sentence, mark.wa-word { border-radius: 0; }
 @media (forced-colors: active) {
   mark.wa-sentence, mark.wa-word { forced-color-adjust: none; background: Mark; color: MarkText; }
@@ -3930,7 +3945,6 @@ mark.wa-sentence, mark.wa-word { border-radius: 0; }
 
 /* The editor: text on the left, the checks (and the notes) on the right. */
 .editor-grid { max-width: 1440px; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: var(--s-9); }
-.wa-fullwidth .editor-grid, .editor-grid:has(.wa-fullwidth) { max-width: none; }
 .editor-grid > .writer-card { max-width: none; margin: 0; }
 .editor-side { gap: var(--s-7); }
 .editor-side:empty { display: none; }
@@ -3952,57 +3966,74 @@ mark.wa-sentence, mark.wa-word { border-radius: 0; }
   letter-spacing: var(--label-tracking); color: var(--text-muted);
 }
 .wa-panel-mini { display: none; color: var(--text-muted); }
-.wa-panel-modes { display: inline-flex; border: 1px solid var(--border-strong); }
-.wa-panel-modes button {
-  border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: var(--t-xs);
-  font-weight: 600; padding: var(--s-1) var(--s-4); cursor: pointer;
+.wa-switch {
+  display: inline-flex; align-items: center; gap: var(--s-3); min-height: 26px; padding: 0;
+  border: 0; background: none; font: inherit; font-size: var(--t-xs); font-weight: 600; color: var(--text);
+  cursor: pointer;
 }
-.wa-panel-modes button[aria-pressed="true"] { background: var(--text); color: var(--btn-text); }
+.wa-switch-track {
+  position: relative; width: 30px; height: 16px; border-radius: 8px;
+  border: 1px solid var(--border-strong); background: var(--bg-sunken); transition: background 0.15s ease;
+}
+.wa-switch-knob {
+  position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--text-muted); transition: transform 0.15s ease, background 0.15s ease;
+}
+.wa-switch[aria-checked="true"] .wa-switch-track { background: var(--text); border-color: var(--text); }
+.wa-switch[aria-checked="true"] .wa-switch-knob { transform: translateX(14px); background: var(--bg); }
+.wa-switch-text { min-width: 2.2em; text-align: left; }
+.wa-switch:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .wa-switch-track, .wa-switch-knob { transition: none; } }
 .wa-panel-grade { display: flex; align-items: baseline; gap: var(--s-4); flex-wrap: wrap; }
 .wa-grade-num { font-family: var(--font-display); font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
 .wa-grade-word { font-size: var(--t-md); font-weight: 600; }
 .wa-panel-facts { margin: 0; color: var(--text-muted); }
 .wa-panel-cards { display: flex; flex-direction: column; gap: var(--s-2); }
 .wa-pcard {
-  display: block; width: 100%; text-align: left; cursor: pointer;
+  display: flex; align-items: baseline; gap: var(--s-3); width: 100%; text-align: left; cursor: pointer;
   padding: var(--s-3) var(--s-4); border: 1px solid transparent; border-radius: 0;
   font: inherit; font-size: var(--t-sm); line-height: 1.4; color: var(--text);
   background: var(--wa-card-fill, var(--bg-sunken));
 }
-.wa-pcard strong { font-size: var(--t-md); margin-right: 1px; }
+.wa-pcard strong { font-size: var(--t-md); margin-right: -2px; }
 .wa-pcard:hover { border-color: var(--border-strong); }
 .wa-pcard-sentence-red { --wa-card-fill: var(--wa-fill-veryhard); }
 .wa-pcard-sentence-yellow { --wa-card-fill: var(--wa-fill-hard); }
 .wa-pcard-adverb { --wa-card-fill: var(--wa-fill-adverb); }
 .wa-pcard-passive { --wa-card-fill: var(--wa-fill-passive); }
 .wa-pcard-complex { --wa-card-fill: var(--wa-fill-complex); }
-.wa-pcard-spell { --wa-card-fill: transparent; border-color: var(--border); }
-.wa-pcard-spell strong { text-decoration: underline wavy #3f9e92 1px; text-underline-offset: 3px; }
-.wa-pcard.is-zero { background: transparent; border-color: var(--border); color: var(--text-muted); }
-.wa-pcard.is-off { background: transparent; border-color: var(--border); border-style: dashed; color: var(--text-muted); }
-.wa-pcard-state {
-  float: right; margin-left: var(--s-3); font-size: var(--t-2xs); font-weight: 700;
-  text-transform: uppercase; letter-spacing: var(--label-tracking);
+.wa-pcard-spell { --wa-card-fill: var(--wa-fill-spell); }
+.wa-pcard-filler { --wa-card-fill: var(--wa-fill-filler); }
+.wa-pcard-echo { --wa-card-fill: var(--wa-fill-echo); }
+.wa-pcard-filter { --wa-card-fill: var(--wa-fill-filter); }
+.wa-pcard-dialogue { --wa-card-fill: var(--wa-fill-dialogue); }
+.wa-pcard-opening { --wa-card-fill: var(--wa-fill-opening); }
+/* On or off is a tick in a box, and the card's colour; nothing else
+   changes, so a card never grows, shrinks or rewords itself when clicked. */
+.wa-pcard-box {
+  flex: none; align-self: center; position: relative; width: 14px; height: 14px;
+  border: 1.5px solid var(--text); background: var(--text);
 }
+.wa-pcard-box::after {
+  content: ""; position: absolute; left: 3.5px; top: 0.5px; width: 4px; height: 8px;
+  border: solid var(--bg); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.wa-pcard.is-zero { background: transparent; border-color: var(--border); }
+.wa-pcard.is-off { background: transparent; border-color: var(--border); color: var(--text-muted); }
+.wa-pcard.is-off .wa-pcard-box { background: transparent; border-color: var(--text-muted); }
+.wa-pcard.is-off .wa-pcard-box::after { content: none; }
 .wa-panel-craft { display: flex; flex-wrap: wrap; gap: var(--s-2); }
 .wa-panel-sub {
   flex-basis: 100%; margin: var(--s-2) 0 0; font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted);
 }
-.wa-pcard-craft {
-  width: auto; padding: var(--s-1) var(--s-3); background: transparent; border-color: var(--border);
-  font-size: var(--t-xs);
-}
-.wa-pcard-craft strong {
-  font-size: inherit; text-decoration: underline solid var(--wa-color) 2px; text-underline-offset: 3px;
-}
-.wa-pcard-craft .wa-pcard-state { float: none; margin-left: var(--s-2); }
+.wa-pcard-craft { width: auto; padding: var(--s-1) var(--s-3); font-size: var(--t-xs); }
+.wa-pcard-craft strong { font-size: inherit; }
+.wa-pcard-craft .wa-pcard-box { width: 12px; height: 12px; }
+.wa-pcard-craft .wa-pcard-box::after { left: 2.5px; top: 0; width: 3.5px; height: 7px; }
 .wa-panel-writenote { display: none; margin: 0; color: var(--text-muted); }
 .wa-panel-writing .wa-panel-cards, .wa-panel-writing .wa-panel-craft { display: none; }
 .wa-panel-writing .wa-panel-writenote { display: block; }
-.wa-panel-more > summary { cursor: pointer; color: var(--text-muted); font-size: var(--t-xs); }
-.wa-panel-more-body { display: flex; flex-direction: column; gap: var(--s-3); margin-top: var(--s-3); }
-.wa-panel-more-body .wa-width-bar { margin: 0; }
 
 /* Folded above the text, on a phone: one line that opens. */
 .wa-panel-inline { margin-bottom: var(--s-4); padding-bottom: var(--s-4); border-bottom: 1px solid var(--border); }
@@ -4016,8 +4047,6 @@ body.writing-focus .wa-panel { visibility: hidden; }
 
 /* Big enough to hit (WCAG 2.5.8). */
 .wa-pcard-craft { min-height: 28px; }
-.wa-panel-more > summary { display: inline-block; min-height: 24px; padding: var(--s-1) 0; }
-.wa-panel-modes button { min-height: 26px; }
 
 /* Putting a backup back: tucked away, and deliberate. */
 .restore-backup { margin: var(--s-5) 0; }
@@ -4078,7 +4107,6 @@ main:not([data-reading="revise"]) .wa-panel-chapter { display: none; }
 /* The checks panel above a chapter: the cards in columns rather than a
    stack the width of the page, and no editor settings where there is no editor. */
 .wa-panel-chapter .wa-panel-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-.wa-panel-more:has(.wa-panel-more-body:empty) { display: none; }
 
 /* Answering notes beside the editor. */
 .editor-notes-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s-2) var(--s-4); }

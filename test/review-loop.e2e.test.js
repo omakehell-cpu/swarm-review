@@ -276,16 +276,11 @@ test('a story has a cover only if its author uploads one, and it can be cropped 
   assert.doesNotMatch(await home(), /class="story-cover"/);
 });
 
-test('each person picks the look the site wears for them, and nobody else', async () => {
-  const look = async (client) => ((await (await client.request('/')).text()).match(/<html lang="en"( data-look="([a-z]+)")?>/) || [])[2] || '';
-  assert.strictEqual(await look(luis), '', 'the default writes no attribute');
-  await luis.request('/account/look', { method: 'POST', ...form([['look', 'swarm']]) });
-  assert.strictEqual(await look(luis), 'swarm');
-  assert.strictEqual(await look(ana), '', 'Ana still sees the default');
-  await luis.request('/account/look', { method: 'POST', ...form([['look', 'nonsense']]) });
-  assert.strictEqual(await look(luis), '', 'an unknown look is the default');
-  const css = await luis.request('/css/looks.css');
-  assert.strictEqual(css.status, 200);
+test('the site has one look, and nobody is painted in an old one', async () => {
+  const html = await (await luis.request('/')).text();
+  assert.match(html, /<html lang="en">/);
+  assert.ok(!html.includes('looks.css'));
+  assert.strictEqual((await luis.request('/account/look', { method: 'POST', ...form([['look', 'swarm']]) })).status, 404);
 });
 
 test('the writing desk: scene notes and snapshots belong to the chapter author alone', async () => {

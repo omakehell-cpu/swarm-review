@@ -1,6 +1,5 @@
 'use strict';
 
-const { LOOKS, lookFor } = require('../lib/looks');
 const { HIT_OPEN, HIT_CLOSE } = require('../lib/search-query');
 const { layout } = require('../lib/layout');
 const { escapeHtml } = require('../lib/util');
@@ -310,23 +309,6 @@ function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], stre
           <label class="check-line"><input type="checkbox" name="plainNames" value="1"${user.plain_names ? ' checked' : ''}>
             <span>No links in the prose <span class="muted">&mdash; names from the bible and the glossary read as plain words, not as links</span></span></label>
           <button class="btn" type="submit">Save</button>
-        </form>
-      </div>
-      <div class="auth-card look-card" id="look">
-        <h2>How the site looks</h2>
-        <p class="muted">Only for you, and on every device you sign in on. Light or dark follows the moon button in the top bar, in every look.</p>
-        <form method="post" action="/account/look" class="look-form">
-          <fieldset class="look-options">
-            <legend class="sr-only">Look</legend>
-            ${LOOKS.map((l) => `
-              <label class="look-option look-${l.key || 'clean'}">
-                <input type="radio" name="look" value="${l.key}"${lookFor(user) === l.key ? ' checked' : ''}>
-                <span class="look-swatch" aria-hidden="true"><span></span><span></span><span></span></span>
-                <span class="look-name">${escapeHtml(l.name)}</span>
-                <span class="look-blurb">${escapeHtml(l.blurb)}</span>
-              </label>`).join('')}
-          </fieldset>
-          <button class="btn" type="submit">Use this look</button>
         </form>
       </div>
       <div class="auth-card">

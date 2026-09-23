@@ -8,6 +8,9 @@ here is missing on the site, it has not been restarted yet.
 
 ### Writing
 
+- **Writing style checks, on or off.** One switch at the top of the checks panel instead of the Revise and Write pair. Each card says whether its marks are shown with a tick and its colour -- it no longer changes its words or its size -- and hard and very hard sentences are two cards now.
+- **Every check is a highlight**, the way Hemingway marks the text, by day and by night: the craft checks and spelling are fills in their own colours instead of underlines.
+- **The editor fills its column.** The width settings are gone; drag the bottom edge for a taller box.
 - **One place to write.** The editor is a single box, in Markdown, with the writing checks drawn behind the words. **Preview** shows the chapter as it will read, in the same box at the same size; press it again, or Escape, to go on writing.
 - **Letters appear the moment you type them**, however long the chapter. The checks catch up behind the text instead of the text waiting for them.
 - **Checks like Hemingway.** A panel beside the text: the reading grade in large type, then one coloured card per kind of trouble -- "4 adverbs. Aim for 1 or fewer." Yellow and red sentences, blue adverbs, green passive voice, purple words with a simpler alternative; the craft checks are underlined. Click a card to hide its marks; **Write** hides them all while you draft, **Revise** brings them back.
@@ -36,7 +39,7 @@ here is missing on the site, it has not been restarted yet.
 
 ### The site
 
-- **Each look has its own type**, and *The Swarm* now has a day and a night version, with the chapter on a dark page at night.
+- **One look.** *Literary* and *The Swarm* are gone; the site is *Clean*, light or dark with the moon button.
 - **The story page is set like the front of a book**: cover, title, blurb and *Start reading* (or *Continue*), then the contents with a dotted leader to each chapter's length.
 - **The front page**: what changed since you last came is said once; the stories can be ordered and found; *Lately* sits below them; each story reads top to bottom.
 - **An app on your phone**: add it to the home screen, and chapters you have opened recently can be read without a connection.

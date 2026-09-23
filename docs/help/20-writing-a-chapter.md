@@ -48,9 +48,7 @@ note](/help/reading-and-reviewing).
 
 @figure chapter-editor.png | The editor: the text on the left, the writing checks and the notes on the right.
 
-At the bottom of the checks, **Editor settings** has two things you will
-rarely need: **Fit to chapter** and **Fill screen**, for how wide the text
-box is (you can also drag its corner).
+The text box fills its column; drag its bottom edge to make it taller.
 
 ## Writing and Preview
 

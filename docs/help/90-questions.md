@@ -53,8 +53,8 @@ Click the mark and add the name to the story's dictionary, or put the
 character in the [story bible](/help/story-bible), which adds it for you.
 
 **The coloured marks are distracting while I draft.**
-Press **Write** at the top of the checks panel. **Revise** brings them
-back. Or click any single card to hide just that kind. See
+Turn **Writing style checks** off, at the top of the checks panel, and
+on again when you want them. Or click any single card to hide just that kind. See
 [the writing checks](/help/writing-checks).
 
 **Can someone else edit my chapter?**

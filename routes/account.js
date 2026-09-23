@@ -2,7 +2,6 @@
 
 /** @typedef {import('../server').RouteContext} RouteContext */
 
-const { LOOKS, cleanLook } = require('../lib/looks');
 const { parseBody, sendHtml, redirect } = require('../lib/util');
 const auth = require('../auth');
 const models = require('../models');
@@ -90,14 +89,6 @@ async function handleAccountReadingSubmit(req, res, user) {
   redirect(res, '/account?notice=Reading settings saved.#reading');
 }
 
-async function handleAccountLookSubmit(req, res, user) {
-  const body = await parseBody(req);
-  const look = cleanLook(body.look);
-  models.setUserLook(user.id, look);
-  const name = LOOKS.find((l) => l.key === look).name;
-  redirect(res, `/account?notice=${encodeURIComponent(`The site now looks ${name === 'The Swarm' ? 'like The Swarm' : name.toLowerCase()} for you, on every device you sign in on.`)}#look`);
-}
-
 async function handleHiddenTagsSubmit(req, res, user) {
   const body = await parseBody(req);
   models.setUserHiddenTags(user.id, tagIdsFromBody(body));
@@ -116,7 +107,6 @@ const routes = [
   ['POST', '/account/hidden-tags', (c) => handleHiddenTagsSubmit(c.req, c.res, c.user)],
   ['POST', '/account/name', (c) => handleAccountNameSubmit(c.req, c.res, c.user)],
   ['POST', '/account/reading', (c) => handleAccountReadingSubmit(c.req, c.res, c.user)],
-  ['POST', '/account/look', (c) => handleAccountLookSubmit(c.req, c.res, c.user)],
   ['POST', '/account/goal', (c) => handleAccountGoalSubmit(c.req, c.res, c.user)],
   ['POST', /^\/account\/feed\/(new|off)$/, (c) => handleAccountFeedSubmit(c.req, c.res, c.user, c.m[1])],
 ];
