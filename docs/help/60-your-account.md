@@ -5,17 +5,32 @@ admins touch.
 
 ## Your account
 
-**Account**, from your name in the top bar, holds four things:
+**Account**, from your name in the top bar, is everything about the site
+that is yours to set. From the top:
 
-- **The name people see.** Your username is how you log in and never
-  changes; the display name is what appears on everything you write, and you
-  can change it whenever you like.
-- **Your password**, changed with the current one in hand. If you have lost
-  it, the login page will send you a reset link instead.
-- **Tags you would rather not see** — see [tags](/help/tags-and-search).
-- A link to **your page as the group sees it**.
+- **Your name** -- the name people see. Your username is how you log in
+  and never changes; the display name is what appears on everything you
+  write, and you can change it whenever you like. Under it, a link to
+  **your page as the group sees it**.
+- **Reading chapters** -- two settings for reading with nothing in the way:
+  *open every chapter in Read mode*, and *no links in the prose* (names
+  from the bible and the glossary read as plain words). See
+  [with a screen reader](/help/screen-readers) for why they exist; they are
+  for anybody.
+- **How the site looks** -- Clean, Literary or The Swarm; see the end of
+  this page.
+- **Writing** -- a target of your own in words a day, and how this week
+  has gone; see [targets](/help/targets-and-analysis).
+- **Being told there is something waiting** -- your private feed; below.
+- **Change password** -- with the current one in hand. If you have lost
+  it, an admin can make you a reset link. Changing it signs
+  you out everywhere else.
+- **Tags you'd rather not see** -- see [tags](/help/tags-and-search).
 
-@figure account-page.png | The account page: your name, your password, and the tags you would rather not see.
+All of it follows you to every device you sign in on, except light and
+dark, which each browser remembers for itself.
+
+@figure account-page.png | The top of the account page: your name, reading, how the site looks, and your daily target.
 
 ## Being told there is something waiting
 
@@ -55,11 +70,11 @@ public web out there looking at this site.
 
 @figure your-page.png | Your page: what you have written, and what you have been doing.
 
-## The theme
+## Light and dark
 
-The switch at the right of the top bar moves between light and dark, and
-follows your system by default. It is remembered in your browser, not your
-account, so it can be different on your phone and your desk.
+The moon at the right of the top bar moves between light and dark, and
+follows your system until you press it. It is remembered in your browser,
+not your account, so it can be different on your phone and your desk.
 
 ## Admin
 
@@ -71,13 +86,20 @@ What they do:
 
 - **Invites.** Registration is invite-only. An admin generates a code, or
   invites a specific person by name, and can close registration altogether.
+  Every code that still works has a **Copy the invite** button: it copies a
+  short message, ready to paste into a chat or an email, with a link that
+  fills the code in (and the username, for a named invite) on the sign-up
+  page.
 - **Accounts.** Three wrong passwords locks an account, and an admin
   reactivates it. They can also send somebody a reset link.
 - **Tags.** Approving or merging the tags authors have proposed.
 - **The wiki.** Pressing *Sync wiki now* to refresh the glossary.
-- **Backup.** Downloading the whole database as one file.
+- **Backup.** Downloading the whole database as one file, safe to take
+  while people are using the site.
 - **A log** of what each person has been doing, which is there so that
   "something went wrong yesterday" is answerable.
+
+@figure invite-copy.png | The invite code on the admin page, with the button that copies it as a message.
 
 ## Where your writing lives
 

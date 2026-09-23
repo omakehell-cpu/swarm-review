@@ -34,7 +34,22 @@ typing.
 title, the text and the buttons that save it. **Escape** brings it all
 back. The site remembers which way you like it.
 
-@figure chapter-editor.png | The editor: the text, the markdown reminder, and the writing checks down the side.
+## The editor page
+
+On a screen with room for it the editor is two columns. On the left, the
+title, the row of buttons and the text. On the right, the
+[writing checks](/help/writing-checks) -- the reading grade and a coloured
+card for each kind of trouble -- and, under them, the notes the chapter has
+been given, for reference while you rewrite. Answering those notes happens
+on the chapter page, not here.
+
+@figure chapter-editor.png | The editor: the text on the left, the writing checks and the notes on the right.
+
+At the bottom of the checks, **Editor settings** has two things you will
+rarely need: **Fit to chapter** and **Fill screen**, for how wide the text
+box is (you can also drag its corner), and **Markdown preview**, which
+shows the chapter rendered beside the box -- useful mainly in Markdown, as
+Visual already shows it that way.
 
 ## Visual or Markdown
 
@@ -85,9 +100,9 @@ Opening the editor with a draft waiting opens the draft, and says so, with
 went up since you started the draft -- a suggested rewrite you applied, say
 -- the editor tells you, and publishing asks before it goes on top.
 
-If the chapter already exists as a file, **upload it instead** — `.md`,
-`.txt` or `.docx` — and it replaces the text in the box. Word documents keep
-their bold, italics, headings and blockquotes.
+Starting a story or a chapter, you can **upload a file instead** of
+typing -- `.md`, `.txt` or `.docx` -- under *Optional details*. Word
+documents keep their bold, italics, headings and blockquotes.
 
 ## Replacing a chapter with a file
 
@@ -134,8 +149,9 @@ saving is never a scroll away from wherever you have got to.
 
 @figure editor-phone.png | The editor on a phone: the text, and a save bar that stays put.
 
-**Markdown is supported** and **Optional details** are folded shut and one
-tap from open. On a screen with room for them they are open, as before --
+The writing checks fold into one line above the text -- *Grade 5 · 18
+flagged* -- and open with a tap. **Markdown is supported** and **Optional
+details** are folded shut and one tap from open. On a screen with room for them they are open, as before --
 nothing was taken away, it was put where it fits.
 
 ## Writing with something open beside it
@@ -154,41 +170,9 @@ than opening a third one.
 
 ## The writing checks
 
-The checks work the way Hemingway does. Beside the text is a panel: the
-**reading grade** in large type, then one coloured card for each kind of
-trouble, and the same colours in the text.
-
-- **Red** -- a sentence that is very hard to read. **Yellow** -- hard.
-- **Blue** -- an adverb. **Green** -- passive voice. **Purple** -- a word or
-  phrase with a simpler alternative.
-- A wavy underline is a possible misspelling.
-- The craft checks -- filler words, repeated words, filter verbs, dialogue
-  tags, repeated openings -- are **underlined** rather than filled: a
-  second, quieter layer.
-
-**Click a card** to hide or show its marks; it still counts them while they
-are hidden. **Write** at the top of the panel takes every mark away while
-you draft, and **Revise** brings them back. Hover over a mark to see what it
-is and, where there is an honest rewrite, what it proposes. On a phone the
-panel is one line above the text; tap it to open it.
-
-The targets on the cards ("aim for 2 or fewer") are this site's own: about
-one adverb in a hundred words, about one passive sentence in five. They are
-suggestions from a set of rules, not judgements. Nothing is sent anywhere:
-the checks run in your browser.
-
-The **reading grade** is the American school year that would follow the
-text on a first read, worked out from sentence length and syllables per
-word. Most published fiction lands between 4 and 8; children's books lower,
-a dense literary chapter higher. There is no grade that is wrong: a hard
-chapter written on purpose is a hard chapter written on purpose. It is
-useful for noticing that a scene has drifted somewhere you did not mean it
-to go, and useless as a target.
-
-The spellchecker uses a real dictionary, which means it does not know your
-invented names. Add them to the **story dictionary** (on the story page, or
-from the spelling highlight itself) and it will stop underlining them. Names
-you write into the story bible are added for you.
+The coloured marks in the text and the panel beside it -- hard sentences,
+adverbs, passive voice and the rest -- have [a page of their
+own](/help/writing-checks).
 
 ## Who can write
 

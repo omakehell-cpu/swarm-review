@@ -4,6 +4,12 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — A better Help
+
+- **Four new pages**: *Finding your way round* (the front page, a story and a chapter, part by part), *The writing checks* (every colour and every check, and what to do about each), *Keys* (every shortcut on one page), and *Questions people ask*.
+- **The rest brought up to date** with the new chapter page, the notes, the editor, the account page and the invites, with fresh pictures.
+- **Leaving a note from Read mode** now switches to Review for you, instead of opening a box you could not see.
+
 ## 2026-09-23 — Checks like Hemingway
 
 The writing checks had got too quiet to be useful. They are back, laid out the way Hemingway does it.

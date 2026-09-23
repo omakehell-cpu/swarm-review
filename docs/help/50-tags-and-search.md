@@ -20,10 +20,19 @@ of the same idea within a month.
 
 @figure tag-vocabulary.png | The vocabulary at Tags, grouped the way the codes are.
 
+## Filtering the front page
+
+**Filter by tag**, at the right of the *All stories* heading on the front
+page, opens the vocabulary as boxes to tick. A story has to carry **every**
+tag you tick, not any of them, so each one you add narrows the list.
+**Clear** puts the whole list back. The address of a filtered page can be
+bookmarked or sent to somebody.
+
 ## Tags you would rather not see
 
 On your **account** page there is a list of tags to hide. Stories carrying
-one drop out of the index for you and nobody else. Nothing is deleted or
+one are folded away at the foot of the front page, behind a line saying
+how many there are -- for you and nobody else. Nothing is deleted or
 hidden from anybody: it is your own filter on your own view.
 
 ## Searching
@@ -40,6 +49,7 @@ three copies of itself.
 
 ## What is waiting for you
 
-The stories index puts what needs you above what merely exists: chapters
-with notes waiting on your answer, replies to you, and things you have not
-read yet, before the general list.
+The front page puts what needs you above what merely exists: notes waiting
+on your answer, replies to you, chapters you were asked to read and ones
+you have not opened yet, before the general list. See
+[finding your way round](/help/finding-your-way).

@@ -244,6 +244,14 @@
   // it without one.
   function openCommentBox() {
     if (!pendingSelection) return false;
+    // In Read mode the notes column is put away, and the box lives in it.
+    // Wanting to leave a note is wanting Review, so switch to it first;
+    // the selection is already held in pendingSelection.
+    const main = document.querySelector('main');
+    if (main && main.dataset.reading === 'read') {
+      const review = /** @type {HTMLElement|null} */ (document.querySelector('[data-mode="review"]'));
+      if (review) review.click();
+    }
     startInput.value = String(pendingSelection.start);
     endInput.value = String(pendingSelection.end);
     quotedInput.value = pendingSelection.text;

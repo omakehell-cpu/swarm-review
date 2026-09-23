@@ -5,20 +5,39 @@ kind of note the author can actually act on.
 
 ## Read or Review
 
-Every chapter page opens in one of two modes, and the switch is in the bar
-above the text.
+Under the chapter's title is one row of controls, and the first of them is
+the switch between two ways of having the page.
 
 **Read** gives you the chapter and nothing else: no notes, no highlights,
-no margin. **Review** brings all of it back. Nobody thinks well about a
-sentence while the sentence has three coloured underlines on it, so read it
-once first.
+no margin. **Review** brings all of it back: the passages people have left
+notes on are underlined, and the notes sit beside them. Nobody thinks well
+about a sentence while the sentence has three coloured underlines on it,
+so read it once first.
 
-Next to the switch, **Aa** sets the type size, the line length and the line
-spacing, and **Fill screen** takes the rest of the page away. All of that is
-yours alone — it follows you around the site and changes nothing for anybody
-else.
+A chapter with notes opens in Review; one without opens in Read; and after
+that the site remembers which you last chose. If you would rather every
+chapter opened in Read, whatever it has on it, that is a setting on your
+[account page](/help/your-account).
 
-@figure read-review-switch.png | The bar above the chapter: the Read/Review switch, the type controls behind Aa, and Fill screen.
+**Aa**, next to the switch, is how the text looks to you:
+
+- **Type size** -- S, M, L or XL.
+- **Line length** -- narrow, normal or wide.
+- **Line spacing** -- tight, normal or loose.
+- **Names** -- *Linked* underlines the names the story's bible and the
+  glossary know about, so you can click them (see below); *Plain* leaves
+  them as words.
+- **Fill screen** -- takes the width of the whole window.
+
+All of that is yours alone: it follows you round the site and changes
+nothing for anybody else. **More** has the downloads -- this version of
+the chapter as Word, Markdown or plain text -- and, on your own chapter,
+**Archive chapter**.
+
+@figure read-review-switch.png | The row under the title: Read or Review, and Aa open with its settings.
+
+**Left and right arrow keys** go to the previous and next chapter, as long
+as you are not typing or have not selected something.
 
 ## A name you do not remember
 
@@ -47,10 +66,12 @@ so does everything if JavaScript is off: it is a link, and it stays a link.
 
 ## Leaving a note
 
-**Select the words you mean** and a comment box opens on them. That is the
-whole gesture. The note then sits in the margin beside the passage it is
-about, joined to it by a line, and the passage is underlined so the author
-can see at a glance where the notes fall.
+**Select the words you mean** and a button offers to comment on them;
+click it and the note box opens beside the passage. That is the whole
+gesture. If you were in Read, the page switches to Review for you. The
+note then sits in the margin beside the passage it is about, joined to it
+by a line, and the passage is underlined so the author can see at a
+glance where the notes fall.
 
 **From the keyboard**, it is the same gesture: select the passage with
 shift and the arrow keys, and then press **C**. The offer is announced
@@ -77,8 +98,28 @@ with one click.
 If what you want to say is not about one passage, use **General comment (no
 text selected)** at the foot of the notes.
 
-Anyone can **Reply** to a note, including the author. A note you regret can
-be **Retract**ed.
+### Under every note
+
+Each note ends in one quiet line:
+
+- **Reply** -- anyone can, including the author. Replies sit under the note.
+- **Edit** -- your own notes only, for when you said it badly.
+- **Retract** -- your own notes only, for the one you regret. It leaves a
+  marker saying a note was there, so the replies under it still make sense.
+
+The heading of the notes column says how many there are.
+
+### A good note
+
+The notes that get used have three things in common. They say **where**
+-- which is what selecting the words does for you. They say **what
+happened to you as a reader** ("I lost track of who was speaking here"),
+which the author cannot know, rather than what the author should do, which
+they can decide. And they are **the right size**: a typo is one word; a
+problem with the whole middle of the chapter is a general comment, not
+eleven notes on eleven paragraphs.
+
+A question is a good note. So is a heart.
 
 ## What the author does with it
 
@@ -103,9 +144,9 @@ conversation is part of the record. A note can be **Reopen**ed later.
 
 @figure note-in-margin.png | A note sits beside the passage it is about, joined to it by a line. Accept and Reject are the author's.
 
-The chapter's own heading shows how many notes are still **pending**, and
-the story index shows the same, so nobody has to open ten chapters to find
-out where the work is.
+The count of notes still **pending** is on the story's contents and on the
+front page, so nobody has to open ten chapters to find out where the work
+is.
 
 ## Versions
 
@@ -121,16 +162,18 @@ with or it needs a look -- and the current version says how many are
 waiting back there, with a link. Accepted and rejected notes never move:
 they are the record of what was said about that draft.
 
-The **Version** dropdown moves between them, and **What changed?** shows the
-difference in prose — the words that went and the words that came, not a
-screen of markdown. A chapter nobody has revised yet just says so.
+Once a chapter has more than one version, a **version picker** appears in
+the row under the title -- *Version 2 (latest)* -- with the line the author
+wrote about it, and **What changed?** shows the difference in prose: the
+words that went and the words that came, not a screen of markdown. A
+chapter with only one version shows none of this.
 
 @figure version-and-diff.png | What changed, shown in prose rather than in markdown source.
 
 ## Asking somebody to read
 
-On your own chapter, **Ask someone to read this** is under the chapter
-heading. Tick the people and, if you have one, write the question you want
+On your own chapter, **Ask someone to read this** is just under the row of
+controls. Tick the people and, if you have one, write the question you want
 answered: *does the jump in time work? is the fight too long?* A question
 gets better notes than "thoughts?".
 
@@ -145,8 +188,9 @@ It is also in the private feed, for anybody who reads the site that way.
 
 ## Who has read what
 
-Opening a chapter records that you opened it. The dots on the story index
-say who has been in and which version they saw.
+Opening a chapter records that you opened it. The initials under each
+chapter in the story's contents say who has been in, and on your own
+chapter the line under the title says who has read it.
 
 This exists because silence is ambiguous: an author hearing nothing cannot
 tell "nobody has looked at it" from "three people read it and had nothing to
