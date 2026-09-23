@@ -184,21 +184,42 @@ function arcHeading(group, position) {
     </div>`;
 }
 
+// Where a reader should start: the first chapter they have not opened
+// yet, or the beginning if they have read them all or none.
+function readingStart(chapters, readersByChapter, userId) {
+  if (!chapters.length) return null;
+  const read = (c) => (readersByChapter.get(c.id) || []).some((r) => r.id === userId);
+  const readCount = chapters.filter(read).length;
+  if (readCount === 0) return { chapter: chapters[0], label: 'Start reading' };
+  const next = chapters.find((c) => !read(c) && c.author_id !== userId);
+  if (next) return { chapter: next, label: `Continue with chapter ${next.chapter_number}` };
+  return { chapter: chapters[0], label: 'Read it again from the start' };
+}
+
+// The story page is set like the front of a book: a title page -- the
+// cover, the title, who wrote it, what it is about, and the one thing a
+// reader came to do, which is start reading -- and then the contents, one
+// line per chapter with a dotted leader to its length. Everything the
+// authors need (outline, analysis, the bible, the details) is still here,
+// on a quieter row under the title page.
 function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0, bibleVisible = true }) {
+  const pad = (n) => String(n).padStart(2, '0');
   const chapterRow = (c, i) => `
-    <div class="chapter-row-outer">
-      <a class="chapter-row" href="/chapters/${c.id}">
+    <div class="chapter-row-outer toc-entry">
+      <a class="chapter-row toc-row" href="/chapters/${c.id}">
         <div class="chapter-row-main">
-          <h3>Chapter ${c.chapter_number}: ${escapeHtml(c.title)}
+          <h3><span class="toc-num" aria-hidden="true">${pad(c.chapter_number)}</span><span class="toc-title"><span class="sr-only">Chapter ${c.chapter_number}: </span>${escapeHtml(c.title)}</span>
             ${c.is_new ? '<span class="badge new">New</span>' : (c.has_new_comments ? '<span class="badge new-comments">New comments</span>' : '')}
             ${chapterStageBadge(c)}
+            <span class="toc-leader" aria-hidden="true"></span>
+            <span class="toc-words">${c.word_count ? wordCount(c.word_count) : ''}</span>
           </h3>
-          <p class="muted">${escapeHtml(c.summary || '')}</p>
+          ${c.summary ? `<p class="muted">${escapeHtml(c.summary)}</p>` : ''}
         </div>
         <div class="chapter-row-meta">
           ${readerDots(readersByChapter.get(c.id) || [], c.latest_version)}
           <span>by ${escapeHtml(c.author_name)}</span>
-          <span>v${c.latest_version}${c.word_count ? ` &middot; ${wordCount(c.word_count)}` : ''}</span>
+          <span>v${c.latest_version}</span>
           ${timeHtml(c.created_at)}
           ${c.pending_comments > 0 ? `<span class="badge pending">${c.pending_comments} pending</span>` : ''}
         </div>
@@ -211,7 +232,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
   let arcNumber = 0;
   const rows = chapters.length ? arcs.map((group) => {
     if (group.title) arcNumber += 1;
-    return `<section class="arc">${arcHeading(group, arcNumber)}<div class="chapter-list">${
+    return `<section class="arc">${arcHeading(group, arcNumber)}<div class="chapter-list toc">${
       group.chapters.map((c) => chapterRow(c, chapters.indexOf(c))).join('')
     }</div></section>`;
   }).join('') : emptyState({
@@ -220,36 +241,45 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
     body: 'Every chapter of this story has been archived. They are still readable, and can be brought back.',
     action: `<a class="btn ghost small" href="/stories/${story.id}/archived-chapters">View archived chapters</a>`,
   });
+  const start = readingStart(chapters, readersByChapter, user.id);
 
   return layout({
     title: story.title,
     user,
     body: `
-      <div class="page-head${story.cover_filename ? ' has-cover' : ''}">
+      <section class="title-page${story.cover_filename ? ' has-cover' : ''}">
         ${storyCoverImg(story, 'story-page-cover')}
-        <div>
-          <h1>${escapeHtml(story.title)} ${storyStateBadge(story)}</h1>
-          <p class="muted byline">${bylineWith(story.author_name, coauthors, story.author_username)} &middot; ${timeHtml(story.created_at)}</p>
-          ${story.description ? `<p class="summary">${escapeHtml(story.description)}</p>` : ''}
+        <div class="title-page-text">
+          <p class="title-page-kicker">A story ${bylineWith(story.author_name, coauthors, story.author_username)}</p>
+          <h1>${escapeHtml(story.title)}</h1>
+          ${story.description ? `<p class="title-page-blurb">${escapeHtml(story.description)}</p>` : ''}
+          <p class="title-page-facts">${storyStateBadge(story)} ${chapters.length} chapter${chapters.length === 1 ? '' : 's'}${stats && stats.words ? ` &middot; ${wordCount(stats.words)}` : ''} &middot; begun ${timeHtml(story.created_at)}</p>
           ${tagChips(tags)}
-          ${storyStatsBlock(stats)}
-          ${goalBar(stats ? stats.words : 0, story.word_goal)}
+          <div class="title-page-actions">
+            ${start ? `<a class="btn" href="/chapters/${start.chapter.id}">${ICONS.book}${escapeHtml(start.label)}</a>` : ''}
+            ${canWrite ? `<a class="btn ghost" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
+          </div>
         </div>
-        <div class="page-head-actions">
-          ${canWrite ? `<a class="btn" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
-          <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
-          <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
-          <a class="btn ghost small" href="/stories/${story.id}/timeline">Timeline</a>
-          ${bibleVisible ? `<a class="btn ghost small" href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
-          ${isStoryAuthor ? `<a class="btn ghost small" href="/stories/${story.id}/edit">Edit details</a>` : ''}
-          ${isStoryAuthor ? `
-            <form method="post" action="/stories/${story.id}/archive" class="inline-form">
-              <button class="btn ghost small" type="submit">Archive story</button>
-            </form>` : ''}
-        </div>
-      </div>
+      </section>
+      <nav class="story-tools" aria-label="About this story">
+        <a href="/stories/${story.id}/outline">Outline</a>
+        <a href="/stories/${story.id}/analysis">Analysis</a>
+        <a href="/stories/${story.id}/timeline">Timeline</a>
+        ${bibleVisible ? `<a href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
+        ${isStoryAuthor ? `<a href="/stories/${story.id}/edit">Edit details</a>` : ''}
+        ${isStoryAuthor ? `
+          <form method="post" action="/stories/${story.id}/archive" class="inline-form">
+            <button class="linklike" type="submit">Archive story</button>
+          </form>` : ''}
+      </nav>
+      <details class="story-numbers">
+        <summary>The story in numbers</summary>
+        ${storyStatsBlock(stats)}
+        ${goalBar(stats ? stats.words : 0, story.word_goal)}
+      </details>
       ${synopsisSection(story)}
-      ${named ? `<div class="arc-stack">${rows}</div>` : `<div class="chapter-list">${rows}</div>`}
+      <h2 class="toc-heading">Contents</h2>
+      ${named ? `<div class="arc-stack">${rows}</div>` : `<div class="chapter-list toc">${rows}</div>`}
       ${chapters.length ? compileSection(story) : ''}
       <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>
       ${(isStoryAuthor || coauthors.length) ? coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId: user.id }) : ''}

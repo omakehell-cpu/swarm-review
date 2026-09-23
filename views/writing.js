@@ -5,6 +5,7 @@ const { escapeHtml, toScriptJson } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
 const { besidePanel, editorBiblePanel } = require('./bible');
+const { diffBlockHtml } = require('./chapter');
 const { arcField, fileUploadField, markdownHint, positionField, povAndStrandFields, renderCommentReadOnly, stageField, tagPicker, uploadVersionField, whenFields } = require('./shared');
 function archivedStoriesPage({ user, stories }) {
   const rows = stories.length ? stories.map((s) => `
@@ -163,8 +164,8 @@ function draftNotice(chapter, draft, justDrafted, publishedVersionNumber) {
     </div>`;
 }
 
-/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, conflict?: any, latestVersionNumber?: number, publishedVersionNumber?: number, draft?: Row|null, justDrafted?: boolean, vocabulary?: any, siblings?: Row[], castList?: Row[], values?: FormValues }} props */
-function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, conflict = null, latestVersionNumber = 0, publishedVersionNumber = 0, draft = null, justDrafted = false, vocabulary = {}, siblings = [], castList = [], values = /** @type {FormValues} */ ({}) }) {
+/** @param {{ user: Row, chapter: Row, latestContent: string, comments?: Row[], error?: string|null, canWrite?: boolean, conflict?: any, latestVersionNumber?: number, publishedVersionNumber?: number, draft?: Row|null, justDrafted?: boolean, desk?: any, vocabulary?: any, siblings?: Row[], castList?: Row[], values?: FormValues }} props */
+function editChapterPage({ user, chapter, latestContent, comments = [], error, canWrite = true, conflict = null, latestVersionNumber = 0, publishedVersionNumber = 0, draft = null, justDrafted = false, desk = null, vocabulary = {}, siblings = [], castList = [], values = /** @type {FormValues} */ ({}) }) {
   const published = publishedVersionNumber || latestVersionNumber;
   const topLevelComments = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
@@ -193,7 +194,8 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
       ${conflict ? conflictNotice(chapter, conflict) : ''}
       ${conflict ? '' : draftNotice(chapter, draft, justDrafted, published)}
       <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" enctype="multipart/form-data"
-            data-draft-url="/chapters/${chapter.id}/draft">
+            data-draft-url="/chapters/${chapter.id}/draft"${desk ? ' data-desk' : ''}>
+        ${desk ? `<script type="application/json" id="desk-data">${toScriptJson(desk)}</script>` : ''}
         <input type="hidden" name="baseVersion" value="${conflict ? conflict.version : (latestVersionNumber || '')}">
         <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
         <label class="main-field">Chapter text<textarea name="content" rows="24" data-story-id="${chapter.story_id}" data-editor-tools>${escapeHtml(values.content ?? latestContent)}</textarea>
@@ -247,9 +249,30 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
   });
 }
 
+// A snapshot against the chapter as it stands, in prose, the same way the
+// version comparison shows it.
+function snapshotComparePage({ user, chapter, snapshot, againstLabel, blocks, summary }) {
+  const body = summary.identical
+    ? '<p class="muted diff-identical">The snapshot and the chapter say the same thing, word for word.</p>'
+    : blocks.map(diffBlockHtml).join('\n');
+  return layout({
+    title: `Snapshot - ${chapter.title}`,
+    user,
+    body: `
+      <p class="breadcrumb"><a href="/chapters/${chapter.id}/edit">&larr; Back to the editor</a></p>
+      <div class="page-head"><h1>&ldquo;${escapeHtml(snapshot.name)}&rdquo;</h1></div>
+      <p class="muted diff-summary">Snapshot taken ${timeHtml(snapshot.created_at)}, compared with ${escapeHtml(againstLabel)}.
+        ${summary.identical ? '' : `<span class="diff-count added">+${summary.added} word${summary.added === 1 ? '' : 's'}</span>
+        <span class="diff-count removed">&minus;${summary.removed} word${summary.removed === 1 ? '' : 's'}</span>`}
+        Struck through is what the snapshot had; underlined is what is there now.</p>
+      <div class="reading-pane"><div class="diff-body">${body}</div></div>`,
+  });
+}
+
 // ---------- story detail (chapter list) ----------
 
 module.exports = {
+  snapshotComparePage,
   archivedStoriesPage,
   conflictNotice,
   editChapterPage,

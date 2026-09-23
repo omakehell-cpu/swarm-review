@@ -36,6 +36,40 @@ back. The site remembers which way you like it.
 
 @figure chapter-editor.png | The editor: the text, the markdown reminder, and the writing checks down the side.
 
+## Visual or Markdown
+
+The switch above the text changes how you see it, not what is saved.
+**Markdown** shows the symbols -- `*italic*`, `> quote`, `---` -- with the
+writing checks drawn on them. **Visual** shows the chapter as a reader will
+see it, and you write in it the same way: the buttons and Ctrl+B / Ctrl+I
+work, Enter starts a new paragraph, Shift+Enter a new line, Ctrl+Enter a
+scene break. Pasting brings the words and the paragraphs, not the fonts.
+The writing checks' marks only show in Markdown; their counts show in both.
+
+## Focus, typewriter, and how much you have written
+
+**Focus** hides everything but the title, the text and the buttons.
+**Typewriter** keeps the line you are writing at the same height on the
+screen, and in Visual it fades the paragraphs you are not in. Beside them,
+the editor counts what you have written since you opened it, and -- with a
+daily goal set on your account page -- how far along today is.
+
+## Scenes and snapshots
+
+**Scenes & snapshots** opens a drawer beside the editor.
+
+- **Scenes** splits the chapter where it has scene breaks and lists each
+  scene with its first words and its length. Click one to go there. Under
+  each is a box for your own note on it -- what it is for, what has to
+  happen -- kept on the server and seen by nobody but you. Notes stay with
+  the scene's place in the chapter: add a scene at the top and the notes
+  below it move down one.
+- **Snapshots** keeps a copy of the text in the editor, under a name, when
+  you ask -- before a big cut, say. Each can be **compared** with the
+  chapter as it stands, **put back** in the editor (what you had is kept as
+  a snapshot first, and nothing is published until you press Publish), or
+  deleted. A snapshot is not a version: readers never see it.
+
 ## Drafts and publishing
 
 While you write, your text is kept as a **draft**, every few seconds and

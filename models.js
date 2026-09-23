@@ -21,6 +21,7 @@ const modules = [
   ['drafts', require('./models/drafts')],
   ['activity', require('./models/activity')],
   ['covers', require('./models/covers')],
+  ['desk', require('./models/desk')],
   ['tags', require('./models/tags')],
   ['calendar', require('./models/calendar')],
   ['coauthors', require('./models/coauthors')],

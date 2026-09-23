@@ -4,6 +4,16 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — A desk to write at
+
+- **Visual or Markdown.** A switch above the editor shows the chapter as it reads while you write it -- italics in italics, scene breaks as breaks, no asterisks. Underneath it is still the same Markdown: switch back at any time and it is there, and nothing is rewritten unless you change it. The site remembers which you prefer.
+- **Typewriter.** The line you are writing stays at the same height on the screen, and in the visual editor the paragraphs around it fade. Best with *Focus*.
+- **How much you have written this session**, beside the buttons -- and, if you have a daily goal, how far along today is.
+- **Scenes & snapshots**, a drawer beside the editor. *Scenes* lists the chapter's scenes (split where it has scene breaks) with their opening words and length; click one to go there, and keep a note on each -- what it is for, what has to happen in it. The notes are yours alone. *Snapshots* keeps a named copy of the text whenever you ask, to compare with the chapter as it stands or to put back in the editor. Neither is a version, and nobody else ever sees them.
+- **The story page is set like the front of a book:** a title page with the cover, the title, the blurb and one button -- *Start reading*, or *Continue with chapter 4* if you have read the first three -- then the contents, one line per chapter with a dotted leader to its length. The tools (outline, analysis, bible, details) are on a quieter row underneath.
+- **Each look has its own type.** *Literary* sets its headings in Fraunces, with ornaments and a centred title page; *The Swarm* uses Space Grotesk and IBM Plex Mono, an emblem in the bar, a chapter heading that reads as a log entry and a story page that reads as a file. All self-hosted, like the rest.
+- **Fixed:** putting back a draft the browser had rescued showed blank lines instead of the text until you typed.
+
 ## 2026-09-22 — Three looks
 
 - **Pick how the site looks, on your account page:** *Clean* (as it has been), *Literary* (paper, serif headings, the stories as a shelf of covers, a drop capital at the start of each chapter) or *The Swarm* (a dark console with the prose on a lit page).

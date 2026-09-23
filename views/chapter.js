@@ -397,7 +397,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       <p class="breadcrumb"><a href="/stories/${chapter.story_id}">&larr; ${escapeHtml(chapter.story_title)}</a></p>
       ${chapterNav(chapter, neighbours, { compact: true })}
     </div>
-    <div class="chapter-header">
+    <div class="chapter-header" data-kicker="LOG ${String(chapter.chapter_number).padStart(2, '0')} // ${escapeHtml(chapter.story_title).toUpperCase()} // V${currentVersion.version_number}${currentVersion.word_count ? ` // ${currentVersion.word_count} W` : ''}">
       <h1>Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</h1>
       <p class="muted byline">by ${personLink(chapter.author_username, chapter.author_name)} &middot; ${timeHtml(chapter.created_at)}${
         currentVersion.word_count ? ` &middot; ${wordCount(currentVersion.word_count)}` : ''
@@ -459,7 +459,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
               </div>
             </div>
           </details>
-          ${isChapterAuthor ? `<a class="btn ghost small" href="/chapters/${chapter.id}/edit">Edit</a>` : ''}
+          ${isChapterAuthor ? `<a class="btn ghost small" href="/chapters/${chapter.id}/edit">${ICONS.pen}Edit</a>` : ''}
           <details class="menu">
             <summary class="btn ghost small">More</summary>
             <div class="menu-panel">
