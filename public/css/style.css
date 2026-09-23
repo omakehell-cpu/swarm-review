@@ -3405,10 +3405,10 @@ body.writing-focus textarea[data-editor-tools] { min-height: 70vh; }
 /* ======================================================================
    The front page: who is here, what they are doing, and a way in.
    ====================================================================== */
-/* The last three things that happened, under the inbox: a label, three
+/* The last three things that happened, below the stories: a label, three
    short lines, a link to the rest. Deliberately smaller than everything
    around it. */
-.activity-strip { margin: 0 0 var(--s-8); }
+.activity-strip { margin: var(--s-10) 0 var(--s-6); }
 .activity-strip h3 {
   margin: 0 0 var(--s-2); font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
   letter-spacing: var(--label-tracking); color: var(--text-muted);

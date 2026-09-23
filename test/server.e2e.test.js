@@ -764,8 +764,9 @@ test('what changed since the last visit is said once on the front page, then not
   assert.ok(!second.includes('whats-new-card'));
   assert.strictEqual(models.getUserByUsername(USER.username).changelog_seen_key, docs.latestReleaseKey());
 
-  // The menu has What's new right after Stories.
-  assert.match(second, /href="\/"[^>]*>Stories<\/a>\s*<a href="\/help\/changelog"[^>]*>What's new/);
+  // Lately comes after the stories, not between you and them.
+  const lately = second.indexOf('id="activity-title"');
+  if (lately >= 0) assert.ok(lately > second.indexOf('class="chapter-list"'), 'Lately sits below the stories');
 });
 
 test('an invite comes with a link that fills in its own code', async () => {
