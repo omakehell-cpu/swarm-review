@@ -2,8 +2,9 @@
 
 /** @typedef {import('../server').RouteContext} RouteContext */
 
-const { parseMarkdown, renderPlainText, renderHighlighted } = require('../lib/markdown');
+const { parseMarkdown, renderPlainText, renderHighlighted, flattenText } = require('../lib/markdown');
 const { markdownToDocxBuffer } = require('../lib/docx');
+const { noteAsWordText, readWordComments } = require('../lib/word-comments');
 const { parseBody, parseMultipartBody, sendHtml, sendJson, redirect } = require('../lib/util');
 const models = require('../models');
 const views = require('../views');
@@ -128,6 +129,62 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   redirect(res, `/chapters/${chapter.id}`);
 }
 
+// Notes from a Word file: a reader who read the chapter in Word (perhaps
+// downloaded with everybody's notes, see handleDownload) and commented
+// there. Each Word comment becomes a note by whoever uploads the file, on
+// the words it was on if those words are still in the current version,
+// or on the chapter as a whole, quoting them, if not. Comments that are
+// this site's own notes coming back (the download carries them) are left
+// out, so nothing is said twice.
+async function handleNotesFromWord(req, res, user, chapterId) {
+  const chapter = models.getChapterById(chapterId);
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
+  const { files } = await parseMultipartBody(req, UPLOAD_LIMIT_BYTES);
+  const file = files.file;
+  const back = (msg) => redirect(res, `/chapters/${chapterId}?notice=${encodeURIComponent(msg)}#notes`);
+  if (!file || !file.buffer || !file.buffer.length) return back('Choose a Word file first.');
+  if (!/\.docx$/i.test(file.filename || '')) return back('That is not a Word (.docx) file.');
+  let found;
+  try {
+    found = await readWordComments(file.buffer);
+  } catch (err) {
+    return back('That file could not be read as a Word document.');
+  }
+  const version = models.getLatestVersion(chapterId);
+  const existing = models.listCommentsForVersion(version.id);
+  const ours = new Set(existing.filter((c) => c.parent_id == null).map((c) =>
+    `${c.author_name}\u0000${noteAsWordText(c, existing.filter((r) => r.parent_id === c.id))}`.trim()));
+  const flat = flattenText(parseMarkdown(version.content));
+  let placed = 0;
+  let loose = 0;
+  for (const c of found) {
+    if (ours.has(`${c.author}\u0000${c.text}`)) continue;
+    const quoted = c.quoted.replace(/\s+/g, ' ').trim();
+    const at = quoted ? flat.indexOf(quoted) : -1;
+    const from = c.author && c.author !== user.display_name ? `(From ${c.author}, in Word) ` : '';
+    if (at >= 0) {
+      models.createComment({
+        versionId: version.id, authorId: user.id, startOffset: at, endOffset: at + quoted.length,
+        quotedText: quoted.slice(0, 1000), body: `${from}${c.text}`.slice(0, 4000),
+      });
+      placed += 1;
+    } else {
+      models.createComment({
+        versionId: version.id, authorId: user.id,
+        body: `${from}${quoted ? `On \u201c${quoted.slice(0, 200)}\u201d: ` : ''}${c.text}`.slice(0, 4000),
+      });
+      loose += 1;
+    }
+  }
+  if (placed + loose) {
+    logEvent(user, 'notes-from-word', { subject: chapter.title, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId });
+  }
+  const said = placed + loose === 0
+    ? 'That file had no comments that are not already here.'
+    : `${placed + loose} note${placed + loose === 1 ? '' : 's'} added from Word${loose ? `; ${loose} on the chapter as a whole, because their words are no longer in it` : ''}.`;
+  return back(said);
+}
+
 // One reaction on one paragraph, switched on or off by a reader (see
 // models/reactions.js and public/js/reactions.js). Not by the author: a
 // writer's own "hooked" is not news.
@@ -209,6 +266,7 @@ async function handleChapterPage(req, res, user, chapterId, query) {
     // Only on the current version: a place in an old draft is not a place.
     place: currentVersion.id === versions[0].id ? models.readingPlace(user.id, chapterId) : null,
     mentionable: models.listMentionable().filter((p) => p.username !== user.username),
+    notice: (query.get('notice') || '').slice(0, 300),
     reactions: isChapterAuthor
       ? { mode: 'author', versionId: currentVersion.id, map: models.reactionMap(currentVersion.id) }
       : { mode: 'reader', versionId: currentVersion.id, mine: models.myReactions(currentVersion.id, user.id) },
@@ -475,7 +533,7 @@ async function handleDownload(req, res, user, chapterId, format, query) {
     subject: `${chapter.title} as .${format}`, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId,
   });
 
-  const filename = `${slugForFilename(chapter.title)}-v${version.version_number}.${format}`;
+  const filename = `${slugForFilename(chapter.title)}-v${version.version_number}${query.get('notes') === '1' ? '-with-notes' : ''}.${format}`;
   const disposition = `attachment; filename="${filename}"`;
 
   if (format === 'md') {
@@ -488,7 +546,17 @@ async function handleDownload(req, res, user, chapterId, format, query) {
     return res.end(text);
   }
   if (format === 'docx') {
-    const buffer = await markdownToDocxBuffer({ title: chapter.title, markdownSource: version.content });
+    // With ?notes=1, the notes on this version come along as Word
+    // comments, each on its own words, replies included.
+    let notes = [];
+    if (query.get('notes') === '1') {
+      const all = models.listCommentsForVersion(version.id);
+      notes = all.filter((c) => c.parent_id == null && !c.deleted_at).map((c) => ({
+        start: c.start_offset, end: c.end_offset, author: c.author_name, date: c.created_at,
+        text: noteAsWordText(c, all.filter((r) => r.parent_id === c.id)),
+      }));
+    }
+    const buffer = await markdownToDocxBuffer({ title: chapter.title, markdownSource: version.content, notes });
     res.writeHead(200, {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'Content-Disposition': disposition,
@@ -507,6 +575,7 @@ const routes = [
   ['GET', '/changelog', (c) => redirect(c.res, '/help/changelog')],
   ['GET', /^\/stories\/(\d+)\/archived-chapters$/, (c) => handleArchivedChaptersForStory(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/chapters\/(\d+)\/beside$/, (c) => handleBesideChapter(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/chapters\/(\d+)\/notes-from-word$/, (c) => handleNotesFromWord(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/react$/, (c) => handleReaction(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/place$/, (c) => handleReadingPlace(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/summary$/, (c) => handleChapterSummary(c.req, c.res, c.user, Number(c.m[1]))],

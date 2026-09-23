@@ -4,6 +4,11 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — Word, both ways
+
+- **Download a chapter with its notes as Word comments**, each on the words it was left on, replies included (More, above the text).
+- **Bring Word comments back as notes.** Comment in Word, then *Notes from a Word file* at the foot of the notes: each comment becomes a note by you on the same words, or on the chapter as a whole if those words have since been rewritten. The notes that came along in the download are not added twice.
+
 ## 2026-09-23 — Checks in Visual too
 
 - **The writing checks now mark the text in Visual** as well as in Markdown: yellow and red sentences, blue adverbs, green passive voice and the rest, painted over the formatted chapter by the browser without touching what you type. Hover a mark to see what it is.

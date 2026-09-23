@@ -404,7 +404,7 @@ function reviewBlock({ chapter, isChapterAuthor, requests = [], mine = null, peo
     </section>`;
 }
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '', place = null, mentionable = [], reactions = null }) {
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '', place = null, mentionable = [], reactions = null, notice = '' }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -531,6 +531,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
                 <a href="/stories/${chapter.story_id}/chapters/new">Add a chapter</a>` : ''}
               <p class="menu-heading">Download this version</p>
               <a href="/chapters/${chapter.id}/download.docx?v=${currentVersion.version_number}">Word (.docx)</a>
+              ${comments.some((c) => c.parent_id == null && !c.deleted_at) ? `<a href="/chapters/${chapter.id}/download.docx?v=${currentVersion.version_number}&amp;notes=1">Word, with the notes as comments</a>` : ''}
               <a href="/chapters/${chapter.id}/download.md?v=${currentVersion.version_number}">Markdown (.md)</a>
               <a href="/chapters/${chapter.id}/download.txt?v=${currentVersion.version_number}">Plain text (.txt)</a>
               ${isChapterAuthor ? `
@@ -550,9 +551,10 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       <article class="reading-pane" aria-labelledby="chapter-title">
         <div id="chapter-text" tabindex="-1" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}"${place ? ` data-place="${place.paragraph}" data-place-of="${place.total}"` : ''} data-story-id="${chapter.story_id}" data-can-edit-dictionary="${isChapterAuthor ? '1' : '0'}" data-is-author="${isChapterAuthor ? '1' : '0'}">${highlighted}</div>
       </article>
-      <aside class="comments-pane" aria-label="Notes on this chapter">
+      <aside class="comments-pane" id="notes" aria-label="Notes on this chapter">
         ${nameCard()}
         <h2>Notes${topLevel.some((x) => !x.deleted_at) ? ` <span class="notes-count">${topLevel.filter((x) => !x.deleted_at).length}</span>` : ''}</h2>
+        ${notice ? `<p class="flash-inline" role="status">${escapeHtml(notice)}</p>` : ''}
         ${appliedFrom ? `<p class="flash-inline" role="status">${ICONS.tick}The rewrite from ${escapeHtml(appliedFrom)} is in the text. This is the new version; the one before it is still in the history.</p>` : ''}
         ${isLatest ? leftBehindNotice(leftBehind) : ''}
         <div id="comment-list">${topLevel.length ? anchoredHtml : commentsHtml}</div>
@@ -580,6 +582,15 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
           </form>
         </div>
 
+        ${isLatest ? `
+        <details class="notes-from-word" aria-label="Notes from a Word file">
+          <summary>Notes from a Word file</summary>
+          <p class="hint">Read it in Word? Download it with the notes (More, above the text), add your own as Word comments, and bring them here. Each becomes a note by you, on the same words.</p>
+          <form method="post" action="/chapters/${chapter.id}/notes-from-word" enctype="multipart/form-data" class="notes-from-word-form">
+            <label>Word file (.docx)<input type="file" name="file" accept=".docx" required></label>
+            <button type="submit" class="btn small">Bring the notes in</button>
+          </form>
+        </details>` : ''}
         <details class="general-comment" aria-label="A note on the whole chapter">
           <summary>General comment (no text selected)</summary>
           <form method="post" action="/chapters/${chapter.id}/comments">
