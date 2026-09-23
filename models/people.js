@@ -21,6 +21,12 @@ const listUsers = () =>
 // Excludes the "deleted-user" placeholder -- it's an internal bookkeeping
 // account, not a real member, and shouldn't show up (or be actionable) in
 // the admin panel.
+// Everybody who can be named in a note, for the "@" suggestions.
+function listMentionable() {
+  return db.prepare(`SELECT username, display_name FROM users
+    WHERE locked_at IS NULL ORDER BY display_name COLLATE NOCASE`).all();
+}
+
 function listUsersForAdmin() {
   return db.prepare(`
     SELECT id, username, display_name, is_admin, created_at, last_seen_at,
@@ -389,6 +395,7 @@ function setUserLook(userId, look) {
 }
 
 module.exports = {
+  listMentionable,
   setReadingPrefs,
   setUserLook,
   adminDeleteUser,

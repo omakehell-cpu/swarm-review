@@ -26,6 +26,26 @@ function markChapterRead(chapterId, userId, versionNumber) {
   return !before;
 }
 
+// ---------- where somebody stopped ----------
+
+/** @param {number} userId @param {number} chapterId @param {number} paragraph @param {number} total */
+function saveReadingPlace(userId, chapterId, paragraph, total) {
+  // The top of the chapter, or its last screen, is not a place to come back to.
+  if (!(paragraph > 1) || !(total > 0) || paragraph >= total) {
+    db.prepare('DELETE FROM reading_places WHERE user_id = ? AND chapter_id = ?').run(userId, chapterId);
+    return;
+  }
+  db.prepare(`
+    INSERT INTO reading_places (user_id, chapter_id, paragraph, total) VALUES (?, ?, ?, ?)
+    ON CONFLICT (user_id, chapter_id) DO UPDATE SET paragraph = excluded.paragraph, total = excluded.total, at = datetime('now')
+  `).run(userId, chapterId, Math.floor(paragraph), Math.floor(total));
+}
+
+/** @param {number} userId @param {number} chapterId */
+function readingPlace(userId, chapterId) {
+  return db.prepare('SELECT paragraph, total, at FROM reading_places WHERE user_id = ? AND chapter_id = ?').get(userId, chapterId) || null;
+}
+
 function listChapterReaders(chapterId) {
   return db.prepare(`
     SELECT u.id, u.display_name, r.read_at, r.version_number
@@ -109,6 +129,35 @@ function repliesToMe(userId, since, limit) {
 }
 
 
+// Notes and replies that name somebody: "@luis, is this the same Kessler?"
+// Matched by the username, which is the one name that never changes and
+// has no spaces. LIKE narrows it in SQL; the pattern decides, so "@luisa"
+// is not a mention of "luis".
+/** @returns {any[]} */
+function mentionsOf(userId, since, limit) {
+  if (!since) return [];
+  const me = db.prepare('SELECT username FROM users WHERE id = ?').get(userId);
+  if (!me) return [];
+  const rows = db.prepare(`
+    SELECT r.id, r.body, r.created_at, r.parent_id, u.display_name AS author_name,
+           c.id AS chapter_id, c.title AS chapter_title, c.chapter_number,
+           s.title AS story_title
+    FROM comments r
+    JOIN chapter_versions v ON v.id = r.version_id
+    JOIN chapters c ON c.id = v.chapter_id
+    JOIN stories s ON s.id = c.story_id
+    JOIN users u ON u.id = r.author_id
+    WHERE r.body LIKE @pattern AND r.author_id <> @userId
+      AND r.deleted_at IS NULL AND r.created_at > @since
+      AND c.archived_at IS NULL AND s.archived_at IS NULL
+    ORDER BY r.created_at DESC
+    LIMIT @limit
+  `).all({ userId, since, limit: limit * 3, pattern: `%@${me.username}%` });
+  const re = new RegExp(`(^|[^\\w@])@${me.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`, 'i');
+  return rows.filter((r) => re.test(String(r.body || ''))).slice(0, limit)
+    .map((r) => /** @type {any} */ (Object.assign({}, r, { mention: true })));
+}
+
 // Not "since your last visit" any more: what you have not opened. The old
 // version cleared itself every time somebody loaded the index, which is
 // the wrong behaviour for a list of things still to do -- reading the page
@@ -139,7 +188,12 @@ function chaptersNewToMe(userId, limit) {
  */
 function inboxFor(userId, { since = null, limit = 8 } = {}) {
   const pending = pendingOnMyChapters(userId);
-  const replies = repliesToMe(userId, since, limit);
+  // A reply that also names you is one thing, not two.
+  const direct = repliesToMe(userId, since, limit);
+  const seen = new Set(direct.map((r) => r.id));
+  const replies = direct.concat(mentionsOf(userId, since, limit).filter((m) => !seen.has(m.id)))
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+    .slice(0, limit);
   const asked = reviewQueueFor(userId);
   // A chapter somebody asked you to read is already at the top of the
   // list; saying it again under "new to read" is the same thing twice.
@@ -162,6 +216,9 @@ module.exports = {
   inboxFor,
   listChapterReaders,
   markChapterRead,
+  mentionsOf,
+  readingPlace,
+  saveReadingPlace,
   pendingOnMyChapters,
   readersForChapters,
   repliesToMe,

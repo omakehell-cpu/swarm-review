@@ -130,6 +130,9 @@ better for it.
 
 ## On the chapter page
 
-The author also has the checks on the chapter page, in Review, under
-**Writing checks**. There they start switched off: the chapter page is for
-reading and for the notes, and the editor is where the checks are for.
+The author also has the same panel on the chapter page, in Review, folded
+into one line above the text: *Readability · Grade 5 · 18 flagged*. Open it
+for the cards. It starts in **Write**, with nothing marked, because the
+chapter page is for reading and for the notes; press **Revise** and the
+text is marked as in the editor. The choice is remembered apart from the
+editor's.

@@ -74,7 +74,6 @@
   };
   const CHECK_ORDER = ['spell', 'passive', 'adverb', 'filler', 'complex', 'sentence',
     'echo', 'filter', 'dialogue', 'opening'];
-  const SEVERITY_COLOR = { yellow: '#c2a04e', red: '#c26a4e' };
 
   const DEFAULT_SETTINGS = {
     spell: true, passive: true, adverb: true, filler: true, complex: true, sentence: true,
@@ -83,16 +82,9 @@
   const SETTINGS_KEY = 'wa-settings-v2';
   const LEGACY_ENABLED_KEY = 'wa-enabled'; // the old single on/off switch
 
-  // The reading page is where you go to read a chapter and see what people
-  // said about it. Arriving to prose already covered in five colours of
-  // mark answers a question nobody asked, so the checks start off there
-  // and remember separately: turning "long sentences" off while reading
-  // shouldn't turn it off in the editor, where it is the whole point.
-  const READ_DEFAULT_SETTINGS = {
-    spell: false, passive: false, adverb: false, filler: false, complex: false, sentence: false,
-    echo: false, filter: false, dialogue: false, opening: false,
-  };
-  const READ_SETTINGS_KEY = 'wa-read-settings-v1';
+  // The chapter page's panel (see setupReadView): which checks it marks
+  // when switched to Revise. All of them, until the author says otherwise.
+  const READ_PANEL_KEY = 'wa-read-panel-v1';
 
   function loadSettings(key = SETTINGS_KEY, defaults = DEFAULT_SETTINGS) {
     const settings = Object.assign({}, defaults);
@@ -1118,77 +1110,8 @@
     return { html, ranges, stats };
   }
 
-  // Builds one "● N label" chip; returns '' when the count is zero so
-  // empty categories don't clutter the bar. `colorId` looks up its color
-  // in CHECK_META/SEVERITY_COLOR so the dot always matches its check/mark.
-  function statChip(color, count, singular, plural) {
-    if (!count) return '';
-    return `<span class="wa-chip"><span class="wa-dot" style="background:${color}"></span>${count} ${count === 1 ? singular : plural}</span>`;
-  }
-
-  // A writing group counts words, so the count is always there -- even
-  // when nothing else is, and even with every check switched off. It sits
-  // with the issue chips rather than under the textarea because that strip
-  // is the one place on the page already reserved for "how is this going".
-  function wordsChip(text) {
-    const words = String(text || '')
-      // A link's target is not prose. Dropping it keeps this in step with
-      // the count the server stores (see countWords in lib/markdown.js),
-      // which works on the parsed document rather than on the source.
-      .replace(/\]\([^)]*\)/g, ']')
-      .replace(/[*_~`#>]/g, ' ')
-      .match(/[\p{L}\p{N}][\p{L}\p{N}'\u2019-]*/gu);
-    const count = words ? words.length : 0;
-    const shown = count < 10000 ? count.toLocaleString('en-GB') : `${(count / 1000).toFixed(1).replace(/\.0$/, '')}k`;
-    return `<span class="wa-chip wa-words">${shown} ${count === 1 ? 'word' : 'words'}</span>`;
-  }
-
-  // "Grade 7" -- the one number Hemingway is known for, and the only chip
-  // in the strip that is not a count of things to fix. It carries no color
-  // dot on purpose: there is no grade that is wrong, and shading it would
-  // turn a description into a target. The title says what the number is
-  // for anyone who has not met it before.
-  function gradeChip(grade) {
-    if (grade === null || grade === undefined) return '';
-    const n = Math.round(grade);
-    const ease = n <= 6 ? 'very easy to read'
-      : n <= 9 ? 'easy to read'
-        : n <= 12 ? 'takes some work'
-          : 'hard going';
-    const title = `Reading grade ${n} (Flesch-Kincaid): ${ease}. `
-      + 'Most published fiction sits between 4 and 8.';
-    return `<span class="wa-chip wa-grade" title="${title}">Grade ${n}</span>`;
-  }
-
-  function summaryHtml(stats, text) {
-    const words = wordsChip(text) + gradeChip(stats.grade);
-    const total = stats.yellow + stats.red + stats.passive + stats.adverb + stats.filler
-      + stats.complex + stats.spell + stats.echo + stats.filter + stats.dialogue + stats.opening;
-    if (total === 0) return `${words}<span class="wa-chip muted">No issues spotted.</span>`;
-    return words + [
-      statChip(SEVERITY_COLOR.red, stats.red, 'very dense sentence', 'very dense sentences'),
-      statChip(SEVERITY_COLOR.yellow, stats.yellow, 'long sentence', 'long sentences'),
-      statChip(CHECK_META.passive.color, stats.passive, 'passive-voice phrase', 'passive-voice phrases'),
-      statChip(CHECK_META.adverb.color, stats.adverb, 'adverb', 'adverbs'),
-      statChip(CHECK_META.filler.color, stats.filler, 'filler word/phrase', 'filler words/phrases'),
-      statChip(CHECK_META.complex.color, stats.complex, 'complex word', 'complex words'),
-      statChip(CHECK_META.spell.color, stats.spell, 'possible misspelling', 'possible misspellings'),
-      statChip(CHECK_META.echo.color, stats.echo, 'repeated word', 'repeated words'),
-      statChip(CHECK_META.filter.color, stats.filter, 'filter verb', 'filter verbs'),
-      statChip(CHECK_META.dialogue.color, stats.dialogue, 'dialogue tag', 'dialogue tags'),
-      statChip(CHECK_META.opening.color, stats.opening, 'repeated opening', 'repeated openings'),
-    ].filter(Boolean).join('');
-  }
-
-  // ---------------------------------------------------------------------
-  // shared control card -- a list of toggle rows grouped into labeled
-  // sections (Spelling / Style / Markdown preview / Comments), rather than
-  // one flat row of colored pills -- easier to scan, and grouping the five
-  // Hemingway-style checks under one "Style" heading reads as one related
-  // group instead of five unrelated buttons.
-  // ---------------------------------------------------------------------
-
-  // One checkbox-and-label row inside a section. The checkbox itself
+  // One checkbox-and-label row (the Markdown preview switch in the
+  // panel's settings). The checkbox itself
   // carries the check's color (via accent-color, tied to --wa-color) --
   // that's the only color cue a row needs, so unlike the old pill this
   // doesn't need a separate dot element.
@@ -1210,83 +1133,6 @@
     row.classList.toggle('active', checked);
     return row;
   }
-
-  // A titled group of rows -- one of the four sections.
-  function buildSection(title, rows) {
-    const section = document.createElement('div');
-    section.className = 'wa-section';
-    const heading = document.createElement('div');
-    heading.className = 'wa-section-title';
-    heading.textContent = title;
-    // Read once, as the group's name: "Comments, group, Comments, checkbox"
-    // was the section title and its only toggle saying the same word twice.
-    heading.setAttribute('aria-hidden', 'true');
-    section.setAttribute('role', 'group');
-    section.setAttribute('aria-label', title);
-    section.appendChild(heading);
-    // Rows wrap horizontally instead of stacking one per line -- Style
-    // has five of them, and stacked they made the whole card as tall as
-    // its longest section even though Spelling/Comments only ever need
-    // one line each.
-    const list = document.createElement('div');
-    list.className = 'wa-section-rows';
-    rows.forEach((row) => list.appendChild(row));
-    section.appendChild(list);
-    return section;
-  }
-
-  // Builds the visual card that sits above the text in both the editor and
-  // the reading page, with two built-in sections (Spelling, Style).
-  // `onToggle(checkId, enabled)` fires when a row is toggled. Returns the
-  // card element, a `summary` element to update, and a `sections` element
-  // callers append their own extra sections to (the editor adds a
-  // "Markdown preview" section, and both the editor and the reading page
-  // add a "Comments" section, after this).
-  function buildControlsCard(settings, onToggle, { startOpen = true } = {}) {
-    const card = document.createElement('div');
-    card.className = 'wa-card';
-
-    const head = document.createElement('div');
-    head.className = 'wa-card-head';
-    // The head is the fold's handle: the whole strip toggles, so the
-    // counts stay readable at a glance with the switches put away.
-    const title = document.createElement('button');
-    title.type = 'button';
-    title.className = 'wa-card-title wa-card-toggle';
-    title.setAttribute('aria-expanded', startOpen ? 'true' : 'false');
-    title.innerHTML = '<span class="wa-card-caret" aria-hidden="true"></span>Writing checks';
-    const summary = document.createElement('span');
-    summary.className = 'wa-summary';
-    summary.innerHTML = 'Checking...';
-    head.appendChild(title);
-    head.appendChild(summary);
-    card.appendChild(head);
-
-    const sections = document.createElement('div');
-    sections.className = 'wa-sections';
-    if (!startOpen) card.classList.add('wa-card-folded');
-    title.addEventListener('click', () => {
-      const open = card.classList.toggle('wa-card-folded');
-      title.setAttribute('aria-expanded', open ? 'false' : 'true');
-    });
-
-    const spellRow = buildCheckRow(
-      CHECK_META.spell.color, CHECK_META.spell.label, settings.spell !== false,
-      (checked) => onToggle('spell', checked),
-    );
-    sections.appendChild(buildSection('Spelling', [spellRow]));
-
-    const styleRows = CHECK_ORDER.filter((id) => id !== 'spell').map((id) => {
-      const meta = CHECK_META[id];
-      return buildCheckRow(meta.color, meta.label, settings[id] !== false, (checked) => onToggle(id, checked));
-    });
-    sections.appendChild(buildSection('Style', styleRows));
-
-    card.appendChild(sections);
-
-    return { card, summary, sections };
-  }
-
 
   // ---------------------------------------------------------------------
   // the editor's side panel, after Hemingway
@@ -1360,13 +1206,16 @@
 
   function settingFor(id) { return id.indexOf('sentence-') === 0 ? 'sentence' : id; }
 
-  function buildPanel(getSettings, onToggle, onMode) {
+  function buildPanel(getSettings, onToggle, onMode, { modeKey = MODE_KEY, defaultMode = 'revise' } = {}) {
     const panel = document.createElement('section');
     panel.className = 'wa-panel';
     panel.setAttribute('aria-label', 'Writing checks');
 
-    let mode = 'revise';
-    try { if (localStorage.getItem(MODE_KEY) === 'write') mode = 'write'; } catch (e) { /* ignore */ }
+    let mode = defaultMode;
+    try {
+      const stored = localStorage.getItem(modeKey);
+      if (stored === 'write' || stored === 'revise') mode = stored;
+    } catch (e) { /* ignore */ }
 
     const head = document.createElement('div');
     head.className = 'wa-panel-head';
@@ -1489,7 +1338,7 @@
       panel.classList.toggle('wa-panel-writing', m === 'write');
       modeButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.waMode === m)));
       if (fromUser) {
-        try { localStorage.setItem(MODE_KEY, m); } catch (e) { /* ignore */ }
+        try { localStorage.setItem(modeKey, m); } catch (e) { /* ignore */ }
         onMode(m);
       }
     }
@@ -2235,16 +2084,20 @@
     // author's tool, and there is no card at all for anybody else.
     if (!isAuthor) return;
 
-    let settings = loadSettings(READ_SETTINGS_KEY, READ_DEFAULT_SETTINGS);
+    // The same panel as the editor's, folded to one line above the text,
+    // and starting in Write -- nothing marked -- because this page is for
+    // reading and for the notes. Revise marks the text here as it does in
+    // the editor, and the choice is remembered apart from the editor's.
+    let settings = loadSettings(READ_PANEL_KEY, DEFAULT_SETTINGS);
     let storyWords = new Set();
-
-    const { card, summary } = buildControlsCard(settings, (id, checked) => {
-      settings = Object.assign({}, settings, { [id]: checked });
-      saveSettings(settings, READ_SETTINGS_KEY);
+    const panelApi = buildPanel(() => settings, (id, show) => {
+      settings = Object.assign({}, settings, { [id]: show });
+      saveSettings(settings, READ_PANEL_KEY);
       render();
-    }, { startOpen: false });
-    card.classList.add('wa-card-reading');
-    insertControlsCard(card, container);
+    }, () => render(), { modeKey: 'wa-read-mode', defaultMode: 'write' });
+    panelApi.panel.classList.add('wa-panel-inline', 'wa-panel-chapter');
+    panelApi.setFolded(true);
+    insertControlsCard(panelApi.panel, container);
 
     const popover = document.createElement('div');
     popover.className = 'wa-popover hidden';
@@ -2265,14 +2118,16 @@
     async function render() {
       const token = (renderToken += 1);
       const text = flattenText(container);
-      const { ranges, stats } = await analyzer.run(text, storyWords, settings, null);
+      const { ranges, stats } = await analyzer.run(text, storyWords, DEFAULT_SETTINGS, null);
       // Settings can change while the worker is thinking, and a second
       // render is already on its way; this one would mark the text twice.
       if (token !== renderToken) return;
       clearMarks();
       hidePopover();
-      applyRangesToDom(container, ranges);
-      summary.innerHTML = summaryHtml(stats, text);
+      const shown = panelApi.mode() === 'write' ? []
+        : ranges.filter((r) => settings[r.kind.indexOf('sentence-') === 0 ? 'sentence' : r.kind] !== false);
+      applyRangesToDom(container, shown);
+      panelApi.update(stats, text);
     }
 
     Promise.all([loadDictionary(), loadStoryWords(storyId)]).then(([, words]) => {

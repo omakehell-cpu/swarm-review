@@ -4,6 +4,15 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — Small things, done properly
+
+- **Pick up where you stopped.** Come back to a chapter you did not finish and a line above the text offers to take you to the paragraph you stopped at. It follows you from the phone to the laptop, and it is forgotten once you reach the end.
+- **Name somebody in a note** with @ and their username. Typing @ offers the people there are; the note lands under *Replies and mentions* on their front page and in their feed.
+- **The front page can be ordered** -- Latest, A–Z, or only the stories you write in -- and narrowed with a *Find a story* box, once there are enough stories for it to matter.
+- **The editor's buttons on a phone** are one row: the formatting, the two views, and **…** for the rest. The text starts on the first screen.
+- **The writing checks on the chapter page** are the same panel as in the editor, folded to one line above the text, for the author, in Review.
+- **An app on your phone.** The site can be added to the home screen, with its own icon, and chapters you have opened recently can be read without a connection.
+
 ## 2026-09-23 — Housekeeping
 
 Things nobody sees until the day they matter.

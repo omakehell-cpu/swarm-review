@@ -150,7 +150,9 @@ saving is never a scroll away from wherever you have got to.
 @figure editor-phone.png | The editor on a phone: the text, and a save bar that stays put.
 
 The writing checks fold into one line above the text -- *Grade 5 · 18
-flagged* -- and open with a tap. **Markdown is supported** and **Optional
+flagged* -- and open with a tap. The row of buttons is only the formatting
+and the two views; **…** at the end of it opens the rest (Checks as a list,
+Scenes & snapshots, Typewriter, Focus). **Markdown is supported** and **Optional
 details** are folded shut and one tap from open. On a screen with room for them they are open, as before --
 nothing was taken away, it was put where it fits.
 

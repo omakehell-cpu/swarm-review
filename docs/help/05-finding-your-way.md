@@ -23,7 +23,10 @@ you**:
   have not opened.
 
 Under that is **All stories**, with a count, and **Filter by tag** at the
-right of the heading. Each story shows who wrote it, how many chapters and
+right of the heading. Once there are more than a handful of stories, the
+heading also offers an order -- **Latest** (the default), **A–Z**, or
+**Mine**, only the stories you write in -- and a **Find a story** box that
+narrows the list as you type. Each story shows who wrote it, how many chapters and
 words it has, when it last moved, and how many notes on it are still
 **pending**; then its blurb; then who is reading it and, if its author set
 one, how far it is towards its word target.
@@ -95,3 +98,15 @@ every bible. Your name leads to your **account**, and the moon switches
 between light and dark.
 
 On a phone the links fold into **Menu**.
+
+## On a phone, as an app
+
+The site can sit on a phone's home screen like an app, with its own icon
+and no browser bar round it. On an iPhone, open it in Safari, press
+**Share** and **Add to Home Screen**; on Android, Chrome offers **Install
+app** (or **Add to Home screen**) from its menu.
+
+Installed or not, the chapters you have opened recently on that device can
+be read with no connection -- on a train, in a tunnel. Anything that needs
+the server (a note, a draft, the front page) waits for the connection to
+come back. Signing out clears the chapters kept on the device.

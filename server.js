@@ -71,6 +71,8 @@ const MIME = {
   '.dic': 'text/plain; charset=utf-8',
   '.woff2': 'font/woff2',
   '.woff': 'font/woff',
+  '.html': 'text/html; charset=utf-8',
+  '.webmanifest': 'application/manifest+json',
 };
 
 function tryServeStatic(req, res, pathname) {
@@ -122,6 +124,16 @@ async function router(req, res) {
   setSecurityHeaders(res);
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = decodeURIComponent(url.pathname);
+
+  // The app's own furniture, reachable signed out: a phone asks for the
+  // manifest and the icons without a cookie, the service worker must sit
+  // at the root to look after the whole site, and the offline page is
+  // what that worker shows when there is no network at all.
+  if (pathname === '/manifest.webmanifest' || pathname === '/sw.js' || pathname === '/offline.html'
+      || pathname.startsWith('/icons/')) {
+    if (pathname === '/sw.js' && req.method === 'GET') res.setHeader('Service-Worker-Allowed', '/');
+    if (tryServeStatic(req, res, pathname)) return;
+  }
 
   if (pathname.startsWith('/css/') || pathname.startsWith('/js/')
       || pathname.startsWith('/dictionary/') || pathname.startsWith('/fonts/')) {

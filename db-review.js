@@ -119,4 +119,19 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   );
   CREATE INDEX IF NOT EXISTS idx_snapshots_chapter ON chapter_snapshots(chapter_id, id DESC);
   `);
+
+  // Where somebody stopped reading a chapter: the paragraph at the top of
+  // their screen when they left, out of how many. On the server rather
+  // than in the browser, so a chapter begun on the phone picks up on the
+  // laptop. Cleared once they reach the end.
+  db.exec(`
+  CREATE TABLE IF NOT EXISTS reading_places (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    paragraph  INTEGER NOT NULL,
+    total      INTEGER NOT NULL,
+    at         TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, chapter_id)
+  );
+  `);
 };

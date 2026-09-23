@@ -39,6 +39,12 @@ the chapter as Word, Markdown or plain text -- and, on your own chapter,
 **Left and right arrow keys** go to the previous and next chapter, as long
 as you are not typing or have not selected something.
 
+**Coming back to a chapter you did not finish**, a line above the text
+says where you stopped -- *You stopped at paragraph 14 of 30* -- with **Go
+there**. The page never jumps there by itself. The place is kept for you
+on the server, so a chapter begun on the phone picks up on the laptop, and
+it is forgotten once you reach the end.
+
 ## A name you do not remember
 
 Characters and places from the story's bible, and names from the shared
@@ -97,6 +103,12 @@ with one click.
 
 If what you want to say is not about one passage, use **General comment (no
 text selected)** at the foot of the notes.
+
+**Name somebody** with **@** and their username -- *@luis, is this the same
+Kessler?* Type **@** and the start of a name, and the people there are to
+name appear under the box; choose one with the arrow keys and Enter, or
+click it. The note is then under *Replies and mentions* on their front page
+(and in their feed), and their name in the note is a link to their page.
 
 ### Under every note
 

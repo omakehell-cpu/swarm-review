@@ -128,6 +128,18 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   redirect(res, `/chapters/${chapter.id}`);
 }
 
+// Where the reader has got to, sent by the page as they read and when
+// they leave (see reading.js). Anybody who can read the chapter can keep
+// their own place in it; nothing else is written.
+async function handleReadingPlace(req, res, user, chapterId) {
+  const chapter = models.getChapterById(chapterId);
+  if (!chapter) return sendError(res, 404, 'Chapter not found', user);
+  const body = await parseBody(req);
+  models.saveReadingPlace(user.id, chapterId, Number(body.paragraph) || 0, Number(body.total) || 0);
+  res.writeHead(204);
+  res.end();
+}
+
 async function handleChapterPage(req, res, user, chapterId, query) {
   const chapter = models.getChapterById(chapterId);
   if (!chapter) return sendError(res, 404, 'Chapter not found', user);
@@ -178,6 +190,9 @@ async function handleChapterPage(req, res, user, chapterId, query) {
     entities: bibleVisible ? models.listStoryEntities(chapter.story_id) : [],
     leftBehind: models.notesLeftBehind(chapterId),
     appliedFrom: appliedNote && appliedNote.suggestion != null ? appliedNote.author_name : null,
+    // Only on the current version: a place in an old draft is not a place.
+    place: currentVersion.id === versions[0].id ? models.readingPlace(user.id, chapterId) : null,
+    mentionable: models.listMentionable().filter((p) => p.username !== user.username),
     reviewHtml: views.reviewBlock({
       chapter, isChapterAuthor,
       requests: models.listReviewRequestsForChapter(chapterId),
@@ -473,6 +488,7 @@ const routes = [
   ['GET', '/changelog', (c) => redirect(c.res, '/help/changelog')],
   ['GET', /^\/stories\/(\d+)\/archived-chapters$/, (c) => handleArchivedChaptersForStory(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/chapters\/(\d+)\/beside$/, (c) => handleBesideChapter(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/chapters\/(\d+)\/place$/, (c) => handleReadingPlace(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/summary$/, (c) => handleChapterSummary(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterPage(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterSubmit(c.req, c.res, c.user, Number(c.m[1]))],

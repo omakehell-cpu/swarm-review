@@ -46,10 +46,18 @@ async function handleStories(req, res, user, query) {
   // the list: they stay reachable behind a "show anyway" summary, since
   // hiding something outright makes an app feel broken when you know the
   // story exists but can't find it.
+  // How the list is ordered: newest movement first (the default), A to Z,
+  // or only the stories you write in. A plain GET parameter, so the
+  // choice can be bookmarked and needs no script.
+  const sort = ['title', 'mine'].includes(query.get('sort') || '') ? query.get('sort') : '';
+  if (sort === 'title') stories.sort((a, b) => a.title.localeCompare(b.title, 'en', { sensitivity: 'base' }));
+  const writesIn = (s2) => s2.author_id === user.id
+    || (coauthorsByStory.get(s2.id) || []).some((c) => c.id === user.id);
   const hiddenTagIds = new Set(models.listUserHiddenTagIds(user.id));
   const visible = [];
   const folded = [];
   for (const story of stories) {
+    if (sort === 'mine' && !writesIn(story)) continue;
     const tags = tagsByStory.get(story.id) || [];
     const hit = tags.filter((t) => hiddenTagIds.has(t.id));
     (hit.length ? folded : visible).push({ ...story, hiddenBy: hit });
@@ -75,7 +83,7 @@ async function handleStories(req, res, user, query) {
   }
   sendHtml(res, 200, views.storiesPage({
     user, stories: visible, folded, since, tagsByStory, coauthorsByStory,
-    activeTags, allGroups: models.listTagsGrouped(),
+    activeTags, allGroups: models.listTagsGrouped(), sort, totalStories: stories.length,
     inbox: models.inboxFor(user.id, { since }),
     activity: models.groupActivity(user),
     welcome, whatsNew,

@@ -38,7 +38,7 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } 
   // across the row instead (see .story-row in style.css), so the row is
   // still clickable everywhere the chips aren't.
   return `
-    <div class="chapter-row story-row">
+    <div class="chapter-row story-row" data-find="${escapeHtml(`${s.title} ${s.author_name || ''} ${s.description || ''}`.toLowerCase())}">
       ${storyCoverImg(s)}
       <div class="chapter-row-main">
         <h3><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a> ${s.has_new_chapters ? '<span class="badge new">New</span>' : ''}</h3>
@@ -91,12 +91,12 @@ function inboxSection(inbox) {
 
   const replies = inbox.replies.length ? `
     <section class="inbox-group">
-      <h2>Replies to you</h2>
+      <h2>${inbox.replies.some((r) => r.mention) ? 'Replies and mentions' : 'Replies to you'}</h2>
       <ul class="inbox-list">
         ${inbox.replies.map((r) => `
           <li>
             <a href="/chapters/${r.chapter_id}#comment-${r.id}">
-              <span class="inbox-what"><strong>${escapeHtml(r.author_name)}</strong> ${commentGist(r.body)}</span>
+              <span class="inbox-what"><strong>${escapeHtml(r.author_name)}</strong> ${r.mention ? '<span class="muted">mentioned you:</span> ' : ''}${commentGist(r.body)}</span>
               <span class="inbox-where">${escapeHtml(r.story_title)} &middot; chapter ${r.chapter_number}: ${escapeHtml(r.chapter_title)}</span>
             </a>
           </li>`).join('')}
@@ -225,7 +225,29 @@ function whatsNewCard(whatsNew) {
     </section>`;
 }
 
-function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null, activity = [], welcome = null, whatsNew = null }) {
+// Order and find, once there are enough stories for either to matter.
+// The order is a link per choice rather than a select, so it works with
+// no script and each is one click; the find box narrows the list as you
+// type (see story-filter.js) and, without a script, is simply not there.
+function listTools(sort, activeTags) {
+  const keep = activeTags.map((t) => `tag=${encodeURIComponent(t.slug)}`);
+  const href = (value) => {
+    const parts = [...keep, ...(value ? [`sort=${value}`] : [])];
+    return parts.length ? `/?${parts.join('&amp;')}` : '/';
+  };
+  const choice = (value, label) => (sort === value
+    ? `<span class="list-sort-current" aria-current="true">${label}</span>`
+    : `<a href="${href(value)}">${label}</a>`);
+  return `
+    <div class="list-tools">
+      <nav class="list-sort" aria-label="Order of the stories">
+        ${choice('', 'Latest')}${choice('title', 'A&ndash;Z')}${choice('mine', 'Mine')}
+      </nav>
+      <input type="search" class="list-find" id="story-find" placeholder="Find a story" aria-label="Find a story by title, author or blurb" hidden>
+    </div>`;
+}
+
+function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null, activity = [], welcome = null, whatsNew = null, sort = '', totalStories = 0 }) {
   const sinceQs = since ? `?since=${encodeURIComponent(since)}` : '';
   const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
   const rows = stories.length
@@ -291,7 +313,8 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
       ${activeTags.length ? '' : welcomeCard(welcome)}
       ${activeTags.length ? '' : inboxSection(inbox)}
       <div class="list-head">
-        <h2 class="list-label">${activeTags.length ? 'Stories with those tags' : 'All stories'}${stories.length ? ` <span class="list-count">${stories.length}</span>` : ''}</h2>
+        <h2 class="list-label">${activeTags.length ? 'Stories with those tags' : (sort === 'mine' ? 'Stories you write in' : 'All stories')}${stories.length ? ` <span class="list-count">${stories.length}</span>` : ''}</h2>
+        ${totalStories > 4 || sort ? listTools(sort, activeTags) : ''}
         ${filter}
       </div>
       <div class="chapter-list">${rows}</div>
