@@ -50,25 +50,24 @@ note](/help/reading-and-reviewing).
 
 At the bottom of the checks, **Editor settings** has two things you will
 rarely need: **Fit to chapter** and **Fill screen**, for how wide the text
-box is (you can also drag its corner), and **Markdown preview**, which
-shows the chapter rendered beside the box -- useful mainly in Markdown, as
-Visual already shows it that way.
+box is (you can also drag its corner).
 
-## Visual or Markdown
+## Writing and Preview
 
-The switch above the text changes how you see it, not what is saved.
-**Markdown** shows the symbols -- `*italic*`, `> quote`, `---` -- with the
-writing checks drawn on them. **Visual** shows the chapter as a reader will
-see it, and you write in it the same way: the buttons and Ctrl+B / Ctrl+I
-work, Enter starts a new paragraph, Shift+Enter a new line, Ctrl+Enter a
-scene break. Pasting brings the words and the paragraphs, not the fonts.
-The writing checks mark the text in both views: over the symbols in Markdown, over the formatted chapter in Visual.
+There is one place to write: the box, in Markdown -- `*italic*`,
+`> quote`, `---` for a scene break -- with the writing checks drawn behind
+the words. **Preview**, above the text, shows the chapter as a reader will
+see it instead of the box. Press it again, press Escape or double-click the
+preview to go back to writing, where you left off. Nothing is typed in the
+preview; the formatting buttons wait until you are back.
 
 ## Focus, typewriter, and how much you have written
 
-**Focus** hides everything but the title, the text and the buttons.
+**Focus** fades out everything but the title, the text and the buttons,
+where they stand -- nothing moves, so the button is still there to press
+again (or press Escape).
 **Typewriter** keeps the line you are writing at the same height on the
-screen, and in Visual it fades the paragraphs you are not in. Beside them,
+screen. Beside them,
 the editor counts what you have written since you opened it, and -- with a
 daily goal set on your account page -- how far along today is.
 

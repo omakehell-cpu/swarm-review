@@ -406,6 +406,11 @@ label {
    writing-checks card the analyzer injects into the chapter-text label,
    which would otherwise inherit four-word-caption styling for a panel. */
 label > * { text-transform: none; letter-spacing: normal; font-weight: 400; }
+/* The chapter text is not inside its label: the editor, its toolbar and
+   the checks list are built round the textarea, and a click anywhere in a
+   label is handed to the first control in it -- which was the Bold button,
+   so clicking the list's summary typed four asterisks. */
+.main-field { display: flex; flex-direction: column; gap: var(--s-3); }
 input, textarea, select {
   background: transparent; border: 1px solid var(--border-strong); color: var(--text);
   border-radius: 0; padding: var(--s-4) var(--s-5); font: inherit; font-size: var(--t-md);
@@ -1332,9 +1337,6 @@ input:focus, textarea:focus, select:focus {
   text-transform: uppercase; letter-spacing: var(--label-tracking);
 }
 .wa-split { display: block; }
-.wa-split.wa-split-active { display: flex; gap: var(--s-6); align-items: stretch; }
-.wa-split.wa-split-active > .wa-editor-wrap { flex: 1 1 50%; min-width: 0; }
-.wa-split.wa-split-active > .md-preview { flex: 1 1 50%; min-width: 0; display: block; }
 .wa-editor-wrap {
   position: relative;
   background: var(--bg-sunken); border: 1px solid var(--border-strong); border-radius: 0;
@@ -1380,29 +1382,6 @@ input:focus, textarea:focus, select:focus {
 .wa-textarea:focus { box-shadow: none; border-color: transparent; }
 .wa-textarea::selection { background: rgba(var(--accent-rgb), 0.4); }
 
-.md-preview {
-  display: none; border: 1px solid var(--border); border-radius: 0; background: transparent;
-  padding: var(--s-8) var(--s-9); overflow: auto; font-family: var(--font-prose); font-size: var(--t-base); line-height: var(--editor-line-height);
-}
-.md-preview p { margin: 0 0 1.05em; }
-.md-preview p:last-child { margin-bottom: 0; }
-.md-preview h1, .md-preview h2, .md-preview h3,
-.md-preview h4, .md-preview h5, .md-preview h6 {
-  font-family: var(--font-display);
-  margin: 1.4em 0 0.5em; line-height: 1.25; color: var(--text); font-weight: 600;
-}
-.md-preview blockquote {
-  margin: 0 0 1.05em; padding: var(--s-2) var(--s-6); border-left: 3px solid var(--accent);
-  color: var(--text-muted); font-style: italic;
-}
-.md-preview ul, .md-preview ol { margin: 0 0 1.05em; padding-left: 1.4em; }
-.md-preview hr { border: none; text-align: center; margin: 1.5em 0; color: var(--text-muted); }
-.md-preview hr::before { content: "\2022 \2022 \2022"; content: "\2022 \2022 \2022" / ""; letter-spacing: 0.4em; }
-.md-preview code {
-  font-family: var(--font-mono); font-size: 0.9em;
-  background: var(--code-bg); padding: 1px var(--s-2); border-radius: 4px;
-}
-.md-preview a { color: var(--accent-strong); }
 
 .wa-card-reading {
   margin-bottom: var(--s-6); padding: 0 0 var(--s-5); border: none;
@@ -3380,8 +3359,9 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 
 /* Focus: the title, the text, the toolbar and the buttons that save it.
    Everything else -- the bar, the breadcrumbs, the checks, the notes, the
-   optional details, the panel beside -- is still on the page and back
-   with Escape. */
+   optional details, the panel beside -- fades out where it stands and is
+   back with Escape. Faded, not removed: nothing moves, so the Focus button
+   is still under the pointer to press again. */
 body.writing-focus .topbar,
 body.writing-focus .breadcrumb,
 body.writing-focus .writer-intro-fold,
@@ -3393,10 +3373,11 @@ body.writing-focus .upload-version,
 body.writing-focus [data-beside],
 body.writing-focus .editor-bible,
 body.writing-focus .writer-card > h1,
-body.writing-focus .markdown-hint { display: none !important; }
-body.writing-focus .chapter-body-grid { display: block; }
-body.writing-focus main.container { max-width: 52rem; }
-body.writing-focus .writer-card { border: 0; box-shadow: none; }
+body.writing-focus .markdown-hint,
+body.writing-focus .draft-notice,
+body.writing-focus .editor-side,
+body.writing-focus .site-footer { visibility: hidden; }
+body.writing-focus .writer-card { border-color: transparent; box-shadow: none; }
 /* Height only: the checks draw their marks on a layer that has to match
    the textarea's type exactly, so its size and leading are left alone. */
 body.writing-focus textarea[data-editor-tools] { min-height: 70vh; }
@@ -3622,41 +3603,35 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
    The writing desk: the visual editor, typewriter, the session count and
    the drawer of scenes and snapshots.
    ====================================================================== */
-.editor-modes { display: inline-flex; margin-left: var(--s-4); border: 1px solid var(--border); }
-.editor-modes .editor-tool { border: 0; font-family: var(--font-ui); font-size: var(--t-sm); }
-.editor-modes .editor-tool + .editor-tool { border-left: 1px solid var(--border); }
+.editor-tool.tool-preview { margin-left: var(--s-4); font-family: var(--font-ui); font-size: var(--t-sm); }
+.editor-tool:disabled { opacity: 0.4; cursor: default; }
 .editor-tool.tool-typewriter, .editor-tool.tool-desk { font-family: var(--font-ui); font-size: var(--t-sm); }
 .session-count { font-size: var(--t-xs); color: var(--text-muted); margin-right: var(--s-4); white-space: nowrap; }
 .session-count.goal-met { color: var(--text); font-weight: 600; }
 
 /* The visual editor is the same paper as the Markdown one, and the text
    on it is set the way the chapter page sets it. */
-.visual-editor {
+.editor-preview {
   background: var(--bg-sunken); border: 1px solid var(--border-strong); color: var(--text);
   padding: var(--s-7) var(--s-8); min-height: 60vh; outline: none;
   font-family: var(--font-prose); font-size: var(--t-lg); line-height: 1.75;
-  white-space: pre-wrap; overflow-wrap: break-word; text-transform: none; letter-spacing: normal; font-weight: 400;
+  overflow-wrap: break-word; text-transform: none; letter-spacing: normal; font-weight: 400;
 }
-.visual-editor:focus { border-color: var(--text); box-shadow: 0 0 0 1px var(--text); }
-.visual-editor p { margin: 0 0 1em; }
-.visual-editor h1, .visual-editor h2, .visual-editor h3 { font-family: var(--font-display); margin: 1.2em 0 0.5em; }
-.visual-editor blockquote {
+.editor-preview:focus { outline: none; }
+.editor-preview p { margin: 0 0 1em; }
+.editor-preview h1, .editor-preview h2, .editor-preview h3 { font-family: var(--font-display); margin: 1.2em 0 0.5em; }
+.editor-preview blockquote {
   margin: 0 0 1em; padding: var(--s-1) var(--s-7); border-left: 2px solid var(--border-strong);
   color: var(--text-muted); font-style: italic;
 }
-.visual-editor hr { border: none; text-align: center; margin: 1.8em 0; color: var(--text-muted); }
-.visual-editor hr::before { content: "* * *"; content: "* * *" / ""; letter-spacing: 0.5em; }
-.visual-editor ul, .visual-editor ol { margin: 0 0 1em; padding-left: 1.4em; }
-.visual-editor code { font-family: var(--font-mono); font-size: 0.9em; background: var(--code-bg); padding: 0 var(--s-2); }
-.visual-editor a { text-decoration-color: currentColor; }
-body.writing-focus .visual-editor { min-height: 75vh; }
+.editor-preview hr { border: none; text-align: center; margin: 1.8em 0; color: var(--text-muted); }
+.editor-preview hr::before { content: "* * *"; content: "* * *" / ""; letter-spacing: 0.5em; }
+.editor-preview ul, .editor-preview ol { margin: 0 0 1em; padding-left: 1.4em; }
+.editor-preview code { font-family: var(--font-mono); font-size: 0.9em; background: var(--code-bg); padding: 0 var(--s-2); }
+.editor-preview a { text-decoration-color: currentColor; }
+body.writing-focus .editor-preview { min-height: 75vh; }
 
-/* Typewriter: in the visual editor, the paragraph being written stays lit
-   and the rest recedes. The textarea cannot do that -- it is one piece
-   of text -- so there the line simply stays at the same height. */
-body.typewriter .visual-editor > * { transition: opacity 0.2s ease; }
-body.typewriter .visual-editor:focus-within > :not(.is-current) { opacity: 0.32; }
-body.typewriter .visual-editor { padding-bottom: 45vh; }
+/* Typewriter: the line being written stays at the same height. */
 body.typewriter.writing-focus textarea[data-editor-tools] { padding-bottom: 40vh; }
 
 /* The drawer. */
@@ -4035,7 +4010,7 @@ mark.wa-sentence, mark.wa-word { border-radius: 0; }
 .wa-panel-folded .wa-panel-mini { display: inline; }
 .wa-panel-folded .wa-panel-body { display: none; }
 .wa-panel-fold:disabled { color: inherit; opacity: 1; }
-body.writing-focus .wa-panel { display: none; }
+body.writing-focus .wa-panel { visibility: hidden; }
 
 /* Big enough to hit (WCAG 2.5.8). */
 .wa-pcard-craft { min-height: 28px; }
@@ -4181,19 +4156,6 @@ main[data-reading="read"] .missing-names { display: none; }
   .react-btn[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }
 
-/* The writing checks in Visual, painted by the browser over the text
-   without touching it (CSS Custom Highlight API; see writing-analyzer.js). */
-::highlight(wa-hard) { background-color: var(--wa-fill-hard); }
-::highlight(wa-veryhard) { background-color: var(--wa-fill-veryhard); }
-::highlight(wa-adverb) { background-color: var(--wa-fill-adverb); }
-::highlight(wa-passive) { background-color: var(--wa-fill-passive); }
-::highlight(wa-complex) { background-color: var(--wa-fill-complex); }
-::highlight(wa-spell) { text-decoration: underline wavy #3f9e92 1px; }
-::highlight(wa-filler) { text-decoration: underline solid #b06a8f 2px; }
-::highlight(wa-echo) { text-decoration: underline solid #4f9d5d 2px; }
-::highlight(wa-filter) { text-decoration: underline solid #b4574f 2px; }
-::highlight(wa-dialogue) { text-decoration: underline solid #8a8f3f 2px; }
-::highlight(wa-opening) { text-decoration: underline solid #a0679e 2px; }
 .notes-from-word > summary { cursor: pointer; color: var(--text-muted); font-size: var(--t-sm); }
 .notes-from-word-form { display: flex; flex-direction: column; gap: var(--s-3); margin-top: var(--s-3); }
 

@@ -1145,30 +1145,6 @@
     return { html, ranges, stats };
   }
 
-  // One checkbox-and-label row (the Markdown preview switch in the
-  // panel's settings). The checkbox itself
-  // carries the check's color (via accent-color, tied to --wa-color) --
-  // that's the only color cue a row needs, so unlike the old pill this
-  // doesn't need a separate dot element.
-  function buildCheckRow(color, label, checked, onChange) {
-    const row = document.createElement('label');
-    row.className = 'wa-check-row';
-    row.style.setProperty('--wa-color', color);
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.checked = checked;
-    input.addEventListener('change', () => {
-      row.classList.toggle('active', input.checked);
-      onChange(input.checked);
-    });
-    const text = document.createElement('span');
-    text.textContent = label;
-    row.appendChild(input);
-    row.appendChild(text);
-    row.classList.toggle('active', checked);
-    return row;
-  }
-
   // ---------------------------------------------------------------------
   // the editor's side panel, after Hemingway
   // ---------------------------------------------------------------------
@@ -1546,16 +1522,6 @@
     if (narrowQuery && narrowQuery.addEventListener) narrowQuery.addEventListener('change', placePanel);
     const sections = panelApi.moreBody;
 
-    // --- markdown preview toggle (editor only) ---
-    let previewOn = false;
-    try { previewOn = localStorage.getItem('wa-preview-on') === '1'; } catch (e) { /* ignore */ }
-    const previewRow = buildCheckRow('#8b7bd8', 'Markdown preview', previewOn, (checked) => {
-      previewOn = checked;
-      try { localStorage.setItem('wa-preview-on', previewOn ? '1' : '0'); } catch (e2) { /* ignore */ }
-      applyPreviewState();
-    });
-    sections.appendChild(previewRow);
-
     // --- existing comments: reference list + optional inline highlight ---
     // Only present on the edit-chapter page (see views.js's editChapterPage
     // and its #chapter-comments-data script) -- the new-story/new-chapter
@@ -1637,12 +1603,12 @@
     fitChapterBtn.addEventListener('click', () => {
       setFullWidth(false);
       try { localStorage.removeItem('wa-editor-width'); } catch (e) { /* ignore */ }
-      applyPreviewState();
+      applyEditorWidth();
     });
     fitScreenBtn.addEventListener('click', () => {
       setFullWidth(true);
       try { localStorage.removeItem('wa-editor-width'); } catch (e) { /* ignore */ }
-      applyPreviewState();
+      applyEditorWidth();
     });
 
     const splitWrap = document.createElement('div');
@@ -1660,10 +1626,6 @@
     editorWrap.appendChild(textarea);
     textarea.classList.add('wa-textarea');
 
-    const previewPane = document.createElement('div');
-    previewPane.className = 'md-preview';
-    previewPane.innerHTML = '<p class="muted">The preview will appear here.</p>';
-    splitWrap.appendChild(previewPane);
 
     // The overlay is a separate element from the textarea (absolutely
     // positioned on top of it -- see .wa-overlay/.wa-textarea in
@@ -1687,52 +1649,21 @@
     // clientWidth is that scrollbar (the textarea has no border), and it
     // is 0 on a platform that overlays them.
     function syncOverlayWidth() {
-      if (previewOn) { overlay.style.width = ''; return; }
       const scrollbar = textarea.offsetWidth - textarea.clientWidth;
       overlay.style.width = `${textarea.getBoundingClientRect().width - scrollbar}px`;
     }
 
-    function applyPreviewState() {
-      splitWrap.classList.toggle('wa-split-active', previewOn);
-      if (previewOn) {
-        textarea.style.width = ''; // let the 50/50 flex layout govern width
-        schedulePreview();
-      } else {
-        let savedWidth = null;
-        try { savedWidth = localStorage.getItem('wa-editor-width'); } catch (e) { /* ignore */ }
-        // No saved width (never manually resized, or reset via one of the
-        // "Fit to..." buttons below) -- fall back to .wa-textarea's own
-        // width:100%, so it tracks the available space same as any other
-        // block element, rather than staying stuck at a stale pixel value.
-        textarea.style.width = savedWidth ? `${savedWidth}px` : '';
-      }
+    // A width the writer dragged the box to is kept for next time; with
+    // none, the box fills the column like any other block.
+    function applyEditorWidth() {
+      let savedWidth = null;
+      try { savedWidth = localStorage.getItem('wa-editor-width'); } catch (e) { /* ignore */ }
+      textarea.style.width = savedWidth ? `${savedWidth}px` : '';
       syncOverlayWidth();
     }
 
-    let previewTimer = null;
-    function schedulePreview() {
-      if (!previewOn) return;
-      if (previewTimer) clearTimeout(previewTimer);
-      previewTimer = setTimeout(renderPreview, 400);
-    }
-    function renderPreview() {
-      fetch('/markdown/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textarea.value }),
-      })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data && typeof data.html === 'string') {
-            previewPane.innerHTML = data.html || '<p class="muted">Nothing to preview yet.</p>';
-          }
-        })
-        .catch(() => { /* keep whatever preview is already showing */ });
-    }
-
     // Remembers a manually-resized width (the textarea has resize:both) so
-    // it's still that width next time -- but only while the preview is
-    // off, since with it on the width is governed by the 50/50 flex split.
+    // it's still that width next time.
     // ResizeObserver alone can't tell "the user dragged the corner handle"
     // apart from "the textarea's size changed for some other reason" (the
     // page loading into a narrower/wider viewport, a saved width being
@@ -1758,7 +1689,6 @@
     if (typeof ResizeObserver !== 'undefined') {
       let widthTimer = null;
       const ro = new ResizeObserver(() => {
-        if (previewOn) return;
         syncOverlayWidth(); // live, not debounced -- keep the overlay matched to the drag as it happens
         if (!isDraggingResizeHandle) return;
         if (widthTimer) clearTimeout(widthTimer);
@@ -1808,7 +1738,6 @@
       paintedComments = commentRanges;
       paint(text);
       panelApi.update(stats, text);
-      scheduleVisualChecks();
       // Text that has just grown past the bottom of the box gives the
       // textarea a scrollbar it did not have a keystroke ago, which
       // changes its content width -- nothing resizes, so the
@@ -1858,121 +1787,8 @@
           : setTimeout(shiftNow, 60);
       }
       scheduleRender();
-      schedulePreview();
     });
 
-    // ---- the same marks in Visual --------------------------------------
-    //
-    // Visual is an editable page of real paragraphs, and wrapping words in
-    // <mark>s there would fight the caret and end up in the saved text. The
-    // CSS Custom Highlight API marks ranges of text without touching the
-    // page at all: the browser paints them (see ::highlight in style.css)
-    // and the document stays exactly what the writer typed. A browser
-    // without it simply shows Visual unmarked, as before.
-    //
-    // The checks run on the visual text itself, paragraph by paragraph, so
-    // every mark lands on the words it is about whatever the Markdown
-    // looked like underneath.
-    const canHighlight = typeof CSS !== 'undefined' && 'highlights' in CSS && typeof Highlight !== 'undefined';
-    const HIGHLIGHT_NAMES = ['wa-hard', 'wa-veryhard', 'wa-adverb', 'wa-passive', 'wa-complex', 'wa-spell',
-      'wa-filler', 'wa-echo', 'wa-filter', 'wa-dialogue', 'wa-opening'];
-    const visualEl = () => /** @type {HTMLElement|null} */ (document.querySelector('.visual-editor'));
-    let visualRanges = [];
-    let visualTimer = null;
-    function clearVisualChecks() {
-      if (canHighlight) HIGHLIGHT_NAMES.forEach((n) => /** @type {any} */ (CSS).highlights.delete(n));
-      visualRanges = [];
-    }
-    // The visual text as the checks read it: its words, with a paragraph
-    // break between blocks, and where each run of text sits in the page.
-    function flattenVisual(root) {
-      let text = '';
-      const segs = [];
-      let lastBlock = null;
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-      for (let n = walker.nextNode(); n; n = walker.nextNode()) {
-        let block = n.parentElement;
-        while (block && block.parentElement !== root) block = block.parentElement;
-        if (lastBlock && block !== lastBlock) text += '\n\n';
-        lastBlock = block;
-        segs.push({ node: n, start: text.length });
-        text += n.nodeValue;
-      }
-      return { text, segs };
-    }
-    function domPoint(segs, pos) {
-      for (let i = segs.length - 1; i >= 0; i--) {
-        if (pos >= segs[i].start) {
-          return { node: segs[i].node, offset: Math.min(pos - segs[i].start, segs[i].node.nodeValue.length) };
-        }
-      }
-      return null;
-    }
-    async function renderVisualChecks() {
-      const v = visualEl();
-      if (!canHighlight || !v || v.hidden || panelApi.mode() === 'write') { clearVisualChecks(); return; }
-      const { text, segs } = flattenVisual(v);
-      const { ranges } = await analyzer.run(text, storyWords, DEFAULT_SETTINGS, null);
-      clearVisualChecks();
-      if (v.hidden) return;
-      const groups = new Map();
-      const kept = [];
-      for (const r of ranges) {
-        const key = r.kind.indexOf('sentence-') === 0 ? 'sentence' : r.kind;
-        if (settings[key] === false) continue;
-        const name = r.kind === 'sentence-yellow' ? 'wa-hard' : r.kind === 'sentence-red' ? 'wa-veryhard' : `wa-${r.kind}`;
-        const a = domPoint(segs, r.start);
-        const b = domPoint(segs, r.end);
-        if (!a || !b) continue;
-        const range = new Range();
-        try { range.setStart(a.node, a.offset); range.setEnd(b.node, b.offset); } catch (e) { continue; }
-        if (!groups.has(name)) groups.set(name, []);
-        groups.get(name).push(range);
-        kept.push(Object.assign({}, r, { range }));
-      }
-      for (const [name, list] of groups) {
-        const h = new Highlight(...list);
-        // Words sit on top of the sentence they are in, as in Markdown.
-        h.priority = name === 'wa-hard' || name === 'wa-veryhard' ? 0 : 1;
-        /** @type {any} */ (CSS).highlights.set(name, h);
-      }
-      visualRanges = kept;
-    }
-    function scheduleVisualChecks() {
-      if (!canHighlight) return;
-      clearTimeout(visualTimer);
-      visualTimer = setTimeout(renderVisualChecks, 300);
-    }
-    document.addEventListener('input', (ev) => {
-      const v = visualEl();
-      if (v && ev.target instanceof Node && v.contains(ev.target)) scheduleVisualChecks();
-    });
-    // Switching to Visual shows the element; that is the moment to mark it.
-    if (canHighlight && typeof MutationObserver !== 'undefined') {
-      const watchVisual = () => {
-        const v = visualEl();
-        if (!v) return false;
-        new MutationObserver(scheduleVisualChecks).observe(v, { attributes: true, attributeFilter: ['hidden'] });
-        return true;
-      };
-      if (!watchVisual()) document.addEventListener('swarm-editor-ready', watchVisual, { once: true });
-    }
-    // Hovering a marked word in Visual says what it is, as it does in Markdown.
-    document.addEventListener('mousemove', (ev) => {
-      const v = visualEl();
-      if (!visualRanges.length || !v || v.hidden || !(ev.target instanceof Node) || !v.contains(ev.target)) return;
-      const caret = /** @type {any} */ (document).caretRangeFromPoint ? /** @type {any} */ (document).caretRangeFromPoint(ev.clientX, ev.clientY) : null;
-      if (!caret) return;
-      const hit = visualRanges.filter((r) => r.range.isPointInRange(caret.startContainer, caret.startOffset))
-        .sort((a, b) => (a.end - a.start) - (b.end - b.start))[0];
-      if (!hit) { hoverTipVisual.hide(); return; }
-      hoverTipVisual.show({
-        dataset: { waLabel: hit.label || '', waSuggestion: hit.suggestion || '', waKind: hit.kind },
-        textContent: hit.range.toString(),
-        getBoundingClientRect: () => hit.range.getBoundingClientRect(),
-      });
-    });
-    const hoverTipVisual = createHoverTip();
     textarea.addEventListener('scroll', syncScroll);
     window.addEventListener('resize', syncScroll);
 
@@ -2130,7 +1946,7 @@
       return suggestion;
     }
 
-    applyPreviewState();
+    applyEditorWidth();
     render();
   }
 

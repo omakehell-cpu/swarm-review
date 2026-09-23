@@ -26,7 +26,7 @@ On a Mac, **Ctrl** below is **⌘ Cmd**, and **Alt** is **⌥ Option**.
 
 ## Writing
 
-In both Markdown and Visual:
+In the text:
 
 - **Ctrl+B** -- bold.
 - **Ctrl+I** -- italic.
@@ -34,18 +34,15 @@ In both Markdown and Visual:
 - **Ctrl+Enter** -- a scene break.
 - **Ctrl+Z** -- undo, including all of the above.
 
-In Visual:
-
-- **Enter** -- a new paragraph. **Shift+Enter** -- a new line inside one.
-- **Alt+F** -- says the formatting where the caret is and which scene you
-  are in, in one sentence: *Italic, in a quote, scene 2 of 4.*
+- **Alt+F** -- says what kind of line the caret is on and which scene you
+  are in, in one sentence: *On a quoted line, scene 2 of 4.*
 
 In the editor generally:
 
 - **Alt+J** and **Alt+K** -- the next and the previous note still waiting,
   with its words selected in the text.
-- **Escape** -- leaves Focus, or closes the scenes and snapshots drawer and
-  puts you back where you were typing.
+- **Escape** -- leaves Preview or Focus, or closes the scenes and snapshots
+  drawer and puts you back where you were typing.
 
 ## Asking for more
 

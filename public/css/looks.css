@@ -248,7 +248,7 @@
    more space between the lines. */
 [data-look="swarm"] .reading-pane,
 [data-look="swarm"] .wa-editor-wrap,
-[data-look="swarm"] .md-preview {
+[data-look="swarm"] .editor-preview {
   background: var(--bg-elevated); color: var(--text);
 }
 [data-look="swarm"] .reading-pane { padding: var(--s-9) var(--s-10) !important; box-shadow: var(--pane-shadow); }
@@ -373,7 +373,7 @@
 
 /* The desk in the two looks. The Swarm's visual editor is on the lit page,
    like its Markdown one. */
-[data-look="swarm"] .visual-editor { background: var(--bg-elevated); color: var(--text); border-color: var(--border-strong); }
+[data-look="swarm"] .editor-preview { background: var(--bg-elevated); color: var(--text); border-color: var(--border-strong); }
 [data-look="swarm"] .desk-drawer { background: var(--bg-elevated); box-shadow: -16px 0 40px rgba(0, 0, 0, 0.5); }
 [data-look="swarm"] .desk-tabs button, [data-look="swarm"] .session-count, [data-look="swarm"] .desk-scene-num,
 [data-look="swarm"] .desk-scene-words, [data-look="swarm"] .desk-snap-meta { font-family: var(--font-mono); }

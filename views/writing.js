@@ -66,9 +66,9 @@ function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), gr
         <form method="post" action="/stories/new" class="chapter-form" enctype="multipart/form-data">
           <label>Story title<input type="text" name="storyTitle" value="${escapeHtml(values.storyTitle || '')}" required></label>
           <label>Chapter 1 title<input type="text" name="chapterTitle" value="${escapeHtml(values.chapterTitle || '')}" required></label>
-          <label class="main-field">Chapter 1 text<textarea name="content" rows="24" placeholder="Paste or write the chapter here..." data-editor-tools>${escapeHtml(values.content || '')}</textarea>
+          <div class="main-field"><label for="chapter-content">Chapter 1 text</label><textarea id="chapter-content" name="content" rows="24" placeholder="Paste or write the chapter here..." data-editor-tools>${escapeHtml(values.content || '')}</textarea>
             ${markdownHint()}
-          </label>
+          </div>
           <details class="writer-section" data-fold-on-phone open>
             <summary class="writer-section-label">Optional details</summary>
             <label>Story description<textarea name="storyDescription" rows="2">${escapeHtml(values.storyDescription || '')}</textarea></label>
@@ -109,9 +109,9 @@ function newChapterPage({ user, story, chapters = [], castList = [], error, voca
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
         <form method="post" action="/stories/${story.id}/chapters/new" class="chapter-form" enctype="multipart/form-data">
           <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title || '')}" required></label>
-          <label class="main-field">Chapter text<textarea name="content" rows="24" placeholder="Paste or write the chapter here..." data-story-id="${story.id}" data-editor-tools>${escapeHtml(values.content || '')}</textarea>
+          <div class="main-field"><label for="chapter-content">Chapter text</label><textarea id="chapter-content" name="content" rows="24" placeholder="Paste or write the chapter here..." data-story-id="${story.id}" data-editor-tools>${escapeHtml(values.content || '')}</textarea>
             ${markdownHint()}
-          </label>
+          </div>
           <details class="writer-section" data-fold-on-phone open>
             <summary class="writer-section-label">Optional details</summary>
             <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary || '')}</textarea></label>
@@ -246,9 +246,9 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
         ${desk ? `<script type="application/json" id="desk-data">${toScriptJson(desk)}</script>` : ''}
         <input type="hidden" name="baseVersion" value="${conflict ? conflict.version : (latestVersionNumber || '')}">
         <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required></label>
-        <label class="main-field">Chapter text<textarea name="content" rows="24" data-story-id="${chapter.story_id}" data-editor-tools>${escapeHtml(values.content ?? latestContent)}</textarea>
+        <div class="main-field"><label for="chapter-content">Chapter text</label><textarea id="chapter-content" name="content" rows="24" data-story-id="${chapter.story_id}" data-editor-tools>${escapeHtml(values.content ?? latestContent)}</textarea>
           ${markdownHint()}
-        </label>
+        </div>
         ${uploadVersionField()}
         <details class="writer-section" data-fold-on-phone open>
           <summary class="writer-section-label">Optional details</summary>

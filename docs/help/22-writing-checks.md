@@ -47,10 +47,8 @@ on a yellow one rather than a muddy mix of the two.
   screen reader, and for anyone who prefers a to-do list to a colouring
   book.
 
-The marks show in both views: over the symbols in **Markdown**, and over
-the formatted chapter in **Visual**, where the browser paints them on
-without touching the text you are typing into (in an older browser that
-cannot, Visual is simply left unmarked and the counts stay in the panel).
+The marks are drawn behind the words as you write; **Preview** shows the
+chapter clean, as a reader will see it.
 On a phone the panel folds into one line above the text -- *Grade 5 · 18
 flagged* -- that opens with a tap.
 

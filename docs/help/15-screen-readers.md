@@ -27,10 +27,9 @@ To say how a paragraph read -- Hooked, Lost me, Dragged, Didn't buy it -- select
 
 ## Writing
 
-The chapter editor has two views, switched with the **Markdown** and **Visual** buttons above the text.
+The chapter is written in one box, in Markdown: the formatting is part of the text -- `*italic*`, `> ` for a quote, `---` for a scene break -- and is read like any other characters. Nothing is hidden. **Alt+F** (Option+F on a Mac) says where the caret is: *On a quoted line, scene 2 of 4.*
 
-- In **Markdown** the formatting is part of the text -- `*italic*`, `> ` for a quote, `---` for a scene break -- and is read like any other characters. Nothing is hidden.
-- In **Visual** the formatting is applied, not written. The **Bold**, **Italic**, **Quote** and **Heading** buttons say whether they are on where the caret is, and **Alt+F** (Option+F on a Mac) says it all in one sentence: *Italic, in a quote, scene 2 of 4.*
+**Preview**, above the text, is a toggle button: pressed, the box is replaced by the chapter as it will read, as a document the focus moves into; press it again, or Escape, to go back to writing where you were.
 
 Other keys: **Ctrl+B** and **Ctrl+I** (Cmd on a Mac) for bold and italic, **Ctrl+Enter** for a scene break, **Escape** to leave Focus or close a panel.
 
