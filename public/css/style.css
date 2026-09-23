@@ -2858,6 +2858,9 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
   padding: var(--s-3) 0; border-bottom: 1px solid var(--border); font-size: var(--t-sm);
 }
 .missing-list li.added { opacity: 0.5; }
+.missing-list li.done { color: var(--text-muted); }
+.missing-done { margin: 0; font-size: var(--t-sm); }
+.missing-list form[hidden] { display: none; }
 .missing-list form { display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: baseline; width: 100%; }
 .missing-name { font-weight: 700; }
 .missing-count { color: var(--text-muted); font-size: var(--t-xs); font-variant-numeric: tabular-nums; }
