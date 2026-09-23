@@ -4190,3 +4190,17 @@ main[data-reading="read"] .reaction-summary { display: none; }
 @media (forced-colors: active) {
   .react-btn[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }
+
+/* The writing checks in Visual, painted by the browser over the text
+   without touching it (CSS Custom Highlight API; see writing-analyzer.js). */
+::highlight(wa-hard) { background-color: var(--wa-fill-hard); }
+::highlight(wa-veryhard) { background-color: var(--wa-fill-veryhard); }
+::highlight(wa-adverb) { background-color: var(--wa-fill-adverb); }
+::highlight(wa-passive) { background-color: var(--wa-fill-passive); }
+::highlight(wa-complex) { background-color: var(--wa-fill-complex); }
+::highlight(wa-spell) { text-decoration: underline wavy #3f9e92 1px; }
+::highlight(wa-filler) { text-decoration: underline solid #b06a8f 2px; }
+::highlight(wa-echo) { text-decoration: underline solid #4f9d5d 2px; }
+::highlight(wa-filter) { text-decoration: underline solid #b4574f 2px; }
+::highlight(wa-dialogue) { text-decoration: underline solid #8a8f3f 2px; }
+::highlight(wa-opening) { text-decoration: underline solid #a0679e 2px; }

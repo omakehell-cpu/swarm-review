@@ -4,6 +4,10 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — Checks in Visual too
+
+- **The writing checks now mark the text in Visual** as well as in Markdown: yellow and red sentences, blue adverbs, green passive voice and the rest, painted over the formatted chapter by the browser without touching what you type. Hover a mark to see what it is.
+
 ## 2026-09-23 — How it read
 
 - **Reactions.** In Review, click or tap a paragraph -- or select a few words and press R -- and say how it read: **Hooked**, **Lost me**, **Dragged** or **Didn't buy it**. One tap, no words. You see your own as a thin line in the margin; nobody else sees them.
