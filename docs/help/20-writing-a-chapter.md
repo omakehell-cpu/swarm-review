@@ -62,7 +62,7 @@ writing checks drawn on them. **Visual** shows the chapter as a reader will
 see it, and you write in it the same way: the buttons and Ctrl+B / Ctrl+I
 work, Enter starts a new paragraph, Shift+Enter a new line, Ctrl+Enter a
 scene break. Pasting brings the words and the paragraphs, not the fonts.
-The writing checks' marks only show in Markdown; their counts show in both.
+The writing checks mark the text in both views: over the symbols in Markdown, over the formatted chapter in Visual.
 
 ## Focus, typewriter, and how much you have written
 
