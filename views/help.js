@@ -97,8 +97,9 @@ function changelogPage({ user, releases = [], unseen = new Set() }) {
   return layout({
     title: "What's new",
     user,
-    current: 'whats-new',
+    current: 'help',
     body: `
+      <p class="breadcrumb"><a href="/help">&larr; How to</a></p>
       <div class="page-head"><h1>What's new</h1></div>
       <p class="muted">Every change to the site, newest first, in plain language. Anything published since you last looked is marked. The dates are when the work was done -- if something here is missing on the site, it has not been restarted yet.</p>
       ${sections || '<p class="muted">Nothing recorded yet.</p>'}`,

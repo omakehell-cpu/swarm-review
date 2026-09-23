@@ -174,9 +174,9 @@ function activityItem(a) {
     </li>`;
 }
 
-// On the front page, only the last three, in a quiet strip under what is
-// waiting for you: enough to feel that other people are here, not so much
-// that it competes with the stories. The rest is one link away.
+// On the front page, only the last three, in a quiet strip below the
+// stories: enough to feel that other people are here, and out of the way
+// of what you came for. The rest is one link away.
 function activityStrip(activity) {
   if (!activity || !activity.length) return '';
   return `
@@ -217,7 +217,7 @@ function whatsNewCard(whatsNew) {
       <ul class="whats-new-list">${items}</ul>
       <p class="whats-new-foot">
         <a href="/help/changelog">${whatsNew.more ? `All of it, and ${whatsNew.more} more change${whatsNew.more === 1 ? '' : 's'}` : 'Read all about it'} &rarr;</a>
-        <span class="muted">This note shows once. It stays under What's new in the menu.</span>
+        <span class="muted">This note shows once. It all stays under Help, in What's new.</span>
       </p>
     </section>`;
 }
@@ -287,10 +287,10 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
       ${activeTags.length ? '' : whatsNewCard(whatsNew)}
       ${activeTags.length ? '' : welcomeCard(welcome)}
       ${activeTags.length ? '' : inboxSection(inbox)}
-      ${activeTags.length ? '' : activityStrip(activity)}
       ${filter}
       <div class="chapter-list">${rows}</div>
       ${foldedBlock}
+      ${activeTags.length ? '' : activityStrip(activity)}
       <p class="muted archive-link"><a href="/archived-stories">View archived stories &rarr;</a></p>`,
   });
 }

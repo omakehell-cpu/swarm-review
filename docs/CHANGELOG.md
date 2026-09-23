@@ -6,8 +6,8 @@ missing on the site, it has not been restarted yet.
 
 ## 2026-09-23 — News, and invites to send
 
-- **What's new is in the menu**, right after Stories, with a dot when there is something you have not seen.
-- **Told once.** When the site has changed since you last came by, the front page says what changed, in a few lines, the first time you open it. After that it keeps quiet until there is something newer. Everything stays under What's new.
+- **Told once.** When the site has changed since you last came by, the front page says what changed, in a few lines, the first time you open it. After that it keeps quiet until there is something newer. Everything stays under Help, in What's new.
+- **Lately moves down**, below the stories: the last three things people did are still on the front page, just out of the way.
 - **Invites ready to send.** On the admin page, every invite code that still works has a **Copy the invite** button. It copies a short message with a link that fills in the code (and the username, for an invite made for one person), ready to paste into a chat or an email.
 
 ## 2026-09-23 — Up close
