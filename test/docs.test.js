@@ -18,7 +18,7 @@ test('the how-tos are found, in the order their filenames put them', () => {
     assert.ok(topic.summary, `${topic.slug} has a summary`);
   }
   // The numeric prefix orders them and is not part of the slug.
-  assert.strictEqual(topics[0].slug, 'reading-and-reviewing');
+  assert.strictEqual(topics[0].slug, 'finding-your-way');
   assert.ok(topics.some((t) => t.slug === 'story-bible'));
 });
 
@@ -115,4 +115,17 @@ test('every figure a shipped how-to asks for actually exists', () => {
 test('a figure line never gets mistaken for the summary', () => {
   const head = docs.readHead('# A title\n\n@figure a.png | A caption.\n\nThe real first paragraph.\n');
   assert.strictEqual(head.summary, '');
+});
+
+test('every link from one how-to to another goes somewhere', () => {
+  const slugs = new Set(docs.listHelpTopics().map((t) => t.slug).concat(['changelog']));
+  let links = 0;
+  for (const topic of docs.listHelpTopics()) {
+    const full = docs.getHelpTopic(topic.slug);
+    for (const m of full.markdown.matchAll(/\]\(\/help\/([a-z0-9-]+)\)/g)) {
+      links += 1;
+      assert.ok(slugs.has(m[1]), `/help/${m[1]}, linked from ${topic.slug}, exists`);
+    }
+  }
+  assert.ok(links >= 10, 'the how-tos point at each other');
 });
