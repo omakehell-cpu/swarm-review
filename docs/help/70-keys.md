@@ -40,6 +40,8 @@ In Visual:
 
 In the editor generally:
 
+- **Alt+J** and **Alt+K** -- the next and the previous note still waiting,
+  with its words selected in the text.
 - **Escape** -- leaves Focus, or closes the scenes and snapshots drawer and
   puts you back where you were typing.
 

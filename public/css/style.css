@@ -4115,3 +4115,12 @@ main[data-reading="read"] .wa-panel-chapter { display: none; }
    stack the width of the page, and no editor settings where there is no editor. */
 .wa-panel-chapter .wa-panel-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .wa-panel-more:has(.wa-panel-more-body:empty) { display: none; }
+
+/* Answering notes beside the editor. */
+.editor-notes-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s-2) var(--s-4); }
+.editor-notes-step { display: inline-flex; gap: var(--s-2); }
+.editor-note-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-3); }
+.editor-note-actions .inline-form { display: inline-flex; gap: var(--s-2); }
+.editor-notes .comment.is-current { box-shadow: -3px 0 0 var(--text); padding-left: var(--s-3); }
+.editor-notes .comment.status-accepted, .editor-notes .comment.status-rejected { opacity: 0.7; }
+.editor-note-actions [hidden], .editor-notes-step[hidden] { display: none !important; }
