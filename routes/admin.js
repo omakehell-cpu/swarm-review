@@ -29,7 +29,7 @@ async function handleAdminPage(req, res, user, query) {
     event_count: models.countEventsForUser(u.id),
   }));
   sendHtml(res, 200, views.adminPage({
-    user, users: usersWithLog, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice,
+    user, users: usersWithLog, claims: models.listPendingClaims(), activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice,
     backups: { list: backups.listBackups(), dir: backups.backupDir(), keep: backups.KEEP },
     tagGroups: models.listTagsGrouped(),
     proposedTags: models.listProposedTags(),

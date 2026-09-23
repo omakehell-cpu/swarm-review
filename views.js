@@ -21,6 +21,7 @@ const modules = [
   ['chapter', require('./views/chapter')],
   ['people', require('./views/people')],
   ['admin', require('./views/admin')],
+  ['import', require('./views/import')],
 ];
 
 const all = {};

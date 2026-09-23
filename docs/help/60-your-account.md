@@ -68,6 +68,18 @@ public web out there looking at this site.
 
 @figure your-page.png | Your page: what you have written, and what you have been doing.
 
+## Stories written somewhere else
+
+A story imported from StoriesOnline belongs to the author named in it,
+not to anybody here. That author has a page like yours -- *Imported from
+StoriesOnline* under the name -- but no account: they cannot log in, and
+they are not counted among the group.
+
+If that author is you, press **This is me** on their page and say how an
+admin can tell. When an admin approves it, the stories and every chapter
+in them become yours, as if you had written them here, and the old page
+leads to yours.
+
 ## Light and dark
 
 The moon at the right of the top bar moves between light and dark, and
@@ -92,6 +104,13 @@ What they do:
   reactivates it. They can also send somebody a reset link.
 - **Tags.** Approving or merging the tags authors have proposed.
 - **The wiki.** Pressing *Sync wiki now* to refresh the glossary.
+- **Stories from StoriesOnline.** *Import a story*, on the admin page,
+  takes the EPUB that StoriesOnline gives you and shows what it found
+  before anything is saved: the chapters, with titles you can change,
+  and which of its tags the site already has (the rest are left off).
+  Importing the same story twice takes you to the one already here.
+- **Claims.** Approving, or turning down, somebody's word that an
+  imported author is them (below).
 - **Backup.** The server keeps a copy of everything every day, for two
   weeks. An admin can take one on demand, download the whole database as
   one file, and **put a copy back**: choose it, type RESTORE, and the site

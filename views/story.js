@@ -274,6 +274,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           <h1>${escapeHtml(story.title)}</h1>
           ${story.description ? `<p class="title-page-blurb">${escapeHtml(story.description)}</p>` : ''}
           <p class="title-page-facts">${storyStateBadge(story)} ${chapters.length} chapter${chapters.length === 1 ? '' : 's'}${stats && stats.words ? ` &middot; ${wordCount(stats.words)}` : ''} &middot; started ${timeHtml(story.created_at)}</p>
+          ${story.series || story.source_url ? `<p class="title-page-source">${story.series ? `Part of <em>${escapeHtml(story.series)}</em>` : ''}${story.series && story.source_url ? ' &middot; ' : ''}${story.source_url ? `<a href="${escapeHtml(story.source_url)}" target="_blank" rel="noopener noreferrer">first published on StoriesOnline</a>` : ''}</p>` : ''}
           ${tagChips(tags)}
           <div class="title-page-actions">
             ${start ? `<a class="btn" href="/chapters/${start.chapter.id}">${ICONS.book}${escapeHtml(start.label)}</a>` : ''}

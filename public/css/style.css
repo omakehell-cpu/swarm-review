@@ -4558,3 +4558,24 @@ main[data-reading="read"] .note-dots { display: none; }
   .js .topbar.nav-open .user-menu-group > a { padding: var(--s-5) 0; border-bottom: 1px solid var(--border); font-size: var(--t-md); }
 }
 .user-menu-panel, .menu-panel { background: var(--bg-elevated); }
+
+/* ---- imported stories and authors ---- */
+.title-page-source { margin: 0 0 var(--s-4); font-size: var(--t-sm); color: var(--text-muted); }
+.import-lede { max-width: 62ch; }
+.import-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s-5); margin: var(--s-7) 0; }
+.import-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s-4) var(--s-7); margin: var(--s-7) 0; max-width: 900px; }
+.import-facts dt { font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); padding-top: var(--s-2); }
+.import-facts dd { margin: 0; }
+.import-facts input[type="text"] { width: 100%; max-width: 560px; }
+.import-chapters { margin: var(--s-5) 0 var(--s-8); padding-left: var(--s-8); display: flex; flex-direction: column; gap: var(--s-5); max-width: 900px; }
+.import-chapters li input[type="text"] { width: min(100%, 420px); margin-right: var(--s-4); }
+.import-first { margin: var(--s-2) 0 0; font-family: var(--font-prose); color: var(--text-muted); font-size: var(--t-sm); }
+.imported-author { margin: 0 0 var(--s-8); padding: var(--s-5) 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); max-width: 70ch; }
+.imported-author p { margin: 0 0 var(--s-3); }
+.claim-form > summary { cursor: pointer; font-weight: 600; }
+.claim-form form { display: flex; flex-direction: column; gap: var(--s-4); margin-top: var(--s-4); }
+.claim-list { list-style: none; padding: 0; margin: var(--s-4) 0; display: flex; flex-direction: column; gap: var(--s-6); }
+.claim-row p { margin: 0 0 var(--s-3); }
+.claim-message { font-family: var(--font-prose); font-style: italic; color: var(--text-muted); }
+.import-authors { margin-top: var(--s-10); }
+.plain-list { list-style: none; padding: 0; margin: var(--s-4) 0; display: flex; flex-direction: column; gap: var(--s-3); }

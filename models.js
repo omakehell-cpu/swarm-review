@@ -29,6 +29,7 @@ const modules = [
   ['bible', require('./models/bible')],
   ['chapters', require('./models/chapters')],
   ['writing', require('./models/writing')],
+  ['imports', require('./models/imports')],
 ];
 
 const all = {};

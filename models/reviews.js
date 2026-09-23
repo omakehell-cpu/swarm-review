@@ -85,7 +85,7 @@ const reviewQueueFor = (userId) => db.prepare(`
 // placeholder that deleted accounts are credited to and anybody locked out.
 const listPeopleToAsk = (userId) => db.prepare(`
   SELECT id, display_name, username FROM users
-  WHERE id <> ? AND username <> ? AND locked_at IS NULL
+  WHERE id <> ? AND username <> ? AND locked_at IS NULL AND is_placeholder = 0
   ORDER BY display_name COLLATE NOCASE
 `).all(userId, DELETED_USER_USERNAME);
 

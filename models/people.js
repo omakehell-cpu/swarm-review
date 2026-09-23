@@ -14,7 +14,7 @@ const getUserById = (id) =>
   db.prepare('SELECT * FROM users WHERE id = ?').get(id);
 
 const listUsers = () =>
-  db.prepare('SELECT id, username, display_name, is_admin FROM users ORDER BY display_name').all();
+  db.prepare('SELECT id, username, display_name, is_admin FROM users WHERE is_placeholder = 0 ORDER BY display_name').all();
 
 // ---------- admin: user management ----------
 
@@ -24,7 +24,7 @@ const listUsers = () =>
 // Everybody who can be named in a note, for the "@" suggestions.
 function listMentionable() {
   return db.prepare(`SELECT username, display_name FROM users
-    WHERE locked_at IS NULL ORDER BY display_name COLLATE NOCASE`).all();
+    WHERE locked_at IS NULL AND is_placeholder = 0 ORDER BY display_name COLLATE NOCASE`).all();
 }
 
 function listUsersForAdmin() {
@@ -32,7 +32,7 @@ function listUsersForAdmin() {
     SELECT id, username, display_name, is_admin, created_at, last_seen_at,
            failed_login_attempts, locked_at, locked_reason
     FROM users
-    WHERE username != ?
+    WHERE username != ? AND is_placeholder = 0
     ORDER BY created_at ASC
   `).all(DELETED_USER_USERNAME);
 }

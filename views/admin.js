@@ -143,7 +143,7 @@ function adminUserRow(u, { currentUserId }) {
     </div>`;
 }
 
-function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [], proposedTags = [], backups = { list: [], dir: '', keep: 0 } }) {
+function adminPage({ user, users, claims = [], activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [], proposedTags = [], backups = { list: [], dir: '', keep: 0 } }) {
   const userRows = users.map((u) => adminUserRow(u, { currentUserId: user.id })).join('');
   return layout({
     title: 'Admin',
@@ -152,6 +152,31 @@ function adminPage({ user, users, activeInviteCode, inviteCodeHistory, pendingNa
     flash: notice ? { type: 'info', message: notice } : null,
     body: `
       <h1>Admin</h1>
+
+      <section class="admin-section" id="claims">
+        <h2>Imported stories</h2>
+        <p class="muted">Stories brought in from StoriesOnline belong to an imported author until the writer claims them. <a href="/admin/import">Import a story</a></p>
+        ${claims.length ? `
+          <h3 class="tag-admin-group">Claims waiting (${claims.length})</h3>
+          <ul class="claim-list">
+            ${claims.map((c) => `
+              <li class="claim-row">
+                <p><strong>${escapeHtml(c.member_name)}</strong> <span class="muted">@${escapeHtml(c.member_username)}</span> says they are
+                  <a href="/users/${encodeURIComponent(c.author_username)}">${escapeHtml(c.author_name)}</a>
+                  <span class="muted">(${c.story_count} stor${c.story_count === 1 ? 'y' : 'ies'})</span>${c.source_url ? ` &middot; <a href="${escapeHtml(c.source_url)}" target="_blank" rel="noopener noreferrer">their page on StoriesOnline</a>` : ''}</p>
+                ${c.message ? `<p class="claim-message">&ldquo;${escapeHtml(c.message)}&rdquo;</p>` : ''}
+                <div class="row">
+                  <form method="post" action="/admin/claims/${c.id}/approve" class="inline-form"
+                        data-confirm="Move every story by ${escapeHtml(c.author_name)} to ${escapeHtml(c.member_name)}'s account?">
+                    <button class="btn small" type="submit">Yes, move the stories</button>
+                  </form>
+                  <form method="post" action="/admin/claims/${c.id}/decline" class="inline-form">
+                    <button class="btn small ghost" type="submit">Turn down</button>
+                  </form>
+                </div>
+              </li>`).join('')}
+          </ul>` : '<p class="muted">No claims waiting.</p>'}
+      </section>
 
       <section class="admin-section">
         <h2 id="backup">Backup</h2>

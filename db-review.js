@@ -94,6 +94,18 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   // (see unseenReleases in lib/docs.js).
   ensureColumn('users', 'changelog_seen_key', 'TEXT');
   ensureColumn('users', 'plain_names', 'INTEGER NOT NULL DEFAULT 0');
+  // Authors brought in with an imported story (lib/sol-import.js): a row in
+  // users so the story has somebody to belong to, but not a member -- no
+  // password, no sign-in, left out of every list of people. `claimed_by`
+  // is the member whose account their stories were moved to.
+  ensureColumn('users', 'is_placeholder', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('users', 'source_url', 'TEXT');
+  ensureColumn('users', 'claimed_by', 'INTEGER');
+  // Where an imported story came from, and the series it belongs to there.
+  ensureColumn('stories', 'source_url', 'TEXT');
+  ensureColumn('stories', 'source_id', 'TEXT');
+  ensureColumn('stories', 'series', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn('stories', 'imported_at', 'TEXT');
 
   // The writing desk (see models/desk.js). A note the author keeps against
   // one scene of a chapter -- "this is where she lies to him" -- private to
@@ -144,6 +156,19 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   -- Capitalised words an author has said are not names ("Kestrel" the
   -- adjective, a sentence's first word the check keeps catching): the
   -- unknown-names list stops offering them, for this story only.
+  -- Somebody who claims an imported author (see models/imports.js) is
+  -- asking to have that author's stories put on their own account. An
+  -- admin says yes or no; until then nothing moves.
+  CREATE TABLE IF NOT EXISTS author_claims (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    placeholder_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message        TEXT NOT NULL DEFAULT '',
+    status         TEXT NOT NULL DEFAULT 'pending',
+    decided_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    decided_at     TEXT,
+    created_at     TEXT NOT NULL DEFAULT (datetime('now'))
+  );
   CREATE TABLE IF NOT EXISTS story_not_names (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
     story_id   INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,

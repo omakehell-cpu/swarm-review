@@ -6,6 +6,12 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-23 — A desk to write at, and a page to read on
 
+### Stories from StoriesOnline
+
+- **Import a story from its EPUB.** Admins upload the file StoriesOnline gives you; the site finds the chapters (one per file, or split at the chapter headings when the whole story is in one), shows them with their titles and word counts to check and rename, and brings in the cover, the description, the series, the dates and the tags it already knows.
+- **Imported authors.** Each story belongs to the author named in the book, who gets a page of their own but no account: they cannot log in, are not counted among the group and cannot be asked to read.
+- **"This is me."** Anyone can claim an imported author from its page; once an admin approves it, the stories and chapters move to their account.
+
 ### The look
 
 - **Swarm Review, with a mark.** The site has a name and a logo -- an open book whose pages are halves of the swarm's hexagon -- and titles set in the book face, like the stories.

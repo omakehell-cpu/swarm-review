@@ -9,14 +9,21 @@ const docs = require('../lib/docs');
 const views = require('../views');
 const wiki = require('../lib/wiki');
 const { sendError } = require('./shared');
-async function handleProfilePage(req, res, user, username) {
+async function handleProfilePage(req, res, user, username, query) {
   const person = models.getUserByUsername(String(username).toLowerCase());
   if (!person || person.username === models.DELETED_USER_USERNAME) {
     return sendError(res, 404, 'No such person', user);
   }
+  // An imported author somebody has claimed is them now.
+  if (person.is_placeholder && person.claimed_by) {
+    const member = models.getUserById(person.claimed_by);
+    if (member) return redirect(res, `/users/${encodeURIComponent(member.username)}`);
+  }
   sendHtml(res, 200, views.profilePage({
     user,
     person,
+    pendingClaim: person.is_placeholder ? models.pendingClaimBy(person.id, user.id) : null,
+    notice: query ? (query.get('notice') || '').slice(0, 300) : '',
     stats: models.userStats(person.id),
     stories: models.listStoriesForUser(person.id),
     chapters: models.listChaptersByUser(person.id),
@@ -128,7 +135,7 @@ const routes = [
   ['GET', '/', (c) => handleStories(c.req, c.res, c.user, c.url.searchParams)],
   ['GET', '/activity', (c) => handleActivity(c.req, c.res, c.user)],
   ['POST', '/welcome/dismiss', (c) => handleDismissWelcome(c.req, c.res, c.user)],
-  ['GET', /^\/users\/([A-Za-z0-9_.-]+)$/, (c) => handleProfilePage(c.req, c.res, c.user, c.m[1])],
+  ['GET', /^\/users\/([A-Za-z0-9_.-]+)$/, (c) => handleProfilePage(c.req, c.res, c.user, c.m[1], c.url.searchParams)],
 ];
 
 module.exports = {
