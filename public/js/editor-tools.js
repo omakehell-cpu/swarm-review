@@ -3,15 +3,16 @@
 //
 //  * Buttons and the keyboard shortcuts every other editor has: bold,
 //    italic, a quoted line, a heading, a scene break.
-//  * Two ways of seeing the text. *Markdown* is the textarea it has always
-//    been, with the writing checks drawn on it. *Visual* shows the chapter
-//    as it will read -- italics in italics, scene breaks as breaks -- and
-//    writes the Markdown underneath as you type (public/js/md-serialize.js).
-//    The textarea stays the one thing the form sends and the one thing the
-//    drafts, the checks and the notes are counted against.
-//  * Focus: everything but the writing gone until Escape.
+//  * One place to write: the Markdown, in the textarea, with the writing
+//    checks drawn behind it. *Preview* swaps it for the chapter as it will
+//    read -- italics in italics, scene breaks as breaks -- until pressed
+//    again (or Escape). Nothing is written in the preview; the textarea is
+//    the one thing the form sends and the one thing the drafts, the checks
+//    and the notes are counted against.
+//  * Focus: everything but the writing gone until Escape, with nothing
+//    moving -- the rest of the page fades out where it stands.
 //  * Typewriter: the line being written stays at the same height on the
-//    screen, and in the visual editor everything but its paragraph fades.
+//    screen.
 //  * How much has been written since the page was opened, and against the
 //    day's goal.
 //
@@ -25,7 +26,6 @@
 
   const textarea = /** @type {HTMLTextAreaElement|null} */ (document.querySelector('textarea[data-editor-tools]'));
   if (!textarea) return;
-  const form = textarea.form;
   const store = {
     get(key) { try { return localStorage.getItem(key); } catch (e) { return null; } },
     set(key, value) { try { localStorage.setItem(key, value); } catch (e) { /* private window */ } },
@@ -94,211 +94,114 @@
     insert(text, text.length);
   }
 
-  // ----------------------------------------------------------------- visual
+  // ---------------------------------------------------------------- preview
 
-  const visual = document.createElement('div');
-  visual.className = 'visual-editor';
-  visual.contentEditable = 'true';
-  visual.setAttribute('role', 'textbox');
-  visual.setAttribute('aria-multiline', 'true');
-  visual.setAttribute('aria-label', 'Chapter text');
-  visual.spellcheck = true;
-  visual.hidden = true;
+  const preview = document.createElement('div');
+  preview.className = 'editor-preview';
+  preview.id = 'editor-preview';
+  preview.tabIndex = -1;
+  preview.setAttribute('role', 'document');
+  preview.setAttribute('aria-label', 'Preview of the chapter');
+  preview.hidden = true;
   let mode = 'markdown';
-  let lastSerialised = null;
 
-  const markdownView = () => /** @type {HTMLElement} */ (textarea.closest('.wa-split') || textarea.closest('.wa-editor-wrap') || textarea);
+  const markdownView = () => /** @type {HTMLElement} */ (textarea.closest('.wa-editor-wrap') || textarea);
 
-  async function renderVisual() {
+  async function renderPreview() {
     const res = await fetch('/markdown/preview', {
       method: 'POST', credentials: 'same-origin',
       body: new URLSearchParams({ text: textarea.value, plain: '1' }),
     });
     if (!res.ok) throw new Error(String(res.status));
     const { html } = await res.json();
-    visual.innerHTML = html || '<p><br></p>';
-    // Links open nothing while writing; they are text with a destination.
-    for (const a of Array.from(visual.querySelectorAll('a'))) a.removeAttribute('target');
-    lastSerialised = textarea.value;
+    preview.innerHTML = html || '<p class="muted">Nothing written yet.</p>';
+    // A preview is for reading: its links go nowhere.
+    for (const a of Array.from(preview.querySelectorAll('a'))) a.removeAttribute('href');
   }
 
-  // The visual text, written back into the textarea -- only when it has
-  // actually changed, so that switching views and back never rewrites a
-  // chapter nobody touched.
-  let syncTimer = null;
-  function syncFromVisual() {
-    clearTimeout(syncTimer);
-    const markdown = /** @type {any} */ (window).markdownFromDom(visual);
-    if (markdown === lastSerialised) return;
-    lastSerialised = markdown;
-    textarea.value = markdown;
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
-  async function setMode(next, { remember = true } = {}) {
+  async function setMode(next, { quiet = false } = {}) {
     if (next === mode) return;
-    if (next === 'visual') {
+    if (next === 'preview') {
       try {
-        await renderVisual();
+        await renderPreview();
       } catch (e) {
-        return; // stay in Markdown rather than show an editor that cannot load
+        if (!quiet) announce('The preview could not be made just now.');
+        return;
       }
+      // The same place in the chapter, roughly: as far down the preview
+      // as the text was scrolled down the box.
+      const room = textarea.scrollHeight - textarea.clientHeight;
+      const share = room > 0 ? textarea.scrollTop / room : 0;
       markdownView().hidden = true;
-      visual.hidden = false;
-      mode = 'visual';
+      preview.hidden = false;
+      mode = 'preview';
+      if (share) window.scrollBy({ top: share * Math.max(0, preview.offsetHeight - window.innerHeight * 0.6) });
+      preview.focus({ preventScroll: true });
     } else {
-      syncFromVisual();
-      visual.hidden = true;
+      preview.hidden = true;
       markdownView().hidden = false;
       mode = 'markdown';
-      // The checks draw the text on their own layer; tell them it may have moved.
+      // The checks draw their marks on their own layer; tell them it may have moved.
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      textarea.focus({ preventScroll: true });
+      centreCaret(true);
     }
-    for (const b of modeButtons) b.setAttribute('aria-pressed', String(b.dataset.mode === mode));
-    document.body.classList.toggle('editor-visual', mode === 'visual');
-    updateFormatState();
-    if (remember) announce(mode === 'visual'
-      ? `Visual view: the chapter as it reads. ${FKEY} says the formatting where the caret is.`
-      : 'Markdown view: the formatting marks are part of the text.');
-    if (remember) store.set('editor-mode', mode);
+    previewBtn.setAttribute('aria-pressed', String(mode === 'preview'));
+    document.body.classList.toggle('editor-previewing', mode === 'preview');
+    for (const b of Array.from(bar.querySelectorAll('[data-format], .tool-break'))) {
+      /** @type {HTMLButtonElement} */ (b).disabled = mode === 'preview';
+    }
+    if (!quiet) announce(mode === 'preview'
+      ? 'Preview: the chapter as it will read. Press Preview again, or Escape, to write.'
+      : 'Writing.');
   }
-
-  // The editor sits inside the chapter text's <label>, and a click inside a
-  // label is handed to the first control in it -- which took the caret out
-  // of the text on every click. Cancelling the click keeps it where it was
-  // put (the caret lands on mousedown), and stops links from being followed.
-  visual.addEventListener('click', (ev) => ev.preventDefault());
-
-  visual.addEventListener('input', () => {
-    clearTimeout(syncTimer);
-    syncTimer = setTimeout(syncFromVisual, 250);
-    afterEdit();
+  preview.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') { ev.stopPropagation(); setMode('markdown'); }
   });
-  // Pasted text arrives as text: a chapter pasted from a word processor
-  // brings its paragraphs, not its fonts, colours and tables.
-  visual.addEventListener('paste', (ev) => {
-    const text = ev.clipboardData && ev.clipboardData.getData('text/plain');
-    if (text === undefined || text === null) return;
-    ev.preventDefault();
-    const esc = (t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-    const paras = text.replace(/\r\n/g, '\n').split(/\n{2,}/);
-    if (paras.length === 1) document.execCommand('insertText', false, text);
-    else document.execCommand('insertHTML', false, paras.map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join(''));
-  });
-  if (form) form.addEventListener('submit', () => { if (mode === 'visual') syncFromVisual(); }, true);
-
-  function visualCommand(name, value) {
-    visual.focus();
-    try { document.execCommand(name, false, value); } catch (e) { /* not supported */ }
-    syncFromVisual();
-    afterEdit();
-  }
-  function visualBlock(tag) {
-    const current = currentBlock();
-    const already = current && current.nodeName === tag.toUpperCase();
-    visualCommand('formatBlock', already ? 'P' : tag);
-  }
+  // Double-click the preview to go back to writing.
+  preview.addEventListener('dblclick', () => setMode('markdown'));
 
   // ------------------------------------------------------ what is here
   //
-  // Formatting you can see and a screen reader does not say: bold, italic,
-  // a quote, a heading, which scene you are in. In the visual view the
-  // B, I, quote and H buttons say whether they are on where the caret is
-  // (a toggle button, pressed or not), and Alt+F -- or the "Formatting
-  // here" button -- says all of it in one sentence. In the Markdown view
-  // the marks are characters in the text and are read like any other.
-  function formatState() {
-    const state = { bold: false, italic: false, strike: false, quote: false, heading: false };
-    if (mode !== 'visual') return state;
-    // Read off the text itself rather than asked of the browser: a quote is
-    // set in italics by the stylesheet, and the browser would call every
-    // word in it italic.
-    const sel = window.getSelection();
-    const node = sel && sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
-    const el = /** @type {Element|null} */ (node && (node.nodeType === 1 ? node : node.parentElement));
-    const inside = (selector) => Boolean(el && el.closest && visual.contains(el) && el.closest(selector) && visual.contains(el.closest(selector)));
-    state.bold = inside('strong, b');
-    state.italic = inside('em, i');
-    state.strike = inside('s, strike, del');
-    const block = currentBlock();
-    state.quote = Boolean(block && block.nodeName === 'BLOCKQUOTE');
-    state.heading = Boolean(block && /^H[1-6]$/.test(block.nodeName));
-    return state;
-  }
-  function updateFormatState() {
-    const state = formatState();
-    for (const b of Array.from(bar.querySelectorAll('[data-format]'))) {
-      const key = /** @type {HTMLElement} */ (b).dataset.format;
-      if (mode === 'visual') b.setAttribute('aria-pressed', String(Boolean(state[key])));
-      else b.removeAttribute('aria-pressed');
-    }
-  }
-  document.addEventListener('selectionchange', () => {
-    if (mode === 'visual' && visual.contains(document.activeElement)) updateFormatState();
-  });
-
+  // Formatting a screen reader does not say: which scene you are in, and
+  // whether the line is a quote or a heading. Alt+F -- or the "Formatting
+  // here" button -- says it in one sentence. The marks themselves are
+  // characters in the text and are read like any other.
   function whereAmI() {
     const parts = [];
-    let sceneIndex = 1;
-    let scenes;
-    if (mode === 'visual') {
-      const state = formatState();
-      const inline = [state.bold && 'bold', state.italic && 'italic', state.strike && 'struck through'].filter(Boolean);
-      const sel = window.getSelection();
-      const node = sel && sel.rangeCount ? sel.getRangeAt(0).startContainer : null;
-      const el = /** @type {Element|null} */ (node && (node.nodeType === 1 ? node : node.parentElement));
-      if (el && el.closest && el.closest('code')) inline.push('code');
-      if (el && el.closest && el.closest('a')) inline.push('a link');
-      parts.push(inline.length ? inline.join(', ') : 'plain text');
-      const block = currentBlock();
-      parts.push(state.quote ? 'in a quote' : state.heading ? 'in a heading' : (block && /^(UL|OL)$/.test(block.nodeName) ? 'in a list' : 'in a paragraph'));
-      const kids = Array.from(visual.children);
-      scenes = kids.filter((k) => k.nodeName === 'HR').length + 1;
-      if (block) sceneIndex = kids.slice(0, kids.indexOf(block)).filter((k) => k.nodeName === 'HR').length + 1;
-    } else {
-      const before = textarea.value.slice(0, textarea.selectionStart);
-      const BREAK = /^ {0,3}([-*_])(?: *\1){2,} *$/;
-      const all = textarea.value.split('\n');
-      scenes = all.filter((l) => BREAK.test(l)).length + 1;
-      sceneIndex = before.split('\n').filter((l) => BREAK.test(l)).length + 1;
-      const line = all[before.split('\n').length - 1] || '';
-      parts.push(/^\s*>/.test(line) ? 'on a quoted line' : /^\s*#/.test(line) ? 'on a heading' : /^\s*([-*+]|\d+\.)\s/.test(line) ? 'on a list item' : 'on a line of prose');
-    }
+    const before = textarea.value.slice(0, textarea.selectionStart);
+    const BREAK = /^ {0,3}([-*_])(?: *\1){2,} *$/;
+    const all = textarea.value.split('\n');
+    const scenes = all.filter((l) => BREAK.test(l)).length + 1;
+    const sceneIndex = before.split('\n').filter((l) => BREAK.test(l)).length + 1;
+    const line = all[before.split('\n').length - 1] || '';
+    parts.push(/^\s*>/.test(line) ? 'on a quoted line' : /^\s*#/.test(line) ? 'on a heading' : /^\s*([-*+]|\d+\.)\s/.test(line) ? 'on a list item' : 'on a line of prose');
     parts.push(`scene ${sceneIndex} of ${scenes}`);
     const text = parts.join(', ');
     announce(text.charAt(0).toUpperCase() + text.slice(1) + '.');
   }
   document.addEventListener('keydown', (ev) => {
-    if (ev.altKey && !ev.ctrlKey && !ev.metaKey && ev.code === 'KeyF'
-      && (document.activeElement === textarea || visual.contains(document.activeElement))) {
+    if (ev.altKey && !ev.ctrlKey && !ev.metaKey && ev.code === 'KeyF' && document.activeElement === textarea) {
       ev.preventDefault();
       whereAmI();
     }
   });
 
   // ---------------------------------------------------------------- actions
+  // ---------------------------------------------------------------- actions
 
   const ACTIONS = [
-    { id: 'bold', label: 'B', title: 'Bold (Ctrl+B)', md: () => wrap('**'), vis: () => visualCommand('bold') },
-    { id: 'italic', label: 'I', title: 'Italic (Ctrl+I)', md: () => wrap('*'), vis: () => visualCommand('italic') },
-    { id: 'quote', label: '\u201c', title: 'Quote (Ctrl+Shift+.)', md: () => prefixLines('> '), vis: () => visualBlock('blockquote') },
-    { id: 'heading', label: 'H', title: 'Heading', md: () => prefixLines('## '), vis: () => visualBlock('h2') },
-    { id: 'break', label: '* * *', title: 'Scene break (Ctrl+Enter)', md: sceneBreakText, vis: () => visualCommand('insertHTML', '<hr><p><br></p>') },
+    { id: 'bold', label: 'B', title: 'Bold (Ctrl+B)', md: () => wrap('**') },
+    { id: 'italic', label: 'I', title: 'Italic (Ctrl+I)', md: () => wrap('*') },
+    { id: 'quote', label: '\u201c', title: 'Quote (Ctrl+Shift+.)', md: () => prefixLines('> ') },
+    { id: 'heading', label: 'H', title: 'Heading', md: () => prefixLines('## ') },
+    { id: 'break', label: '* * *', title: 'Scene break (Ctrl+Enter)', md: sceneBreakText },
   ];
   const SAID = { bold: 'Bold', italic: 'Italic', quote: 'Quote', heading: 'Heading' };
   function run(action) {
-    if (mode === 'visual') {
-      action.vis();
-      if (action.id === 'break') announce('Scene break inserted.');
-      else {
-        updateFormatState();
-        const on = formatState()[action.id];
-        announce(`${SAID[action.id]} ${on ? 'on' : 'off'}.`);
-      }
-    } else {
-      action.md();
-      announce(action.id === 'break' ? 'Scene break inserted.' : `${SAID[action.id]} marks added around the selection.`);
-    }
+    if (mode !== 'markdown') return;
+    action.md();
+    announce(action.id === 'break' ? 'Scene break inserted.' : `${SAID[action.id]} marks added around the selection.`);
   }
 
   const bar = document.createElement('div');
@@ -322,22 +225,14 @@
     bar.appendChild(b);
   }
 
-  // Markdown | Visual
-  const modeGroup = document.createElement('span');
-  modeGroup.className = 'editor-modes';
-  modeGroup.setAttribute('role', 'group');
-  modeGroup.setAttribute('aria-label', 'How to see the text');
-  const modeButtons = [['markdown', 'Markdown'], ['visual', 'Visual']].map(([key, label]) => {
-    const b = button('tool-mode', label, key === 'visual' ? 'See the chapter as it reads while you write it' : 'See and write the Markdown itself');
-    b.dataset.mode = key;
-    b.setAttribute('aria-pressed', String(key === 'markdown'));
-    b.addEventListener('click', () => setMode(key));
-    modeGroup.appendChild(b);
-    return b;
-  });
-  bar.appendChild(modeGroup);
+  // Writing | Preview: one button, pressed while the preview is showing.
+  const previewBtn = button('tool-preview', 'Preview', 'See the chapter as it will read (press again, or Escape, to write)');
+  previewBtn.setAttribute('aria-pressed', 'false');
+  previewBtn.setAttribute('aria-controls', preview.id);
+  previewBtn.addEventListener('click', () => setMode(mode === 'preview' ? 'markdown' : 'preview'));
+  bar.appendChild(previewBtn);
 
-  // On a phone the row is the formatting and the two views, and the rest
+  // On a phone the row is the formatting and the preview, and the rest
   // waits behind one button, so the text starts on the first screen
   // rather than under three rows of controls. On a wide screen the button
   // is not shown and everything sits in one row as before.
@@ -384,7 +279,7 @@
     const anchor = markdownView();
     anchor.parentNode.insertBefore(bar, anchor);
     anchor.parentNode.insertBefore(checksPanel, anchor);
-    anchor.parentNode.insertBefore(visual, anchor);
+    anchor.parentNode.insertBefore(preview, anchor);
   };
   // (Called at the end of this file, once everything it places exists.)
 
@@ -450,7 +345,7 @@
     }
   }
   checksBtn.addEventListener('click', async () => {
-    if (checksPanel.hidden && mode === 'visual') await setMode('markdown');
+    if (checksPanel.hidden && mode === 'preview') await setMode('markdown');
     openChecks(checksPanel.hidden);
   });
   checksPanel.addEventListener('click', (ev) => {
@@ -483,30 +378,18 @@
     else if (ev.shiftKey && (k === '.' || k === '>')) { ev.preventDefault(); prefixLines('> '); }
     else if (!ev.shiftKey && k === 'enter') { ev.preventDefault(); sceneBreakText(); }
   });
-  visual.addEventListener('keydown', (ev) => {
-    const mod = ev.ctrlKey || ev.metaKey;
-    if (!mod || ev.altKey) return;
-    const k = ev.key.toLowerCase();
-    if (!ev.shiftKey && k === 'enter') { ev.preventDefault(); visualCommand('insertHTML', '<hr><p><br></p>'); }
-    else if (ev.shiftKey && (k === '.' || k === '>')) { ev.preventDefault(); visualBlock('blockquote'); }
-    else if (!ev.shiftKey && (k === 'b' || k === 'i')) {
-      // The browser's own bold and italic; synced like any other edit.
-      setTimeout(() => { syncFromVisual(); afterEdit(); }, 0);
-    }
-  });
-  try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) { /* older engines */ }
-
   // ------------------------------------------------------------ focus mode
 
+  // The button keeps its name and its place: pressed is the only change,
+  // so it is still under the pointer to press again.
   function setFocus(on) {
     document.body.classList.toggle('writing-focus', on);
     focusBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    focusBtn.textContent = on ? 'Leave focus' : 'Focus';
     store.set('editor-focus', on ? '1' : '0');
   }
   focusBtn.addEventListener('click', () => {
     setFocus(!document.body.classList.contains('writing-focus'));
-    (mode === 'visual' ? visual : textarea).focus();
+    if (mode === 'markdown') textarea.focus({ preventScroll: true });
   });
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape' && document.body.classList.contains('writing-focus')
@@ -522,20 +405,11 @@
     document.body.classList.toggle('typewriter', on);
     store.set('editor-typewriter', on ? '1' : '0');
     if (on) centreCaret();
-    else for (const el of Array.from(visual.querySelectorAll('.is-current'))) el.classList.remove('is-current');
   }
   typewriterBtn.addEventListener('click', () => {
     setTypewriter(!typewriter);
-    (mode === 'visual' ? visual : textarea).focus();
+    if (mode === 'markdown') textarea.focus();
   });
-
-  function currentBlock() {
-    const sel = window.getSelection();
-    if (!sel || !sel.rangeCount) return null;
-    let node = sel.getRangeAt(0).startContainer;
-    while (node && node.parentNode !== visual) node = node.parentNode;
-    return node && node.nodeType === 1 ? /** @type {HTMLElement} */ (node) : null;
-  }
 
   // Where the caret is inside the textarea, in pixels from its top: a
   // hidden copy of the textarea's text up to the caret, with the same
@@ -564,17 +438,7 @@
   function centreCaret(force = false) {
     if (!typewriter && !force) return;
     const target = window.innerHeight * 0.42;
-    if (mode === 'visual') {
-      const block = currentBlock();
-      for (const el of Array.from(visual.querySelectorAll('.is-current'))) if (el !== block) el.classList.remove('is-current');
-      if (block && typewriter) block.classList.add('is-current');
-      const sel = window.getSelection();
-      if (!sel || !sel.rangeCount) return;
-      let rect = sel.getRangeAt(0).getBoundingClientRect();
-      if (!rect.height && block) rect = block.getBoundingClientRect();
-      window.scrollBy({ top: rect.top - target, behavior: 'auto' });
-      return;
-    }
+    if (mode !== 'markdown') return;
     const caretTop = caretTopInTextarea();
     if (textarea.scrollHeight > textarea.clientHeight + 4) {
       textarea.scrollTop = Math.max(0, caretTop - textarea.clientHeight * 0.42);
@@ -615,62 +479,46 @@
     afterTimer = setTimeout(() => { updateSession(); centreCaret(); }, 30);
   }
   textarea.addEventListener('input', afterEdit);
-  for (const el of [textarea, visual]) {
-    el.addEventListener("keyup", (ev) => { if (/^(Arrow|Page|Home|End|Enter)/.test(/** @type {KeyboardEvent} */ (ev).key)) centreCaret(); });
-    el.addEventListener('click', () => centreCaret());
-  }
+  textarea.addEventListener('keyup', (ev) => { if (/^(Arrow|Page|Home|End|Enter)/.test(ev.key)) centreCaret(); });
+  textarea.addEventListener('click', () => centreCaret());
   updateSession();
 
   // ------------------------------------------------------------ remembered
 
   if (store.get('editor-focus') === '1') setFocus(true);
   if (store.get('editor-typewriter') === '1') setTypewriter(true);
-  if (store.get('editor-mode') === 'visual') setMode('visual', { remember: false });
+  // The old Visual editor's choice, remembered in browsers that used it.
+  store.set('editor-mode', '');
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', place);
   else place();
 
-  // For the desk (public/js/writing-desk.js): the text, whichever view is
-  // showing, and a way to put text in or go to a place in it.
+  // For the desk (public/js/writing-desk.js) and the notes beside the editor
+  // (public/js/editor-notes.js): the text, a way to put text in, to go to a
+  // place in it, and to select or replace a passage by its place in the
+  // Markdown. A preview showing is put away first.
   /** @type {any} */ (window).swarmEditor = {
     bar,
-    getText() { if (mode === 'visual') syncFromVisual(); return textarea.value; },
+    getText() { return textarea.value; },
     async setText(text) {
       textarea.value = text;
       textarea.dispatchEvent(new Event('input', { bubbles: true }));
-      if (mode === 'visual') await renderVisual();
+      if (mode === 'preview') await renderPreview();
     },
-    goToScene(index, offset) {
-      if (mode === 'visual') {
-        const breaks = Array.from(visual.children).filter((el) => el.nodeName === 'HR');
-        const target = index === 0 ? visual.firstElementChild : (breaks[index - 1] && breaks[index - 1].nextElementSibling);
-        if (!target) return;
-        visual.focus();
-        const range = document.createRange();
-        range.setStart(target, 0);
-        range.collapse(true);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        target.scrollIntoView({ block: 'center' });
-        centreCaret();
-        return;
-      }
+    async goToScene(index, offset) {
+      if (mode === 'preview') await setMode('markdown', { quiet: true });
       textarea.focus();
       textarea.setSelectionRange(offset, offset);
       centreCaret(true);
     },
-    // For the notes beside the editor (public/js/editor-notes.js): select a
-    // passage by its place in the Markdown, and put new words in its place.
-    // Both work on the Markdown, so Visual hands over to it first.
     async selectText(start, end) {
-      if (mode === 'visual') await setMode('markdown');
+      if (mode === 'preview') await setMode('markdown', { quiet: true });
       textarea.focus();
       textarea.setSelectionRange(start, end);
       centreCaret(true);
     },
     async replaceText(start, end, text) {
-      if (mode === 'visual') await setMode('markdown');
+      if (mode === 'preview') await setMode('markdown', { quiet: true });
       textarea.focus();
       textarea.setRangeText(text, start, end, 'select');
       textarea.dispatchEvent(new Event('input', { bubbles: true }));

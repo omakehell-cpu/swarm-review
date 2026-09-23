@@ -4,6 +4,12 @@ Every batch of changes, newest first, in plain language. The dates are when
 the work landed, not when the server picked it up -- if something here is
 missing on the site, it has not been restarted yet.
 
+## 2026-09-23 — One place to write
+
+- **The editor is one box again, in Markdown**, with the writing checks behind the words. **Preview** shows the chapter as it will read; press it again, or Escape, to go on writing. The Visual editor, and the side-by-side preview in Editor settings, are gone.
+- **Focus no longer moves the page.** Everything else fades out where it stands, so the Focus button stays under your pointer and keeps its name.
+- **Fixed: clicking the bar of *Checks as a list* typed four asterisks** into the chapter. The click was being passed on to the Bold button.
+
 ## 2026-09-23 — Typing without the wait
 
 - **Letters appear the moment you type them** in the Markdown view of the editor. The text used to be drawn by the writing checks, so each key waited for them; now the checks only paint their marks behind the text, and keep them on their words as you type.
