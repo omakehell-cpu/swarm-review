@@ -45,6 +45,7 @@ const ROUTES = [
   require('./routes/auth'),
   require('./routes/account'),
   require('./routes/admin'),
+  require('./routes/import'),
   require('./routes/glossary'),
   require('./routes/help'),
   require('./routes/tags'),

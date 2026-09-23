@@ -189,8 +189,8 @@ function eventLog(events) {
 // what they have written, and the numbers underneath it. No activity feed
 // and no reading history -- what somebody has read is between them and
 // the author whose chapter it was.
-/** @param {{ user: Row, person: Row, stats: any, stories: any[], chapters: any[] }} props */
-function profilePage({ user, person, stats, stories, chapters }) {
+/** @param {{ user: Row, person: Row, stats: any, stories: any[], chapters: any[], pendingClaim?: any, notice?: string }} props */
+function profilePage({ user, person, stats, stories, chapters, pendingClaim = null, notice = '' }) {
   const isSelf = person.id === user.id;
   const stat = (value, label) => `<div class="story-stat"><span class="story-stat-value">${value}</span><span class="story-stat-label">${label}</span></div>`;
 
@@ -218,20 +218,40 @@ function profilePage({ user, person, stats, stories, chapters }) {
       </div>
     </a>`).join('')}</div>` : `<p class="muted">${isSelf ? 'Nothing written yet.' : 'Nothing yet.'}</p>`;
 
+  // An imported author: a name the stories came with, not a member. Who
+  // they are elsewhere, and -- for a member who is them -- a way to say so.
+  const imported = person.is_placeholder ? `
+      <section class="imported-author">
+        <p><strong>Imported author.</strong> These stories were brought in from StoriesOnline${person.source_url ? ` (<a href="${escapeHtml(person.source_url)}" target="_blank" rel="noopener noreferrer">their page there</a>)` : ''}. Nobody here has claimed them yet.</p>
+        ${pendingClaim
+    ? '<p class="muted">You have said this is you. An admin will look at it; once they agree, these stories move to your account.</p>'
+    : `<details class="claim-form">
+            <summary>This is me</summary>
+            <form method="post" action="/users/${encodeURIComponent(person.username)}/claim">
+              <label>Anything that will help an admin see it is you (optional)
+                <textarea name="message" rows="3" maxlength="1000" placeholder="e.g. I post there as ${escapeHtml(person.display_name)}; ask me anything about the stories."></textarea>
+              </label>
+              <button class="btn small" type="submit">Claim these stories</button>
+            </form>
+          </details>`}
+      </section>` : '';
+
   return layout({
     title: person.display_name,
     user,
+    flash: notice ? { type: 'info', message: notice } : null,
     body: `
       <div class="page-head">
         <div>
           <h1>${escapeHtml(person.display_name)}</h1>
-          <p class="muted byline">@${escapeHtml(person.username)} &middot; joined ${timeHtml(person.created_at)}${
-  person.last_seen_at ? ` &middot; last seen ${timeHtml(person.last_seen_at)}` : ''
-}</p>
+          <p class="muted byline">${person.is_placeholder
+    ? 'Imported from StoriesOnline'
+    : `@${escapeHtml(person.username)} &middot; joined ${timeHtml(person.created_at)}${person.last_seen_at ? ` &middot; last seen ${timeHtml(person.last_seen_at)}` : ''}`}</p>
         </div>
         ${isSelf ? '<div class="page-head-actions"><a class="btn ghost small" href="/account">Account</a></div>' : ''}
       </div>
 
+      ${imported}
       <div class="story-stats">
         ${stat(stats.words.toLocaleString('en-GB'), 'words')}
         ${stat(stats.chapters, `chapter${stats.chapters === 1 ? '' : 's'}`)}

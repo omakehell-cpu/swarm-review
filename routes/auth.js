@@ -24,7 +24,8 @@ async function handleLoginSubmit(req, res) {
 
   // Second, explicit safeguard against the "deleted-user" placeholder ever
   // being used to log in, on top of its unusable random password hash.
-  if (!user || user.username === models.DELETED_USER_USERNAME) {
+  // Nor an imported author (models/imports.js): a name, not an account.
+  if (!user || user.username === models.DELETED_USER_USERNAME || user.is_placeholder) {
     return sendHtml(res, 401, views.loginPage({ error: 'Incorrect username or password.' }));
   }
 
@@ -74,7 +75,7 @@ async function handleRegisterSubmit(req, res) {
       values,
     }));
   }
-  if (username === models.DELETED_USER_USERNAME) {
+  if (username === models.DELETED_USER_USERNAME || username.startsWith('sol-')) {
     return sendHtml(res, 400, views.registerPage({ error: 'That username is reserved.', values }));
   }
   if (!/^[a-zA-Z0-9_-]{3,30}$/.test(username)) {

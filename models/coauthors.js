@@ -113,7 +113,7 @@ function removeStoryCoauthor(storyId, userId) {
 function listAddableCoauthors(story) {
   return db.prepare(`
     SELECT id, display_name, username FROM users
-    WHERE username != ?
+    WHERE username != ? AND is_placeholder = 0
       AND id != ?
       AND id NOT IN (SELECT user_id FROM story_authors WHERE story_id = ?)
     ORDER BY display_name COLLATE NOCASE
