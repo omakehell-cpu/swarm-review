@@ -11,13 +11,13 @@
 (function () {
 'use strict';
 
-const STATIC = 'swarm-static-v1';
+const STATIC = 'swarm-static-v2';
 const PAGES = 'swarm-pages-v1';
 const KEEP_PAGES = 40;
 const OFFLINE = '/offline.html';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(STATIC).then((c) => c.addAll([OFFLINE, '/css/style.css', '/css/looks.css'])));
+  event.waitUntil(caches.open(STATIC).then((c) => c.addAll([OFFLINE, '/css/style.css'])));
   self.skipWaiting();
 });
 

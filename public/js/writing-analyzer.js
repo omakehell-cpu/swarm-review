@@ -72,11 +72,16 @@
     dialogue: { label: 'Dialogue tags', color: '#8a8f3f' },
     opening: { label: 'Repeated openings', color: '#a0679e' },
   };
+  // Hard and very hard sentences are two switches, not one: somebody can
+  // want the red ones and not the forty yellow ones. The analysis itself
+  // still runs 'sentence' as one check; the two switches decide only
+  // which of its marks are shown.
   const CHECK_ORDER = ['spell', 'passive', 'adverb', 'filler', 'complex', 'sentence',
-    'echo', 'filter', 'dialogue', 'opening'];
+    'sentence-yellow', 'sentence-red', 'echo', 'filter', 'dialogue', 'opening'];
 
   const DEFAULT_SETTINGS = {
     spell: true, passive: true, adverb: true, filler: true, complex: true, sentence: true,
+    'sentence-yellow': true, 'sentence-red': true,
     echo: true, filter: true, dialogue: true, opening: true,
   };
   const SETTINGS_KEY = 'wa-settings-v2';
@@ -93,6 +98,12 @@
       if (raw) {
         const parsed = JSON.parse(raw);
         CHECK_ORDER.forEach((id) => { if (typeof parsed[id] === 'boolean') settings[id] = parsed[id]; });
+        // Saved when the two kinds of sentence were one switch.
+        if (parsed.sentence === false && parsed['sentence-yellow'] === undefined) {
+          settings['sentence-yellow'] = false;
+          settings['sentence-red'] = false;
+        }
+        settings.sentence = true;
         return settings;
       }
       // First time this browser sees the new per-check settings: honor the
@@ -133,44 +144,12 @@
     try { localStorage.setItem(WIKI_LINKS_VISIBLE_KEY, visible ? '1' : '0'); } catch (e) { /* ignore */ }
   }
 
-  function hexToRgba(hex, alpha) {
-    const n = parseInt(hex.slice(1), 16);
-    const r = (n >> 16) & 255; const g = (n >> 8) & 255; const b = n & 255;
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  }
-
-  // Inline style for a word-level <mark>, so every color lives in this one
-  // place instead of being duplicated across CSS classes.
-  //
-  // Word-level checks mark with an underline, not a filled block. Blocks
-  // were unreadable in practice: a word-level highlight almost always sits
-  // *inside* a sentence-level one, and two stacked translucent fills turn
-  // the passage into mud exactly where the writer most needs to read it.
-  // An underline carries the same color coding, stacks cleanly with the
-  // sentence tint underneath, and leaves the letterforms alone.
-  //
-  // That was the reasoning; Hemingway, which this is modelled on, shows
-  // that the fill is the point: a hard sentence is a yellow block you
-  // cannot miss, and an adverb inside it is a blue block sitting on top.
-  // So the five checks Hemingway has are fills again, in its colours, and
-  // solid rather than translucent, so two of them stack into two clean
-  // colours rather than mud. The checks this app adds on top (filler,
-  // repeated words, filter verbs, dialogue tags, repeated openings) and
-  // spelling stay underlines: a second, quieter layer.
-  //
-  // The colours live in style.css (--wa-fill-*), where the dark scheme and
-  // each look can set their own; these return a style only for the
-  // underline layer, whose colour is per check.
-  const FILL_KINDS = new Set(['passive', 'adverb', 'complex']);
-  function wordMarkStyle(kind) {
-    if (kind === 'spell') {
-      return `text-decoration-line:underline;text-decoration-style:wavy;text-decoration-color:${CHECK_META.spell.color};text-decoration-thickness:1px;text-underline-offset:3px;`;
-    }
-    if (FILL_KINDS.has(kind) || kind === 'rewrite') return '';
-    const meta = CHECK_META[kind];
-    if (!meta) return '';
-    return `text-decoration-line:underline;text-decoration-style:solid;text-decoration-color:${hexToRgba(meta.color, 0.85)};`
-      + 'text-decoration-thickness:2px;text-underline-offset:3px;';
+  // Every check is a fill now, the way Hemingway marks the text: an
+  // underline was too easy to read past, and at night it was all there
+  // was. The colours live in style.css (--wa-fill-*), one per check, with
+  // a light and a dark set; nothing is set inline.
+  function wordMarkStyle(_kind) {
+    return '';
   }
 
   // Whole sentences: yellow for hard, red for very hard (see style.css).
@@ -1215,7 +1194,7 @@
     }
   }
 
-  function settingFor(id) { return id.indexOf('sentence-') === 0 ? 'sentence' : id; }
+  function settingFor(id) { return id; }
 
   function buildPanel(getSettings, onToggle, onMode, { modeKey = MODE_KEY, defaultMode = 'revise', modeSwitch = true } = {}) {
     const panel = document.createElement('section');
@@ -1234,26 +1213,21 @@
     fold.type = 'button';
     fold.className = 'wa-panel-fold';
     fold.setAttribute('aria-expanded', 'true');
-    fold.innerHTML = '<span class="wa-panel-label">Readability</span>';
-    const modes = document.createElement('div');
-    modes.className = 'wa-panel-modes';
-    modes.setAttribute('role', 'group');
-    modes.setAttribute('aria-label', 'Checks');
-    const modeButtons = ['revise', 'write'].map((m) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.dataset.waMode = m;
-      b.textContent = m === 'revise' ? 'Revise' : 'Write';
-      b.title = m === 'revise' ? 'Show the checks in the text' : 'Hide every check while you draft';
-      b.addEventListener('click', () => setMode(m, true));
-      modes.appendChild(b);
-      return b;
-    });
+    fold.innerHTML = '<span class="wa-panel-label">Writing style checks</span>';
+    // One switch: the checks marked in the text, or not. (It used to be a
+    // pair, Revise and Write, which was one choice in two buttons.)
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'wa-switch';
+    toggle.setAttribute('role', 'switch');
+    toggle.setAttribute('aria-label', 'Writing style checks');
+    toggle.innerHTML = '<span class="wa-switch-track" aria-hidden="true"><span class="wa-switch-knob"></span></span><span class="wa-switch-text"></span>';
+    toggle.addEventListener('click', () => setMode(mode === 'write' ? 'revise' : 'write', true));
     head.appendChild(fold);
     // On the chapter page the page's own switch (Read, Review, Revise)
     // already says whether the checks are shown; a second one would be
-    // two buttons for the same thing.
-    if (modeSwitch) head.appendChild(modes);
+    // two controls for the same thing.
+    if (modeSwitch) head.appendChild(toggle);
     panel.appendChild(head);
 
     const body = document.createElement('div');
@@ -1270,7 +1244,7 @@
 
     const writeNote = document.createElement('p');
     writeNote.className = 'wa-panel-writenote';
-    writeNote.textContent = 'Writing: the checks are out of the way. Switch to Revise to see them.';
+    writeNote.textContent = 'The checks are off: nothing is marked in the text. Turn them on to see them.';
     body.appendChild(writeNote);
 
     const cards = new Map();
@@ -1279,7 +1253,6 @@
       b.type = 'button';
       b.className = `wa-pcard wa-pcard-${id}${craft ? ' wa-pcard-craft' : ''}`;
       b.dataset.waCheck = id;
-      if (craft) b.style.setProperty('--wa-color', CHECK_META[id].color);
       b.title = 'Show or hide these in the text';
       b.addEventListener('click', () => {
         const key = settingFor(id);
@@ -1298,22 +1271,14 @@
     const craft = document.createElement('div');
     craft.className = 'wa-panel-craft';
     craft.setAttribute('role', 'group');
-    craft.setAttribute('aria-label', 'Craft checks, underlined');
+    craft.setAttribute('aria-label', 'Craft checks, each one shown or hidden in the text');
     const craftHead = document.createElement('p');
     craftHead.className = 'wa-panel-sub';
     craftHead.setAttribute('aria-hidden', 'true');
-    craftHead.textContent = 'Craft, underlined';
+    craftHead.textContent = 'Craft';
     craft.appendChild(craftHead);
     PANEL_CRAFT.forEach((id) => craft.appendChild(makeCard(id, true)));
     body.appendChild(craft);
-
-    const more = document.createElement('details');
-    more.className = 'wa-panel-more';
-    more.innerHTML = '<summary>Editor settings</summary>';
-    const moreBody = document.createElement('div');
-    moreBody.className = 'wa-panel-more-body';
-    more.appendChild(moreBody);
-    body.appendChild(more);
 
     fold.addEventListener('click', () => {
       const folded = panel.classList.toggle('wa-panel-folded');
@@ -1334,7 +1299,7 @@
         + `${stats.sentences || 0} ${plural(stats.sentences || 0, 'sentence', 'sentences')} · ${minutes} min read`;
       const flagged = PANEL_PRIMARY.concat(PANEL_CRAFT)
         .reduce((sum, id) => sum + panelLine(id, stats, words)[0], 0);
-      fold.innerHTML = `<span class="wa-panel-label">Readability</span>`
+      fold.innerHTML = `<span class="wa-panel-label">Writing style checks</span>`
         + `<span class="wa-panel-mini">${g === null ? '' : `Grade ${g} · `}${flagged} flagged</span>`;
       for (const [id, card] of cards) {
         const [n, rest] = panelLine(id, stats, words);
@@ -1342,15 +1307,18 @@
         card.classList.toggle('is-zero', !n);
         card.classList.toggle('is-off', !on);
         card.setAttribute('aria-pressed', String(on));
-        card.innerHTML = `<strong>${n}</strong>${escapeHtml(rest)}`
-          + (on ? '' : '<span class="wa-pcard-state">hidden</span>');
+        // Same size on or off: a tick in a box, in the check's own colour,
+        // says whether its marks are shown -- the words never change.
+        card.innerHTML = `<span class="wa-pcard-box" aria-hidden="true"></span><strong>${n}</strong>${escapeHtml(rest)}`;
       }
     }
 
     function setMode(m, fromUser) {
       mode = m;
       panel.classList.toggle('wa-panel-writing', m === 'write');
-      modeButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.waMode === m)));
+      toggle.setAttribute('aria-checked', String(m !== 'write'));
+      const text = toggle.querySelector('.wa-switch-text');
+      if (text) text.textContent = m === 'write' ? 'Off' : 'On';
       if (fromUser) {
         try { localStorage.setItem(modeKey, m); } catch (e) { /* ignore */ }
         onMode(m);
@@ -1360,7 +1328,6 @@
 
     return {
       panel,
-      moreBody,
       update,
       refresh() { if (last) update(last.stats, last.text); },
       mode: () => mode,
@@ -1520,7 +1487,6 @@
     }
     placePanel();
     if (narrowQuery && narrowQuery.addEventListener) narrowQuery.addEventListener('change', placePanel);
-    const sections = panelApi.moreBody;
 
     // --- existing comments: reference list + optional inline highlight ---
     // Only present on the edit-chapter page (see views.js's editChapterPage
@@ -1561,55 +1527,13 @@
       return found;
     }
 
-    // --- editor width controls ---
-    // The textarea (and its overlay, kept matched via syncOverlayWidth)
-    // fills the available space by default (.wa-textarea's width:100%),
-    // same as any other block element -- until the user drags its
-    // resize:both handle, at which point that pixel width is remembered
-    // (see the ResizeObserver below) and wins from then on, on every
-    // future visit, per the "unless manually overridden" rule. These two
-    // buttons are the way back: one clears that override (returns to
-    // filling the normal chapter-form column), the other both clears it
-    // and additionally widens the whole writer-card past its usual cap so
-    // the editor can use the full page width -- for wide-screen setups
-    // where the normal column feels cramped for long-form writing.
-    const writerCardEl = textarea.closest('.writer-card');
-    const widthBar = document.createElement('div');
-    widthBar.className = 'wa-width-bar';
-    const widthLabel = document.createElement('span');
-    widthLabel.className = 'wa-width-label';
-    widthLabel.textContent = 'Editor width:';
-    const fitChapterBtn = document.createElement('button');
-    fitChapterBtn.type = 'button';
-    fitChapterBtn.className = 'btn ghost tiny';
-    fitChapterBtn.textContent = 'Fit to chapter';
-    const fitScreenBtn = document.createElement('button');
-    fitScreenBtn.type = 'button';
-    fitScreenBtn.className = 'btn ghost tiny';
-    fitScreenBtn.textContent = 'Fill screen';
-    widthBar.appendChild(widthLabel);
-    widthBar.appendChild(fitChapterBtn);
-    widthBar.appendChild(fitScreenBtn);
-    sections.appendChild(widthBar);
-
-    function setFullWidth(on) {
-      try { localStorage.setItem('wa-editor-fullwidth', on ? '1' : '0'); } catch (e) { /* ignore */ }
-      if (writerCardEl) writerCardEl.classList.toggle('wa-fullwidth', on);
-    }
-    let fullWidthOn = false;
-    try { fullWidthOn = localStorage.getItem('wa-editor-fullwidth') === '1'; } catch (e) { /* ignore */ }
-    setFullWidth(fullWidthOn);
-
-    fitChapterBtn.addEventListener('click', () => {
-      setFullWidth(false);
-      try { localStorage.removeItem('wa-editor-width'); } catch (e) { /* ignore */ }
-      applyEditorWidth();
-    });
-    fitScreenBtn.addEventListener('click', () => {
-      setFullWidth(true);
-      try { localStorage.removeItem('wa-editor-width'); } catch (e) { /* ignore */ }
-      applyEditorWidth();
-    });
+    // The box fills the column, always. (There used to be width controls
+    // and a remembered dragged width; both are gone, and so is whatever
+    // this browser was keeping for them.)
+    try {
+      localStorage.removeItem('wa-editor-width');
+      localStorage.removeItem('wa-editor-fullwidth');
+    } catch (e) { /* ignore */ }
 
     const splitWrap = document.createElement('div');
     splitWrap.className = 'wa-split';
@@ -1653,50 +1577,10 @@
       overlay.style.width = `${textarea.getBoundingClientRect().width - scrollbar}px`;
     }
 
-    // A width the writer dragged the box to is kept for next time; with
-    // none, the box fills the column like any other block.
-    function applyEditorWidth() {
-      let savedWidth = null;
-      try { savedWidth = localStorage.getItem('wa-editor-width'); } catch (e) { /* ignore */ }
-      textarea.style.width = savedWidth ? `${savedWidth}px` : '';
-      syncOverlayWidth();
-    }
-
-    // Remembers a manually-resized width (the textarea has resize:both) so
-    // it's still that width next time.
-    // ResizeObserver alone can't tell "the user dragged the corner handle"
-    // apart from "the textarea's size changed for some other reason" (the
-    // page loading into a narrower/wider viewport, a saved width being
-    // restored, the Fit-to-chapter/Fill-screen buttons, ...) -- it fires
-    // for all of those identically. Without this, loading the editor on a
-    // narrow phone once was enough to "learn" that width and lock the
-    // editor to it forever after, on every device, since every resize
-    // looked like a manual one. So only track real drags: the native
-    // resize:both handle lives in the last ~20px of the bottom-right
-    // corner, and dragging it means a mousedown that starts there.
-    let isDraggingResizeHandle = false;
-    textarea.addEventListener('mousedown', (ev) => {
-      const rect = textarea.getBoundingClientRect();
-      isDraggingResizeHandle = (rect.right - ev.clientX < 20) && (rect.bottom - ev.clientY < 20);
-    });
-    window.addEventListener('mouseup', () => {
-      // Cleared on a short delay, not immediately -- the ResizeObserver
-      // callback for the drag's final size fires asynchronously and can
-      // land just after mouseup.
-      setTimeout(() => { isDraggingResizeHandle = false; }, 50);
-    });
-
     if (typeof ResizeObserver !== 'undefined') {
-      let widthTimer = null;
-      const ro = new ResizeObserver(() => {
-        syncOverlayWidth(); // live, not debounced -- keep the overlay matched to the drag as it happens
-        if (!isDraggingResizeHandle) return;
-        if (widthTimer) clearTimeout(widthTimer);
-        widthTimer = setTimeout(() => {
-          try { localStorage.setItem('wa-editor-width', String(Math.round(textarea.getBoundingClientRect().width))); } catch (e) { /* ignore */ }
-        }, 300);
-      });
-      ro.observe(textarea);
+      // Keep the overlay matched to the box as the window or the box's
+      // height changes.
+      new ResizeObserver(() => syncOverlayWidth()).observe(textarea);
     }
 
     const popover = document.createElement('div');
@@ -1733,7 +1617,7 @@
       // The answer to a question the typist has already moved on from.
       if (token !== renderToken) return;
       const writing = panelApi.mode() === 'write';
-      const shown = writing ? [] : ranges.filter((r) => settings[r.kind.indexOf('sentence-') === 0 ? 'sentence' : r.kind] !== false);
+      const shown = writing ? [] : ranges.filter((r) => settings[r.kind] !== false);
       currentRanges = shown;
       paintedComments = commentRanges;
       paint(text);
@@ -1946,7 +1830,7 @@
       return suggestion;
     }
 
-    applyEditorWidth();
+    syncOverlayWidth();
     render();
   }
 
@@ -1995,9 +1879,32 @@
   // already there. Sentence-level ranges are applied first (they're always
   // supersets of the word-level ranges inside them, by construction), so
   // word marks end up nested inside their sentence mark, matching the
-  // editor's overlay. A range that can't be wrapped cleanly (very rare --
-  // e.g. it would partially straddle a bold/italic boundary) is simply
-  // skipped rather than risking a broken page.
+  // editor's overlay. A range that straddles an element boundary -- a
+  // sentence with a linked name, a note's underline or an italic word in
+  // it, which is most long sentences -- cannot be one <mark>, so it is
+  // marked piece by piece: one <mark> per run of text inside it, which
+  // reads as one highlight. (It used to be skipped, which is why a hard
+  // sentence with a name in it was never marked here.)
+  function wrapInPieces(range, makeMark) {
+    const root = range.commonAncestorContainer.nodeType === 3
+      ? range.commonAncestorContainer.parentNode : range.commonAncestorContainer;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const pieces = [];
+    for (let t = walker.nextNode(); t; t = walker.nextNode()) {
+      if (!range.intersectsNode(t)) continue;
+      const text = /** @type {Text} */ (t);
+      const from = text === range.startContainer ? range.startOffset : 0;
+      const to = text === range.endContainer ? range.endOffset : text.length;
+      if (to > from && text.nodeValue.slice(from, to).trim()) pieces.push([text, from, to]);
+    }
+    for (const [text, from, to] of pieces) {
+      const piece = document.createRange();
+      piece.setStart(text, from);
+      piece.setEnd(text, to);
+      piece.surroundContents(makeMark());
+    }
+  }
+
   function applyRangesToDom(root, ranges) {
     const ordered = ranges.slice().sort((a, b) => (b.end - b.start) - (a.end - a.start));
     for (const r of ordered) {
@@ -2011,19 +1918,26 @@
         range.setEnd(endPt.node, endPt.offset);
         if (range.collapsed) continue;
         const isSentence = r.kind.indexOf('sentence-') === 0;
-        const mark = document.createElement('mark');
-        if (isSentence) {
-          const severity = r.kind.slice('sentence-'.length);
-          mark.className = `wa-sentence wa-${severity}`;
-          mark.style.cssText = sentenceMarkStyle(severity);
-        } else {
-          mark.className = `wa-word wa-${r.kind}`;
-          mark.style.cssText = wordMarkStyle(r.kind);
+        const makeMark = () => {
+          const mark = document.createElement('mark');
+          if (isSentence) {
+            const severity = r.kind.slice('sentence-'.length);
+            mark.className = `wa-sentence wa-${severity}`;
+            mark.style.cssText = sentenceMarkStyle(severity);
+          } else {
+            mark.className = `wa-word wa-${r.kind}`;
+            mark.style.cssText = wordMarkStyle(r.kind);
+          }
+          mark.dataset.waLabel = r.label;
+          mark.dataset.waKind = r.kind;
+          if (r.suggestion) mark.dataset.waSuggestion = r.suggestion;
+          return mark;
+        };
+        try {
+          range.surroundContents(makeMark());
+        } catch (e) {
+          wrapInPieces(range, makeMark);
         }
-        mark.dataset.waLabel = r.label;
-        mark.dataset.waKind = r.kind;
-        if (r.suggestion) mark.dataset.waSuggestion = r.suggestion;
-        range.surroundContents(mark);
       } catch (e) {
         // Skip this one highlight; never let it break the reading page.
       }
@@ -2140,7 +2054,7 @@
       clearMarks();
       hidePopover();
       const shown = panelApi.mode() === 'write' ? []
-        : ranges.filter((r) => settings[r.kind.indexOf('sentence-') === 0 ? 'sentence' : r.kind] !== false);
+        : ranges.filter((r) => settings[r.kind] !== false);
       applyRangesToDom(container, shown);
       panelApi.update(stats, text);
     }

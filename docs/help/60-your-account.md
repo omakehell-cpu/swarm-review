@@ -17,8 +17,6 @@ that is yours to set. From the top:
   from the bible and the glossary read as plain words). See
   [with a screen reader](/help/screen-readers) for why they exist; they are
   for anybody.
-- **How the site looks** -- Clean, Literary or The Swarm; see the end of
-  this page.
 - **Writing** -- a target of your own in words a day, and how this week
   has gone; see [targets](/help/targets-and-analysis).
 - **Being told there is something waiting** -- your private feed; below.
@@ -30,7 +28,7 @@ that is yours to set. From the top:
 All of it follows you to every device you sign in on, except light and
 dark, which each browser remembers for itself.
 
-@figure account-page.png | The top of the account page: your name, reading, how the site looks, and your daily target.
+@figure account-page.png | The top of the account page: your name, reading settings and your daily target.
 
 ## Being told there is something waiting
 
@@ -114,12 +112,8 @@ There is no AI anywhere in this app. The spellchecker is a dictionary, the
 writing checks are rules, and the story bible's scan is a regular
 expression. Nothing you write is sent anywhere to be read by anything.
 
-## How the site looks
+## Light and dark
 
-Your account page has three looks to choose from: **Clean**, the site as
-it was designed; **Literary**, paper and serif, with the stories laid out
-as a shelf of covers; and **The Swarm**, a ship's console -- a pale
-bridge by day and a dark deck by night, where the chapter sits on a dark
-page as well. The choice is yours alone -- nobody else sees it -- and it
-follows you to every device you sign in on. Light and dark follow the moon
-button in the top bar in all three.
+The moon button in the top bar switches the site between light and dark.
+Until you press it, the site follows your system's own setting.
+

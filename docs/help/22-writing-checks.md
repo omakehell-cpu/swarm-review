@@ -12,18 +12,18 @@ card for each kind of trouble -- *1 of 9 sentences is very hard to read*,
 *4 adverbs. Aim for 1 or fewer.* Each card is the same colour as its marks
 in the text, so the panel is also the key to them.
 
-@figure checks-panel.png | The panel beside the text: the grade, then a card per check, then the craft checks.
+@figure checks-panel.png | The panel beside the text: the switch, the grade, then a card per check, then the craft checks.
 
 In the text itself:
 
 - **Red** -- a sentence that is very hard to read. **Yellow** -- hard.
 - **Blue** -- an adverb. **Green** -- passive voice. **Purple** -- a word or
   phrase with a simpler alternative.
-- **Wavy underline** -- a possible misspelling.
-- **Plain underline**, in a colour of its own -- one of the craft checks
-  (filler words, repeated words, filter verbs, dialogue tags, repeated
-  openings). They are a second, quieter layer, because they are more often
-  a matter of taste.
+- **Aqua** -- a possible misspelling.
+- The **craft checks** each have a colour of their own: **pink** filler
+  words, **orange** repeated words, **periwinkle** filter verbs, **khaki**
+  dialogue tags, **grey** repeated openings. The card in the panel shows
+  which is which.
 
 The fills are solid, so an adverb inside a hard sentence is a blue block
 on a yellow one rather than a muddy mix of the two.
@@ -35,13 +35,14 @@ on a yellow one rather than a muddy mix of the two.
 - **Click a mark** to open the same note with buttons: a proposed word or
   rewrite goes into the text with one click, and a misspelt name can be
   added to the story's dictionary from there.
-- **Click a card** to hide or show that kind of mark. The card keeps
-  counting while its marks are hidden, and says *hidden*, so you know
-  what you have put away.
-- **Write** and **Revise**, at the top of the panel: Write takes every mark
-  out of the text while you draft; Revise brings them back. Hemingway has
-  the same pair, for the same reason -- a first draft and a second pass are
-  different jobs.
+- **Click a card** to hide or show that kind of mark. A tick in the box
+  and the card's colour say it is shown; an empty box and a plain card
+  say it is hidden. The card keeps counting either way. Hard and very hard
+  sentences are two cards, so you can keep the red ones and put away the
+  yellow.
+- **Writing style checks**, the switch at the top of the panel: **Off**
+  takes every mark out of the text while you draft; **On** brings them
+  back. A first draft and a second pass are different jobs.
 - **Checks as a list**, above the text, turns every mark into a list you
   can go through in order, each item selecting its words. It is for a
   screen reader, and for anyone who prefers a to-do list to a colouring

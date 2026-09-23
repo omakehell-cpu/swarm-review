@@ -82,7 +82,7 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   // default, clean), 'literary' or 'swarm'. A preference like the reading
   // size, except that it follows them to every device, so it is stored
   // here rather than in the browser. See lib/looks.js.
-  ensureColumn('users', 'look', "TEXT NOT NULL DEFAULT ''");
+  ensureColumn('users', 'look', "TEXT NOT NULL DEFAULT ''"); // no longer read: the site has one look
 
   // How this person wants to read, when it matters more than taste: open
   // chapters in Read mode every time, and have no links in the prose at
