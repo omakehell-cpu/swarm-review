@@ -3,10 +3,10 @@
 How to read a chapter the way you would read a book, and how to leave the
 kind of note the author can actually act on.
 
-## Read, Review, Revise
+## Read or Review
 
 Under the chapter's title is one row of controls, and the first of them is
-the switch between the ways of having the page.
+a switch between two ways of having the page.
 
 **Read** gives you the chapter and nothing else: no notes, no highlights,
 no margin, and selecting words offers nothing -- it is just the story.
@@ -15,7 +15,7 @@ are underlined, the notes sit beside them, and selecting words lets you
 leave one. Nobody thinks well about a sentence while the sentence has
 three coloured underlines on it, so read it once first.
 
-On your own chapter there is a third: **Revise** is Review with the
+On your own chapter the second is **Revise** instead: the notes, and the
 [writing checks](/help/writing-checks) marked in the text as well.
 
 A chapter with notes opens in Review; one without opens in Read; and after

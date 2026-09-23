@@ -476,8 +476,9 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         <div class="version-actions" id="reading-controls" data-has-comments="${comments.length ? '1' : '0'}" data-read-first="${user.read_first ? '1' : '0'}">
           <div class="mode-switch" role="group" aria-label="How to view this chapter">
             <button type="button" data-mode="read" aria-pressed="false" title="The story alone">Read</button>
-            <button type="button" data-mode="review" aria-pressed="false" title="The story and the notes">Review</button>
-            ${isChapterAuthor ? '<button type="button" data-mode="revise" aria-pressed="false" title="The notes, and the writing checks marked in the text">Revise</button>' : ''}
+            ${isChapterAuthor
+    ? '<button type="button" data-mode="revise" aria-pressed="false" title="The notes, and the writing checks marked in the text">Revise</button>'
+    : '<button type="button" data-mode="review" aria-pressed="false" title="The story and the notes">Review</button>'}
           </div>
           <details class="reading-prefs" aria-label="Reading settings">
             <summary aria-label="Reading settings: type size, line length, spacing">Aa</summary>

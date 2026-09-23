@@ -23,7 +23,7 @@ here is missing on the site, it has not been restarted yet.
 
 ### Reading and notes
 
-- **Read, Review, Revise.** One switch under the title. Read is the story alone; Review is the story and the notes; Revise, on your own chapter, adds the writing checks.
+- **Read or Review.** One switch of two under the title. Read is the story alone; Review is the story and the notes. On your own chapter the second is Revise: the notes and the writing checks.
 - **How it read.** In Review, click a paragraph -- or select a few words and press R -- and say how it read: **Hooked**, **Lost me**, **Dragged** or **Didn't buy it**. The author gets them summed up above the text and marked in the margin.
 - **Pick up where you stopped**, on any device; forgotten once you reach the end.
 - **Name somebody in a note** with @: it lands under *Replies and mentions* on their front page and in their feed.
