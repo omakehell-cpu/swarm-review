@@ -211,7 +211,10 @@ async function router(req, res) {
         ? (pathname === matcher ? [pathname] : null)
         : pathname.match(matcher);
       if (!m) continue;
-      return await run({ req, res, user, url, m });
+      const out = await run({ req, res, user, url, m });
+      // Anything posted may have changed a story: its glossary page follows.
+      if (req.method === 'POST') models.scheduleStoryGlossaryRefresh();
+      return out;
     }
 
     sendError(res, 404, 'There is no page at that address.', user);
@@ -238,6 +241,9 @@ if (process.env.NODE_ENV !== 'test') {
   // And server.log, which launchd writes and nothing else would trim.
   require('./lib/logrotate').startLogRotation((err) => console.error('log rotation failed:', err.message));
 }
+
+// Stories written before their glossary pages existed get them now.
+try { models.refreshStoryGlossary(); } catch (err) { console.error('story glossary refresh failed:', err.message); }
 
 server.listen(PORT, () => {
   console.log(`Swarm Review listening on http://localhost:${PORT}`);

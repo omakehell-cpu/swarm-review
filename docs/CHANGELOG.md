@@ -8,6 +8,7 @@ here is missing on the site, it has not been restarted yet.
 
 ### Stories from StoriesOnline
 
+- **Every story has a glossary page.** Made from the story itself -- who wrote it, where it stands, its chapters and who is in it -- under Stories, filed as *In this group*, and kept up to date as the story changes. A wiki sync leaves it alone; where the wiki has a page of the same title, the wiki's wins.
 - **Import a story from its EPUB.** Admins upload the file StoriesOnline gives you; the site finds the chapters (one per file, or split at the chapter headings when the whole story is in one), shows them with their titles and word counts to check and rename, and brings in the cover, the description, the series, the dates and the tags it already knows.
 - **Imported authors.** Each story belongs to the author named in the book, who gets a page of their own but no account: they cannot log in, are not counted among the group and cannot be asked to read.
 - **"This is me."** Anyone can claim an imported author from its page; once an admin approves it, the stories and chapters move to their account.

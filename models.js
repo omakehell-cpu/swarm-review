@@ -30,6 +30,7 @@ const modules = [
   ['chapters', require('./models/chapters')],
   ['writing', require('./models/writing')],
   ['imports', require('./models/imports')],
+  ['storyGlossary', require('./models/story-glossary')],
 ];
 
 const all = {};

@@ -17,6 +17,19 @@ Nothing in this app ever reaches out to the wiki to render a page. That is
 the whole point of the copy: a chapter reads the same whether the wiki is up
 or not.
 
+## The stories in this group
+
+There is one exception to *read-only*: every story in this group has a
+page of its own, under **Stories** and filed as *In this group*. Nobody
+writes it. It is made from the story -- who wrote it, where it stands, its
+chapters, and the people in its bible, unless the bible is private -- and
+follows it: a new story gets its page straight away, a renamed one moves,
+an archived one leaves. **Open the story** at the top goes back to it.
+
+A sync leaves these pages alone. If the wiki has a page of the same title,
+the wiki's is the one the glossary shows. A story's title is not a name, so
+it is never linked in anybody's chapter.
+
 ## Finding something
 
 The front page is a **directory**, not a list. Three doors — the world,

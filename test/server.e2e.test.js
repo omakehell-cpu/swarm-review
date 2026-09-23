@@ -496,15 +496,17 @@ test('the glossary keeps the state of a page off the subject axis', async () => 
 });
 
 test('a long glossary listing is sent a letter at a time; a search is not', async () => {
-  const before = models.listWikiPagesForGlossary().map((p) => {
-    const full = models.getWikiPageByTitleLower(p.title_lower);
-    return { title: full.title, summary: full.summary, categories: models.categoriesByPage().get(full.title_lower) || [], contentHtml: full.content_html };
-  });
+  // The wiki's pages, to put back afterwards -- not the ones made from the
+  // stories this suite has written, which a sync leaves alone anyway.
+  const before = models.listWikiPagesForGlossary().map((p) => models.getWikiPageByTitleLower(p.title_lower))
+    .filter((full) => !full.story_id)
+    .map((full) => ({ title: full.title, summary: full.summary, categories: models.categoriesByPage().get(full.title_lower) || [], contentHtml: full.content_html }));
   const many = [];
   for (const first of ['Alpha', 'Beta', 'Gamma']) {
     for (let i = 0; i < 60; i++) many.push({ title: `${first} ${String(i).padStart(2, '0')}`, summary: 'x', categories: ['Ships'], contentHtml: '<p>.</p>' });
   }
   models.replaceWikiPages(many);
+  const total = models.listWikiPagesForGlossary().length;
   const first = await (await request('/glossary?view=all')).text();
   assert.match(first, /data-paged="1"/);
   assert.match(first, />Alpha 00</);
@@ -513,7 +515,7 @@ test('a long glossary listing is sent a letter at a time; a search is not', asyn
   const b = await (await request('/glossary?view=all&letter=B')).text();
   assert.match(b, />Beta 59</);
   assert.ok(!b.includes('>Alpha 00<'));
-  assert.match(b, /60 of 180 pages, under B/);
+  assert.ok(b.includes(`60 of ${total} pages, under B`));
   const found = await (await request('/glossary?q=Gamma')).text();
   assert.ok(!found.includes('data-paged'), 'a search shows everything it found');
   // The tests after this one read the small glossary from the one before.

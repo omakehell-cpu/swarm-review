@@ -106,6 +106,10 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   ensureColumn('stories', 'source_id', 'TEXT');
   ensureColumn('stories', 'series', "TEXT NOT NULL DEFAULT ''");
   ensureColumn('stories', 'imported_at', 'TEXT');
+  // Glossary pages made from a story written here (models/story-glossary.js)
+  // rather than copied from the wiki. A wiki sync replaces only the rows
+  // where this is empty.
+  ensureColumn('wiki_pages', 'story_id', 'INTEGER');
 
   // The writing desk (see models/desk.js). A note the author keeps against
   // one scene of a chapter -- "this is where she lies to him" -- private to

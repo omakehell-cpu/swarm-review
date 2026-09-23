@@ -2,8 +2,11 @@
 
 const { htmlToText } = require('../lib/util');
 const { db } = require('./shared');
+// The names a chapter's text is scanned for. The wiki's own pages only: a
+// story written here has a glossary page, but its title is not a name, and
+// "Average Joes" should not turn into a link every time somebody writes it.
 function listWikiPages() {
-  return db.prepare('SELECT title, title_lower, summary FROM wiki_pages').all();
+  return db.prepare('SELECT title, title_lower, summary FROM wiki_pages WHERE story_id IS NULL').all();
 }
 
 
@@ -13,8 +16,14 @@ function listWikiPages() {
 function replaceWikiPages(pages) {
   db.exec('BEGIN');
   try {
-    db.exec('DELETE FROM wiki_pages');
-    db.exec('DELETE FROM wiki_page_categories');
+    // The wiki's pages only: the ones made from stories written here are
+    // not the wiki's to take away (see models/story-glossary.js). One the
+    // wiki now has a page of the same title for gives way to it.
+    db.exec(`DELETE FROM wiki_page_categories WHERE title_lower IN
+      (SELECT title_lower FROM wiki_pages WHERE story_id IS NULL)`);
+    db.exec('DELETE FROM wiki_pages WHERE story_id IS NULL');
+    const giveWay = db.prepare('DELETE FROM wiki_pages WHERE title_lower = ? AND story_id IS NOT NULL');
+    const giveWayCategories = db.prepare('DELETE FROM wiki_page_categories WHERE title_lower = ?');
     const insert = db.prepare(
       'INSERT INTO wiki_pages (title, title_lower, summary, content_html, content_text) VALUES (?, ?, ?, ?, ?)'
     );
@@ -23,6 +32,7 @@ function replaceWikiPages(pages) {
     );
     for (const p of pages) {
       const lower = p.title.toLowerCase();
+      if (giveWay.run(lower).changes) giveWayCategories.run(lower);
       // content_text is what the search index reads: the same page with
       // the tags taken out, written here so the index never has to parse.
       insert.run(p.title, lower, p.summary || '', p.contentHtml || null, htmlToText(p.contentHtml));
@@ -94,7 +104,7 @@ function listWikiPagesForGlossary() {
 }
 
 function getWikiPageByTitleLower(titleLower) {
-  return db.prepare('SELECT title, title_lower, summary, content_html, fetched_at FROM wiki_pages WHERE title_lower = ?').get(titleLower) || null;
+  return db.prepare('SELECT title, title_lower, summary, content_html, fetched_at, story_id FROM wiki_pages WHERE title_lower = ?').get(titleLower) || null;
 }
 
 function getWikiSyncState() {
