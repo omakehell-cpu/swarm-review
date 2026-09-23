@@ -242,3 +242,17 @@ restart after an update.
   paths (`which node`, `which cloudflared`) and `iagozasdeuna` swapped for
   the new machine's username -- `SETUP-DOMAIN.md` covers moving the tunnel
   itself the same way.
+
+
+## Setting a password from the Mac itself
+
+If an account's password is lost and there is no admin to make a reset
+link -- or the admin is the one locked out -- set it from the site's folder:
+
+```bash
+cd ~/Documents/swarmEditor/swarm-review
+node scripts/set-password.js <username>
+```
+
+It asks for the new password twice without showing it, unlocks the
+account, and signs it out everywhere else. The server can stay running.
