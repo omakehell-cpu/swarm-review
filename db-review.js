@@ -125,6 +125,14 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   // than in the browser, so a chapter begun on the phone picks up on the
   // laptop. Cleared once they reach the end.
   db.exec(`
+  CREATE TABLE IF NOT EXISTS paragraph_reactions (
+    version_id INTEGER NOT NULL REFERENCES chapter_versions(id) ON DELETE CASCADE,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    paragraph  INTEGER NOT NULL,
+    kind       TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (version_id, user_id, paragraph, kind)
+  );
   CREATE TABLE IF NOT EXISTS reading_places (
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,

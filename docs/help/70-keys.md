@@ -17,7 +17,9 @@ On a Mac, **Ctrl** below is **⌘ Cmd**, and **Alt** is **⌥ Option**.
   typing in a box or have text selected.
 - **Shift + arrow keys** -- select a passage, the same as dragging across
   it.
-- **C** -- comment on the passage you have selected. The note box opens
+- **C** -- comment on the passage you have selected.
+- **R** -- say how the paragraph you have selected in read: Hooked, Lost
+  me, Dragged, Didn't buy it. **Escape** closes the bar. The note box opens
   beside it, switching to Review if you were in Read.
 - **Escape** -- closes the card of a name you clicked, and puts you back
   on the word.

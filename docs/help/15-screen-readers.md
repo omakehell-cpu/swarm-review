@@ -23,7 +23,7 @@ At the end of a chapter the next one is a single link, with its title. The **lef
 
 In **Review** mode, a passage somebody has left a note on is read as highlighted. The notes themselves are in a region called **Notes on this chapter**, and each starts with a heading that says whose it is, what kind, where it stands and what it is about -- *Note by Luis, question, pending, on "four hundred days"* -- so the headings key walks you from note to note. Each note has a **Go to the passage** link back to the words.
 
-To leave a note, select the words with Shift and the arrow keys and press **C**; if you were in Read mode, the page switches to Review so that the note box has somewhere to open. Accept, reject, reply and retract happen in place: the page does not reload, your place is kept and one sentence says what happened.
+To say how a paragraph read -- Hooked, Lost me, Dragged, Didn't buy it -- select a few of its words and press **R**: a toolbar of four switches opens, each saying whether it is on; Escape closes it and puts you back. To leave a note, select the words with Shift and the arrow keys and press **C**; if you were in Read mode, the page switches to Review so that the note box has somewhere to open. Accept, reject, reply and retract happen in place: the page does not reload, your place is kept and one sentence says what happened.
 
 ## Writing
 

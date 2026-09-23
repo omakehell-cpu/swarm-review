@@ -308,9 +308,11 @@
     if (result.text !== lastAnnounced) {
       lastAnnounced = result.text;
       const words = result.text.trim().split(/\s+/).length;
-      selectionSay.textContent = words === 1
+      const react = document.getElementById('reactions-data') && !document.querySelector('.reacted-heat, [data-reaction-author]')
+        ? ' Or R to say how the paragraph read.' : '';
+      selectionSay.textContent = (words === 1
         ? `One word selected: ${result.text.trim()}. Press C to comment on it.`
-        : `${words} words selected. Press C to comment on them.`;
+        : `${words} words selected. Press C to comment on them.`) + react;
     }
   }
 

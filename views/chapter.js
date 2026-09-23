@@ -6,6 +6,32 @@ const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
 const { chapterCastBlock, missingNamesBlock } = require('./bible');
 const { ICONS, KIND_LABEL, STATUS_LABEL, emptyState, kindBadge, personLink, readersLine, suggestionDiff, wiki, wordCount } = require('./shared');
+// Above the text, for the author: how the chapter read, added up. The
+// paragraphs are shaded in the text itself (public/js/reactions.js); this
+// is the same thing as sentences, with a way to each place.
+const REACTION_LABEL = { hooked: 'Hooked', lost: 'Lost me', slow: 'Dragged', unconvinced: 'Didn\u2019t buy it' };
+function reactionSummary(map) {
+  if (!map || !map.readers) return '';
+  const totals = {};
+  const places = {};
+  for (const [para, counts] of Object.entries(map.byParagraph)) {
+    for (const [kind, n] of Object.entries(counts)) {
+      totals[kind] = (totals[kind] || 0) + Number(n);
+      (places[kind] = places[kind] || []).push([Number(para), Number(n)]);
+    }
+  }
+  const line = Object.keys(REACTION_LABEL).filter((k) => totals[k]).map((kind) => {
+    const top = places[kind].sort((a, b) => b[1] - a[1] || a[0] - b[0]).slice(0, 3)
+      .map(([p, n]) => `<a href="#chapter-text" data-para="${p}">paragraph ${p}${n > 1 ? ` (${n})` : ''}</a>`).join(', ');
+    return `<li class="reaction-sum reaction-sum-${kind}"><strong>${REACTION_LABEL[kind]}</strong> ${totals[kind]} &middot; ${top}</li>`;
+  }).join('');
+  return `
+    <section class="reaction-summary" aria-label="How the chapter read" data-reaction-author>
+      <p class="reaction-summary-head">How it read, from ${map.readers} reader${map.readers === 1 ? '' : 's'}</p>
+      <ul>${line}</ul>
+    </section>`;
+}
+
 // "@luis" in a note is a person: a link to their page. The text is
 // escaped first and only then linked, so nothing in a note becomes markup.
 function withMentions(body) {
@@ -378,7 +404,7 @@ function reviewBlock({ chapter, isChapterAuthor, requests = [], mine = null, peo
     </section>`;
 }
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '', place = null, mentionable = [] }) {
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '', place = null, mentionable = [], reactions = null }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -519,6 +545,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
       </div>
     </div>
     ${reviewHtml}
+    ${reactions && reactions.mode === 'author' ? reactionSummary(reactions.map) : ''}
     <div class="chapter-body-grid">
       <article class="reading-pane" aria-labelledby="chapter-title">
         <div id="chapter-text" tabindex="-1" data-chapter-id="${chapter.id}" data-version-id="${currentVersion.id}"${place ? ` data-place="${place.paragraph}" data-place-of="${place.total}"` : ''} data-story-id="${chapter.story_id}" data-can-edit-dictionary="${isChapterAuthor ? '1' : '0'}" data-is-author="${isChapterAuthor ? '1' : '0'}">${highlighted}</div>
@@ -570,6 +597,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     ${chapterFloatNav(chapter, neighbours)}
     <button id="selection-toast" class="selection-toast hidden" type="button">+ Comment on selection</button>
     <script type="application/json" id="chapter-meta">${toScriptJson({ chapterId: chapter.id })}</script>
+    ${reactions ? `<script type="application/json" id="reactions-data">${toScriptJson(reactions)}</script>` : ''}
     ${mentionable.length ? `<script type="application/json" id="mention-people">${toScriptJson(mentionable.map((p) => ({ u: p.username, n: p.display_name })))}</script>` : ''}
     <script src="/js/nspell.bundle.js"></script>
     <script src="/js/writing-analyzer.js" defer></script>
