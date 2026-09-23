@@ -822,7 +822,11 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
   transition: border-color 0.14s ease;
 }
 .comment.status-accepted { border-top-color: var(--text); }
-.comment.status-rejected { border-top-color: var(--border); opacity: 0.6; }
+/* Turned down: quieter by colour, not by fading -- faded text fails
+   contrast, and a turned-down note still has to be readable. */
+.comment.status-rejected { border-top-color: var(--border); }
+.comment.status-rejected .comment-body, .comment.status-rejected .comment-gist,
+.comment.status-rejected .quoted { color: var(--text-muted); }
 /* Arriving at a comment -- from a highlight in the text, or from a link in
    the inbox -- with no signal at all leaves you looking for the thing you
    just asked for. Two pulses and done: enough to find it, not enough to
@@ -4122,7 +4126,7 @@ main[data-reading="read"] .wa-panel-chapter { display: none; }
 .editor-note-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-3); }
 .editor-note-actions .inline-form { display: inline-flex; gap: var(--s-2); }
 .editor-notes .comment.is-current { box-shadow: -3px 0 0 var(--text); padding-left: var(--s-3); }
-.editor-notes .comment.status-accepted, .editor-notes .comment.status-rejected { opacity: 0.7; }
+.editor-notes .comment.status-accepted .comment-body, .editor-notes .comment.status-rejected .comment-body { color: var(--text-muted); }
 .editor-note-actions [hidden], .editor-notes-step[hidden] { display: none !important; }
 
 /* ==== Reactions: how each paragraph read ============================== */
@@ -4206,3 +4210,13 @@ main[data-reading="read"] .reaction-summary { display: none; }
 ::highlight(wa-opening) { text-decoration: underline solid #a0679e 2px; }
 .notes-from-word > summary { cursor: pointer; color: var(--text-muted); font-size: var(--t-sm); }
 .notes-from-word-form { display: flex; flex-direction: column; gap: var(--s-3); margin-top: var(--s-3); }
+
+/* The reaction colours are for dots and margins; words stay in ink, which
+   every one of those colours would fail against as text. */
+.reaction-summary .reaction-sum strong { color: var(--text); }
+.reaction-sum strong::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: var(--s-2); vertical-align: 1px; }
+.reaction-sum-hooked strong::before { background: var(--react-hooked); }
+.reaction-sum-lost strong::before { background: var(--react-lost); }
+.reaction-sum-slow strong::before { background: var(--react-slow); }
+.reaction-sum-unconvinced strong::before { background: var(--react-unconvinced); }
+main:not([data-reading="read"]) #chapter-text > .reacted-heat::after { color: var(--text-muted); }
