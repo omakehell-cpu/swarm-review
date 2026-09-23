@@ -61,6 +61,12 @@ Only if they are a coauthor of the story and it is their chapter.
 Nobody -- not a coauthor, not an admin -- can rewrite a chapter somebody
 else wrote.
 
+**I prefer marking up in Word. Can I?**
+Yes. **More** on the chapter page has *Word, with the notes as comments*;
+comment in Word, then use *Notes from a Word file* at the foot of the
+notes to bring your comments back as notes. See
+[reading it in Word](/help/reading-and-reviewing).
+
 **How do I get my whole story out as a file?**
 At the foot of the story's page: PDF, EPUB, Word, Markdown or plain text,
 laid out as a manuscript or as a book.

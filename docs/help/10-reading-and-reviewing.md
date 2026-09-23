@@ -228,6 +228,25 @@ new draft, reopens the same request. **Take back** withdraws one.
 
 It is also in the private feed, for anybody who reads the site that way.
 
+## Reading it in Word
+
+Some people read and mark up best in Word, and they can. **More**, above
+the text, has **Word, with the notes as comments**: the chapter as a Word
+document with every note on it in Word's own margin, each on the words it
+was left on, replies included, and the notes on the chapter as a whole on
+its title.
+
+Add your own as ordinary Word comments, and bring them back with **Notes
+from a Word file**, at the foot of the notes. Each Word comment becomes a
+note by you, on the same words -- or, if the author has since rewritten
+those words, a note on the chapter as a whole that quotes them. The notes
+that were already here and came along in the download are recognised and
+not added twice.
+
+To send the author a whole rewritten version rather than notes, see
+*Replacing a chapter with a file* in [writing](/help/writing-a-chapter):
+that is for the author, and it makes a new version.
+
 ## Who has read what
 
 Opening a chapter records that you opened it. The initials under each

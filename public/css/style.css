@@ -4204,3 +4204,5 @@ main[data-reading="read"] .reaction-summary { display: none; }
 ::highlight(wa-filter) { text-decoration: underline solid #b4574f 2px; }
 ::highlight(wa-dialogue) { text-decoration: underline solid #8a8f3f 2px; }
 ::highlight(wa-opening) { text-decoration: underline solid #a0679e 2px; }
+.notes-from-word > summary { cursor: pointer; color: var(--text-muted); font-size: var(--t-sm); }
+.notes-from-word-form { display: flex; flex-direction: column; gap: var(--s-3); margin-top: var(--s-3); }
