@@ -27,6 +27,7 @@ const modules = [
   ['calendar', require('./models/calendar')],
   ['coauthors', require('./models/coauthors')],
   ['bible', require('./models/bible')],
+  ['bibleEdits', require('./models/bible-edits')],
   ['chapters', require('./models/chapters')],
   ['writing', require('./models/writing')],
   ['imports', require('./models/imports')],

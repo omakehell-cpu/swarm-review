@@ -63,15 +63,35 @@ async function handleBibleIndex(req, res, user, storyId, query) {
   if (q) {
     entities = entities.filter((e) => `${e.name} ${e.summary} ${e.alias_list || ''}`.toLowerCase().includes(q));
   }
+  const canWrite = models.canWriteInStory(story, user);
+  entities = withStatusAsSeen(entities, story, user, canWrite);
   sendHtml(res, 200, views.bibleIndexPage({
     user, story, entities, counts, total, kind, sort,
-    canWrite: models.canWriteInStory(story, user),
+    canWrite,
+    notNames: canWrite ? models.listNotNames(storyId) : [],
     isOwner: story.author_id === user.id,
     conflicts: models.storyBibleNameConflicts(storyId),
     covers: models.coverImagesFor(storyId),
     notice: query.get('notice') || '',
   }));
 }
+
+// How far the one asking can see: the people writing the story see how
+// everybody ends up; a reader sees each entry as it stands where they have
+// read up to, and not a chapter further -- "Dead" on the first page of the
+// bible is the worst spoiler it could hold.
+function positionFor(story, user, canWrite) {
+  return canWrite ? Infinity : models.readerPosition(story.id, user.id);
+}
+
+function withStatusAsSeen(entities, story, user, canWrite) {
+  const changes = models.statusChangesForStory(story.id);
+  if (!changes.size) return entities;
+  const upTo = positionFor(story, user, canWrite);
+  return entities.map((e) => ({ ...e, status: storyBible.statusAt(e.status, changes.get(e.id) || [], upTo) }));
+}
+
+const wantsJson = (req) => (req.headers.accept || '').includes('application/json');
 
 async function handleNewEntityPage(req, res, user, storyId) {
   const story = bibleGuard(res, user, storyId, { write: true });
@@ -163,7 +183,7 @@ async function handleNotName(req, res, user, storyId) {
   if (!story) return;
   const body = await parseBody(req);
   const back = /^\/[A-Za-z0-9/_?=&.-]*$/.test(String(body.returnTo || ''))
-    ? String(body.returnTo) : `/stories/${storyId}#not-names`;
+    ? String(body.returnTo) : `/stories/${storyId}/bible#not-names`;
   const wantsJson = (req.headers.accept || '').includes('application/json');
   const row = models.addNotName(storyId, body.name, user.id);
   if (wantsJson) return row ? sendJson(res, 200, { id: row.id, name: row.name }) : sendJson(res, 400, { error: 'Which word?' });
@@ -173,8 +193,12 @@ async function handleNotName(req, res, user, storyId) {
 async function handleRemoveNotName(req, res, user, storyId, id) {
   const story = bibleGuard(res, user, storyId, { write: true });
   if (!story) return;
+  const body = await parseBody(req);
   models.removeNotName(storyId, id);
-  redirect(res, `/stories/${storyId}#not-names`);
+  if (wantsJson(req)) return sendJson(res, 200, { ok: true });
+  const back = /^\/[A-Za-z0-9/_?=&.#-]*$/.test(String(body.returnTo || ''))
+    ? String(body.returnTo) : `/stories/${storyId}/bible#not-names`;
+  redirect(res, back);
 }
 
 async function handleUnknownNames(req, res, user, storyId) {
@@ -233,12 +257,17 @@ async function handleNewEntitySubmit(req, res, user, storyId) {
   redirect(res, `/bible/${entity.id}`);
 }
 
-function renderEntity(res, user, entityId, error = '', status = 200) {
+function renderEntity(res, user, entityId, error = '', status = 200, notice = '') {
   const guard = entityGuard(res, user, entityId);
   if (!guard) return;
   const { entity, story, canWrite } = guard;
+  const changes = models.listStatusChanges(entityId);
+  const upTo = positionFor(story, user, canWrite);
   sendHtml(res, status, views.entityPage({
-    user, story, entity, canWrite, error,
+    user, story, entity: { ...entity, status: storyBible.statusAt(entity.status, changes, upTo), start_status: entity.status },
+    canWrite, error, notice,
+    statusChanges: canWrite ? changes : changes.filter((c) => c.chapter_number <= upTo),
+    matching: canWrite ? models.entityMatching(entityId) : null,
     aliases: models.listEntityAliases(entityId),
     links: models.listStoryEntityLinks(entityId),
     appearances: models.listEntityAppearances(entityId),
@@ -249,8 +278,8 @@ function renderEntity(res, user, entityId, error = '', status = 200) {
   }));
 }
 
-async function handleEntityPage(req, res, user, entityId) {
-  renderEntity(res, user, entityId);
+async function handleEntityPage(req, res, user, entityId, query) {
+  renderEntity(res, user, entityId, '', 200, query ? String(query.get('notice') || '').slice(0, 300) : '');
 }
 
 // ---------- pictures of a bible entry ----------
@@ -350,7 +379,8 @@ async function handleEditEntitySubmit(req, res, user, entityId) {
   const saved = models.updateStoryEntity({ ...fields, entityId, userId: user.id });
   if (!saved) return sendError(res, 400, 'That entry could not be saved.', user);
   logEvent(user, 'bible-entry-edited', { subject: `${saved.name} (${story.title})`, href: `/bible/${saved.id}`, storyId: story.id });
-  redirect(res, `/bible/${saved.id}`);
+  const renamed = saved.name.toLowerCase() !== entity.name.toLowerCase();
+  redirect(res, `/bible/${saved.id}${renamed ? `?notice=${encodeURIComponent(`${entity.name} is still found in the text: it is one of the aliases now.`)}` : ''}`);
 }
 
 async function handleDeleteEntity(req, res, user, entityId) {
@@ -366,13 +396,18 @@ async function handleAddEntityLink(req, res, user, entityId) {
   const guard = entityGuard(res, user, entityId, { write: true });
   if (!guard) return;
   const body = await parseBody(req);
-  models.setStoryEntityLink({
+  const linkId = models.setStoryEntityLink({
     storyId: guard.story.id,
     fromId: entityId,
     toId: Number(body.to),
     label: body.label,
     reverseLabel: body.reverse_label,
   });
+  if (wantsJson(req)) {
+    if (!linkId) return sendJson(res, 400, { error: 'Pick somebody else in this bible.' });
+    const other = models.getStoryEntity(Number(body.to), { fresh: false });
+    return sendJson(res, 200, { id: linkId, label: String(body.label || '').trim() || 'related to', other: { id: other.id, name: other.name } });
+  }
   redirect(res, `/bible/${entityId}`);
 }
 
@@ -441,12 +476,26 @@ function besideCast(story, user) {
   return models.listStoryEntities(story.id);
 }
 
-function handleBesideEntity(req, res, user, entityId) {
+function handleBesideEntity(req, res, user, entityId, query) {
   const entity = models.getStoryEntity(entityId);
   if (!entity) return sendError(res, 404, 'Entry not found', user);
   const story = models.getStoryById(entity.story_id);
   if (!story || !models.canReadBible(story, user)) return sendError(res, 403, 'This bible is private.', user);
-  const html = views.besideEntityFragment(entity, {
+  const canWrite = models.canWriteInStory(story, user);
+  // Opened from a chapter: the entry as it stands there. A card opened
+  // from chapter 5 does not say what happens in chapter 12.
+  const chapter = query && query.get('chapter') ? models.getChapterById(Number(query.get('chapter'))) : null;
+  const here = chapter && chapter.story_id === story.id ? chapter : null;
+  const changes = models.listStatusChanges(entityId);
+  const upTo = here ? here.chapter_number : positionFor(story, user, canWrite);
+  const later = canWrite ? changes.filter((c) => c.chapter_number > upTo) : [];
+  const as = query ? storyBible.cleanName(query.get('as') || '') : '';
+  const html = views.besideEntityFragment({ ...entity, status: storyBible.statusAt(entity.status, changes, upTo) }, {
+    canWrite,
+    chapter: here,
+    later,
+    as: as && as.toLowerCase() !== entity.name.toLowerCase() ? as : '',
+    others: canWrite ? models.listStoryEntities(story.id).filter((e) => e.id !== entity.id).map((e) => ({ id: e.id, name: e.name })) : [],
     aliases: models.listEntityAliases(entityId),
     links: models.listStoryEntityLinks(entityId),
     // The first picture is the portrait -- "make this the portrait" on
@@ -461,12 +510,119 @@ function handleBesideEntity(req, res, user, entityId) {
   sendFragment(res, html, entity.name);
 }
 
+// ---------- small changes, in place ----------
+
+// One field of an entry, from its page or from the card beside a chapter.
+// JSON back for the page that asked; a redirect for a plain form.
+async function handleSetEntityField(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const body = await parseBody(req);
+  const field = String(body.field || '');
+  const before = guard.entity;
+  const { entity, error } = models.setEntityField(entityId, field, body.value, user.id);
+  if (error) {
+    return wantsJson(req) ? sendJson(res, 400, { error }) : renderEntity(res, user, entityId, error, 400);
+  }
+  logEvent(user, 'bible-entry-edited', { subject: `${entity.name} (${guard.story.title})`, href: `/bible/${entityId}`, storyId: guard.story.id });
+  const renamed = field === 'name' && entity.name.toLowerCase() !== before.name.toLowerCase();
+  const notice = renamed ? `${before.name} is still found in the text: it is one of the aliases now.` : '';
+  if (wantsJson(req)) {
+    return sendJson(res, 200, {
+      ok: true, notice,
+      entity: {
+        id: entity.id, name: entity.name, summary: entity.summary, kind: entity.kind, role: entity.role, status: entity.status,
+        aliases: models.listEntityAliases(entityId), any_case: entity.any_case, match_parts: entity.match_parts,
+        kindLabel: storyBible.KIND_LABELS[entity.kind], roleLabel: storyBible.ROLE_LABELS[entity.role || ''],
+        statusLabel: storyBible.STATUS_LABELS[entity.status || ''],
+      },
+    });
+  }
+  redirect(res, `/bible/${entityId}${notice ? `?notice=${encodeURIComponent(notice)}` : ''}`);
+}
+
+// Status from a chapter on, or at the start.
+async function handleSetEntityStatus(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const body = await parseBody(req);
+  const chapterId = Number(body.chapterId) || null;
+  const ok = models.setEntityStatus({ entityId, status: body.status, chapterId, userId: user.id });
+  if (!ok) {
+    return wantsJson(req) ? sendJson(res, 400, { error: 'That chapter is not in this story.' }) : renderEntity(res, user, entityId, 'That chapter is not in this story.', 400);
+  }
+  logEvent(user, 'bible-entry-edited', { subject: `${guard.entity.name} (${guard.story.title})`, href: `/bible/${entityId}`, storyId: guard.story.id });
+  if (wantsJson(req)) return sendJson(res, 200, { ok: true });
+  redirect(res, `/bible/${entityId}#status`);
+}
+
+async function handleRemoveStatusChange(req, res, user, entityId, changeId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  models.removeStatusChange(entityId, changeId);
+  if (wantsJson(req)) return sendJson(res, 200, { ok: true });
+  redirect(res, `/bible/${entityId}#status`);
+}
+
+// "Not them here": the whole chapter, from the card beside it.
+async function handleNotHere(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const body = await parseBody(req);
+  const chapter = models.getChapterById(Number(body.chapterId));
+  if (!chapter || chapter.story_id !== guard.story.id) {
+    return wantsJson(req) ? sendJson(res, 400, { error: 'That chapter is not in this story.' }) : sendError(res, 400, 'That chapter is not in this story.', user);
+  }
+  models.setAppearanceOverride({ entityId, chapterId: chapter.id, state: 'exclude', userId: user.id });
+  if (wantsJson(req)) return sendJson(res, 200, { ok: true, said: `${guard.entity.name} is not in this chapter. The names here stop linking to them.` });
+  redirect(res, `/chapters/${chapter.id}`);
+}
+
+// "That word is never them": an alias comes off, a part of the name is put away.
+async function handleNotAs(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const body = await parseBody(req);
+  const form = storyBible.cleanName(body.form);
+  const { removed, error } = models.blockEntityForm(entityId, form);
+  if (error) return wantsJson(req) ? sendJson(res, 400, { error }) : renderEntity(res, user, entityId, error, 400);
+  const said = removed === 'alias'
+    ? `"${form}" is no longer one of ${guard.entity.name}'s aliases.`
+    : `"${form}" on its own is not ${guard.entity.name} any more.`;
+  if (wantsJson(req)) return sendJson(res, 200, { ok: true, said, form });
+  redirect(res, `/bible/${entityId}?notice=${encodeURIComponent(said)}#found-as`);
+}
+
+async function handleUnblock(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const body = await parseBody(req);
+  models.unblockEntityForm(entityId, body.form);
+  if (wantsJson(req)) return sendJson(res, 200, { ok: true });
+  redirect(res, `/bible/${entityId}#found-as`);
+}
+
+// Two entries that were one all along.
+async function handleMergeEntity(req, res, user, entityId) {
+  const guard = entityGuard(res, user, entityId, { write: true });
+  if (!guard) return;
+  const body = await parseBody(req);
+  const into = models.getStoryEntity(Number(body.into), { fresh: false });
+  if (!into || into.story_id !== guard.story.id || into.id === entityId) {
+    return renderEntity(res, user, entityId, 'Pick another entry in this bible to fold this one into.', 400);
+  }
+  const merged = models.mergeStoryEntities(entityId, into.id, user.id);
+  if (!merged) return renderEntity(res, user, entityId, 'Those two could not be merged.', 400);
+  logEvent(user, 'bible-entry-edited', { subject: `${guard.entity.name} into ${into.name} (${guard.story.title})`, href: `/bible/${into.id}`, storyId: guard.story.id });
+  redirect(res, `/bible/${into.id}?notice=${encodeURIComponent(`${guard.entity.name} is part of ${into.name} now: the name is an alias, and the chapters, relations and pictures came along.`)}`);
+}
+
 // The routes this file answers. server.js walks the tables in order
 // and hands the first match a context: the request, the response, who is
 // asking, the parsed URL and the regex groups.
 /** @type {Array<[string, string|RegExp, (c: RouteContext) => any]>} */
 const routes = [
-  ['GET', /^\/bible\/(\d+)\/beside$/, (c) => handleBesideEntity(c.req, c.res, c.user, Number(c.m[1]))],
+  ['GET', /^\/bible\/(\d+)\/beside$/, (c) => handleBesideEntity(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['GET', /^\/stories\/(\d+)\/bible$/, (c) => handleBibleIndex(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['POST', /^\/stories\/(\d+)\/bible$/, (c) => handleNewEntitySubmit(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/bible\/new$/, (c) => handleNewEntityPage(c.req, c.res, c.user, Number(c.m[1]))],
@@ -478,7 +634,14 @@ const routes = [
   ['POST', /^\/stories\/(\d+)\/bible\/fields$/, (c) => handleFieldTemplateSubmit(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/stories\/(\d+)\/bible\/privacy$/, (c) => handleBiblePrivacy(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/stories\/(\d+)\/bible\/rescan$/, (c) => handleRescanBible(c.req, c.res, c.user, Number(c.m[1]))],
-  ['GET', /^\/bible\/(\d+)$/, (c) => handleEntityPage(c.req, c.res, c.user, Number(c.m[1]))],
+  ['GET', /^\/bible\/(\d+)$/, (c) => handleEntityPage(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
+  ['POST', /^\/bible\/(\d+)\/set$/, (c) => handleSetEntityField(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/bible\/(\d+)\/status$/, (c) => handleSetEntityStatus(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/bible\/(\d+)\/status\/(\d+)\/delete$/, (c) => handleRemoveStatusChange(c.req, c.res, c.user, Number(c.m[1]), Number(c.m[2]))],
+  ['POST', /^\/bible\/(\d+)\/not-here$/, (c) => handleNotHere(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/bible\/(\d+)\/not-as$/, (c) => handleNotAs(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/bible\/(\d+)\/unblock$/, (c) => handleUnblock(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/bible\/(\d+)\/merge$/, (c) => handleMergeEntity(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/bible\/(\d+)$/, (c) => handleEditEntitySubmit(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/bible\/(\d+)\/edit$/, (c) => handleEditEntityPage(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/bible\/(\d+)\/delete$/, (c) => handleDeleteEntity(c.req, c.res, c.user, Number(c.m[1]))],
@@ -497,6 +660,11 @@ module.exports = {
   entityFormExtras,
   entityGuard,
   handleAddEntityImage,
+  handleMergeEntity,
+  handleNotAs,
+  handleNotHere,
+  handleSetEntityField,
+  handleSetEntityStatus,
   handleAddEntityLink,
   handleBesideEntity,
   handleBibleIndex,

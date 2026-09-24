@@ -83,6 +83,23 @@
             for (const e of found.entries) same.appendChild(new Option(e.name, `alias:${e.id}`, false, e.id === candidate.sameAs));
             kind.appendChild(same);
           }
+          if (candidate.inGlossary) {
+            const tag = document.createElement('span');
+            tag.className = 'missing-tag';
+            tag.textContent = 'in the glossary';
+            label.appendChild(document.createTextNode(' '));
+            label.appendChild(tag);
+          }
+          // One line, for a new entry; another name for somebody has theirs.
+          const summary = document.createElement('input');
+          summary.type = 'text';
+          summary.className = 'missing-summary';
+          summary.maxLength = 240;
+          summary.placeholder = 'One line (optional)';
+          summary.setAttribute('aria-label', `One line about ${candidate.name} (optional)`);
+          const fit = () => { summary.hidden = /^alias:/.test(kind.value); };
+          kind.addEventListener('change', fit);
+          fit();
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'btn ghost tiny';
@@ -90,7 +107,7 @@
           button.addEventListener('click', async () => {
             button.disabled = true;
             try {
-              const made = await post(`/stories/${storyId}/bible/quick`, { name: candidate.name, kind: kind.value });
+              const made = await post(`/stories/${storyId}/bible/quick`, { name: candidate.name, kind: kind.value, summary: summary.hidden ? '' : summary.value });
               li.classList.add('added');
               button.textContent = made.alias ? `Added to ${made.name}` : 'Added';
             } catch (err) {
@@ -109,7 +126,7 @@
             try {
               await post(`/stories/${storyId}/bible/not-names`, { name: candidate.name });
               li.remove();
-              say(`${candidate.name} will not be offered again. Undo it from the story page.`, false);
+              say(`${candidate.name} will not be offered again. Bring it back from the bible's list of words that are not names.`, false);
             } catch (err) {
               dismiss.disabled = false;
               say(err.message, true);
@@ -117,6 +134,7 @@
           });
           li.appendChild(label);
           li.appendChild(kind);
+          li.appendChild(summary);
           li.appendChild(button);
           li.appendChild(dismiss);
           ul.appendChild(li);

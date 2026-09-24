@@ -131,10 +131,12 @@ test('the link is only ever intercepted, never replaced', () => {
   // a fallback bolted on afterwards -- it is what the markup does, and
   // this script is the only thing that ever stops it.
   assert.match(script, /metaKey \|\| event\.ctrlKey/, 'open-in-a-new-tab still opens a new tab');
-  assert.match(script, /if \(!twoColumns\(\)\) return;/, 'one column follows the link');
+  // One column is no longer a reason to leave the chapter: the card comes
+  // up from the bottom of the screen instead.
+  assert.match(script, /is-sheet/, 'one column gets the card as a sheet');
   const preventIndex = script.indexOf('event.preventDefault()');
   const guards = script.slice(0, preventIndex);
-  assert.match(guards, /fragmentUrl\(link\.getAttribute\('href'\)/,
+  assert.match(guards, /fragmentUrl\(link\.getAttribute\('href'\) \|\| '', ''\)/,
     'a link with no card behind it is left alone');
   assert.match(script, /catch[\s\S]{0,300}window\.location\.href = href/,
     'and a failed lookup becomes the navigation it was going to be');

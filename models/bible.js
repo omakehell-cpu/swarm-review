@@ -41,6 +41,7 @@ const ENTITY_SORTS = {
  * @param {{ kind?: string, sort?: string }} [opts]
  */
 function listStoryEntities(storyId, { kind, sort } = {}) {
+  flushStoryRescan(storyId);
   const order = ENTITY_SORTS[sort] || ENTITY_SORTS.name;
   return db.prepare(`
     SELECT ${ENTITY_COLUMNS}
@@ -50,7 +51,16 @@ function listStoryEntities(storyId, { kind, sort } = {}) {
   `).all(kind ? { storyId, kind } : { storyId });
 }
 
-function getStoryEntity(entityId) {
+/**
+ * One entry, with its counts. `fresh: false` skips waiting for a rescan
+ * that is due: what a save hands back does not need its counts to be
+ * right this instant, and waiting would make every save a rescan again.
+ * @param {number} entityId
+ * @param {{ fresh?: boolean }} [opts]
+ */
+function getStoryEntity(entityId, { fresh = true } = {}) {
+  const owner = fresh ? db.prepare('SELECT story_id FROM story_entities WHERE id = ?').get(entityId) : null;
+  if (owner) flushStoryRescan(owner.story_id);
   return db.prepare(`
     SELECT ${ENTITY_COLUMNS}, s.title AS story_title
     FROM story_entities e
@@ -101,11 +111,20 @@ function storyBibleNameConflicts(storyId) {
 }
 
 
-/** @returns {{id: number, name: string, aliases: string[]}[]} */
+/**
+ * Everything the scan needs to know about each entry: what it is called,
+ * what kind it is (people are also found by the parts of their name), how
+ * strictly, and the words it has been told are not it.
+ * @returns {{id: number, name: string, kind: string, summary: string, any_case: number, match_parts: number, aliases: string[], blocked: string[]}[]}
+ */
 function entitiesWithAliases(storyId) {
   const entities = db.prepare(
-    'SELECT id, name FROM story_entities WHERE story_id = ?'
-  ).all(storyId).map((e) => ({ id: Number(e.id), name: String(e.name), aliases: /** @type {string[]} */ ([]) }));
+    'SELECT id, name, kind, summary, any_case, match_parts FROM story_entities WHERE story_id = ?'
+  ).all(storyId).map((e) => ({
+    id: Number(e.id), name: String(e.name), kind: String(e.kind), summary: String(e.summary || ''),
+    any_case: Number(e.any_case) || 0, match_parts: e.match_parts == null ? 1 : Number(e.match_parts),
+    aliases: /** @type {string[]} */ ([]), blocked: /** @type {string[]} */ ([]),
+  }));
   const byId = new Map(entities.map((e) => [e.id, e]));
   for (const row of db.prepare(
     'SELECT entity_id, alias FROM story_entity_aliases WHERE story_id = ?'
@@ -113,7 +132,46 @@ function entitiesWithAliases(storyId) {
     const entity = byId.get(row.entity_id);
     if (entity) entity.aliases.push(row.alias);
   }
+  for (const row of db.prepare(
+    'SELECT entity_id, form_lower FROM story_entity_blocked_forms WHERE story_id = ?'
+  ).all(storyId)) {
+    const entity = byId.get(row.entity_id);
+    if (entity) entity.blocked.push(row.form_lower);
+  }
   return entities;
+}
+
+// ---------- rescanning, later and once ----------
+
+// Every change to a name used to rescan the whole story there and then,
+// on the request -- so writing down thirty names from a chapter was
+// thirty full rescans. Now a change asks for one, a moment later, and a
+// burst of changes is one rescan. Anything that reads appearances asks
+// for a waiting rescan to happen first, so nothing ever reads a stale list.
+//
+// Under test the rescan happens at once: the suite reads the database from
+// another process, which cannot ask this one to catch up.
+const RESCAN_DELAY_MS = process.env.NODE_ENV === 'test' ? 0 : 400;
+const pendingRescans = new Map();
+function queueStoryRescan(storyId) {
+  const key = Number(storyId);
+  if (!RESCAN_DELAY_MS) { rebuildStoryAppearances(key); return; }
+  if (pendingRescans.has(key)) return;
+  const timer = setTimeout(() => {
+    pendingRescans.delete(key);
+    try { rebuildStoryAppearances(key); } catch (err) { console.error('bible rescan failed:', err.message); }
+  }, RESCAN_DELAY_MS);
+  if (timer.unref) timer.unref();
+  pendingRescans.set(key, timer);
+}
+
+function flushStoryRescan(storyId) {
+  const key = Number(storyId);
+  const timer = pendingRescans.get(key);
+  if (!timer) return;
+  clearTimeout(timer);
+  pendingRescans.delete(key);
+  rebuildStoryAppearances(key);
 }
 
 function writeAliases(entityId, storyId, aliases) {
@@ -130,8 +188,8 @@ function writeAliases(entityId, storyId, aliases) {
 // to do by hand.
 function teachDictionary(storyId, names, userId) {
   for (const name of names) {
-    for (const word of String(name).split(/[^A-Za-z0-9'’-]+/)) {
-      if (word.length >= 3 && /[A-Za-z]/.test(word)) addStoryDictionaryWord(storyId, word, userId);
+    for (const word of String(name).split(/[^\p{L}\p{N}'’-]+/u)) {
+      if (word.length >= 3 && /\p{L}/u.test(word)) addStoryDictionaryWord(storyId, word, userId);
     }
   }
 }
@@ -174,18 +232,23 @@ function createStoryEntity({ storyId, kind, name, summary, description, secret, 
   // back, so these stay outside the try.
   teachDictionary(storyId, [clean, ...list], createdBy);
   castLinks.invalidate(storyId);
-  rebuildStoryAppearances(storyId);
-  return getStoryEntity(entityId);
+  queueStoryRescan(storyId);
+  return getStoryEntity(entityId, { fresh: false });
 }
 
 
 /** @param {{ entityId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], userId?: number , storyWhen?: string, storyDay?: string|number|null }} entry */
 function updateStoryEntity({ entityId, kind, name, summary, description, secret, status, role, aliases, fields, userId, storyWhen, storyDay }) {
-  const current = db.prepare('SELECT id, story_id FROM story_entities WHERE id = ?').get(entityId);
+  const current = db.prepare('SELECT id, story_id, name, name_lower FROM story_entities WHERE id = ?').get(entityId);
   if (!current) return null;
   const clean = bible.cleanName(name);
   if (!clean) return null;
   const list = (aliases || []).map(bible.cleanName).filter(Boolean);
+  // A new name does not unsay the old one: the chapters already written
+  // still call them that, so the old name stays on as an alias.
+  if (clean.toLowerCase() !== current.name_lower && !list.some((a) => a.toLowerCase() === current.name_lower)) {
+    list.push(current.name);
+  }
   db.exec('BEGIN');
   try {
     db.prepare(`
@@ -221,8 +284,8 @@ function updateStoryEntity({ entityId, kind, name, summary, description, secret,
   // one goes missing.
   teachDictionary(current.story_id, [clean, ...list], userId);
   castLinks.invalidate(current.story_id);
-  rebuildStoryAppearances(current.story_id);
-  return getStoryEntity(entityId);
+  queueStoryRescan(current.story_id);
+  return getStoryEntity(entityId, { fresh: false });
 }
 
 
@@ -253,12 +316,24 @@ function deleteStoryEntity(entityId) {
 function knownNamesFor(storyId) {
   const known = new Set();
   for (const row of db.prepare('SELECT name_lower FROM story_not_names WHERE story_id = ?').all(storyId)) known.add(row.name_lower);
-  for (const row of db.prepare('SELECT name_lower FROM story_entities WHERE story_id = ?').all(storyId)) known.add(row.name_lower);
-  for (const row of db.prepare('SELECT alias_lower FROM story_entity_aliases WHERE story_id = ?').all(storyId)) known.add(row.alias_lower);
-  for (const row of db.prepare('SELECT title_lower FROM wiki_pages').all()) known.add(row.title_lower);
+  // Every form the scan finds an entry by -- names, aliases, the parts of
+  // a person's name, and the parts two people share, which are known even
+  // if they are nobody's in particular.
+  const entities = entitiesWithAliases(storyId);
+  for (const [, info] of bible.buildMatcher(entities).forms) {
+    for (const n of info.names) known.add(n.toLowerCase());
+    for (const n of info.parts) known.add(n.toLowerCase());
+    for (const n of info.shared) known.add(n);
+  }
   for (const word of getStoryDictionary(storyId)) known.add(String(word).toLowerCase());
   return known;
 }
+
+// The glossary's titles. Not "known": a character of yours can share a
+// name with the wiki, so these are still offered, marked as the glossary's.
+const glossaryTitles = () => new Set(
+  db.prepare('SELECT title_lower FROM wiki_pages WHERE story_id IS NULL').all().map((r) => r.title_lower)
+);
 
 
 // ---------- another name for somebody already written down ----------
@@ -273,10 +348,12 @@ function addEntityAlias(entityId, alias, userId) {
       'INSERT OR IGNORE INTO story_entity_aliases (entity_id, story_id, alias, alias_lower) VALUES (?, ?, ?, ?)'
     ).run(entityId, entity.story_id, clean, clean.toLowerCase());
   }
+  // A form it had been told was not it, it is again.
+  db.prepare('DELETE FROM story_entity_blocked_forms WHERE entity_id = ? AND form_lower = ?').run(entityId, clean.toLowerCase());
   teachDictionary(entity.story_id, [clean], userId);
   castLinks.invalidate(entity.story_id);
-  rebuildStoryAppearances(entity.story_id);
-  return getStoryEntity(entityId);
+  queueStoryRescan(entity.story_id);
+  return getStoryEntity(entityId, { fresh: false });
 }
 
 
@@ -311,12 +388,12 @@ function missingNamesInChapter(chapterId) {
   if (!chapter) return [];
   const version = getLatestVersion(chapterId);
   if (!version) return [];
-  return bible.findProperNames(version.content, knownNamesFor(chapter.story_id));
+  return bible.findProperNames(version.content, knownNamesFor(chapter.story_id), { glossary: glossaryTitles() });
 }
 
 
 /** The same question about text that has not been saved yet. */
-const missingNamesInText = (storyId, text) => bible.findProperNames(text, knownNamesFor(storyId));
+const missingNamesInText = (storyId, text) => bible.findProperNames(text, knownNamesFor(storyId), { glossary: glossaryTitles() });
 
 // ---------- custom fields: the story's template, and what each entry says ----------
 
@@ -536,6 +613,14 @@ function listStoryEntityLinks(entityId) {
 
 // ---------- appearances ----------
 
+// Before reading appearances through a row of this table: any rescan its
+// story is waiting for. Returns nothing, so it sits in front of a query.
+function flushFor(table, id) {
+  const row = db.prepare(`SELECT story_id FROM ${table === 'chapters' ? 'chapters' : 'story_entities'} WHERE id = ?`).get(id);
+  if (row) flushStoryRescan(row.story_id);
+  return null;
+}
+
 // The cache is rebuilt, never patched: a rebuild is one regex pass over
 // the story's current text, and a patch is a chance to leave a stale row
 // behind after a rename.
@@ -586,7 +671,7 @@ function rebuildChapterAppearances(chapterId) {
 
 
 /** Which chapters one entry is in, scan and corrections already resolved. */
-const listEntityAppearances = (entityId) => db.prepare(`
+const listEntityAppearances = (entityId) => flushFor('story_entities', entityId) || db.prepare(`
   SELECT ch.id AS chapter_id, ch.chapter_number, ch.title, ch.archived_at,
          sc.mentions, sc.first_name, sc.source
     FROM story_entity_chapters sc
@@ -597,7 +682,7 @@ const listEntityAppearances = (entityId) => db.prepare(`
 
 
 /** Who is in one chapter -- the other way round the same view. */
-const listChapterEntities = (chapterId) => db.prepare(`
+const listChapterEntities = (chapterId) => flushFor('chapters', chapterId) || db.prepare(`
   SELECT e.id, e.name, e.kind, e.summary, sc.mentions, sc.source,
     (SELECT MIN(ch.chapter_number) FROM story_entity_chapters sc2
        JOIN chapters ch ON ch.id = sc2.chapter_id
@@ -635,6 +720,8 @@ const listChapterStubs = (storyId) => db.prepare(
 ).all(storyId);
 
 module.exports = {
+  flushStoryRescan,
+  queueStoryRescan,
   APPEARANCE_COUNT_SQL,
   ENTITY_COLUMNS,
   ENTITY_SORTS,

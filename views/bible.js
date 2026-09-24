@@ -132,7 +132,7 @@ function biblePrivacyBlock(story, isOwner) {
 
 function bibleIndexPage({
   user, story, entities = [], counts = {}, total = 0, kind = '', canWrite = false,
-  conflicts = [], notice = '', covers = new Map(), sort = 'name', isOwner = false,
+  conflicts = [], notice = '', covers = new Map(), sort = 'name', isOwner = false, notNames = [],
 }) {
   // The kinds are a row of tabs with their counts, not five big numbers:
   // on a young bible those were mostly zeros, and the biggest thing on the
@@ -188,8 +188,30 @@ function bibleIndexPage({
         </form>
         ${bibleSortBar(story, kind, sort)}
         <p class="muted"><span id="glossary-count">${entities.length} entr${entities.length === 1 ? 'y' : 'ies'}</span>${kind ? ` &middot; ${escapeHtml(bible.KIND_PLURALS[kind])}` : ''}.</p>` : ''}
-      ${list}`,
+      ${list}
+      ${canWrite ? notNamesBlock(story, notNames) : ''}`,
   });
+}
+
+// The words put away as "not a name", with the way back beside each. It
+// lived on the story page, a long way from where anybody would look for it.
+function notNamesBlock(story, notNames) {
+  if (!notNames.length) return '';
+  return `
+    <details class="not-names" id="not-names">
+      <summary>Words that are not names (${notNames.length})</summary>
+      <p class="muted">Put away from the chapters' lists of names that are not in the bible. Bring one back and it is offered again.</p>
+      <ul class="not-names-list">
+        ${notNames.map((n) => `
+          <li>
+            <span>${escapeHtml(n.name)}</span>
+            <form method="post" action="/stories/${story.id}/bible/not-names/${n.id}/delete" class="inline-form" data-inline-form data-then="remove">
+              <input type="hidden" name="returnTo" value="/stories/${story.id}/bible#not-names">
+              <button class="btn ghost tiny" type="submit" aria-label="Offer ${escapeHtml(n.name)} again">Bring back</button>
+            </form>
+          </li>`).join('')}
+      </ul>
+    </details>`;
 }
 
 function entityAppearanceList(entity, appearances, chapters, canWrite) {
@@ -427,13 +449,161 @@ function fieldTemplatePage({ user, story, templates = {}, notice = '' }) {
   });
 }
 
+// ---------- changing things where they are shown ----------
+
+// A piece of an entry that its writers can change where it stands: click
+// it, change it, Enter. The value goes to /bible/:id/set and the text is
+// put back. With JavaScript off it is plain text, and Edit is the way in.
+/**
+ * @param {any} entity
+ * @param {string} field
+ * @param {string} shown the HTML shown when it is not being edited
+ * @param {{ value?: string, options?: Array<[string, string]>, placeholder?: string, tag?: string, cls?: string }} [opts]
+ */
+function inlineEdit(entity, field, shown, opts = {}) {
+  const tag = opts.tag || 'span';
+  const attrs = [
+    `data-inline-edit="${field}"`,
+    `data-entity="${entity.id}"`,
+    `data-value="${escapeHtml(opts.value == null ? '' : opts.value)}"`,
+    opts.options ? `data-options="${escapeHtml(JSON.stringify(opts.options))}"` : '',
+    opts.placeholder ? `data-placeholder="${escapeHtml(opts.placeholder)}"` : '',
+    'tabindex="0"', 'role="button"',
+    `title="Click to change"`,
+  ].filter(Boolean).join(' ');
+  return `<${tag} class="inline-edit${opts.cls ? ` ${opts.cls}` : ''}" ${attrs}>${shown || `<span class="inline-empty">${escapeHtml(opts.placeholder || 'Add')}</span>`}</${tag}>`;
+}
+
+/** @returns {Array<[string, string]>} */
+const KIND_OPTIONS = () => bible.KINDS.map((k) => /** @type {[string, string]} */ ([k, bible.KIND_LABELS[k]]));
+/** @returns {Array<[string, string]>} */
+const ROLE_OPTIONS = () => bible.ROLES.map((r) => /** @type {[string, string]} */ ([r, r ? bible.ROLE_LABELS[r] : 'No role']));
+
+// The status, chapter by chapter: how they start, then every change and
+// the chapter it happens in. A reader is only ever given the part of this
+// they have read up to; the people writing it get all of it, and the form.
+function entityStatusBlock(entity, changes, chapters, canWrite) {
+  const label = (s) => escapeHtml(bible.STATUS_LABELS[s || ''] || bible.STATUS_LABELS['']);
+  const start = entity.start_status != null ? entity.start_status : entity.status;
+  const rows = [`
+    <li><span class="status-when">At the start</span> <span class="ent-badge status-${escapeHtml(start || 'none')}">${label(start)}</span></li>`]
+    .concat(changes.map((c) => `
+    <li>
+      <span class="status-when">From <a href="/chapters/${c.chapter_id}">chapter ${c.chapter_number}</a></span>
+      <span class="ent-badge status-${escapeHtml(c.status || 'none')}">${label(c.status)}</span>
+      ${canWrite ? `
+        <form method="post" action="/bible/${entity.id}/status/${c.id}/delete" class="inline-form" data-inline-form data-then="reload">
+          <button class="btn ghost tiny" type="submit" aria-label="Take back the change in chapter ${c.chapter_number}">Remove</button>
+        </form>` : ''}
+    </li>`)).join('');
+  const live = chapters.filter((c) => !c.archived_at);
+  const form = canWrite ? `
+    <form method="post" action="/bible/${entity.id}/status" class="status-form" data-inline-form data-then="reload">
+      <label class="sr-only" for="status-${entity.id}">Status</label>
+      <select name="status" id="status-${entity.id}">
+        ${bible.STATUSES.map((s) => `<option value="${s}">${label(s)}</option>`).join('')}
+      </select>
+      <label class="sr-only" for="status-from-${entity.id}">From</label>
+      <select name="chapterId" id="status-from-${entity.id}">
+        <option value="">from the start</option>
+        ${live.map((c) => `<option value="${c.id}">from chapter ${c.chapter_number}: ${escapeHtml(c.title)}</option>`).join('')}
+      </select>
+      <button class="btn ghost small" type="submit">Set</button>
+    </form>
+    <p class="hint">Readers only see a change once they have read that far.</p>` : '';
+  return `
+    <section id="status">
+      <h2 class="side-head">Status</h2>
+      <ul class="status-list">${rows}</ul>
+      ${form}
+    </section>`;
+}
+
+// How the scan finds this entry, said out loud: the names, the parts of a
+// person's name it finds on their own, and what it leaves out and why. The
+// place to fix a false alarm ("Kessler" is her brother) and to undo one.
+function entityFoundAsBlock(entity, matching) {
+  if (!matching) return '';
+  const chip = (text) => `<span class="found-chip">${escapeHtml(text)}</span>`;
+  const part = (text) => `
+    <li class="found-part">${chip(text)}
+      <form method="post" action="/bible/${entity.id}/not-as" class="inline-form" data-inline-form data-then="reload">
+        <input type="hidden" name="form" value="${escapeHtml(text)}">
+        <button class="btn ghost tiny" type="submit" aria-label="${escapeHtml(text)} on its own is not ${escapeHtml(entity.name)}">Not them</button>
+      </form>
+    </li>`;
+  const toggle = (field, on, text) => `
+    <form method="post" action="/bible/${entity.id}/set" class="found-toggle" data-inline-form data-autosubmit>
+      <input type="hidden" name="field" value="${field}">
+      <input type="hidden" name="value" value="0">
+      <label class="found-check"><input type="checkbox" name="value" value="1"${on ? ' checked' : ''}> <span>${text}</span></label>
+      <button class="btn ghost tiny" type="submit" data-no-js>Save</button>
+    </form>`;
+  const isPerson = entity.kind === 'person';
+  return `
+    <section id="found-as" class="found-as">
+      <h2 class="side-head">Found in the text as</h2>
+      <p class="found-names">${matching.names.map(chip).join(' ')}</p>
+      ${isPerson && matching.parts.length ? `
+        <p class="hint">And on their own, the parts of the name:</p>
+        <ul class="found-parts">${matching.parts.map(part).join('')}</ul>` : ''}
+      ${isPerson && matching.common.length ? `<p class="hint">${matching.common.map((w) => `<strong>${escapeHtml(w)}</strong>`).join(', ')} ${matching.common.length === 1 ? 'is also an ordinary word' : 'are also ordinary words'}, so not found alone. Add ${matching.common.length === 1 ? 'it' : 'one'} as an alias if it always means them.</p>` : ''}
+      ${matching.sharedWith.length ? `<p class="hint">${matching.sharedWith.map((s) => `<strong>${escapeHtml(s.part)}</strong> is shared with ${s.others.map(escapeHtml).join(', ')}`).join('; ')}, so on its own it counts for neither.</p>` : ''}
+      ${matching.conflicts.length ? `<p class="error">${matching.conflicts.map((c) => `<strong>${escapeHtml(c.name)}</strong> is also ${c.others.map(escapeHtml).join(', ')}`).join('; ')}: it is not counted for anybody until one of them stops using it.</p>` : ''}
+      ${matching.blocked.length ? `
+        <p class="hint">Not them on their own:</p>
+        <ul class="found-parts">${matching.blocked.map((b) => `
+          <li>${chip(b)}
+            <form method="post" action="/bible/${entity.id}/unblock" class="inline-form" data-inline-form data-then="reload">
+              <input type="hidden" name="form" value="${escapeHtml(b)}">
+              <button class="btn ghost tiny" type="submit">Undo</button>
+            </form>
+          </li>`).join('')}</ul>` : ''}
+      <div class="found-toggles">
+        ${isPerson ? toggle('match_parts', entity.match_parts !== 0, 'Find the parts of the name on their own') : ''}
+        ${toggle('any_case', !!entity.any_case, 'Also when written in lower case')}
+      </div>
+    </section>`;
+}
+
+// Two entries that turned out to be one person: this one folds into the
+// other, which keeps its name and takes this one's as an alias.
+function entityMergeBlock(entity, others) {
+  if (!others.length) return '';
+  return `
+    <details class="entity-merge">
+      <summary>Merge into another entry&hellip;</summary>
+      <p class="muted">For two entries that are the same one. ${escapeHtml(entity.name)} goes, and becomes an alias of the one you pick, which takes its chapters, relations, pictures, details and status changes. Where both say something, the one you pick keeps its own; the rest is added.</p>
+      <form method="post" action="/bible/${entity.id}/merge" class="inline-form"
+            data-confirm="Merge ${escapeHtml(entity.name)} into the entry you picked? This cannot be undone from here.">
+        <label>Into <select name="into">${others.map((o) => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('')}</select></label>
+        <button class="btn ghost small" type="submit">Merge</button>
+      </form>
+    </details>`;
+}
+
 function entityPage({
   user, story, entity, aliases = [], links = [], appearances = [], chapters = [],
-  others = [], images = [], fields = [], canWrite = false, error = '',
+  others = [], images = [], fields = [], canWrite = false, error = '', notice = '',
+  statusChanges = [], matching = null,
 }) {
+  const aliasText = aliases.map((a) => escapeHtml(a)).join(', ');
+  const deleteWarning = [
+    `Delete ${entity.name} from the bible?`,
+    appearances.length ? ` The list of the ${appearances.length} chapter${appearances.length === 1 ? '' : 's'} it is in goes too (the chapters stay).` : '',
+    links.length ? ` ${links.length} relation${links.length === 1 ? '' : 's'} will be removed.` : '',
+    images.length ? ` ${images.length} picture${images.length === 1 ? '' : 's'} will be deleted.` : '',
+    ' If it is the same as another entry, merge it instead.',
+  ].join('');
+  const meta = canWrite
+    ? `${inlineEdit(entity, 'kind', escapeHtml(entityKindLabel(entity.kind)), { value: entity.kind, options: KIND_OPTIONS() })}
+       &middot; ${inlineEdit(entity, 'role', entity.role ? escapeHtml(bible.ROLE_LABELS[entity.role]) : '', { value: entity.role || '', options: ROLE_OPTIONS(), placeholder: 'No role' })}
+       &middot; also ${inlineEdit(entity, 'aliases', aliasText, { value: aliases.join(', '), placeholder: 'no other names' })}`
+    : `${escapeHtml(entityKindLabel(entity.kind))}${entity.role ? ` &middot; ${escapeHtml(bible.ROLE_LABELS[entity.role])}` : ''}${aliases.length ? ` &middot; also ${aliasText}` : ''}`;
   return layout({
     title: entity.name,
     user,
+    flash: notice ? { type: 'info', message: notice } : null,
     body: `
       <p class="breadcrumb"><a href="/stories/${story.id}/bible">&larr; ${escapeHtml(story.title)} bible</a></p>
       ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
@@ -443,13 +613,16 @@ function entityPage({
     ? `<img class="entity-portrait" src="/entity-images/${images[0].id}" alt="${escapeHtml(images[0].caption || entity.name)}" style="object-position: ${focusPosition(images[0])}">`
     : ''}
           <div>
-          <h1>${escapeHtml(entity.name)} ${entityBadges(entity)}</h1>
-          <p class="muted">${escapeHtml(entityKindLabel(entity.kind))}${aliases.length ? ` &middot; also ${aliases.map((a) => escapeHtml(a)).join(', ')}` : ''}</p>
-          ${entity.summary ? `<p class="summary">${escapeHtml(entity.summary)}</p>` : ''}
+          <h1>${canWrite ? inlineEdit(entity, 'name', escapeHtml(entity.name), { value: entity.name }) : escapeHtml(entity.name)}
+            ${entity.status ? `<span class="ent-badge status-${entity.status}">${escapeHtml(bible.STATUS_LABELS[entity.status])}</span>` : ''}</h1>
+          <p class="muted entity-meta">${meta}</p>
+          ${canWrite
+    ? inlineEdit(entity, 'summary', entity.summary ? escapeHtml(entity.summary) : '', { value: entity.summary || '', placeholder: 'Add the one line you would say about them', tag: 'p', cls: 'summary' })
+    : (entity.summary ? `<p class="summary">${escapeHtml(entity.summary)}</p>` : '')}
           </div>
         </div>
         <div class="page-head-actions">
-          ${canWrite ? `<a class="btn ghost small" href="/bible/${entity.id}/edit">Edit</a>` : ''}
+          ${canWrite ? `<a class="btn ghost small" href="/bible/${entity.id}/edit">Edit everything</a>` : ''}
         </div>
       </div>
       <div class="entity-grid">
@@ -465,10 +638,12 @@ function entityPage({
         </div>
         <aside class="entity-side">
           ${entityFieldList(fields)}
+          ${entityStatusBlock(entity, statusChanges, chapters, canWrite)}
           <section>
             <h2 class="side-head">Appears in</h2>
             ${entityAppearanceList(entity, appearances, chapters, canWrite)}
           </section>
+          ${canWrite ? entityFoundAsBlock(entity, matching) : ''}
           <section>
             <h2 class="side-head">Related</h2>
             ${entityRelationBlock(entity, links, others, canWrite)}
@@ -476,9 +651,12 @@ function entityPage({
         </aside>
       </div>
       ${canWrite ? `
-        <form method="post" action="/bible/${entity.id}/delete" class="inline-form danger-form">
-          <button class="btn ghost small danger" type="submit">Delete this entry</button>
-        </form>` : ''}`,
+        <div class="entity-danger">
+          ${entityMergeBlock(entity, others)}
+          <form method="post" action="/bible/${entity.id}/delete" class="inline-form danger-form">
+            <button class="btn ghost small danger" type="submit" data-confirm="${escapeHtml(deleteWarning)}">Delete this entry</button>
+          </form>
+        </div>` : ''}`,
   });
 }
 
@@ -516,7 +694,7 @@ function entityFormPage({ user, story, entity = null, aliases = [], fields = [],
               ${bible.ROLES.map((r) => `<option value="${r}"${selected('role', r)}>${escapeHtml(bible.ROLE_LABELS[r])}</option>`).join('')}
             </select>
           </label>
-          <label>Status
+          <label>Status at the start
             <select name="status">
               ${bible.STATUSES.map((s2) => `<option value="${s2}"${selected('status', s2)}>${escapeHtml(bible.STATUS_LABELS[s2])}</option>`).join('')}
             </select>
@@ -563,27 +741,39 @@ function nameKindSelect(name, entities) {
     </select>`;
 }
 
-function missingNamesBlock(names, storyId, returnTo, entities = []) {
-  if (!names.length) return '';
+function missingNameRow(n, storyId, returnTo, entities) {
   return `
-    <section class="missing-names">
-      <h2 class="side-head">${names.length} name${names.length === 1 ? '' : 's'} here ${names.length === 1 ? 'is' : 'are'} not in the bible</h2>
-      <p class="muted">Proper names this chapter uses that no entry, glossary page or dictionary word accounts for. Guesswork, so some of it will be wrong. Add one as a new entry, or as <strong>another name for</strong> somebody already there (Colonel Jack is Jack); <strong>Not a name</strong> puts a false alarm away for the whole story.</p>
-      <ul class="missing-list">
-        ${names.map((n) => `
           <li>
-            <form method="post" action="/stories/${storyId}/bible/quick" class="inline-form">
+            <form method="post" action="/stories/${storyId}/bible/quick" class="inline-form missing-row">
               <input type="hidden" name="name" value="${escapeHtml(n.name)}">
               <input type="hidden" name="returnTo" value="${escapeHtml(returnTo)}">
               <span class="missing-name">${escapeHtml(n.name)}</span>
               <span class="missing-count">${n.count}&times;</span>
               ${nameKindSelect(n.name, entities)}
+              <input type="text" name="summary" class="missing-summary" maxlength="240" placeholder="One line (optional)"
+                     aria-label="One line about ${escapeHtml(n.name)} (optional)">
               <button class="btn ghost tiny" type="submit">Add</button>
               <button class="btn ghost tiny missing-dismiss" type="submit" formaction="/stories/${storyId}/bible/not-names"
                       aria-label="${escapeHtml(n.name)} is not a name">Not a name</button>
             </form>
-          </li>`).join('')}
-      </ul>
+          </li>`;
+}
+
+function missingNamesBlock(names, storyId, returnTo, entities = []) {
+  if (!names.length) return '';
+  const own = names.filter((n) => !n.inGlossary);
+  const glossary = names.filter((n) => n.inGlossary);
+  return `
+    <section class="missing-names">
+      <h2 class="side-head">${own.length ? `${own.length} name${own.length === 1 ? '' : 's'} here ${own.length === 1 ? 'is' : 'are'} not in the bible` : 'Every name here is accounted for'}</h2>
+      <p class="muted">Proper names this chapter uses that no entry or dictionary word accounts for. Guesswork, so some of it will be wrong. Add one as a new entry, with its one line if you have it, or as <strong>another name for</strong> somebody already there (Colonel Jack is Jack); <strong>Not a name</strong> puts a false alarm away for the whole story.</p>
+      ${own.length ? `<ul class="missing-list">${own.map((n) => missingNameRow(n, storyId, returnTo, entities)).join('')}</ul>` : ''}
+      ${glossary.length ? `
+        <details class="missing-glossary">
+          <summary>${glossary.length} more ${glossary.length === 1 ? 'is a name' : 'are names'} the glossary already has</summary>
+          <p class="muted">They link to the glossary as they are. Add one if, in this story, it is somebody of your own.</p>
+          <ul class="missing-list">${glossary.map((n) => missingNameRow(n, storyId, returnTo, entities)).join('')}</ul>
+        </details>` : ''}
     </section>`;
 }
 
@@ -646,7 +836,19 @@ function besideChapterFragment(chapter, content) {
     <div class="reading-pane beside-reading">${content}</div>`;
 }
 
-function besideEntityFragment(entity, { aliases = [], links = [], description = '', image = null }) {
+/**
+ * An entry as a card: in the column beside the editor, or floating over a
+ * chapter when a name in it is clicked. Opened from a chapter, it is the
+ * entry as it stands there -- its status up to that chapter -- and for
+ * the people writing the story it carries the fixes that belong to that
+ * moment: the one line, the status from here on, "not them here", and a
+ * relation, without leaving the chapter.
+ * @param {any} entity
+ * @param {{ aliases?: string[], links?: any[], description?: string, image?: any, canWrite?: boolean, chapter?: any, later?: any[], as?: string, others?: {id: number, name: string}[] }} [opts]
+ */
+function besideEntityFragment(entity, {
+  aliases = [], links = [], description = '', image = null, canWrite = false, chapter = null, later = [], as = '', others = [],
+} = {}) {
   // Half of what a bible is for is recognising somebody, and a face does
   // that faster than a line of summary. The crop the entry was given is
   // the crop that shows here too -- a portrait cropped to the middle of a
@@ -655,17 +857,57 @@ function besideEntityFragment(entity, { aliases = [], links = [], description = 
     ? `<img class="beside-portrait" src="/entity-images/${image.id}" alt="${escapeHtml(image.caption || entity.name)}"
             loading="lazy" style="object-position: ${focusPosition(image)}">`
     : '';
+  const status = entity.status
+    ? ` <span class="ent-badge status-${escapeHtml(entity.status)}">${escapeHtml(bible.STATUS_LABELS[entity.status])}${chapter ? ` in chapter ${chapter.chapter_number}` : ''}</span>`
+    : '';
+  const summary = canWrite
+    ? inlineEdit(entity, 'summary', entity.summary ? escapeHtml(entity.summary) : '', { value: entity.summary || '', placeholder: 'Add the one line you would say about them', tag: 'p', cls: 'summary' })
+    : (entity.summary ? `<p class="summary">${escapeHtml(entity.summary)}</p>` : '');
+  const tools = canWrite ? `
+    <div class="card-tools">
+      ${later.length ? `<p class="hint">Later: ${later.map((c) => `${escapeHtml(bible.STATUS_LABELS[c.status] || c.status)} from chapter ${c.chapter_number}`).join(', ')}.</p>` : ''}
+      ${chapter ? `
+        <form method="post" action="/bible/${entity.id}/status" class="card-form" data-inline-form data-then="say">
+          <input type="hidden" name="chapterId" value="${chapter.id}">
+          <label class="sr-only" for="card-status-${entity.id}">Status from this chapter</label>
+          <select name="status" id="card-status-${entity.id}">
+            ${bible.STATUSES.filter(Boolean).map((s) => `<option value="${s}">${escapeHtml(bible.STATUS_LABELS[s])}</option>`).join('')}
+          </select>
+          <button class="btn ghost tiny" type="submit">from this chapter on</button>
+        </form>
+        <form method="post" action="/bible/${entity.id}/not-here" class="card-form" data-inline-form data-then="unlink" data-unlink="${entity.id}">
+          <input type="hidden" name="chapterId" value="${chapter.id}">
+          <button class="btn ghost tiny" type="submit">Not ${escapeHtml(entity.name)} in this chapter</button>
+        </form>
+        ${as ? `
+        <form method="post" action="/bible/${entity.id}/not-as" class="card-form" data-inline-form data-then="unlink" data-unlink="${entity.id}" data-unlink-as="${escapeHtml(as)}">
+          <input type="hidden" name="form" value="${escapeHtml(as)}">
+          <button class="btn ghost tiny" type="submit">&ldquo;${escapeHtml(as)}&rdquo; is never ${escapeHtml(entity.name)}</button>
+        </form>` : ''}` : ''}
+      ${others.length ? `
+        <details class="card-relation">
+          <summary>Add a relation</summary>
+          <form method="post" action="/bible/${entity.id}/links" class="card-form" data-inline-form data-then="relation">
+            <label class="sr-only" for="card-rel-${entity.id}">Relation</label>
+            <input type="text" name="label" id="card-rel-${entity.id}" placeholder="sister of, serves under..." maxlength="80">
+            <label class="sr-only" for="card-to-${entity.id}">To</label>
+            <select name="to" id="card-to-${entity.id}">${others.map((o) => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('')}</select>
+            <button class="btn ghost tiny" type="submit">Add</button>
+          </form>
+        </details>` : ''}
+    </div>` : '';
   return `
     <div class="beside-head">
       ${portrait}
       <div class="beside-head-text">
         <h3>${escapeHtml(entity.name)}</h3>
-        <p class="muted">${escapeHtml(entityKindLabel(entity.kind))}${aliases.length ? ` &middot; also ${aliases.map((a) => escapeHtml(a)).join(', ')}` : ''}</p>
+        <p class="muted">${escapeHtml(entityKindLabel(entity.kind))}${aliases.length ? ` &middot; also ${aliases.map((a) => escapeHtml(a)).join(', ')}` : ''}${status}</p>
       </div>
     </div>
-    ${entity.summary ? `<p class="summary">${escapeHtml(entity.summary)}</p>` : ''}
-    ${links.length ? `<ul class="relation-list">${links.map((l) => `
-      <li><span class="rel-label">${escapeHtml(l.label || 'related to')}</span> <a href="/bible/${l.other_id}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.other_name)}</a></li>`).join('')}</ul>` : ''}
+    ${summary}
+    <ul class="relation-list" data-card-relations>${links.map((l) => `
+      <li><span class="rel-label">${escapeHtml(l.label || 'related to')}</span> <a href="/bible/${l.other_id}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.other_name)}</a></li>`).join('')}</ul>
+    ${tools}
     ${description ? `<div class="reading-pane beside-reading">${description}</div>` : '<p class="muted">No description yet.</p>'}`;
 }
 
@@ -716,6 +958,9 @@ function chapterCastBlock(entities, storyId) {
 // ---------- the analysis (bibisco's strongest screen, on data this app
 
 module.exports = {
+  inlineEdit,
+  notNamesBlock,
+  missingNameRow,
   KIND_ORDER,
   SORT_LABELS,
   appearanceSummary,

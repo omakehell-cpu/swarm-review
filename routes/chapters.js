@@ -256,8 +256,10 @@ async function handleChapterPage(req, res, user, chapterId, query) {
     // it is private, a reader gets the chapter the way they did before any
     // of this existed.
     cast: bibleVisible ? models.listChapterEntities(chapterId) : [],
+    // Somebody the author has said is not in this chapter is not linked
+    // in it either: the word is theirs, the person is not.
     findMatches: bibleVisible
-      ? castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches)
+      ? castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches, models.listChapterExclusions(chapterId))
       : wiki.findWikiMatches,
     missingNames: models.canWriteInStory(story, user) ? models.missingNamesInChapter(chapterId) : [],
     entities: bibleVisible ? models.listStoryEntities(chapter.story_id) : [],
@@ -368,7 +370,7 @@ function handleBesideChapter(req, res, user, chapterId) {
   const html = renderHighlighted(
     parseMarkdown(latest ? latest.content : ''),
     [],
-    bibleVisible ? castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches) : wiki.findWikiMatches
+    bibleVisible ? castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches, models.listChapterExclusions(chapterId)) : wiki.findWikiMatches
   );
   sendFragment(res, views.besideChapterFragment(chapter, html), story ? `${chapter.chapter_number}. ${chapter.title}` : chapter.title);
 }

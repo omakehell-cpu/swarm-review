@@ -21,12 +21,25 @@
   section.appendChild(voice);
 
   function left() {
-    const n = section.querySelectorAll('.missing-list li:not(.done)').length;
+    const n = section.querySelectorAll(':scope > .missing-list li:not(.done)').length;
     if (!heading) return;
     heading.textContent = n
       ? `${n} name${n === 1 ? '' : 's'} here ${n === 1 ? 'is' : 'are'} not in the bible`
       : 'Every name here is accounted for';
   }
+
+  // One line is for a new entry. "Another name for" somebody already has
+  // theirs, so the box goes while that is what is chosen.
+  function fitSummary(select) {
+    const row = select.closest('form');
+    const box = row ? row.querySelector('.missing-summary') : null;
+    if (box) /** @type {HTMLElement} */ (box).hidden = /^alias:/.test(select.value);
+  }
+  for (const select of Array.from(section.querySelectorAll('select[name="kind"]'))) fitSummary(/** @type {HTMLSelectElement} */ (select));
+  section.addEventListener('change', (ev) => {
+    const t = /** @type {Element} */ (ev.target);
+    if (t && t.matches && t.matches('select[name="kind"]')) fitSummary(/** @type {HTMLSelectElement} */ (t));
+  });
 
   section.addEventListener('submit', async (ev) => {
     const form = /** @type {HTMLFormElement} */ (ev.target);

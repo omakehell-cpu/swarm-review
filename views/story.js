@@ -24,24 +24,12 @@ function chapterReorderButtons(chapter, index, total) {
     </div>`;
 }
 
-// The false alarms put away from the unknown-names list, so one clicked
-// by mistake can be brought back.
+// The false alarms put away from the unknown-names list live in the
+// bible now, beside the names they were mistaken for; this is the way there.
 function notNamesSection(story, notNames) {
   if (!notNames.length) return '';
   return `
-    <details class="story-dictionary" id="not-names">
-      <summary>Not names (${notNames.length})</summary>
-      <p class="hint">Words you told the chapter page are not names. It no longer offers them for the bible. Remove one to have it offered again.</p>
-      <ul class="story-dictionary-list">
-        ${notNames.map((n) => `
-          <li>
-            <span class="invite-code-inline">${escapeHtml(n.name)}</span>
-            <form method="post" action="/stories/${story.id}/bible/not-names/${n.id}/delete" class="inline-form">
-              <button class="btn tiny ghost" type="submit" title="Offer it again" aria-label="Offer ${escapeHtml(n.name)} as a name again">&times;</button>
-            </form>
-          </li>`).join('')}
-      </ul>
-    </details>`;
+    <p class="hint story-not-names"><a href="/stories/${story.id}/bible#not-names">${notNames.length} word${notNames.length === 1 ? '' : 's'} put away as not names &rarr;</a></p>`;
 }
 
 function storyDictionarySection(story, dictionary) {
