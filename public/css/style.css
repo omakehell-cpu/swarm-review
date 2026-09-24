@@ -4587,3 +4587,16 @@ main[data-reading="read"] .note-dots { display: none; }
 .import-tags li { display: grid; grid-template-columns: minmax(8rem, 14rem) minmax(0, 14rem) minmax(0, 12rem); gap: var(--s-4); align-items: center; }
 .import-tag-name { font-weight: 600; }
 @media (max-width: 640px) { .import-tags li { grid-template-columns: 1fr 1fr; } .import-tag-name { grid-column: 1 / -1; } }
+
+/* Admin tags: the proposals in view, the vocabulary folded under them. */
+.tag-vocabulary { margin-top: var(--s-7); border-top: 1px solid var(--border); padding-top: var(--s-5); }
+.tag-vocabulary > summary { cursor: pointer; font-weight: 600; display: flex; align-items: baseline; gap: var(--s-4); }
+.tag-vocabulary > summary .tag-admin-count { font-weight: 400; }
+.tag-vocabulary[open] > summary { margin-bottom: var(--s-5); }
+.tag-admin-group .tag-admin-count { text-transform: none; letter-spacing: 0; margin-left: var(--s-2); }
+.proposed-queue.is-empty { background: none; border-color: var(--border); }
+.proposed-queue.is-empty .tag-admin-group { color: var(--text-muted); }
+.tag-vocabulary > summary { list-style: none; }
+.tag-vocabulary > summary::-webkit-details-marker { display: none; }
+.tag-vocabulary > summary::before { content: ""; width: 0.45em; height: 0.45em; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); align-self: center; transition: transform 0.15s; }
+.tag-vocabulary[open] > summary::before { transform: rotate(45deg); }

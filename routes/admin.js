@@ -33,6 +33,7 @@ async function handleAdminPage(req, res, user, query) {
     backups: { list: backups.listBackups(), dir: backups.backupDir(), keep: backups.KEEP },
     tagGroups: models.listTagsGrouped(),
     proposedTags: models.listProposedTags(),
+    openTags: query.get('open') === 'tags',
   }));
 }
 
@@ -202,35 +203,38 @@ async function handleAdminCreateTag(req, res, user) {
   const body = await parseBody(req);
   models.createTag({ name: body.name, group: body.group, description: body.description });
   logEvent(user, 'tag-created', { subject: body.name, href: '/tags' });
-  redirect(res, '/admin?notice=Tag added.#tags');
+  redirect(res, '/admin?notice=Tag added.&open=tags#tag-vocabulary');
 }
 
 async function handleAdminUpdateTag(req, res, user, tagId) {
   const body = await parseBody(req);
   models.updateTag(tagId, { name: body.name, group: body.group, description: body.description });
   logEvent(user, 'tag-edited', { subject: body.name, href: '/tags' });
-  redirect(res, '/admin?notice=Tag updated.#tags');
+  redirect(res, '/admin?notice=Tag updated.&open=tags#tag-vocabulary');
 }
 
 async function handleAdminApproveTag(req, res, user, tagId) {
   const body = await parseBody(req);
   models.approveTag(tagId, { name: body.name, group: body.group });
   logEvent(user, 'tag-approved', { subject: body.name, href: '/tags' });
-  redirect(res, '/admin?notice=Tag approved.#tags');
+  redirect(res, '/admin?notice=Tag approved.#tag-queue');
 }
 
 async function handleAdminMergeTag(req, res, user, tagId) {
   const body = await parseBody(req);
   const into = models.mergeTag(tagId, Number(body.intoTagId));
   logEvent(user, 'tag-merged', { subject: into ? into.name : '', href: '/tags' });
-  redirect(res, `/admin?notice=${encodeURIComponent(into ? `Merged into "${into.name}".` : 'Nothing to merge into.')}#tags`);
+  redirect(res, `/admin?notice=${encodeURIComponent(into ? `Merged into "${into.name}".` : 'Nothing to merge into.')}#tag-queue`);
 }
 
 async function handleAdminDeleteTag(req, res, user, tagId) {
   const tag = models.getTagById(tagId);
   models.deleteTag(tagId);
   logEvent(user, 'tag-deleted', { subject: tag ? tag.name : '' });
-  redirect(res, `/admin?notice=${encodeURIComponent(`Tag ${tag ? `"${tag.name}" ` : ''}deleted.`)}#tags`);
+  // A proposal turned down goes back to the queue; a tag deleted from the
+  // vocabulary, to the vocabulary, left open.
+  const back = tag && tag.status === 'proposed' ? '#tag-queue' : '&open=tags#tag-vocabulary';
+  redirect(res, `/admin?notice=${encodeURIComponent(`Tag ${tag ? `"${tag.name}" ` : ''}deleted.`)}${back}`);
 }
 
 // ---------- account: tags this reader would rather not see ----------

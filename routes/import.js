@@ -95,7 +95,7 @@ async function handleImportConfirm(req, res, user, key) {
     authorId: author.id, tagIds, coverImage,
   });
   if (chosen.added.length) {
-    logEvent(user, 'tags-added', { subject: chosen.added.join(', '), href: '/admin#tags' });
+    logEvent(user, 'tags-added', { subject: chosen.added.join(', '), href: '/admin?open=tags#tag-vocabulary' });
   }
   WAITING.delete(key);
   logEvent(user, 'story-imported', { subject: `${title} by ${author.display_name}`, href: `/stories/${storyId}`, storyId });

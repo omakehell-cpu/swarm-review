@@ -143,7 +143,7 @@ function adminUserRow(u, { currentUserId }) {
     </div>`;
 }
 
-function adminPage({ user, users, claims = [], activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [], proposedTags = [], backups = { list: [], dir: '', keep: 0 } }) {
+function adminPage({ user, users, claims = [], activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [], proposedTags = [], openTags = false, backups = { list: [], dir: '', keep: 0 } }) {
   const userRows = users.map((u) => adminUserRow(u, { currentUserId: user.id })).join('');
   return layout({
     title: 'Admin',
@@ -223,12 +223,12 @@ function adminPage({ user, users, claims = [], activeInviteCode, inviteCodeHisto
 
       ${wikiSyncSection(wikiSyncState)}
 
-      ${tagAdminSection(tagGroups, proposedTags)}
-
       <section class="admin-section">
         <h2>Users</h2>
         <div class="admin-user-list">${userRows}</div>
-      </section>`,
+      </section>
+
+      ${tagAdminSection(tagGroups, proposedTags, { open: openTags })}`,
   });
 }
 
@@ -241,13 +241,19 @@ function adminPage({ user, users, claims = [], activeInviteCode, inviteCodeHisto
 // (possibly renaming and filing it under a real group first), fold it
 // into a tag that already says the same thing, or throw it out.
 function proposedTagsSection(proposedTags, tagGroups) {
-  if (!proposedTags.length) return '';
+  if (!proposedTags.length) {
+    return `
+    <div class="proposed-queue is-empty" id="tag-queue">
+      <h3 class="tag-admin-group">Waiting for approval</h3>
+      <p class="muted">Nothing waiting. Tags an author proposes while tagging a story appear here.</p>
+    </div>`;
+  }
   const approved = tagGroups.flatMap((g) => g.tags.filter((t) => t.status !== 'proposed').map((t) => ({ ...t, group: g.group })));
   const groupNames = Array.from(new Set(tagGroups.map((g) => g.group))).filter((n) => n !== 'Proposed');
 
   return `
-    <div class="proposed-queue">
-      <h3 class="tag-admin-group">Proposed by authors (${proposedTags.length})</h3>
+    <div class="proposed-queue" id="tag-queue">
+      <h3 class="tag-admin-group">Waiting for approval (${proposedTags.length})</h3>
       <p class="muted">These are already on the stories they were proposed for and marked as proposed wherever they show. Approving one files it in the vocabulary properly; merging moves its stories onto a tag that already exists and drops the duplicate.</p>
       ${proposedTags.map((t) => `
         <div class="proposed-row">
@@ -278,10 +284,23 @@ function proposedTagsSection(proposedTags, tagGroups) {
     </div>`;
 }
 
-function tagAdminSection(tagGroups, proposedTags = []) {
-  const groupNames = Array.from(new Set(tagGroups.map((g) => g.group)));
-  const rows = tagGroups.map((g) => `
-    <h3 class="tag-admin-group">${escapeHtml(g.group)}</h3>
+// The vocabulary, and the proposals waiting to join it. The proposals are
+// the part that needs doing, so they stay in view; the vocabulary is
+// reference -- dozens of rows -- and stays folded until it is wanted
+// (or until a change to it brings the admin back here).
+/**
+ * @param {Array<{ group: string, tags: any[] }>} tagGroups
+ * @param {any[]} [proposedTags]
+ * @param {{ open?: boolean }} [options]
+ */
+function tagAdminSection(tagGroups, proposedTags = [], { open = false } = {}) {
+  const vocabulary = tagGroups
+    .map((g) => ({ ...g, tags: g.tags.filter((t) => t.status !== 'proposed') }))
+    .filter((g) => g.tags.length);
+  const tagCount = vocabulary.reduce((n, g) => n + g.tags.length, 0);
+  const groupNames = Array.from(new Set(vocabulary.map((g) => g.group)));
+  const rows = vocabulary.map((g) => `
+    <h4 class="tag-admin-group">${escapeHtml(g.group)} <span class="tag-admin-count">${g.tags.length}</span></h4>
     <div class="tag-admin-list">${g.tags.map((t) => `
       <form method="post" action="/admin/tags/${t.id}" class="tag-admin-row">
         <input type="text" name="name" value="${escapeHtml(t.name)}" aria-label="Tag name">
@@ -298,14 +317,17 @@ function tagAdminSection(tagGroups, proposedTags = []) {
       <h2>Tags</h2>
       <p class="muted">The vocabulary authors pick from when they tag a story (see the <a href="/tags">tag index</a>). Renaming one updates it everywhere at once; its link keeps working, since a tag is identified by its own row rather than by its name.</p>
       ${proposedTagsSection(proposedTags, tagGroups)}
-      <datalist id="tag-groups">${groupNames.map((n) => `<option value="${escapeHtml(n)}"></option>`).join('')}</datalist>
-      <form method="post" action="/admin/tags" class="tag-admin-new">
-        <input type="text" name="name" placeholder="New tag" required aria-label="New tag name">
-        <input type="text" name="group" placeholder="Group" list="tag-groups" aria-label="Group">
-        <input type="text" name="description" placeholder="What it means (optional)" aria-label="Description">
-        <button class="btn small" type="submit">Add tag</button>
-      </form>
-      ${tagGroups.length ? rows : '<p class="muted">No tags yet.</p>'}
+      <details class="tag-vocabulary" id="tag-vocabulary"${open ? ' open' : ''}>
+        <summary>The vocabulary <span class="tag-admin-count">${tagCount} tag${tagCount === 1 ? '' : 's'} in ${vocabulary.length} group${vocabulary.length === 1 ? '' : 's'}</span></summary>
+        <datalist id="tag-groups">${groupNames.map((n) => `<option value="${escapeHtml(n)}"></option>`).join('')}</datalist>
+        <form method="post" action="/admin/tags" class="tag-admin-new">
+          <input type="text" name="name" placeholder="New tag" required aria-label="New tag name">
+          <input type="text" name="group" placeholder="Group" list="tag-groups" aria-label="Group">
+          <input type="text" name="description" placeholder="What it means (optional)" aria-label="Description">
+          <button class="btn small" type="submit">Add tag</button>
+        </form>
+        ${vocabulary.length ? rows : '<p class="muted">No tags yet.</p>'}
+      </details>
     </section>`;
 }
 
