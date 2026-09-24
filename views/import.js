@@ -40,7 +40,38 @@ function importPage({ user, authors = [], error = '' }) {
   });
 }
 
-function importPreviewPage({ user, key, filename, parsed, author, duplicate, tags }) {
+// One row per tag the book has and the vocabulary does not: add it (in a
+// group), use the near spelling the site already has, or leave it off.
+function missingTagRows(suggestions, groups) {
+  if (!suggestions.length) return '';
+  return `
+    <fieldset class="import-tags">
+      <legend>Not in the vocabulary yet</legend>
+      <p class="hint">Suggested for adding: each one you add becomes a tag anybody can use, in the group you pick. Where the site already has a tag spelled nearly the same, that one is offered instead.</p>
+      <ul>
+        ${suggestions.map((s, i) => {
+    const options = [
+      s.similar ? `<option value="use" selected>Use ${escapeHtml(s.similar.name)}</option>` : '',
+      `<option value="add"${s.similar ? '' : ' selected'}>${s.proposed ? 'Approve the proposed tag' : 'Add it'}</option>`,
+      '<option value="skip">Leave it off</option>',
+    ].join('');
+    const allGroups = groups.includes(s.group) ? groups : [...groups, s.group];
+    return `
+          <li>
+            <span class="import-tag-name">${escapeHtml(s.name)}</span>
+            <label class="sr-only" for="tag${i}">What to do with ${escapeHtml(s.name)}</label>
+            <select id="tag${i}" name="tag${i}">${options}</select>
+            <label class="sr-only" for="group${i}">Group for ${escapeHtml(s.name)}</label>
+            <select id="group${i}" name="group${i}">
+              ${allGroups.map((g) => `<option${g === s.group ? ' selected' : ''}>${escapeHtml(g)}</option>`).join('')}
+            </select>
+          </li>`;
+  }).join('')}
+      </ul>
+    </fieldset>`;
+}
+
+function importPreviewPage({ user, key, filename, parsed, author, duplicate, tags, groups = [] }) {
   const firstLine = (md) => {
     const para = String(md).split('\n\n').find((p) => p.trim() && p.trim() !== '---') || '';
     const t = para.replace(/[*_>#]/g, '').trim();
@@ -66,10 +97,10 @@ function importPreviewPage({ user, key, filename, parsed, author, duplicate, tag
           <dt>Published</dt><dd>${escapeHtml(parsed.published || 'unknown')}${parsed.updated ? `, updated ${escapeHtml(parsed.updated)}` : ''} &middot; ${parsed.status === 'complete' ? 'complete' : 'ongoing'}</dd>
           ${parsed.storyUrl ? `<dt>On StoriesOnline</dt><dd><a href="${escapeHtml(parsed.storyUrl)}" rel="noopener noreferrer" target="_blank">${escapeHtml(parsed.storyUrl)}</a></dd>` : ''}
           <dt>Cover</dt><dd>${parsed.cover ? 'yes' : 'none'}</dd>
-          <dt>Tags</dt><dd>${tags.matched.length ? tags.matched.map((t) => `<span class="tag-chip">${escapeHtml(t.name)}</span>`).join(' ') : '<span class="muted">none of them are in the vocabulary</span>'}
-            ${tags.unmatched.length ? `<p class="hint">Not in the vocabulary, so left off: ${tags.unmatched.map(escapeHtml).join(', ')}.</p>` : ''}</dd>
+          <dt>Tags</dt><dd>${tags.matched.length ? tags.matched.map((t) => `<span class="tag-chip">${escapeHtml(t.name)}</span>`).join(' ') : '<span class="muted">none of them are in the vocabulary yet</span>'}</dd>
           ${parsed.description ? `<dt>Description</dt><dd>${escapeHtml(parsed.description)}</dd>` : ''}
         </dl>
+        ${duplicate ? '' : missingTagRows(tags.suggestions || [], groups)}
 
         <h2 class="side-head">${parsed.chapters.length} chapter${parsed.chapters.length === 1 ? '' : 's'} &middot; ${wordCount(parsed.words)}</h2>
         <ol class="import-chapters">

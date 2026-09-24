@@ -107,7 +107,10 @@ What they do:
 - **Stories from StoriesOnline.** *Import a story*, on the admin page,
   takes the EPUB that StoriesOnline gives you and shows what it found
   before anything is saved: the chapters, with titles you can change,
-  and which of its tags the site already has (the rest are left off).
+  and which of its tags the site already has. The ones it has not are
+  suggested for adding, each in the group it most likely belongs to: add
+  it, leave it off, or -- where the site has a tag spelled nearly the
+  same, like *Science-Fiction* for *Science fiction* -- use that one.
   Importing the same story twice takes you to the one already here.
 - **Claims.** Approving, or turning down, somebody's word that an
   imported author is them (below).

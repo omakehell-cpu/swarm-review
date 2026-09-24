@@ -15,6 +15,7 @@ const crypto = require('crypto');
 const { countWords } = require('../lib/markdown');
 const { db } = require('./shared');
 const { rebuildChapterAppearances } = require('./bible');
+const tags = require('./tags');
 
 const slug = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
   .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'author';
@@ -102,7 +103,96 @@ function matchTags(names) {
     const row = find.get(String(name).trim());
     if (row) matched.push(row); else unmatched.push(name);
   }
-  return { matched, unmatched };
+  return { matched, unmatched, suggestions: suggestTags(unmatched) };
+}
+
+// ---------- tags the vocabulary does not have yet ----------
+
+// Spelled the same once case, punctuation and a plural are set aside:
+// "Sci-Fi" and "SciFi", "Aliens" and "Alien".
+const tagKey = (name) => String(name).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '').replace(/s$/, '');
+
+function editDistance(a, b) {
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i += 1) {
+    let prev = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const here = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = here;
+    }
+  }
+  return row[b.length];
+}
+
+// StoriesOnline's codes sort into the groups this site already has: the
+// x/y pairings, orientations, a handful of genres, and -- most of the
+// rest -- what a reader might want warning of.
+const ORIENTATIONS = ['heterosexual', 'homosexual', 'bisexual', 'transgender', 'gay', 'lesbian', 'asexual', 'pansexual'];
+const GENRES = ['science fiction', 'fantasy', 'romance', 'humor', 'humour', 'drama', 'horror', 'mystery', 'thriller',
+  'western', 'historical', 'action', 'adventure', 'action/adventure', 'crime', 'paranormal', 'fan fiction', 'tragedy', 'military'];
+function guessTagGroup(name) {
+  const lower = String(name).toLowerCase().trim();
+  if (/^[a-z]{1,4}\/[a-z]{1,4}$/.test(lower) || ['mult', 'group', 'harem', 'solo'].includes(lower)) return 'Pairings';
+  if (ORIENTATIONS.includes(lower)) return 'Orientation';
+  if (GENRES.includes(lower)) return 'Genre';
+  return 'Content notes';
+}
+
+/**
+ * For each tag the book has and the vocabulary does not: an existing tag
+ * spelled nearly the same (to use instead), a proposal already waiting
+ * under that name (to approve), and the group a new one would go in.
+ * @param {string[]} names
+ */
+function suggestTags(names) {
+  if (!names.length) return [];
+  const all = db.prepare("SELECT id, name, tag_group, COALESCE(status, 'approved') AS status FROM tags").all();
+  const approved = all.filter((t) => t.status !== 'proposed');
+  return names.map((name) => {
+    const key = tagKey(name);
+    const proposed = all.find((t) => t.status === 'proposed' && t.name.toLowerCase() === String(name).toLowerCase()) || null;
+    let similar = approved.find((t) => tagKey(t.name) === key) || null;
+    if (!similar && key.length >= 6) {
+      const near = approved
+        .map((t) => ({ t, d: editDistance(key, tagKey(t.name)) }))
+        .filter((x) => x.d <= 2 && tagKey(x.t.name).length >= 5)
+        .sort((a, b) => a.d - b.d)[0];
+      similar = near ? near.t : null;
+    }
+    return {
+      name,
+      similar: similar && { id: similar.id, name: similar.name },
+      proposed: proposed && { id: proposed.id },
+      group: similar ? similar.tag_group : guessTagGroup(name),
+    };
+  });
+}
+
+/**
+ * What the admin chose for each missing tag, as tag ids to put on the
+ * story: a new tag in the vocabulary, a waiting proposal approved, an
+ * existing tag used instead, or nothing.
+ * @param {Array<{ name: string, similar: {id:number}|null, proposed: {id:number}|null }>} suggestions
+ * @param {Array<{ action: string, group: string }>} choices one per suggestion
+ */
+function applyTagChoices(suggestions, choices) {
+  const ids = [];
+  const added = [];
+  suggestions.forEach((s, i) => {
+    const choice = choices[i] || { action: 'skip', group: '' };
+    const group = String(choice.group || '').trim().slice(0, 60) || guessTagGroup(s.name);
+    if (choice.action === 'use' && s.similar) {
+      ids.push(s.similar.id);
+    } else if (choice.action === 'add') {
+      const tag = s.proposed
+        ? tags.approveTag(s.proposed.id, { name: s.name, group })
+        : tags.createTag({ name: s.name, group, description: 'Brought in with a story from StoriesOnline.' });
+      if (tag) { ids.push(tag.id); added.push(tag.name); }
+    }
+  });
+  return { ids, added };
 }
 
 // ---------- the imported authors, and claiming them ----------
@@ -176,6 +266,7 @@ function declineClaim(claimId, adminId) {
 }
 
 module.exports = {
+  applyTagChoices,
   approveClaim,
   declineClaim,
   findImportedStory,
@@ -188,4 +279,5 @@ module.exports = {
   matchTags,
   pendingClaimBy,
   requestClaim,
+  suggestTags,
 };
