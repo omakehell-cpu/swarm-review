@@ -182,5 +182,35 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (story_id, name_lower)
   );
+
+  -- A word the scan found that is not this entry after all: a part of the
+  -- name ("Kessler" when it is her brother) or an alias that turned out to
+  -- mean somebody else. Never an entry's own name.
+  CREATE TABLE IF NOT EXISTS story_entity_blocked_forms (
+    entity_id  INTEGER NOT NULL REFERENCES story_entities(id) ON DELETE CASCADE,
+    story_id   INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+    form_lower TEXT NOT NULL,
+    PRIMARY KEY (entity_id, form_lower)
+  );
+
+  -- How an entry stands from a chapter on: dead from chapter 12. The entry's
+  -- own status is how it stands at the start; each row here is a change,
+  -- and a reader only ever sees the ones up to where they have read.
+  CREATE TABLE IF NOT EXISTS story_entity_status_changes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_id  INTEGER NOT NULL REFERENCES story_entities(id) ON DELETE CASCADE,
+    story_id   INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+    chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    status     TEXT NOT NULL,
+    set_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (entity_id, chapter_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_status_changes_story ON story_entity_status_changes(story_id);
   `);
+  // How the scan finds an entry: in any case, not only with a capital
+  // ("Will" is not every "will"), and whether a person's name is also
+  // found in parts ("Kessler" for Anna Kessler).
+  ensureColumn('story_entities', 'any_case', 'INTEGER NOT NULL DEFAULT 0');
+  ensureColumn('story_entities', 'match_parts', 'INTEGER NOT NULL DEFAULT 1');
 };

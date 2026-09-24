@@ -27,11 +27,13 @@
   const closeButton = card.querySelector('[data-name-card-close]');
   if (!body) return;
 
-  // One column means there is nowhere to put a card: the reader gets the
-  // page, which on a phone is the right answer anyway. Checked at the
+  // One column means there is no room beside the text: there the card
+  // comes up from the bottom of the screen instead, over the lower part
+  // of the page, and the chapter stays where it was. Checked at the
   // moment of the click rather than at load, because a window gets
   // resized and a phone gets turned sideways.
   const twoColumns = () => window.matchMedia('(min-width: 900px)').matches;
+  const chapterId = text.getAttribute('data-chapter-id') || '';
 
   const announcer = document.createElement('div');
   announcer.className = 'sr-only';
@@ -51,6 +53,12 @@
   // level with the top of the window -- and over the edge of it where
   // there is not.
   function place() {
+    if (!twoColumns()) {
+      card.classList.add('is-sheet');
+      for (const prop of ['left', 'right', 'top', 'width', 'maxHeight']) card.style[prop] = '';
+      return;
+    }
+    card.classList.remove('is-sheet');
     const box = text.getBoundingClientRect();
     const top = Math.max(16, Math.min(96, box.top));
     const room = window.innerWidth - box.right - 56;
@@ -76,17 +84,27 @@
     opener = null;
   }
 
-  /** `/bible/12` -> `/bible/12/beside`, `/glossary/Akarge` -> the same. */
-  function fragmentUrl(href) {
+  /**
+   * `/bible/12` -> `/bible/12/beside`, `/glossary/Akarge` -> the same. A
+   * bible entry is asked for as it stands in this chapter, and told the
+   * word that was clicked, so the card can offer "that word is not them".
+   */
+  function fragmentUrl(href, word) {
     const path = href.split('#')[0].split('?')[0];
-    if (/^\/bible\/\d+$/.test(path)) return path + '/beside';
+    if (/^\/bible\/\d+$/.test(path)) {
+      const qs = new URLSearchParams();
+      if (chapterId) qs.set('chapter', chapterId);
+      if (word) qs.set('as', word);
+      const tail = qs.toString();
+      return `${path}/beside${tail ? `?${tail}` : ''}`;
+    }
     if (/^\/glossary\/[^/]+$/.test(path)) return path + '/beside';
     return null;
   }
 
   async function open(link) {
     const href = link.getAttribute('href') || '';
-    const src = fragmentUrl(href);
+    const src = fragmentUrl(href, (link.textContent || '').trim());
     if (!src) return false;
 
     for (const a of onwards) a.setAttribute('href', href);
@@ -139,8 +157,7 @@
     const target = /** @type {Element|null} */ (event.target);
     const link = target && target.closest ? target.closest('a.wiki-link') : null;
     if (!link || !text.contains(link)) return;
-    if (!twoColumns()) return;
-    if (!fragmentUrl(link.getAttribute('href') || '')) return;
+    if (!fragmentUrl(link.getAttribute('href') || '', '')) return;
     // Only now: everything above is a reason to let the browser do what it
     // was going to do.
     event.preventDefault();
@@ -148,6 +165,14 @@
   });
 
   if (closeButton) closeButton.addEventListener('click', () => shut(true));
+
+  // On a phone the sheet covers the bottom of the page; a tap on the text
+  // above it puts it away, the way a sheet is expected to go.
+  document.addEventListener('click', (event) => {
+    if (card.hidden || !card.classList.contains('is-sheet')) return;
+    const target = /** @type {Node|null} */ (event.target);
+    if (target && !card.contains(target) && !(target instanceof Element && target.closest('a.wiki-link'))) shut(false);
+  });
 
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape' || card.hidden) return;

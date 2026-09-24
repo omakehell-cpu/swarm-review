@@ -497,6 +497,9 @@ test('a name in a chapter links to its entry, and beats the wiki to it', async (
     { title: 'Kessler', summary: 'A wiki page about somebody else entirely.', categories: ['Story Characters'], contentHtml: '<p>.</p>' },
     { title: 'Tampaad', summary: 'A reach.', categories: ['Systems'], contentHtml: '<p>.</p>' },
   ]);
+  // She was taken out of chapter one by hand above; put her back, or the
+  // chapter would rightly not link her.
+  models.setAppearanceOverride({ entityId: kesslerId, chapterId: chapterOne, state: 'auto' });
   const html = await (await owner.request(`/chapters/${chapterOne}`)).text();
   assert.match(html, new RegExp(`class="wiki-link cast-link" href="/bible/${kesslerId}"`));
   assert.ok(!html.includes('href="/glossary/Kessler"'), 'the wiki did not get the name');
@@ -558,13 +561,17 @@ test('a name can be added as another name for somebody already there', async () 
   const res = await owner.request(`/stories/${storyId}/bible/unknown-names`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ text: 'Colonel Kessler Varn came in. Colonel Kessler Varn sat down.' }),
+    body: JSON.stringify({ text: 'Colonel Kessler came in. Colonel Kessler sat down. The Kessler Station was dark.' }),
   });
   const data = await res.json();
   assert.ok(data.entries.some((e) => e.id === kesslerId), 'the entries are offered');
-  const offered = data.names.find((n) => /Varn/.test(n.name));
+  const offered = data.names.find((n) => n.name === 'Colonel Kessler');
   assert.ok(offered, `the new name is offered: ${data.names.map((n) => n.name).join(', ')}`);
   assert.strictEqual(offered.sameAs, kesslerId, 'and Kessler is the guess');
+  // Sharing a word is not being somebody: no guess is chosen in advance.
+  const station = data.names.find((n) => n.name === 'Kessler Station');
+  assert.ok(station, 'the station is offered too');
+  assert.strictEqual(station.sameAs, null, 'and nobody is guessed for it');
 
   // Somebody else's story's entry is refused.
   const bad = await owner.request(`/stories/${storyId}/bible/quick`, {
@@ -608,9 +615,12 @@ test('a false alarm can be put away, and brought back', async () => {
   assert.deepStrictEqual(await ask(), before.filter((n) => n !== alarm));
   assert.ok(!models.getStoryEntityByName(storyId, alarm), 'nothing was added to the bible');
 
-  // The story page lists it, and removing it offers it again.
+  // The bible lists it (the story page points there), and removing it offers it again.
   const story = await (await owner.request(`/stories/${storyId}`)).text();
-  assert.match(story, /id="not-names"/);
+  assert.match(story, /bible#not-names/);
+  const bibleHtml = await (await owner.request(`/stories/${storyId}/bible`)).text();
+  assert.match(bibleHtml, /id="not-names"/);
+  assert.ok(bibleHtml.includes(`>${alarm}<`), 'the word is listed in the bible');
   const row = models.listNotNames(storyId).find((n) => n.name === alarm);
   await owner.request(`/stories/${storyId}/bible/not-names/${row.id}/delete`, { method: 'POST', ...form([]) });
   assert.deepStrictEqual(await ask(), before);

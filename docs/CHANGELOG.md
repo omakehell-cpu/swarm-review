@@ -4,6 +4,24 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
+## 2026-09-24 — Who is who, and changing it where it stands
+
+### The story bible
+
+- **A name with a capital is only found with a capital.** *Will* is no longer every "will". A name written in lower case, like *the Old Man*, is found however it is written, and any entry can ask to be.
+- **People are found by the parts of their name.** *Anna Kessler* is also *Anna*, *Kessler* and *Captain Kessler*, without writing them down. A part that is an ordinary word, or that two people share, is left out, and the entry says so.
+- **Names in any alphabet**: *Émile*, *Chloë* and *Íñigo* are found and suggested whole, and *Ren* is no longer found inside *Renée*.
+- **Better suggestions**: names like *Order of the Silent Star* and *Pedro de Alvarado* arrive whole; names the glossary has are offered too, folded away; and *another name for* is only chosen in advance when it can only be that person.
+- **Found in the text as**, on an entry: every name it answers to, and *Not them* for a part that is somebody else.
+- **From the card beside a chapter**: *not them in this chapter* and *that word is never them* take the link away at once; set the status from this chapter on; add a relation.
+- **Change an entry where it is**: click the name, the one line, the kind, the role or the other names on its page. A new name keeps the old one as an alias.
+- **Status, chapter by chapter**: alive at the start, dead from chapter 12. Readers only see what they have read up to, so the bible no longer gives away who dies.
+- **Merge two entries** that were one person all along. **Deleting asks first.**
+- **A one line box** in each row of names the bible has not heard of.
+- **Words that are not names** are listed in the bible now, with the way back beside each.
+- **On a phone** a name opens its card from the bottom of the screen instead of leaving the chapter.
+- Writing down many names in a row no longer rereads the whole story after each one.
+
 ## 2026-09-23 — A desk to write at, and a page to read on
 
 ### Stories from StoriesOnline

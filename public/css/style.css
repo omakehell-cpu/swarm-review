@@ -2708,8 +2708,9 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .name-card-body .reading-pane p { margin: 0 0 var(--s-4); }
 .name-card-more { margin: var(--s-4) 0 0; font-size: var(--t-sm); }
 @media (max-width: 900px) {
-  /* One column: there is no beside to open into, and the script knows it. */
-  .name-card { display: none; }
+  /* One column: no beside to open into, so the card is a sheet from the
+     bottom (name-card.js sets .is-sheet), and only that. */
+  .name-card:not(.is-sheet) { display: none; }
 }
 
 .beside-pane { min-width: 0; }
@@ -4600,3 +4601,72 @@ main[data-reading="read"] .note-dots { display: none; }
 .tag-vocabulary > summary::-webkit-details-marker { display: none; }
 .tag-vocabulary > summary::before { content: ""; width: 0.45em; height: 0.45em; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(-45deg); align-self: center; transition: transform 0.15s; }
 .tag-vocabulary[open] > summary::before { transform: rotate(45deg); }
+
+/* ---------- the bible, changed where it is shown ---------- */
+.inline-edit { cursor: text; border-bottom: 1px dashed transparent; }
+.inline-edit:hover, .inline-edit:focus-visible { border-bottom-color: var(--text-muted); outline: none; }
+.inline-edit.is-editing { border-bottom: 0; cursor: auto; display: inline-flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; }
+p.inline-edit.is-editing, h1 .inline-edit.is-editing { display: flex; }
+.inline-empty { color: var(--text-muted); font-style: italic; font-weight: 400; }
+.inline-input { font: inherit; font-size: var(--t-sm); padding: var(--s-2) var(--s-4); min-width: 12ch; flex: 1 1 18ch; }
+h1 .inline-input { font-size: var(--t-lg); }
+.inline-note { font-size: var(--t-xs); color: var(--text-muted); margin: var(--s-3) 0 0; }
+.inline-note.error { color: var(--accent); }
+.entity-meta .inline-edit { color: inherit; }
+
+.status-list { list-style: none; margin: 0 0 var(--s-4); padding: 0; display: flex; flex-direction: column; gap: var(--s-3); font-size: var(--t-sm); }
+.status-list li { display: flex; gap: var(--s-4); align-items: baseline; flex-wrap: wrap; }
+.status-when { color: var(--text-muted); min-width: 11ch; }
+.status-list .ent-badge { margin-left: 0; }
+.status-form { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; }
+.status-form select { font-size: var(--t-sm); max-width: 100%; }
+.ent-badge.status-none { color: var(--text-muted); border-style: dotted; }
+
+.found-as .hint { margin: var(--s-4) 0 var(--s-2); }
+.found-names { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: 0; }
+.found-chip { display: inline-block; font-size: var(--t-xs); padding: 1px var(--s-3); border: 1px solid var(--border); }
+.found-parts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-3) var(--s-5); }
+.found-parts li { display: inline-flex; gap: var(--s-2); align-items: center; }
+.found-toggles { margin-top: var(--s-5); display: flex; flex-direction: column; gap: var(--s-2); font-size: var(--t-sm); }
+.found-toggle { display: flex; gap: var(--s-3); align-items: center; }
+
+.entity-danger { margin-top: var(--s-10); padding-top: var(--s-5); border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: var(--s-6); align-items: flex-start; justify-content: space-between; }
+.entity-merge { flex: 1 1 320px; font-size: var(--t-sm); }
+.entity-merge summary { cursor: pointer; color: var(--text-muted); }
+.entity-merge form { display: flex; gap: var(--s-4); align-items: center; flex-wrap: wrap; }
+
+/* The card's tools, for the people writing the story. */
+.card-tools { margin: var(--s-5) 0; padding: var(--s-4) 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--s-3); }
+.card-tools .hint { margin: 0; }
+.card-form { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; margin: 0; }
+.card-form select, .card-form input[type="text"] { font-size: var(--t-xs); padding: var(--s-1) var(--s-3); min-width: 0; }
+.card-form input[type="text"] { flex: 1 1 14ch; }
+.card-relation summary { cursor: pointer; font-size: var(--t-sm); color: var(--text-muted); }
+.card-relation[open] summary { margin-bottom: var(--s-3); }
+.relation-list:empty { display: none; }
+
+/* On a phone the card comes up from the bottom rather than leaving the chapter. */
+.name-card.is-sheet {
+  top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 72vh;
+  border-left: 0; border-right: 0; border-bottom: 0;
+  padding: var(--s-6) max(16px, env(safe-area-inset-left)) calc(var(--s-6) + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 32px var(--shadow);
+}
+
+.missing-summary { flex: 1 1 20ch; min-width: 0; font-size: var(--t-xs); padding: var(--s-1) var(--s-3); }
+.missing-summary[hidden] { display: none; }
+.missing-tag { font-size: var(--t-2xs); color: var(--text-muted); font-weight: 400; border: 1px solid var(--border); padding: 0 var(--s-2); }
+.missing-glossary { margin-top: var(--s-5); font-size: var(--t-sm); }
+.missing-glossary summary { cursor: pointer; color: var(--text-muted); }
+
+.not-names { margin-top: var(--s-10); font-size: var(--t-sm); }
+.not-names summary { cursor: pointer; color: var(--text-muted); }
+.not-names-list { list-style: none; padding: 0; margin: var(--s-4) 0 0; display: flex; flex-wrap: wrap; gap: var(--s-3) var(--s-6); }
+.not-names-list li { display: inline-flex; gap: var(--s-3); align-items: center; }
+.story-not-names { margin-top: var(--s-4); }
+.found-check { display: inline-flex; gap: var(--s-3); align-items: center; font-size: var(--t-sm); text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text); margin: 0; }
+.found-check input { margin: 0; }
+[data-no-js][hidden] { display: none !important; }
+.status-form select[name="chapterId"] { flex: 1 1 14ch; min-width: 0; }
+p.inline-edit.summary.is-editing .inline-input { flex: 1 1 40ch; max-width: 640px; }
+.found-toggle label.found-check { display: inline-flex; flex-direction: row; align-items: center; gap: var(--s-3); }
