@@ -3786,7 +3786,6 @@ main:focus { outline: none; }
 .list-count { font-variant-numeric: tabular-nums; margin-left: var(--s-2); color: var(--text-muted); font-weight: 500; }
 .list-head .tag-filter { margin: 0; }
 .list-head .tag-filter > summary { padding: 0; }
-.list-head .tag-filter[open] { flex-basis: 100%; order: 3; }
 .list-head + .chapter-list > .chapter-row:first-child { border-top: 0; }
 
 .story-row .chapter-row-main h3 { margin-bottom: var(--s-2); }
@@ -4707,5 +4706,16 @@ p.inline-edit.summary.is-editing .inline-input { flex: 1 1 40ch; max-width: 640p
 .shelf-complete .state-complete, .shelf-dropped .state-dropped { display: none; }
 .list-more { font-size: var(--t-sm); }
 .list-more > summary { cursor: pointer; color: var(--text-muted); }
-.list-more[open] { flex-basis: 100%; order: 3; }
 .list-more-body { display: flex; flex-wrap: wrap; gap: var(--s-3) var(--s-6); align-items: center; margin-top: var(--s-4); }
+
+/* Filter by tag and More ways to look open as a panel under the heading,
+   over the list, so the line you clicked on never moves. */
+.list-head { position: relative; }
+.list-head .tag-filter[open] > .tag-filter-form,
+.list-head .list-more[open] > .list-more-body {
+  position: absolute; left: 0; right: 0; top: calc(100% + 1px); z-index: 30;
+  background: var(--bg); border: 1px solid var(--border-strong); border-top: 2px solid var(--text);
+  padding: var(--s-5) var(--s-6); margin: 0;
+  box-shadow: 0 12px 28px var(--shadow);
+}
+.list-head .tag-filter[open] > .tag-filter-form { max-height: 70vh; overflow-y: auto; }

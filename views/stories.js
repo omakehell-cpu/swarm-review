@@ -322,7 +322,7 @@ function listFilters(state) {
       <nav class="list-sort" aria-label="Order of the stories">
         ${choice('sort', '', 'Latest')}${choice('sort', 'title', 'A&ndash;Z')}${choice('sort', 'mine', 'Mine')}
       </nav>
-      <details class="list-more"${narrowed.length ? ' open' : ''}>
+      <details class="list-more">
         <summary>${narrowed.length ? `Showing: ${escapeHtml(narrowed.join(', '))}` : 'More ways to look'}</summary>
         <div class="list-more-body">
           ${origin}
@@ -397,7 +397,7 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
   // picking several tags is one action instead of one page load each.
   const activeSlugs = new Set(activeTags.map((t) => t.slug));
   const filter = allGroups.length ? `
-    <details class="tag-filter"${activeTags.length ? ' open' : ''}>
+    <details class="tag-filter">
       <summary>${activeTags.length
         ? `Filtered by ${activeTags.map((t) => escapeHtml(t.name)).join(', ')}`
         : 'Filter by tag'}</summary>
