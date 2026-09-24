@@ -57,7 +57,7 @@ test('the front page can be ordered, and narrowed to your own stories', async ()
   const az = await (await ana.request('/?sort=title')).text();
   assert.ok(az.indexOf('>Anchorage<') < az.indexOf('>Zebra crossing<'), 'A to Z');
   const mine = await (await ana.request('/?sort=mine')).text();
-  assert.match(mine, /Stories you write in/);
+  assert.match(mine, /that you write in/);
   assert.match(mine, />Zebra crossing</);
   assert.doesNotMatch(mine, />Anchorage</);
 });

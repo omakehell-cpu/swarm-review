@@ -5,6 +5,7 @@
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { parseBody, redirect, sendHtml, sendJson } = require('../lib/util');
 const models = require('../models');
+const shelves = require('../lib/story-shelves');
 const docs = require('../lib/docs');
 const views = require('../views');
 const wiki = require('../lib/wiki');
@@ -88,8 +89,25 @@ async function handleStories(req, res, user, query) {
     models.markChangelogSeen(user.id, docs.latestReleaseDate(), docs.latestReleaseKey());
     user = { ...user, changelog_seen_key: docs.latestReleaseKey() };
   }
+  // Shelved: being written, complete or set aside, then searched, then
+  // cut into pages (lib/story-shelves.js). The shelf the list opens on is
+  // the stories still being written; a search counts every shelf.
+  const shelfOptions = {
+    shelf: query.get('shelf') || '', q: (query.get('q') || '').slice(0, 200), origin: query.get('origin') || '',
+    series: query.get('series') || '', page: Number(query.get('page')) || 1, tagsByStory, coauthorsByStory,
+  };
+  let list = shelves.shelve(visible, shelfOptions);
+  // A search that finds nothing on the shelf it started on, and something
+  // elsewhere, shows everything it found rather than an empty shelf.
+  if (!query.get('shelf') && list.q && !list.total && list.counts.all) {
+    shelfOptions.shelf = 'all';
+    list = shelves.shelve(visible, shelfOptions);
+  }
+  const view = query.get('view') === 'list' ? 'list' : '';
+  const foldedHere = shelves.shelve(folded, { ...shelfOptions, page: 1 });
   sendHtml(res, 200, views.storiesPage({
-    user, stories: visible, folded, since, tagsByStory, coauthorsByStory,
+    user, stories: list.stories, folded: folded.filter((s2) => foldedHere.stories.some((f) => f.id === s2.id)), since, tagsByStory, coauthorsByStory,
+    list: { ...list, view },
     activeTags, allGroups: models.listTagsGrouped(), sort, totalStories: stories.length,
     inbox: models.inboxFor(user.id, { since }),
     activity: models.groupActivity(user),
