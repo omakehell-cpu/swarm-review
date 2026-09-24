@@ -183,3 +183,36 @@ test('tags the vocabulary lacks are offered: add one, use a near spelling, or le
   assert.strictEqual(all.find((t) => t.name === 'Coercion').status, 'approved');
   assert.ok(!all.some((t) => t.name === 'Reluctant'), 'what was left off was not added');
 });
+
+test('many at once: a .zip of EPUBs, each imported, duplicates skipped, tags proposed', async () => {
+  const zip = new JSZip();
+  zip.file('shelf/one.epub', await solEpub({ id: 9001, title: 'Batch One', chapters: ['<h2>Chapter 1</h2><p>A.</p>', '<h2>Chapter 2</h2><p>B.</p>'], tags: 'Science Fiction, Batchtag' }));
+  zip.file('shelf/two.epub', await solEpub({ id: 9002, title: 'Batch Two', chapters: ['<p>Only.</p>'], tags: 'Science Fiction' }));
+  zip.file('shelf/z-again.epub', await solEpub({ id: 9001, title: 'Batch One', chapters: ['<p>x</p>'] }));
+  zip.file('shelf/broken.epub', Buffer.from('not a book'));
+  zip.file('__MACOSX/shelf/._one.epub', Buffer.from('mac'));
+  const body = await zip.generateAsync({ type: 'nodebuffer' });
+
+  assert.strictEqual((await luis.request('/admin/import/batch', { method: 'POST', ...multipartWithFile([['tags', 'propose']], { name: 'file', filename: 'shelf.zip', body }) })).status, 403, 'admins only');
+
+  const res = await admin.request('/admin/import/batch', {
+    method: 'POST', headers: { Accept: 'application/json' },
+    ...multipartWithFile([['tags', 'propose']], { name: 'file', filename: 'shelf.zip', body }),
+  });
+  assert.strictEqual(res.status, 200);
+  const { results } = await res.json();
+  assert.deepStrictEqual(results.map((r) => [r.file, r.status]), [
+    ['broken.epub', 'error'], ['one.epub', 'imported'], ['two.epub', 'imported'], ['z-again.epub', 'duplicate'],
+  ], 'in name order, the Mac\'s shadow copy left out');
+  const one = models.listStories().find((s) => s.title === 'Batch One');
+  const tags = models.getStoryTags(one.id).map((t) => [t.name, t.status || 'approved']);
+  assert.ok(tags.some(([n, st]) => n === 'Batchtag' && st === 'proposed'), `proposed, and waiting: ${JSON.stringify(tags)}`);
+  assert.ok(tags.some(([n]) => n === 'Science fiction'), 'the one the site has is used');
+
+  // The same file on its own, again: already here.
+  const single = await admin.request('/admin/import/batch', {
+    method: 'POST', headers: { Accept: 'application/json' },
+    ...multipartWithFile([['tags', 'skip']], { name: 'file', filename: 'two.epub', body: await solEpub({ id: 9002, title: 'Batch Two', chapters: ['<p>Only.</p>'] }) }),
+  });
+  assert.deepStrictEqual((await single.json()).results.map((r) => r.status), ['duplicate']);
+});

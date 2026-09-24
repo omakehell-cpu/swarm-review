@@ -18,6 +18,10 @@ here is missing on the site, it has not been restarted yet.
 - **More**, beside Preview: the checks as a list, Scenes & snapshots, **bringing text in from a file** (into the box, not published), what Markdown does, and Formatting here.
 - The **+ Write** button no longer turns into a black box on the page it opens.
 
+### Importing
+
+- **Many stories at once.** Choose a hundred or three hundred EPUBs -- or one .zip of them -- and each is imported as it is, two at a time, with a line for every file as it lands: imported, already here, or could not be read. The tags the site does not have are proposed, added or left off, as you choose for the whole batch.
+
 ### The front page
 
 - **Three shelves**: Being written, Complete and Set aside, with All beside them and a count on each. The list opens on what is being written.

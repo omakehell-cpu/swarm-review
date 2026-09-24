@@ -29,7 +29,7 @@ const { URL } = require('url');
 const models = require('./models');
 const backups = require('./lib/backup');
 const { redirect, clearCookie, readBody, sendJson } = require('./lib/util');
-const { SESSION_COOKIE, getCurrentUser, handleFeed, sendError, UPLOAD_LIMIT_BYTES } = require('./routes/shared');
+const { SESSION_COOKIE, getCurrentUser, handleFeed, sendError, UPLOAD_LIMIT_BYTES, BATCH_UPLOAD_LIMIT_BYTES } = require('./routes/shared');
 const auth = require('./auth');
 const { tokenFromRequest } = require('./lib/csrf');
 
@@ -186,7 +186,10 @@ async function router(req, res) {
   // a browser send it, and SameSite=Lax was doing all of that work alone.
   if (user && req.method !== 'GET' && req.method !== 'HEAD') {
     try {
-      req.rawBody = await readBody(req, UPLOAD_LIMIT_BYTES);
+      // A batch of stories for the importer can be a large .zip; that one
+      // address, for admins, takes more (see routes/import.js).
+      const limit = pathname === '/admin/import/batch' && user.is_admin ? BATCH_UPLOAD_LIMIT_BYTES : UPLOAD_LIMIT_BYTES;
+      req.rawBody = await readBody(req, limit);
     } catch (err) {
       return sendError(res, err.statusCode || 400, 'That was too large to send.', user);
     }

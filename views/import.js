@@ -36,7 +36,64 @@ function importPage({ user, authors = [], error = '' }) {
         <label>EPUB file<input type="file" name="epub" accept=".epub,application/epub+zip" required></label>
         <button class="btn" type="submit">Read it</button>
       </form>
+      ${batchSection()}
       ${importedAuthorsList(authors)}`,
+  });
+}
+
+// Many at once: no preview each, one choice for the tags, and the list of
+// what happened as it happens (import-batch.js). With no script, one .zip.
+function batchSection() {
+  return `
+    <section class="import-batch" aria-labelledby="batch-title">
+      <h2 id="batch-title">Many at once</h2>
+      <p class="muted">Choose as many EPUBs as you like -- a hundred, three hundred -- or one <strong>.zip</strong> of them. Each is read and imported as it is, without a preview: the chapters are cut the same way, and a story that is already here is skipped, never doubled.</p>
+      <form method="post" action="/admin/import/batch" enctype="multipart/form-data" class="batch-form" data-import-batch>
+        <label>EPUB files, or a .zip of them<input type="file" name="file" accept=".epub,.zip,application/epub+zip,application/zip" multiple required></label>
+        <fieldset class="batch-tags">
+          <legend>Tags the site does not have yet</legend>
+          <label class="batch-choice"><input type="radio" name="tags" value="propose" checked> <span><strong>Propose them</strong> -- on the story at once, and waiting for you under Tags on the admin page</span></label>
+          <label class="batch-choice"><input type="radio" name="tags" value="add"> <span><strong>Add them</strong> to the vocabulary, each in the group it most likely belongs to</span></label>
+          <label class="batch-choice"><input type="radio" name="tags" value="skip"> <span><strong>Leave them off</strong></span></label>
+          <p class="hint">A tag spelled nearly like one the site already has always uses that one.</p>
+        </fieldset>
+        <button class="btn" type="submit">Import them all</button>
+      </form>
+      <div class="batch-progress" data-batch-progress hidden>
+        <p class="batch-summary" data-batch-summary aria-live="polite"></p>
+        <progress data-batch-bar max="1" value="0"></progress>
+        <ol class="batch-list" data-batch-list></ol>
+      </div>
+    </section>`;
+}
+
+const BATCH_SAID = {
+  imported: 'Imported', duplicate: 'Already here', error: 'Could not be read',
+};
+
+/** One line of what a batch did with one file. */
+function batchRow(r) {
+  const link = r.storyId ? `<a href="/stories/${r.storyId}">${escapeHtml(r.title || r.file)}</a>` : escapeHtml(r.file);
+  const detail = r.status === 'imported'
+    ? `by ${escapeHtml(r.author || '')} &middot; ${r.chapters} chapter${r.chapters === 1 ? '' : 's'}${r.proposed && r.proposed.length ? ` &middot; proposed: ${r.proposed.map(escapeHtml).join(', ')}` : ''}`
+    : escapeHtml(r.message || (r.status === 'duplicate' ? 'skipped' : ''));
+  return `<li class="batch-row is-${escapeHtml(r.status)}"><span class="batch-status">${escapeHtml(BATCH_SAID[r.status] || r.status)}</span> ${link} <span class="muted">${detail}</span></li>`;
+}
+
+// What a batch sent without a script did: the same list the script
+// builds as it goes, all at once.
+function importBatchPage({ user, results = [] }) {
+  const count = (status) => results.filter((r) => r.status === status).length;
+  return layout({
+    title: 'Imported',
+    user,
+    current: 'admin',
+    body: `
+      <p class="breadcrumb"><a href="/admin/import">&larr; Import</a></p>
+      <h1>${count('imported')} stor${count('imported') === 1 ? 'y' : 'ies'} imported</h1>
+      <p class="muted">${count('duplicate')} already here, ${count('error')} could not be read.
+        <a href="/?shelf=all&amp;origin=imported">See them all &rarr;</a></p>
+      <ol class="batch-list">${results.map(batchRow).join('')}</ol>`,
   });
 }
 
@@ -120,4 +177,4 @@ function importPreviewPage({ user, key, filename, parsed, author, duplicate, tag
   });
 }
 
-module.exports = { importPage, importPreviewPage };
+module.exports = { batchRow, importBatchPage, importPage, importPreviewPage };

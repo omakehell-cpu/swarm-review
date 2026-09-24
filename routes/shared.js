@@ -11,6 +11,8 @@ const PORT = Number(process.env.PORT) || 3000;
 const SESSION_COOKIE = 'swarm_session';
 
 const UPLOAD_LIMIT_BYTES = 15 * 1024 * 1024;
+// The story importer's batch: a .zip of a shelf of EPUBs, admins only.
+const BATCH_UPLOAD_LIMIT_BYTES = 250 * 1024 * 1024;
 
 // When the app is only reachable over plain http:// (e.g. localhost during
 // development), the session cookie must NOT be marked Secure -- browsers
@@ -185,6 +187,7 @@ module.exports = {
   SECURE_COOKIES,
   SESSION_COOKIE,
   UPLOAD_LIMIT_BYTES,
+  BATCH_UPLOAD_LIMIT_BYTES,
   extractUploadedText,
   getCurrentUser,
   handleFeed,
