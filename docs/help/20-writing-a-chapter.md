@@ -4,9 +4,11 @@ Starting a story, adding chapters, and what the editor is telling you.
 
 ## A story, then chapters
 
-**+ Write**, in the top bar, starts a new story. It takes the story's title and its first chapter in one go: a
-story here is never empty. Everything else — the description, the tags, the
-synopsis — can wait, and is on **Edit details** afterwards.
+**+ Write**, in the top bar, starts a new story, and the page is the story
+itself: its title written large, the first chapter's title under it, and
+the text. A story here is never empty. What introduces it -- a line or two
+about what it is, and its tags -- is asked when you press **Publish**, and
+can all be changed later from **Edit details**.
 
 After that, **Add chapter** from the story page, or from the end of the last
 chapter, which is usually where you are when you think of it.
@@ -31,19 +33,32 @@ for a quote, **Ctrl+Enter** for a scene break. Ctrl+Z undoes them like any
 typing.
 
 **Focus**, at the end of that row, leaves only the text on the screen.
-**Escape** brings everything back.
+**Escape** brings everything back. **More** holds the rest: the checks as a
+list, Scenes & snapshots, bringing in text from a file, what Markdown does,
+and *Formatting here* for a screen reader.
 
 ## The editor page
 
-On a screen with room for it the editor is two columns. On the left, the
-title, the row of buttons and the text. On the right, the
-[writing checks](/help/writing-checks) -- the reading grade and a coloured
-card for each kind of trouble -- and, under them, the notes the chapter has
-been given. The ones still waiting can be answered right there -- go to
-their words, put a suggested rewrite into the text, accept or turn them
-down -- and **Alt+J** / **Alt+K** step from one to the next. Replies are
-on the chapter page. See [what the author does with a
-note](/help/reading-and-reviewing).
+Along the top, a bar that stays there however far down you are: the way
+back, where your draft is kept, and **Details**, **Cancel**, **Save draft**
+and **Publish**.
+
+Under it the editor is two columns on a screen with room for them. On the
+left, the title, the row of buttons and the text, with a line under it
+counting what you have written this session. On the right, tabs:
+
+- **Checks** -- the [writing checks](/help/writing-checks): the reading
+  grade and a coloured card for each kind of trouble. They wait until
+  there is something written.
+- **Notes** -- the notes the chapter has been given. The ones still waiting
+  can be answered right there -- go to their words, put a suggested rewrite
+  into the text, accept or turn them down -- and **Alt+J** / **Alt+K** step
+  from one to the next. Replies are on the chapter page. See [what the
+  author does with a note](/help/reading-and-reviewing).
+- **Bible** -- write somebody down without leaving the chapter, and find
+  the names in the draft the bible has never heard of.
+- **Beside** -- the chapter before, or a bible entry, to read while you
+  write.
 
 @figure chapter-editor.png | The editor: the text on the left, the writing checks and the notes on the right.
 
@@ -58,19 +73,18 @@ see it instead of the box. Press it again, press Escape or double-click the
 preview to go back to writing, where you left off. Nothing is typed in the
 preview; the formatting buttons wait until you are back.
 
-## Focus, typewriter, and how much you have written
+## Focus, and how much you have written
 
 **Focus** is the text and nothing else: the whole screen, no box around it,
 no toolbar, no checks. The line you are writing stays a little above the
-middle of the screen, and everything above and below it fades, so the eye
-has one place to be. The way out is **Leave focus** in the top corner --
-faint while you type, back when you move the pointer -- or Escape. Nothing
-is lost by leaving: the draft is saved as you go, as always.
+middle of the screen, as on a typewriter, and everything above and below
+it fades, so the eye has one place to be. The way out is **Leave focus**,
+in the top corner, or Escape. Nothing is lost by leaving: the draft is
+saved as you go, as always.
 
-**Typewriter**, on its own, keeps the line you are writing at the same height on the
-screen. Beside them,
-the editor counts what you have written since you opened it, and -- with a
-daily goal set on your account page -- how far along today is.
+Under the text, the editor counts what you have written since you opened
+it, and -- with a daily goal set on your account page -- how far along
+today is.
 
 ## Scenes and snapshots
 
@@ -103,30 +117,26 @@ Opening the editor with a draft waiting opens the draft, and says so, with
 went up since you started the draft -- a suggested rewrite you applied, say
 -- the editor tells you, and publishing asks before it goes on top.
 
-Starting a story or a chapter, you can **upload a file instead** of
-typing -- `.md`, `.txt` or `.docx` -- under *Optional details*. Word
-documents keep their bold, italics, headings and blockquotes.
+## Bringing in a file
 
-## Replacing a chapter with a file
+**More → Bring in text from a file** takes a `.md`, `.txt` or `.docx` and
+puts its text in the box -- replacing what is there, after asking -- to be
+worked on and saved like anything you typed. Nothing is published until you
+publish it. Word documents keep their bold, italics, headings and
+blockquotes.
 
-Under the text box when you are editing: **Replace this chapter with a
-file**. Choose a `.md`, `.txt` or `.docx`, press **Upload and publish**, and
-that file is the chapter — a new version, published there and then. It asks
-first, because it does something Save does not: whatever is in the box at
-that moment is not saved.
+Without JavaScript the same thing is a field in **Details**: *Replace this
+chapter with a file* publishes the file as the next version straight away,
+and on a new story or chapter the file is used instead of the box.
 
-Nothing is lost. A new version never overwrites the one before it: the
-version you replaced is still in the **Version** dropdown on the chapter
-page, with its notes still attached to it, and you can read the difference
-between any two of them.
+Nothing is lost either way. A new version never overwrites the one before
+it: the version you replaced is still in the **Version** dropdown on the
+chapter page, with its notes still attached to it.
 
-It is for the case where the writing happened somewhere else — the draft
-that lives in a folder, the chapter that came back from somebody's Word, the
-version you wrote on a train. If you only want to see what is in the file,
-open it yourself and paste: this button does not show you the text first.
+## The chapter's details
 
-**Optional details** is where the chapter summary lives, along with two
-things worth setting:
+**Details**, in the bar along the top, opens a drawer from the right with
+what you set once in a while: the chapter summary, and:
 
 - **What this chapter wants** — *draft*, *wants notes*, or *settled*. It
   tells your readers whether to reach for the red pen at all.
@@ -139,31 +149,28 @@ things worth setting:
 see [targets and analysis](/help/targets-and-analysis) for what they feed,
 which is the outline, the analysis and the timeline.
 
-**What changed?** is one line for the version history. Future you will want
-it.
+**What changed?** is asked when you press **Publish**: one line for the
+version history. Future you will want it.
 
-@figure optional-details.png | Optional details: the summary, what the chapter is asking for, and the arc it opens.
+@figure optional-details.png | The chapter's details: the summary, what the chapter is asking for, and the arc it opens.
 
 ## On a phone
 
 The editor is built to get out of the way on a small screen. The page is
-the title, the text, and a **Save** bar that rides along the bottom, so
-saving is never a scroll away from wherever you have got to.
+the bar with the buttons that save it, the title, and the text.
 
 @figure editor-phone.png | The editor on a phone: the text, and a save bar that stays put.
 
 The writing checks fold into one line above the text -- *Grade 5 · 18
-flagged* -- and open with a tap. The row of buttons is only the formatting
-and the two views; **…** at the end of it opens the rest (Checks as a list,
-Scenes & snapshots, Typewriter, Focus). **Markdown is supported** and **Optional
-details** are folded shut and one tap from open. On a screen with room for them they are open, as before --
-nothing was taken away, it was put where it fits.
+flagged* -- and open with a tap. The row of buttons is the formatting,
+**Preview**, **More** and **Focus**; the bar with **Publish** stays at the
+top.
 
 ## Writing with something open beside it
 
-**Open something beside this**, under the editor, puts a second column
-next to the text: the chapter before this one, or whichever bible entry
-you keep having to check. It is read-only, and it does not touch what you
+**Beside**, in the tabs next to the text, opens the chapter before this one,
+or whichever bible entry you keep having to check, right there in the
+column. It is read-only, and it does not touch what you
 are writing.
 
 @figure beside.png | The chapter before, open in the column beside the one being written.

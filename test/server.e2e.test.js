@@ -1031,11 +1031,21 @@ test('the editor folds away everything that is not the chapter', async () => {
   const mine = models.listChaptersForStory(story.id)
     .find((c) => c.author_id === models.getUserByUsername(USER.username).id);
   const html = await (await request(`/chapters/${mine.id}/edit`)).text();
-  // Open in the markup, so a screen with room for them shows them and a
-  // browser with no JavaScript never hides anything.
-  assert.match(html, /<details class="writer-section" data-fold-on-phone open>/);
-  assert.match(html, /<details class="md-hint hint" data-fold-on-phone open>/);
-  assert.match(html, /<summary class="writer-section-label">Optional details<\/summary>/);
+  // The buttons that save it are in the bar along the top, tied to the
+  // form, so they are there wherever the page is scrolled to.
+  assert.match(html, /class="writer-bar"/);
+  assert.match(html, /<button class="btn small" type="submit" form="writer-form" name="intent" value="publish" data-publish-open>/);
+  assert.match(html, /form="writer-form" name="intent" value="draft"/);
+  // The details are a fold of the form (a drawer, with a script), and
+  // what changed is asked when publishing.
+  assert.match(html, /<details class="details-drawer" id="chapter-details" data-details-drawer>/);
+  assert.match(html, /<section class="publish-sheet" data-publish-sheet/);
+  assert.match(html, /name="changelog"/);
+  // Beside the text, tabs: the checks, the bible, something beside.
+  assert.match(html, /role="tablist"/);
+  assert.match(html, /id="side-checks" role="tabpanel"[^>]*data-checks-slot/);
+  assert.match(html, /id="side-bible"/);
+  assert.ok(!/tool-typewriter/.test(html), 'no Typewriter of its own: Focus has it');
 });
 
 test('the beside panel offers real links and loads the same page as a fragment', async () => {

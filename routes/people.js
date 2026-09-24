@@ -3,13 +3,13 @@
 /** @typedef {import('../server').RouteContext} RouteContext */
 
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
-const { parseBody, redirect, sendHtml, sendJson } = require('../lib/util');
+const { parseBody, parseMultipartBody, redirect, sendHtml, sendJson } = require('../lib/util');
 const models = require('../models');
 const shelves = require('../lib/story-shelves');
 const docs = require('../lib/docs');
 const views = require('../views');
 const wiki = require('../lib/wiki');
-const { sendError } = require('./shared');
+const { UPLOAD_LIMIT_BYTES, extractUploadedText, sendError } = require('./shared');
 async function handleProfilePage(req, res, user, username, query) {
   const person = models.getUserByUsername(String(username).toLowerCase());
   if (!person || person.username === models.DELETED_USER_USERNAME) {
@@ -139,6 +139,20 @@ async function handleMarkdownPreview(req, res, _user) {
   sendJson(res, 200, { html });
 }
 
+// A file brought into the editor's box: its text, as Markdown, read the
+// same way an upload is. Nothing is saved -- the editor puts it in the box.
+async function handleMarkdownImport(req, res, _user) {
+  const { files } = await parseMultipartBody(req, UPLOAD_LIMIT_BYTES);
+  try {
+    const text = await extractUploadedText(files.file);
+    if (text === null) return sendJson(res, 400, { error: 'Choose a .md, .txt or .docx file.' });
+    sendJson(res, 200, { text });
+  } catch (err) {
+    if (!err.userFacing) throw err;
+    sendJson(res, 400, { error: err.message });
+  }
+}
+
 // ---------------------------------------------------------------------
 // router
 // ---------------------------------------------------------------------
@@ -149,6 +163,7 @@ async function handleMarkdownPreview(req, res, _user) {
 /** @type {Array<[string, string|RegExp, (c: RouteContext) => any]>} */
 const routes = [
   ['POST', '/markdown/preview', (c) => handleMarkdownPreview(c.req, c.res, c.user)],
+  ['POST', '/markdown/import', (c) => handleMarkdownImport(c.req, c.res, c.user)],
   ['GET', '/search', (c) => handleSearch(c.req, c.res, c.user, c.url.searchParams)],
   ['GET', '/', (c) => handleStories(c.req, c.res, c.user, c.url.searchParams)],
   ['GET', '/activity', (c) => handleActivity(c.req, c.res, c.user)],

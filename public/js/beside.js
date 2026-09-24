@@ -27,6 +27,12 @@
   // that one rather than making another is the difference between two
   // columns and three: the pane goes above the comments, and the editor
   // keeps the width it already had.
+  // In the editor's column of tabs the pane is already where it belongs:
+  // under the list it was opened from, in the Beside tab.
+  if (details.closest('.side-panel')) {
+    wireUp(null);
+    return;
+  }
   const existingGrid = card.closest('.chapter-body-grid');
   const comments = existingGrid ? existingGrid.querySelector('.comments-pane') : null;
   let wrap = null;
@@ -44,6 +50,9 @@
     wrap.appendChild(pane);
   }
 
+  wireUp(wrap);
+
+  function wireUp(wrap) {
   const split = (on) => { if (wrap) wrap.classList.toggle('is-split', on); };
 
   const shut = () => {
@@ -93,5 +102,6 @@
         /** @type {HTMLElement} */ (item).hidden = Boolean(needle) && !hay.includes(needle);
       }
     });
+  }
   }
 }());

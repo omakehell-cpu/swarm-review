@@ -27,10 +27,16 @@
   };
 
   const title = /** @type {HTMLInputElement|null} */ (form.querySelector('input[name="title"], input[name="chapterTitle"]'));
-  const status = document.createElement('p');
-  status.className = 'draft-status';
+  const storyTitle = /** @type {HTMLInputElement|null} */ (form.querySelector('input[name="storyTitle"]'));
+  // Where it is kept is said in the bar along the top when there is one,
+  // which is always in view; otherwise under the text.
+  const inBar = document.querySelector('[data-draft-status]');
+  const status = /** @type {HTMLElement} */ (inBar || document.createElement('p'));
+  if (!inBar) {
+    status.className = 'draft-status';
+    text.parentElement.appendChild(status);
+  }
   status.hidden = true;
-  text.parentElement.appendChild(status);
 
   const say = (message) => {
     status.textContent = message;
@@ -95,7 +101,7 @@
 
   function keep() {
     if (text.value === original && text.value === serverCopy) { store.clear(); say(''); return; }
-    store.write({ content: text.value, title: title ? title.value : '', at: Date.now() });
+    store.write({ content: text.value, title: title ? title.value : '', storyTitle: storyTitle ? storyTitle.value : '', at: Date.now() });
     say(`Draft kept in this browser, ${clock()}`);
     if (draftUrl) {
       clearTimeout(serverTimer);
@@ -117,6 +123,7 @@
     restore.addEventListener('click', () => {
       text.value = saved.content;
       if (title && saved.title) title.value = saved.title;
+      if (storyTitle && saved.storyTitle) storyTitle.value = saved.storyTitle;
       // Setting .value does not fire "input", and the writing checks draw
       // the visible text on a layer over a transparent textarea: without
       // this the layer kept showing the old text, so the restored draft
@@ -139,7 +146,7 @@
     form.insertBefore(bar, form.firstChild);
   }
 
-  for (const field of [text, title].filter(Boolean)) {
+  for (const field of [text, title, storyTitle].filter(Boolean)) {
     field.addEventListener('input', () => {
       clearTimeout(timer);
       timer = setTimeout(keep, SAVE_AFTER_MS);

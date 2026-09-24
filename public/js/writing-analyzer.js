@@ -1291,6 +1291,8 @@
       const words = (String(text || '').replace(/\]\([^)]*\)/g, ']').replace(/[*_~`#>]/g, ' ')
         .match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length;
       const g = stats.grade === null || stats.grade === undefined ? null : Math.round(stats.grade);
+      // Nothing written yet: no column of zeros, just what will be here.
+      panel.classList.toggle('wa-panel-empty', words === 0);
       grade.innerHTML = g === null
         ? '<span class="wa-grade-num">&mdash;</span><span class="wa-grade-word">Write a few sentences</span>'
         : `<span class="wa-grade-num">Grade ${g}</span><span class="wa-grade-word">${gradeWord(g)}</span>`;
@@ -1469,7 +1471,7 @@
       saveSettings(settings);
       render();
     }, () => render());
-    const sideSlot = document.querySelector('.editor-side');
+    const sideSlot = document.querySelector('[data-checks-slot]') || document.querySelector('.editor-side');
     const narrowQuery = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
     function placePanel() {
       const narrow = Boolean(narrowQuery && narrowQuery.matches);

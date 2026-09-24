@@ -786,7 +786,7 @@ function missingNamesBlock(names, storyId, returnTo, entities = []) {
 // fetched into the column instead, which is the same thing without losing
 // the draft. Nothing here is a second copy of a page: the panel asks the
 // server for the one that already exists.
-function besidePanel({ chapter = null, story, chapters = [], entities = [] }) {
+function besidePanel({ chapter = null, story, chapters = [], entities = [], open = false }) {
   const others = chapters.filter((c) => !chapter || c.id !== chapter.id);
   const near = chapter
     ? others.filter((c) => Math.abs(c.chapter_number - chapter.chapter_number) <= 2)
@@ -798,7 +798,7 @@ function besidePanel({ chapter = null, story, chapters = [], entities = [] }) {
     </a></li>`;
 
   return `
-    <details class="beside" id="beside" data-beside>
+    <details class="beside" id="beside" data-beside${open ? ' open' : ''}>
       <summary>Open something beside this</summary>
       <div class="beside-body">
         <p class="hint">The chapter before, or whoever you keep having to look up. It opens in the column beside the text; with JavaScript off, in a new tab.</p>

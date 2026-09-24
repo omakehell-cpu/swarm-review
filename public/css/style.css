@@ -4746,3 +4746,152 @@ p.inline-edit.summary.is-editing .inline-input { flex: 1 1 40ch; max-width: 640p
    rule for the top bar's links would otherwise paint its words in the
    button's own ink. */
 .topbar a.topbar-write.current, .topbar nav > a.topbar-write.current { color: var(--bg); box-shadow: none; }
+
+/* ======================================================================
+   The writing desk's frame (views/writing.js, writing-frame.js): a bar
+   along the top that is always there, the titles as titles, the text on
+   paper, tabs beside it, the details in a drawer, and the questions a
+   publish asks in a sheet.
+   ====================================================================== */
+.writer-bar {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; gap: var(--s-3) var(--s-6); flex-wrap: wrap;
+  margin: calc(-1 * var(--s-6)) 0 var(--s-7); padding: var(--s-4) 0;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.writer-bar-back { font-size: var(--t-sm); color: var(--text-muted); text-decoration: none; max-width: 32ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.writer-bar-back:hover { color: var(--text); }
+.writer-bar-status { margin: 0; font-size: var(--t-xs); color: var(--text-muted); flex: 1 1 auto; min-width: 0; }
+.writer-bar-status[hidden] { display: block; visibility: hidden; }
+.writer-bar-actions { display: flex; gap: var(--s-3); align-items: center; margin-left: auto; }
+.writer-bar-actions [hidden] { display: none; }
+
+.story-title-field { display: block; margin: 0 0 var(--s-2); }
+.story-title-field input {
+  width: 100%; padding: var(--s-2) 0; border: 0; border-bottom: 1px solid transparent; background: transparent;
+  font-family: var(--font-prose); font-size: var(--t-3xl); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;
+  color: var(--text);
+}
+.story-title-field input:hover { border-bottom-color: var(--border); }
+.story-title-field input:focus { outline: none; border-bottom-color: var(--border-strong); box-shadow: none; }
+.story-title-field + .title-field input { font-size: var(--t-xl); font-weight: 500; color: var(--text); }
+.writer-kicker { margin: 0 0 var(--s-2); font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); }
+
+/* The text on paper: the page's own colour, a hairline that firms up while
+   you write in it. */
+.writer-card .wa-editor-wrap { background: var(--bg); border: 1px solid var(--border); }
+.writer-card .wa-editor-wrap:focus-within { border-color: var(--border-strong); box-shadow: none; }
+.writer-status { margin: var(--s-3) 0 0; font-size: var(--t-xs); color: var(--text-muted); min-height: 1.2em; }
+.markdown-help { margin: 0 0 var(--s-3); padding: var(--s-3) var(--s-5); border-left: 2px solid var(--border-strong); }
+.markdown-help .hint { margin: 0; }
+.js .no-js-only { display: none; }
+
+/* The toolbar: formatting, then Preview, More and Focus at the right. */
+.editor-tool.tool-preview { margin-left: 0; }
+.editor-tool.tool-more {
+  display: inline-block; border-color: transparent; font-family: var(--font-ui); font-size: var(--t-sm);
+  font-weight: 500; color: var(--text-muted);
+}
+.editor-tool.tool-more::after { content: " \25BE"; content: " \25BE" / ""; font-size: 0.8em; }
+.editor-tool.tool-more:hover { color: var(--text); border-color: var(--border); }
+.editor-tool.tool-focus, .editor-tool.tool-focus:hover {
+  background: var(--text); color: var(--bg); border-color: var(--text);
+  font-size: var(--t-xs); padding: 0 var(--s-5);
+}
+.tools-menu-wrap { position: relative; display: inline-block; }
+.tools-menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 45; min-width: 15rem;
+  display: flex; flex-direction: column; padding: var(--s-2) 0;
+  background: var(--bg); border: 1px solid var(--border-strong); box-shadow: 0 10px 24px var(--shadow);
+}
+.tools-menu[hidden] { display: none; }
+.tools-menu-item {
+  text-align: left; background: none; border: 0; padding: var(--s-3) var(--s-5);
+  font: inherit; font-family: var(--font-ui); font-size: var(--t-sm); color: var(--text); cursor: pointer;
+}
+.tools-menu-item:hover, .tools-menu-item:focus-visible { background: var(--bg-sunken); outline: none; }
+.tools-menu-item[aria-expanded="true"] { font-weight: 700; }
+@media (max-width: 720px) {
+  .editor-tools .editor-tools-spacer { display: block; }
+  .writer-bar { gap: var(--s-2) var(--s-4); }
+  .writer-bar-back { max-width: 100%; flex-basis: 100%; }
+  .writer-bar-actions { margin-left: 0; }
+}
+
+/* Focus's way out: always in view, and plainly a button. */
+.focus-exit, .focus-exit.is-awake, .focus-exit:hover {
+  opacity: 1; background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600;
+}
+
+/* The tabs beside the text. */
+.side-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: var(--s-5); }
+.side-tabs[hidden] { display: none; }
+.side-tab {
+  background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  padding: var(--s-3) var(--s-5); font: inherit; font-family: var(--font-ui); font-size: var(--t-sm);
+  color: var(--text-muted); cursor: pointer;
+}
+.side-tab:hover { color: var(--text); }
+.side-tab[aria-selected="true"] { color: var(--text); font-weight: 600; border-bottom-color: var(--text); }
+.side-tab[hidden] { display: none; }
+.side-tab:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+.side-panel[hidden] { display: none; }
+.editor-side .side-panel .editor-bible { margin-top: 0; border-top: 0; padding-top: 0; }
+.editor-side .side-panel .beside { margin: 0; }
+.editor-side .side-panel .beside > summary { display: none; }
+.editor-side .side-panel .beside-pane { position: static; max-height: none; margin-top: var(--s-5); }
+.editor-side .wa-panel.wa-panel-empty .wa-panel-cards,
+.editor-side .wa-panel.wa-panel-empty .wa-panel-craft,
+.editor-side .wa-panel.wa-panel-empty .wa-panel-sub { display: none; }
+.editor-side .wa-panel.wa-panel-empty .wa-panel-facts::after { content: " \2014  the checks appear as you write."; }
+
+/* The details drawer: a fold at the foot of the form, and with a script a
+   sheet from the right. */
+.details-drawer { margin-top: var(--s-7); border-top: 1px solid var(--border); padding-top: var(--s-4); }
+.details-drawer > summary { cursor: pointer; }
+.details-drawer.is-drawer { margin: 0; border: 0; padding: 0; }
+.details-drawer.is-drawer > summary { display: none; }
+.details-drawer.is-drawer[open] > .drawer-body {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 80; width: min(420px, 100vw); overflow-y: auto;
+  background: var(--bg); border-left: 1px solid var(--border-strong); box-shadow: -12px 0 32px var(--shadow);
+  padding: var(--s-8) var(--s-7) var(--s-9);
+  display: flex; flex-direction: column; gap: var(--s-4);
+}
+.details-drawer.is-drawer .drawer-body::before {
+  content: "Chapter details"; font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
+.drawer-close { position: absolute; top: var(--s-6); right: var(--s-6); }
+.drawer-close[hidden] { display: none; }
+.details-drawer .drawer-body { display: flex; flex-direction: column; gap: var(--s-4); }
+
+/* What a publish asks, as a sheet over the page. */
+.publish-sheet { margin-top: var(--s-7); border-top: 1px solid var(--border); padding-top: var(--s-5); display: flex; flex-direction: column; gap: var(--s-5); }
+.publish-sheet.is-sheet {
+  position: fixed; z-index: 85; left: 50%; top: 8vh; transform: translateX(-50%);
+  width: min(640px, calc(100vw - 32px)); max-height: 84vh; overflow-y: auto; margin: 0;
+  background: var(--bg); border: 1px solid var(--border-strong); border-top: 3px solid var(--text);
+  padding: var(--s-7) var(--s-8); box-shadow: 0 24px 60px var(--shadow);
+}
+.publish-sheet[hidden] { display: none; }
+.publish-sheet h2 { margin: 0; }
+.publish-sheet-actions { display: flex; justify-content: flex-end; gap: var(--s-4); }
+.publish-sheet-actions [hidden] { display: none; }
+.sheet-backdrop { position: fixed; inset: 0; z-index: 84; background: rgba(0, 0, 0, 0.35); }
+.sheet-backdrop[hidden] { display: none; }
+
+/* Tags by typing. */
+.tag-search { display: flex; flex-direction: column; gap: var(--s-3); }
+.tag-search-chosen { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.tag-search-chosen:empty { display: none; }
+.tag-chip.is-chosen { background: var(--text); color: var(--bg); border-color: var(--text); cursor: pointer; }
+.tag-search-input { padding: var(--s-3) var(--s-4); }
+.tag-search-results { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.tag-search-results .tag-chip { cursor: pointer; }
+.tag-search-browse { align-self: flex-start; }
+.tag-picker.is-searchable:not(.show-groups) > details.tag-group { display: none; }
+.writer-bar ~ .editor-grid .writer-card { border-top: 0; padding-top: 0; }
+.story-title-field input, .title-field input { max-width: none; }
+.drawer-body .entity-form-row { display: flex; flex-direction: column; gap: var(--s-4); }
+.drawer-body .entity-form-row > label { width: 100%; }
+.editor-tool.tool-more[aria-expanded="true"] { color: var(--bg); background: var(--text); border-color: var(--text); }

@@ -8,7 +8,14 @@ here is missing on the site, it has not been restarted yet.
 
 ### Writing
 
-- **Focus is only the text.** The whole screen, no box around it, no toolbar and no checks; the line you are writing stays a little above the middle, and everything above and below it fades. Typewriter comes with it. The one thing left is **Leave focus** in the corner, faint while you type, and Escape.
+- **Focus is only the text.** The whole screen, no box around it, no toolbar and no checks; the line you are writing stays a little above the middle, as on a typewriter, and everything above and below it fades. The one thing left is **Leave focus**, in the corner, and Escape. Typewriter is no longer a button of its own.
+- **The editor, rearranged.** A bar along the top that is always there, with where your draft is kept and Details, Cancel, Save draft and Publish. The text on paper, not in a grey box, with the words this session under it.
+- **Tabs beside the text**: Checks, Notes, Bible and Beside, instead of a column and two sections at the foot of the page. The checks wait until something is written.
+- **Details in a drawer**: the summary, what the chapter wants, the arc, point of view, strand and when, out of the way until wanted.
+- **Asked when you publish**: *what changed* for a new version; for a new story, what it is about and its tags.
+- **A new story starts with writing**: its title written large, the first chapter's title, and the text.
+- **Tags by typing**: the ones you pick sit as chips, the matching ones come up as you type, and every tag is still one click away.
+- **More**, beside Preview: the checks as a list, Scenes & snapshots, **bringing text in from a file** (into the box, not published), what Markdown does, and Formatting here.
 - The **+ Write** button no longer turns into a black box on the page it opens.
 
 ### The front page
