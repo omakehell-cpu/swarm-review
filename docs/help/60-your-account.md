@@ -102,7 +102,9 @@ What they do:
   page.
 - **Accounts.** Three wrong passwords locks an account, and an admin
   reactivates it. They can also send somebody a reset link.
-- **Tags.** Approving or merging the tags authors have proposed.
+- **Tags.** At the bottom of the page: the tags authors have proposed,
+  waiting to be approved or merged, and below them the whole vocabulary,
+  folded away until it is opened.
 - **The wiki.** Pressing *Sync wiki now* to refresh the glossary.
 - **Stories from StoriesOnline.** *Import a story*, on the admin page,
   takes the EPUB that StoriesOnline gives you and shows what it found
