@@ -79,10 +79,25 @@ test('the editor offers it, in the open', async () => {
   assert.match(html, /Replace this chapter with a file/);
   assert.match(html, /name="upload" value="1"/, 'its own button, not the Save button');
   assert.match(html, /accept="\.md,\.markdown,\.txt,\.docx"/);
-  // And it is not buried in the fold any more.
-  const field = html.indexOf('upload-version');
-  const details = html.indexOf('Optional details');
-  assert.ok(field > -1 && field < details, 'it sits above the folded section, not inside it');
+  // With a script, the editor's More menu brings a file into the box
+  // instead; the form's own field is what works without one.
+  assert.match(html, /class="no-js-only">\s*<div class="upload-version">/);
+});
+
+test('a file can be brought into the box without publishing it', async () => {
+  const before = models.getLatestVersion(chapter.id).version_number;
+  const boundary = '----swarmimport';
+  const body = Buffer.concat([
+    Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="bits.md"\r\nContent-Type: text/markdown\r\n\r\n`),
+    Buffer.from('A line from a file.'),
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
+  const res = await client.request('/markdown/import', {
+    method: 'POST', headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` }, body,
+  });
+  assert.strictEqual(res.status, 200);
+  assert.deepStrictEqual(await res.json(), { text: 'A line from a file.' });
+  assert.strictEqual(models.getLatestVersion(chapter.id).version_number, before, 'nothing was published');
 });
 
 test('a .md file becomes the next version', async () => {

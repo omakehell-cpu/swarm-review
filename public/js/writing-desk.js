@@ -202,16 +202,9 @@
 
   function addButton() {
     const editor = /** @type {any} */ (window).swarmEditor;
-    if (!editor || !editor.bar || editor.bar.querySelector('.tool-desk')) return;
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'editor-tool tool-desk tool-secondary';
-    b.textContent = 'Scenes & snapshots';
-    b.title = 'The scenes of this chapter, your notes on them, and snapshots of the text';
-    b.addEventListener('mousedown', (ev) => ev.preventDefault());
-    b.addEventListener('click', () => (drawer.hidden ? open() : close()));
-    const focus = editor.bar.querySelector('.tool-typewriter');
-    editor.bar.insertBefore(b, focus);
+    if (!editor || !editor.addMenuItem || document.querySelector('.tool-desk')) return;
+    editor.addMenuItem('tool-desk', 'Scenes & snapshots', 'The scenes of this chapter, your notes on them, and snapshots of the text',
+      () => (drawer.hidden ? open() : close()));
     let t = null;
     document.querySelector('textarea[data-editor-tools]').addEventListener('input', () => {
       if (drawer.hidden) return;

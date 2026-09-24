@@ -11,12 +11,12 @@
 //    and the notes are counted against.
 //  * Focus: the text and nothing else, filling the screen -- no box, no
 //    toolbar, no checks -- with the line being written held at the same
-//    height and everything above and below it faded. One way out, in the
-//    corner, and Escape.
-//  * Typewriter: the line being written stays at the same height on the
-//    screen. Focus always has it.
+//    height (as a typewriter does) and everything above and below it
+//    faded. One way out, in the corner, and Escape.
+//  * A menu for the rest: the checks as a list, the desk, bringing text in
+//    from a file, what Markdown does, and where the caret is.
 //  * How much has been written since the page was opened, and against the
-//    day's goal.
+//    day's goal, on the line under the text.
 //
 // Everything the buttons do in the textarea goes through the browser's own
 // insert command where it exists, so Ctrl+Z undoes a button like typing.
@@ -235,6 +235,10 @@
     bar.appendChild(b);
   }
 
+  const spacer = document.createElement('span');
+  spacer.className = 'editor-tools-spacer';
+  bar.appendChild(spacer);
+
   // Writing | Preview: one button, pressed while the preview is showing.
   const previewBtn = button('tool-preview', 'Preview', 'See the chapter as it will read (press again, or Escape, to write)');
   previewBtn.setAttribute('aria-pressed', 'false');
@@ -242,52 +246,71 @@
   previewBtn.addEventListener('click', () => setMode(mode === 'preview' ? 'markdown' : 'preview'));
   bar.appendChild(previewBtn);
 
-  // On a phone the row is the formatting and the preview, and the rest
-  // waits behind one button, so the text starts on the first screen
-  // rather than under three rows of controls. On a wide screen the button
-  // is not shown and everything sits in one row as before.
-  const moreBtn = button('tool-more', '\u2026', 'More tools: Checks as a list, Scenes & snapshots, Typewriter, Focus');
-  moreBtn.setAttribute('aria-label', 'More tools');
+  // Everything else, in one menu: on a phone and on a wide screen alike,
+  // so the row is the formatting, the preview and the way into focus.
+  const moreBtn = button('tool-more', 'More', 'The checks as a list, the desk, a file, Markdown');
+  moreBtn.setAttribute('aria-haspopup', 'true');
   moreBtn.setAttribute('aria-expanded', 'false');
-  moreBtn.addEventListener('click', () => {
-    const open = bar.classList.toggle('show-more');
-    moreBtn.setAttribute('aria-expanded', String(open));
+  const menu = document.createElement('div');
+  menu.className = 'tools-menu';
+  menu.hidden = true;
+  menu.setAttribute('role', 'menu');
+  menu.setAttribute('aria-label', 'More tools');
+  const menuWrap = document.createElement('span');
+  menuWrap.className = 'tools-menu-wrap';
+  menuWrap.append(moreBtn, menu);
+  bar.appendChild(menuWrap);
+  function openMenu(show) {
+    menu.hidden = !show;
+    moreBtn.setAttribute('aria-expanded', String(show));
+    if (show) {
+      const first = /** @type {HTMLElement|null} */ (menu.querySelector('[role="menuitem"]'));
+      if (first) first.focus();
+    }
+  }
+  moreBtn.addEventListener('click', () => openMenu(menu.hidden));
+  document.addEventListener('click', (ev) => {
+    if (!menu.hidden && !menuWrap.contains(/** @type {Node} */ (ev.target))) openMenu(false);
   });
-  bar.appendChild(moreBtn);
+  menu.addEventListener('keydown', (ev) => {
+    const items = /** @type {HTMLElement[]} */ (Array.from(menu.querySelectorAll('[role="menuitem"]')));
+    const at = items.indexOf(/** @type {HTMLElement} */ (document.activeElement));
+    if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); openMenu(false); moreBtn.focus(); }
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); items[(at + 1) % items.length].focus(); }
+    if (ev.key === 'ArrowUp') { ev.preventDefault(); items[(at - 1 + items.length) % items.length].focus(); }
+  });
+  /**
+   * One line of the menu. Other scripts add theirs (the desk) through
+   * window.swarmEditor.addMenuItem.
+   * @param {string} cls @param {string} label @param {string} title @param {() => void} run
+   */
+  function menuItem(cls, label, title, run) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `tools-menu-item ${cls}`;
+    b.setAttribute('role', 'menuitem');
+    b.textContent = label;
+    b.title = title;
+    b.addEventListener('mousedown', (ev) => ev.preventDefault());
+    b.addEventListener('click', () => { openMenu(false); run(); });
+    menu.appendChild(b);
+    return b;
+  }
 
-  const whereBtn = button('tool-where', 'Formatting here', `Say the formatting and the scene where the caret is (${FKEY})`);
-  whereBtn.addEventListener('click', whereAmI);
-  whereBtn.classList.add('tool-secondary');
-  bar.appendChild(whereBtn);
-
-  const checksBtn = button('tool-checks', 'Checks as a list', 'The writing checks as a list you can walk, each one a jump to its words');
-  checksBtn.setAttribute('aria-expanded', 'false');
-  checksBtn.classList.add('tool-secondary');
-  bar.appendChild(checksBtn);
-
-  const spacer = document.createElement('span');
-  spacer.className = 'editor-tools-spacer';
-  bar.appendChild(spacer);
-
-  const session = document.createElement('span');
-  session.className = 'session-count tool-secondary';
-  session.setAttribute('aria-live', 'off');
-  bar.appendChild(session);
-
-  const typewriterBtn = button('tool-typewriter', 'Typewriter', 'Keep the line you are writing at the same height on the screen');
-  typewriterBtn.setAttribute('aria-pressed', 'false');
-  typewriterBtn.classList.add('tool-secondary');
-  bar.appendChild(typewriterBtn);
+  // The way in to focus: always there, and not to be missed.
   const focusBtn = button('tool-focus', 'Focus', 'Only the text, the line you are writing held in the middle (Esc to come back)');
   focusBtn.setAttribute('aria-pressed', 'false');
-  focusBtn.classList.add('tool-secondary');
   bar.appendChild(focusBtn);
+
+  const session = /** @type {HTMLElement} */ (document.querySelector('[data-writer-status]') || document.createElement('span'));
+  session.classList.add('session-count');
 
   // The bar goes directly above the text, after the writing checks have
   // built their frame round the textarea.
   const place = () => {
     const anchor = markdownView();
     anchor.parentNode.insertBefore(bar, anchor);
+    anchor.parentNode.insertBefore(help, anchor);
     anchor.parentNode.insertBefore(checksPanel, anchor);
     anchor.parentNode.insertBefore(preview, anchor);
   };
@@ -311,6 +334,10 @@
   checksPanel.hidden = true;
   checksPanel.setAttribute('aria-label', 'Writing checks, as a list');
   checksPanel.id = 'checks-list';
+  const checksBtn = menuItem('tool-checks', 'Checks as a list', 'The writing checks as a list you can walk, each one a jump to its words', async () => {
+    if (checksPanel.hidden && mode === 'preview') await setMode('markdown');
+    openChecks(checksPanel.hidden);
+  });
   checksBtn.setAttribute('aria-controls', checksPanel.id);
 
   function readChecks() {
@@ -354,10 +381,6 @@
       announce(summary);
     }
   }
-  checksBtn.addEventListener('click', async () => {
-    if (checksPanel.hidden && mode === 'preview') await setMode('markdown');
-    openChecks(checksPanel.hidden);
-  });
   checksPanel.addEventListener('click', (ev) => {
     const item = /** @type {HTMLElement|null} */ (/** @type {Element} */ (ev.target).closest('.checks-item'));
     if (!item) return;
@@ -377,6 +400,52 @@
       checksCache = renderChecks().checks;
     }, 900);
   });
+
+  // ------------------------------------------------- from a file, and help
+
+  // A .md, .txt or .docx brought into the box, not published: the server
+  // reads it (the same reader an upload uses) and the text lands here, to
+  // be worked on and saved like anything typed.
+  const picker = document.createElement('input');
+  picker.type = 'file';
+  picker.accept = '.md,.markdown,.txt,.docx';
+  picker.hidden = true;
+  document.body.appendChild(picker);
+  menuItem('tool-import', 'Bring in text from a file\u2026', 'A .md, .txt or .docx file, put in the box (nothing is published)', () => picker.click());
+  picker.addEventListener('change', async () => {
+    const file = picker.files && picker.files[0];
+    picker.value = '';
+    if (!file) return;
+    if (textarea.value.trim() && !window.confirm(`Put the text of ${file.name} in the box instead of what is there? Nothing is published until you say so.`)) return;
+    const body = new FormData();
+    body.append('file', file);
+    announce(`Reading ${file.name}\u2026`);
+    try {
+      const res = await fetch('/markdown/import', { method: 'POST', body, credentials: 'same-origin' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'That file could not be read.');
+      if (mode === 'preview') await setMode('markdown', { quiet: true });
+      textarea.focus();
+      textarea.select();
+      insert(data.text || '', 0, 0);
+      announce(`${file.name} is in the box. It is not published until you publish it.`);
+    } catch (err) {
+      announce(err.message);
+      window.alert(err.message);
+    }
+  });
+
+  // What Markdown does, under the toolbar until asked for again.
+  const helpTemplate = /** @type {HTMLTemplateElement|null} */ (document.getElementById('markdown-help'));
+  const help = document.createElement('div');
+  help.className = 'markdown-help';
+  help.hidden = true;
+  if (helpTemplate) help.appendChild(helpTemplate.content.cloneNode(true));
+  menuItem('tool-help', 'What Markdown does', 'Bold, italic, headings, scene breaks: how to write them', () => {
+    help.hidden = !help.hidden;
+    if (!help.hidden) announce(help.textContent || '');
+  });
+  menuItem('tool-where', 'Formatting here', `Say the formatting and the scene where the caret is (${FKEY})`, whereAmI);
 
   // ----------------------------------------------------------------- keys
 
@@ -440,21 +509,6 @@
       && !document.querySelector('.desk-drawer:not([hidden])')) setFocus(false);
   });
 
-  // ------------------------------------------------------------- typewriter
-
-  let typewriter = false;
-  function setTypewriter(on) {
-    typewriter = on;
-    typewriterBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    document.body.classList.toggle('typewriter', on);
-    store.set('editor-typewriter', on ? '1' : '0');
-    if (on) centreCaret();
-  }
-  typewriterBtn.addEventListener('click', () => {
-    setTypewriter(!typewriter);
-    if (mode === 'markdown') textarea.focus();
-  });
-
   // Where the caret is inside the textarea, in pixels from its top: a
   // hidden copy of the textarea's text up to the caret, with the same
   // font and width, and a marker at the end of it.
@@ -480,7 +534,7 @@
   }
 
   function centreCaret(force = false) {
-    if (!typewriter && !focusing && !force) return;
+    if (!focusing && !force) return;
     const target = window.innerHeight * 0.42;
     if (mode !== 'markdown') return;
     const caretTop = caretTopInTextarea();
@@ -519,6 +573,7 @@
       session.classList.toggle('goal-met', today >= desk.goal);
     }
     session.textContent = parts.join(' \u00b7 ');
+    session.hidden = false;
   }
   setInterval(updateSession, 30000);
 
@@ -537,7 +592,8 @@
   // Focus is not reopened by itself: a page that opens as a blank screen
   // with one line in the middle looks broken to anybody who forgot.
   store.set('editor-focus', '');
-  if (store.get('editor-typewriter') === '1') setTypewriter(true);
+  // Typewriter lives in Focus now.
+  store.set('editor-typewriter', '');
   // The old Visual editor's choice, remembered in browsers that used it.
   store.set('editor-mode', '');
 
@@ -550,6 +606,7 @@
   // Markdown. A preview showing is put away first.
   /** @type {any} */ (window).swarmEditor = {
     bar,
+    addMenuItem: menuItem,
     getText() { return textarea.value; },
     async setText(text) {
       textarea.value = text;

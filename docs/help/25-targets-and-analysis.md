@@ -30,7 +30,7 @@ set, a day counts as long as you wrote **anything** at all.
 
 ## Point of view, and strands
 
-**Optional details** on the chapter editor has two free-text fields:
+**Details**, in the chapter editor's top bar, has two free-text fields:
 
 - **Point of view** — whose eyes the chapter is behind.
 - **Strand** — which thread of the story it belongs to, if the book has
@@ -79,7 +79,7 @@ different orders, and the gap between them is where a long book with a lot
 of people in it quietly goes wrong. **Timeline**, next to *Outline* and
 *Analysis*, puts the second one on a line.
 
-Two fields feed it, both optional, on chapters (*Optional details* in the
+Two fields feed it, both optional, on chapters (*Details* in the
 editor) and on bible entries (*When this happens*):
 
 - **When this happens** -- what the story calls the moment. "Day 412",

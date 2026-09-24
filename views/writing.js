@@ -6,7 +6,7 @@ const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
 const { besidePanel, editorBiblePanel } = require('./bible');
 const { diffBlockHtml } = require('./chapter');
-const { arcField, fileUploadField, markdownHint, positionField, povAndStrandFields, renderCommentReadOnly, stageField, tagPicker, uploadVersionField, whenFields } = require('./shared');
+const { arcField, fileUploadField, positionField, povAndStrandFields, renderCommentReadOnly, stageField, tagPicker, uploadVersionField, whenFields } = require('./shared');
 function archivedStoriesPage({ user, stories }) {
   const rows = stories.length ? stories.map((s) => `
     <div class="chapter-row archived-row">
@@ -36,12 +36,55 @@ function archivedStoriesPage({ user, stories }) {
   });
 }
 
-// ---------- new story (+ first chapter) ----------
+// ---------- the writing desk: one frame for all three pages ----------
+//
+// New story, new chapter and editing a chapter are the same room: a bar
+// along the top that is always there -- where you are, whether it is kept,
+// and the buttons that save it -- then the title written as a title, the
+// text, and beside it a column of tabs (the checks, the notes, the bible,
+// something to read beside). Everything that is not writing is one step
+// away rather than on the way: the chapter's details in a drawer, and what
+// a publish needs to know (what changed, what the story is about, its tags)
+// asked at the moment of publishing.
+//
+// All of it is ordinary markup that works with nothing switched on: the
+// drawer and the publish questions are sections of the form, in place, and
+// writing-desk-frame.js turns them into a drawer and a sheet.
 
+const FORM_ID = 'writer-form';
+
+/**
+ * @param {{ back: string, backLabel: string, cancelHref: string, publishLabel: string, draft?: boolean, details?: boolean, sheet?: boolean }} opts
+ */
+function writerBar({ back, backLabel, cancelHref, publishLabel, draft = false, details = true, sheet = true }) {
+  return `
+    <div class="writer-bar" role="region" aria-label="Saving">
+      <a class="writer-bar-back" href="${back}">&larr; ${escapeHtml(backLabel)}</a>
+      <p class="writer-bar-status" data-draft-status aria-live="polite"></p>
+      <div class="writer-bar-actions">
+        ${details ? `<button class="btn ghost small" type="button" data-details-open aria-controls="chapter-details" aria-expanded="false" hidden>Details</button>` : ''}
+        <a class="btn ghost small" href="${cancelHref}">Cancel</a>
+        ${draft ? `<button class="btn ghost small" type="submit" form="${FORM_ID}" name="intent" value="draft" formnovalidate>Save draft</button>` : ''}
+        <button class="btn small" type="submit" form="${FORM_ID}" name="intent" value="publish"${sheet ? ' data-publish-open' : ''}>${escapeHtml(publishLabel)}</button>
+      </div>
+    </div>`;
+}
+
+// The column beside the text, as tabs. Each panel is written out whole,
+// so with no script they are simply one under the other; the tab row is
+// hidden until writing-desk-frame.js has something to switch.
+/** @param {Array<{ id: string, label: string, html: string, attrs?: string }>} panels */
+function sideTabs(panels) {
+  const shown = panels.filter(Boolean);
+  return `
+    <div class="side-tabs" role="tablist" aria-label="Beside the text" hidden>
+      ${shown.map((p, i) => `<button type="button" role="tab" class="side-tab" id="tab-${p.id}" aria-controls="side-${p.id}" aria-selected="${i === 0}" tabindex="${i === 0 ? '0' : '-1'}">${escapeHtml(p.label)}<span class="side-tab-count" data-tab-count></span></button>`).join('')}
+    </div>
+    ${shown.map((p) => `<section class="side-panel" id="side-${p.id}" role="tabpanel" aria-labelledby="tab-${p.id}"${p.attrs ? ` ${p.attrs}` : ''}>${p.html}</section>`).join('')}`;
+}
 
 // The editor is two columns on a wide screen, as Hemingway is: the text,
-// and beside it the writing checks (placed there by writing-analyzer.js)
-// and, when the chapter has any, the notes it was given.
+// and beside it the tabs.
 function editorGrid(writerCard, side = '') {
   return `
     <div class="chapter-body-grid editor-grid">
@@ -50,43 +93,80 @@ function editorGrid(writerCard, side = '') {
     </div>`;
 }
 
+// The chapter's details, in a drawer: what it is about, what it wants, the
+// arc it opens, whose eyes, when. Set once in a while, never needed to
+// write, so none of it is between the author and the text.
+function detailsDrawer(inner, heading = 'Chapter details') {
+  return `
+    <details class="details-drawer" id="chapter-details" data-details-drawer>
+      <summary class="writer-section-label">${escapeHtml(heading)}</summary>
+      <div class="drawer-body">
+        <button class="btn ghost tiny drawer-close" type="button" data-details-close hidden>Close</button>
+        ${inner}
+      </div>
+    </details>`;
+}
+
+// What a publish needs to know, asked when publishing. Without a script it
+// is the last section of the form, above nothing; with one, pressing
+// Publish opens it as a sheet over the page, with the real Publish in it.
+function publishSheet(inner, { heading, button }) {
+  return `
+    <section class="publish-sheet" data-publish-sheet aria-labelledby="publish-sheet-title">
+      <h2 id="publish-sheet-title" class="writer-section-label">${escapeHtml(heading)}</h2>
+      ${inner}
+      <div class="publish-sheet-actions">
+        <button class="btn ghost small" type="button" data-publish-close hidden>Back to the text</button>
+        <button class="btn" type="submit" name="intent" value="publish" data-publish-confirm>${escapeHtml(button)}</button>
+      </div>
+    </section>`;
+}
+
+// The text, with the line under it that says how it stands: the words
+// this session, the day's goal, and where the draft is kept.
+function mainField({ content, placeholder, storyId = null, label = 'Chapter text' }) {
+  return `
+    <div class="main-field"><label for="chapter-content" class="sr-only">${escapeHtml(label)}</label><textarea id="chapter-content" name="content" rows="24" placeholder="${escapeHtml(placeholder)}"${storyId ? ` data-story-id="${storyId}"` : ''} data-editor-tools>${escapeHtml(content)}</textarea>
+      <p class="writer-status" data-writer-status></p>
+    </div>
+    <template id="markdown-help"><p class="hint">${MARKDOWN_HELP}</p></template>`;
+}
+
+const MARKDOWN_HELP = '**bold**, *italic*, ***both***, ~~strikethrough~~, `code`, [link](https://...), # Heading, &gt; quote, --- for a scene break, and - or 1. list items. A backslash keeps a character as it is (\\* is a real asterisk). Line breaks are kept as you type them.';
+
+// ---------- new story (+ first chapter) ----------
+
 /** @param {{ user: Row, error?: string|null, values?: FormValues, groups?: any[], selectedTagIds?: number[] }} props */
 function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), groups = [], selectedTagIds = [] }) {
+  const sheet = publishSheet(`
+      <p class="muted">The story is written; this is how it is introduced. Both can be changed later from the story page.</p>
+      <label>What it is about<textarea name="storyDescription" rows="3" placeholder="The line or two a reader sees before they open it.">${escapeHtml(values.storyDescription || '')}</textarea></label>
+      <div class="sheet-tags">
+        <p class="writer-section-label">Tags</p>
+        ${tagPicker(groups, selectedTagIds, { allowPropose: true })}
+      </div>`, { heading: 'Before you publish', button: 'Publish story' });
   return layout({
     title: 'New story',
     user,
     current: 'new-story',
     wide: true,
     body: `
+      ${writerBar({ back: '/', backLabel: 'Stories', cancelHref: '/', publishLabel: 'Publish', details: true })}
       ${editorGrid(`
       <div class="writer-card">
-        <h1>Start a new story</h1>
-        <p class="muted writer-intro">A story groups together all the chapters that belong to it. You're writing the first chapter now; you can add more later from the story page.</p>
+        <h1 class="sr-only">Start a new story</h1>
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
-        <form method="post" action="/stories/new" class="chapter-form" enctype="multipart/form-data">
-          <label>Story title<input type="text" name="storyTitle" value="${escapeHtml(values.storyTitle || '')}" required></label>
-          <label>Chapter 1 title<input type="text" name="chapterTitle" value="${escapeHtml(values.chapterTitle || '')}" required></label>
-          <div class="main-field"><label for="chapter-content">Chapter 1 text</label><textarea id="chapter-content" name="content" rows="24" placeholder="Paste or write the chapter here..." data-editor-tools>${escapeHtml(values.content || '')}</textarea>
-            ${markdownHint()}
-          </div>
-          <details class="writer-section" data-fold-on-phone open>
-            <summary class="writer-section-label">Optional details</summary>
-            <label>Story description<textarea name="storyDescription" rows="2">${escapeHtml(values.storyDescription || '')}</textarea></label>
+        <form method="post" action="/stories/new" class="chapter-form" id="${FORM_ID}" enctype="multipart/form-data">
+          <label class="story-title-field"><span class="sr-only">Story title</span><input type="text" name="storyTitle" value="${escapeHtml(values.storyTitle || '')}" required placeholder="The story's title" autofocus></label>
+          <label class="title-field"><span class="sr-only">Chapter 1 title</span><input type="text" name="chapterTitle" value="${escapeHtml(values.chapterTitle || '')}" required placeholder="Chapter 1 title"></label>
+          ${mainField({ content: values.content || '', placeholder: 'Once upon a time...', label: 'Chapter 1 text' })}
+          ${detailsDrawer(`
             <label>Chapter summary<textarea name="chapterSummary" rows="2">${escapeHtml(values.chapterSummary || '')}</textarea></label>
-            ${fileUploadField()}
-          </details>
-          <div class="writer-section">
-            <p class="writer-section-label">Tags</p>
-            <p class="hint">What readers are walking into. You can change these later from the story page.</p>
-            ${tagPicker(groups, selectedTagIds, { allowPropose: true })}
-          </div>
-          <div class="writer-actions">
-            <a class="btn ghost" href="/">Cancel</a>
-            <button class="btn" type="submit">Publish story</button>
-          </div>
+            <div class="no-js-only">${fileUploadField()}</div>`)}
+          ${sheet}
         </form>
       </div>
-      `)}
+      `, sideTabs([{ id: 'checks', label: 'Checks', html: '', attrs: 'data-checks-slot' }]))}
       <script src="/js/nspell.bundle.js"></script>
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
@@ -97,39 +177,36 @@ function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), gr
 
 /** @param {{ user: Row, story: Row, chapters?: Row[], castList?: Row[], error?: string|null, vocabulary?: any, values?: FormValues }} props */
 function newChapterPage({ user, story, chapters = [], castList = [], error, vocabulary = {}, values = /** @type {FormValues} */ ({}) }) {
+  const next = chapters.length + 1;
   return layout({
     title: `New chapter - ${story.title}`,
     user,
     wide: true,
     body: `
-      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      ${writerBar({ back: `/stories/${story.id}`, backLabel: story.title, cancelHref: `/stories/${story.id}`, publishLabel: 'Publish chapter', sheet: false })}
       ${editorGrid(`
       <div class="writer-card">
-        <h1>Add a chapter to "${escapeHtml(story.title)}"</h1>
+        <h1 class="sr-only">Add a chapter to &ldquo;${escapeHtml(story.title)}&rdquo;</h1>
+        <p class="writer-kicker">${escapeHtml(story.title)} &middot; chapter ${next}</p>
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
-        <form method="post" action="/stories/${story.id}/chapters/new" class="chapter-form" enctype="multipart/form-data">
-          <label>Chapter title<input type="text" name="title" value="${escapeHtml(values.title || '')}" required></label>
-          <div class="main-field"><label for="chapter-content">Chapter text</label><textarea id="chapter-content" name="content" rows="24" placeholder="Paste or write the chapter here..." data-story-id="${story.id}" data-editor-tools>${escapeHtml(values.content || '')}</textarea>
-            ${markdownHint()}
-          </div>
-          <details class="writer-section" data-fold-on-phone open>
-            <summary class="writer-section-label">Optional details</summary>
+        <form method="post" action="/stories/${story.id}/chapters/new" class="chapter-form" id="${FORM_ID}" enctype="multipart/form-data">
+          <label class="title-field"><span class="sr-only">Chapter title</span><input type="text" name="title" value="${escapeHtml(values.title || '')}" required placeholder="Chapter title" autofocus></label>
+          ${mainField({ content: values.content || '', placeholder: 'Write the chapter here...', storyId: story.id })}
+          ${detailsDrawer(`
             <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary || '')}</textarea></label>
-            ${fileUploadField()}
             ${positionField(chapters, values.position)}
             ${stageField(values.stage)}
             ${arcField(values.arcTitle)}
             ${povAndStrandFields(values.pov, values.strand, vocabulary)}
             ${whenFields(values.storyWhen, values.storyDay, vocabulary)}
-          </details>
-          <div class="writer-actions">
-            <a class="btn ghost" href="/stories/${story.id}">Cancel</a>
-            <button class="btn" type="submit">Publish chapter</button>
-          </div>
+            <div class="no-js-only">${fileUploadField()}</div>`)}
         </form>
-        ${besidePanel({ story, chapters, entities: castList })}
       </div>
-      `)}
+      `, sideTabs([
+        { id: 'checks', label: 'Checks', html: '', attrs: 'data-checks-slot' },
+        { id: 'bible', label: 'Bible', html: editorBiblePanel({ story_id: story.id }) },
+        { id: 'beside', label: 'Beside', html: besidePanel({ story, chapters, entities: castList, open: true }) },
+      ]))}
       <script src="/js/nspell.bundle.js"></script>
       <script src="/js/writing-analyzer.js" defer></script>`,
   });
@@ -237,40 +314,27 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
       ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
       ${conflict ? conflictNotice(chapter, conflict) : ''}
       ${conflict ? '' : draftNotice(chapter, draft, justDrafted, published)}
-      <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" enctype="multipart/form-data"
+      <form method="post" action="/chapters/${chapter.id}/edit" class="chapter-form" id="${FORM_ID}" enctype="multipart/form-data"
             data-draft-url="/chapters/${chapter.id}/draft"${desk ? ' data-desk' : ''}>
         ${desk ? `<script type="application/json" id="desk-data">${toScriptJson(desk)}</script>` : ''}
         <input type="hidden" name="baseVersion" value="${conflict ? conflict.version : (latestVersionNumber || '')}">
         <label class="title-field"><span class="sr-only">Chapter title</span><input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required placeholder="Chapter title"></label>
-        <div class="main-field"><label for="chapter-content" class="sr-only">Chapter text</label><textarea id="chapter-content" name="content" rows="24" data-story-id="${chapter.story_id}" data-editor-tools>${escapeHtml(values.content ?? latestContent)}</textarea>
-          ${markdownHint()}
-        </div>
-        ${uploadVersionField()}
-        <details class="writer-section" data-fold-on-phone open>
-          <summary class="writer-section-label">Optional details</summary>
+        ${mainField({ content: values.content ?? latestContent, placeholder: 'Write the chapter here...', storyId: chapter.story_id })}
+        ${detailsDrawer(`
           <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary ?? chapter.summary ?? '')}</textarea></label>
           ${stageField(values.stage ?? chapter.stage)}
           ${arcField(values.arcTitle ?? chapter.arc_title)}
           ${povAndStrandFields(values.pov ?? chapter.pov, values.strand ?? chapter.strand, vocabulary)}
           ${whenFields(values.storyWhen ?? chapter.story_when, values.storyDay ?? chapter.story_day, vocabulary)}
-          <label>What changed? (shown in the version history)<input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Fixed a couple of typos"></label>
-        </details>
-        <div class="writer-actions">
-          <a class="btn ghost" href="/chapters/${chapter.id}">Cancel</a>
-          <button class="btn ghost" type="submit" name="intent" value="draft" formnovalidate>Save draft</button>
-          <button class="btn" type="submit" name="intent" value="publish">Publish${published ? ` as v${published + 1}` : ''}</button>
-        </div>
+          <div class="no-js-only">${uploadVersionField()}</div>`)}
+        ${publishSheet(`
+          <label>What changed? <span class="muted">Shown in the version history, and optional.</span>
+            <input type="text" name="changelog" value="${escapeHtml(values.changelog || '')}" placeholder="e.g. Tightened the opening, fixed a couple of typos"></label>`,
+          { heading: `Publish as version ${published + 1}`, button: `Publish as v${published + 1}` })}
       </form>
-      ${canWrite ? editorBiblePanel(chapter) : ''}
-      ${canWrite ? besidePanel({ chapter, story: { id: chapter.story_id }, chapters: siblings, entities: castList }) : ''}
     </div>`;
 
-  // The comments sidebar (and its "Comments" toggle, added client-side by
-  // writing-analyzer.js) only ever shows up once there's actually
-  // something to reference -- a brand new or not-yet-commented chapter
-  // just gets the plain, maximally wide editor, same as before this
-  // feature existed.
-  const mainHtml = editorGrid(writerCard, hasComments ? `
+  const notesPanel = hasComments ? `
       <section class="editor-notes" aria-labelledby="editor-notes-title" data-pending="${pendingCount}">
         <div class="editor-notes-head">
           <h2 id="editor-notes-title">Notes <span class="notes-count">${pendingCount} pending</span></h2>
@@ -281,7 +345,14 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
         </div>
         <p class="hint">Go to each note's words, rewrite, and answer it here. Replies are on the chapter page.</p>
         <div id="editor-note-list">${commentsHtml}</div>
-      </section>` : '') + (hasComments ? `
+      </section>` : '';
+
+  const mainHtml = editorGrid(writerCard, sideTabs([
+    { id: 'checks', label: 'Checks', html: '', attrs: 'data-checks-slot' },
+    hasComments ? { id: 'notes', label: pendingCount ? `Notes (${pendingCount})` : 'Notes', html: notesPanel } : null,
+    canWrite ? { id: 'bible', label: 'Bible', html: editorBiblePanel(chapter) } : null,
+    canWrite ? { id: 'beside', label: 'Beside', html: besidePanel({ chapter, story: { id: chapter.story_id }, chapters: siblings, entities: castList, open: true }) } : null,
+  ])) + (hasComments ? `
     <script type="application/json" id="chapter-comments-data">${toScriptJson(commentsData)}</script>` : '');
 
   return layout({
@@ -289,7 +360,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
     user,
     wide: true,
     body: `
-      <p class="breadcrumb"><a href="/chapters/${chapter.id}">&larr; Chapter ${chapter.chapter_number}: ${escapeHtml(chapter.title)}</a></p>
+      ${writerBar({ back: `/chapters/${chapter.id}`, backLabel: `Chapter ${chapter.chapter_number}: ${chapter.title}`, cancelHref: `/chapters/${chapter.id}`, publishLabel: `Publish${published ? ` as v${published + 1}` : ''}`, draft: true })}
       ${mainHtml}
       <script src="/js/nspell.bundle.js"></script>
       <script src="/js/writing-analyzer.js" defer></script>`,
