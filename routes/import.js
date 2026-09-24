@@ -15,10 +15,10 @@
 const crypto = require('crypto');
 const images = require('../lib/entity-images');
 const { readSolEpub } = require('../lib/sol-import');
-const { parseBody, parseMultipartBody, redirect, sendHtml } = require('../lib/util');
+const { parseBody, parseMultipartBody, redirect, sendHtml, sendJson } = require('../lib/util');
 const models = require('../models');
 const views = require('../views');
-const { UPLOAD_LIMIT_BYTES, logEvent, sendError } = require('./shared');
+const { BATCH_UPLOAD_LIMIT_BYTES, UPLOAD_LIMIT_BYTES, logEvent, sendError } = require('./shared');
 
 const WAITING = new Map();
 const HOUR = 60 * 60 * 1000;
@@ -102,6 +102,95 @@ async function handleImportConfirm(req, res, user, key) {
   redirect(res, `/stories/${storyId}`);
 }
 
+// ---------- many at once ----------
+//
+// A shelf of EPUBs -- a hundred, three hundred -- imported without a
+// preview each: the chapters are cut the same way, a story already here
+// is skipped, and the tags the site does not have are handled one way for
+// the whole batch, chosen up front. The page sends the files one at a
+// time (import-batch.js) and lists each as it lands; a .zip of them is
+// read here, and is also the way to send many with no script at all.
+
+const TAG_MODES = ['propose', 'add', 'skip'];
+const JSZip = require(require.resolve('jszip', { paths: [require('path').dirname(require.resolve('mammoth'))] }));
+
+/**
+ * One EPUB, imported as it is.
+ * @param {Buffer} buffer @param {string} filename
+ * @param {{ tagMode: string, user: any }} opts
+ */
+async function importOne(buffer, filename, { tagMode, user }) {
+  let parsed;
+  try {
+    parsed = await readSolEpub(buffer);
+  } catch (err) {
+    if (!err.userFacing) throw err;
+    return { file: filename, status: 'error', message: err.message };
+  }
+  const { duplicate, tags } = describe(parsed);
+  if (duplicate) return { file: filename, status: 'duplicate', title: duplicate.title, storyId: duplicate.id };
+  const author = models.findOrCreateImportedAuthor({ name: parsed.author, authorSlug: parsed.authorSlug, url: parsed.authorUrl });
+  let coverImage = null;
+  if (parsed.cover) {
+    try { coverImage = images.saveImage({ buffer: parsed.cover.buffer }); } catch (err) { coverImage = null; }
+  }
+  // A near spelling the site already has is always used. The rest:
+  // proposed (on the story, waiting in the admin's queue), added to the
+  // vocabulary, or left off.
+  const tagIds = tags.matched.map((t) => t.id);
+  const proposed = [];
+  for (const s of tags.suggestions) {
+    if (s.similar) { tagIds.push(s.similar.id); continue; }
+    if (tagMode === 'add') {
+      const { ids } = models.applyTagChoices([s], [{ action: 'add', group: s.group }]);
+      tagIds.push(...ids);
+    } else if (tagMode === 'propose') {
+      const tag = models.proposeTag({ name: s.name, userId: user.id });
+      if (tag) { tagIds.push(tag.id); proposed.push(tag.name); }
+    }
+  }
+  const storyId = models.importStory(parsed, { authorId: author.id, tagIds: [...new Set(tagIds)], coverImage });
+  logEvent(user, 'story-imported', { subject: `${parsed.title} by ${author.display_name}`, href: `/stories/${storyId}`, storyId });
+  return {
+    file: filename, status: 'imported', storyId, title: parsed.title, author: author.display_name,
+    chapters: parsed.chapters.length, proposed,
+  };
+}
+
+/** The EPUBs inside a .zip, in name order, leaving out the Mac's shadow copies. */
+async function epubsInZip(buffer) {
+  const zip = await JSZip.loadAsync(buffer);
+  const names = Object.keys(zip.files)
+    .filter((n) => /\.epub$/i.test(n) && !zip.files[n].dir && !/(^|\/)__MACOSX\//.test(n) && !/(^|\/)\._/.test(n))
+    .sort((a, b) => a.localeCompare(b));
+  const out = [];
+  for (const name of names) out.push({ name: name.split('/').pop(), buffer: await zip.files[name].async('nodebuffer') });
+  return out;
+}
+
+async function handleImportBatch(req, res, user) {
+  const wantsJson = (req.headers.accept || '').includes('application/json');
+  const { fields, files } = await parseMultipartBody(req, BATCH_UPLOAD_LIMIT_BYTES);
+  const tagMode = TAG_MODES.includes(fields.tags) ? fields.tags : 'propose';
+  const file = files.file;
+  const refuse = (message) => (wantsJson
+    ? sendJson(res, 400, { results: [{ file: (file && file.filename) || '', status: 'error', message }] })
+    : sendHtml(res, 400, views.importPage({ user, authors: models.listImportedAuthors(), error: message })));
+  if (!file || !file.buffer || !file.buffer.length) return refuse('Choose EPUB files, or a .zip of them.');
+  const name = file.filename || 'upload';
+  let books;
+  if (/\.zip$/i.test(name)) {
+    try { books = await epubsInZip(file.buffer); } catch (err) { return refuse(`${name} is not a .zip that can be opened.`); }
+    if (!books.length) return refuse(`There is no .epub inside ${name}.`);
+  } else {
+    books = [{ name, buffer: file.buffer }];
+  }
+  const results = [];
+  for (const book of books) results.push(await importOne(book.buffer, book.name, { tagMode, user }));
+  if (wantsJson) return sendJson(res, 200, { results });
+  sendHtml(res, 200, views.importBatchPage({ user, results, tagMode }));
+}
+
 // ---------- claiming an imported author ----------
 
 async function handleClaim(req, res, user, username) {
@@ -133,6 +222,7 @@ async function handleClaimDecision(req, res, user, claimId, yes) {
 const routes = [
   ['GET', '/admin/import', (c) => handleImportPage(c.req, c.res, c.user)],
   ['POST', '/admin/import', (c) => handleImportUpload(c.req, c.res, c.user)],
+  ['POST', '/admin/import/batch', (c) => handleImportBatch(c.req, c.res, c.user)],
   ['POST', /^\/admin\/import\/([a-f0-9]{24})$/, (c) => handleImportConfirm(c.req, c.res, c.user, c.m[1])],
   ['POST', /^\/admin\/claims\/(\d+)\/approve$/, (c) => handleClaimDecision(c.req, c.res, c.user, Number(c.m[1]), true)],
   ['POST', /^\/admin\/claims\/(\d+)\/decline$/, (c) => handleClaimDecision(c.req, c.res, c.user, Number(c.m[1]), false)],

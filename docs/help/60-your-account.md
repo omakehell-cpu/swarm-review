@@ -114,6 +114,12 @@ What they do:
   it, leave it off, or -- where the site has a tag spelled nearly the
   same, like *Science-Fiction* for *Science fiction* -- use that one.
   Importing the same story twice takes you to the one already here.
+  **Many at once**, on the same page, takes as many EPUBs as you choose
+  -- or one .zip of them -- and imports each without a preview, skipping
+  the ones already here and listing what happened to every file as it
+  goes. The tags the site does not have are handled one way for the whole
+  batch, chosen before you start: proposed (waiting for you under Tags),
+  added, or left off.
 - **Claims.** Approving, or turning down, somebody's word that an
   imported author is them (below).
 - **Backup.** The server keeps a copy of everything every day, for two
