@@ -157,3 +157,29 @@ test('a member claims the author; an admin agrees; the stories move', async () =
   assert.strictEqual(res.status, 302);
   assert.strictEqual(res.headers.get('location'), '/users/luis', 'the imported author is Luis now');
 });
+
+test('tags the vocabulary lacks are offered: add one, use a near spelling, or leave it off', async () => {
+  const luisId = models.getUserByUsername('luis').id;
+  models.proposeTag({ name: 'Coercion', userId: luisId });
+  const epub = await solEpub({ id: 777, title: 'Tagged', chapters: ['<p>Words.</p>'], tags: 'Science-Fiction, Ma/ft, Reluctant, Coercion' });
+  const html = await (await upload(admin, epub)).text();
+  assert.match(html, /Not in the vocabulary yet/);
+  assert.match(html, /<option value="use" selected>Use Science fiction<\/option>/, 'a near spelling is offered first');
+  assert.match(html, /Approve the proposed tag/, 'a waiting proposal is offered for approval');
+  assert.match(html, /name="group1">[\s\S]*?<option selected>Pairings<\/option>/, 'Ma/ft goes with the pairings');
+  const key = /action="\/admin\/import\/([a-f0-9]{24})"/.exec(html)[1];
+
+  await admin.request(`/admin/import/${key}`, { method: 'POST', ...form([
+    ['title', 'Tagged'], ['tag0', 'use'], ['tag1', 'add'], ['group1', 'Pairings'],
+    ['tag2', 'skip'], ['group2', 'Content notes'], ['tag3', 'add'], ['group3', 'Content notes'],
+  ]) });
+  const story = models.listStories().find((st) => st.title === 'Tagged');
+  const names = models.getStoryTags(story.id).map((t) => t.name).sort();
+  assert.deepStrictEqual(names, ['Coercion', 'Ma/ft', 'Science fiction']);
+  const all = models.listTags();
+  const maft = all.find((t) => t.name === 'Ma/ft');
+  assert.strictEqual(maft.tag_group, 'Pairings');
+  assert.notStrictEqual(maft.status, 'proposed', 'an added tag is in the vocabulary, not the queue');
+  assert.strictEqual(all.find((t) => t.name === 'Coercion').status, 'approved');
+  assert.ok(!all.some((t) => t.name === 'Reluctant'), 'what was left off was not added');
+});

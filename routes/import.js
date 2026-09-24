@@ -39,6 +39,10 @@ function describe(parsed) {
   };
 }
 
+// The groups a new tag can go in: the ones the vocabulary has, less the
+// queue proposals wait in.
+const tagGroups = () => models.listTagsGrouped().map((g) => g.group).filter((g) => g !== 'Proposed');
+
 async function handleImportPage(req, res, user) {
   sendHtml(res, 200, views.importPage({ user, authors: models.listImportedAuthors() }));
 }
@@ -57,7 +61,9 @@ async function handleImportUpload(req, res, user) {
     return sendHtml(res, 400, views.importPage({ user, authors: models.listImportedAuthors(), error: err.message }));
   }
   const key = keep({ parsed, filename: file.filename || '' });
-  sendHtml(res, 200, views.importPreviewPage({ user, key, filename: file.filename || '', ...describe(parsed) }));
+  sendHtml(res, 200, views.importPreviewPage({
+    user, key, filename: file.filename || '', groups: tagGroups(), ...describe(parsed),
+  }));
 }
 
 async function handleImportConfirm(req, res, user, key) {
@@ -79,9 +85,18 @@ async function handleImportConfirm(req, res, user, key) {
   if (parsed.cover) {
     try { coverImage = images.saveImage({ buffer: parsed.cover.buffer }); } catch (err) { coverImage = null; }
   }
+  // The tags the vocabulary did not have: added, used as a near spelling
+  // the site already has, or left off, as the admin chose in the preview.
+  const chosen = models.applyTagChoices(tags.suggestions, tags.suggestions.map((s, i) => ({
+    action: String(body[`tag${i}`] || 'skip'), group: String(body[`group${i}`] || ''),
+  })));
+  const tagIds = [...new Set([...tags.matched.map((t) => t.id), ...chosen.ids])];
   const storyId = models.importStory({ ...parsed, title, chapters }, {
-    authorId: author.id, tagIds: tags.matched.map((t) => t.id), coverImage,
+    authorId: author.id, tagIds, coverImage,
   });
+  if (chosen.added.length) {
+    logEvent(user, 'tags-added', { subject: chosen.added.join(', '), href: '/admin#tags' });
+  }
   WAITING.delete(key);
   logEvent(user, 'story-imported', { subject: `${title} by ${author.display_name}`, href: `/stories/${storyId}`, storyId });
   redirect(res, `/stories/${storyId}`);
