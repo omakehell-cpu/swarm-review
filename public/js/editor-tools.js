@@ -9,10 +9,12 @@
 //    again (or Escape). Nothing is written in the preview; the textarea is
 //    the one thing the form sends and the one thing the drafts, the checks
 //    and the notes are counted against.
-//  * Focus: everything but the writing gone until Escape, with nothing
-//    moving -- the rest of the page fades out where it stands.
+//  * Focus: the text and nothing else, filling the screen -- no box, no
+//    toolbar, no checks -- with the line being written held at the same
+//    height and everything above and below it faded. One way out, in the
+//    corner, and Escape.
 //  * Typewriter: the line being written stays at the same height on the
-//    screen.
+//    screen. Focus always has it.
 //  * How much has been written since the page was opened, and against the
 //    day's goal.
 //
@@ -276,7 +278,7 @@
   typewriterBtn.setAttribute('aria-pressed', 'false');
   typewriterBtn.classList.add('tool-secondary');
   bar.appendChild(typewriterBtn);
-  const focusBtn = button('tool-focus', 'Focus', 'Hide everything but the writing (Esc to come back)');
+  const focusBtn = button('tool-focus', 'Focus', 'Only the text, the line you are writing held in the middle (Esc to come back)');
   focusBtn.setAttribute('aria-pressed', 'false');
   focusBtn.classList.add('tool-secondary');
   bar.appendChild(focusBtn);
@@ -387,20 +389,54 @@
     else if (!ev.shiftKey && k === 'enter') { ev.preventDefault(); sceneBreakText(); }
   });
   // ------------------------------------------------------------ focus mode
-
-  // The button keeps its name and its place: pressed is the only change,
-  // so it is still under the pointer to press again.
-  function setFocus(on) {
+  //
+  // The text becomes the whole screen: the box it sits in, the toolbar,
+  // the checks and everything around them are gone, and the line being
+  // written stays a little above the middle while the rest fades (the fade
+  // is a mask on the text box, fixed to the screen, so it costs nothing
+  // per key). Typewriter comes with it. The only thing left is the way
+  // out, in the corner.
+  const focusExit = document.createElement('button');
+  focusExit.type = 'button';
+  focusExit.className = 'focus-exit';
+  focusExit.textContent = 'Leave focus';
+  focusExit.title = 'Back to the editor (Esc)';
+  focusExit.hidden = true;
+  document.body.appendChild(focusExit);
+  let focusing = false;
+  let quietTimer = null;
+  // The way out is barely there while you type, and comes back when the
+  // pointer moves.
+  function stir() {
+    if (!focusing) return;
+    focusExit.classList.add('is-awake');
+    clearTimeout(quietTimer);
+    quietTimer = setTimeout(() => focusExit.classList.remove('is-awake'), 2200);
+  }
+  async function setFocus(on) {
+    if (on && mode === 'preview') await setMode('markdown', { quiet: true });
+    focusing = on;
     document.body.classList.toggle('writing-focus', on);
     focusBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    store.set('editor-focus', on ? '1' : '0');
+    focusExit.hidden = !on;
+    if (on) {
+      textarea.focus({ preventScroll: true });
+      centreCaret(true);
+      stir();
+      announce('Focus: only the text. Escape, or Leave focus, to come back.');
+    } else {
+      // The checks draw on their own layer, which was put away: redraw it
+      // where the text now is.
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      textarea.focus({ preventScroll: true });
+      centreCaret(true);
+    }
   }
-  focusBtn.addEventListener('click', () => {
-    setFocus(!document.body.classList.contains('writing-focus'));
-    if (mode === 'markdown') textarea.focus({ preventScroll: true });
-  });
+  focusBtn.addEventListener('click', () => setFocus(!focusing));
+  focusExit.addEventListener('click', () => setFocus(false));
+  document.addEventListener('mousemove', stir);
   document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape' && document.body.classList.contains('writing-focus')
+    if (ev.key === 'Escape' && focusing
       && !document.querySelector('.desk-drawer:not([hidden])')) setFocus(false);
   });
 
@@ -444,10 +480,15 @@
   }
 
   function centreCaret(force = false) {
-    if (!typewriter && !force) return;
+    if (!typewriter && !focusing && !force) return;
     const target = window.innerHeight * 0.42;
     if (mode !== 'markdown') return;
     const caretTop = caretTopInTextarea();
+    // Focus: the text box is the screen, and scrolls itself.
+    if (focusing) {
+      textarea.scrollTop = Math.max(0, caretTop - textarea.clientHeight * 0.42);
+      return;
+    }
     if (textarea.scrollHeight > textarea.clientHeight + 4) {
       textarea.scrollTop = Math.max(0, caretTop - textarea.clientHeight * 0.42);
       const box = textarea.getBoundingClientRect();
@@ -493,7 +534,9 @@
 
   // ------------------------------------------------------------ remembered
 
-  if (store.get('editor-focus') === '1') setFocus(true);
+  // Focus is not reopened by itself: a page that opens as a blank screen
+  // with one line in the middle looks broken to anybody who forgot.
+  store.set('editor-focus', '');
   if (store.get('editor-typewriter') === '1') setTypewriter(true);
   // The old Visual editor's choice, remembered in browsers that used it.
   store.set('editor-mode', '');

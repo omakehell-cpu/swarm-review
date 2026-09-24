@@ -3356,11 +3356,13 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .draft-notice.just-saved { border-left-color: var(--accent); }
 .draft-behind { color: var(--text); }
 
-/* Focus: the title, the text, the toolbar and the buttons that save it.
-   Everything else -- the bar, the breadcrumbs, the checks, the notes, the
-   optional details, the panel beside -- fades out where it stands and is
-   back with Escape. Faded, not removed: nothing moves, so the Focus button
-   is still under the pointer to press again. */
+/* Focus: the text is the screen. The editor's frame is lifted out and laid
+   over everything, borderless, in the page's own colour; the toolbar, the
+   checks and the marks they draw are gone; and the line being written is
+   held at 42% of the height (editor-tools.js) inside a band the mask
+   leaves at full strength, everything above and below it faded. The rest
+   of the page is hidden too, so a screen reader is not walking behind it. */
+body.writing-focus { overflow: hidden; }
 body.writing-focus .topbar,
 body.writing-focus .breadcrumb,
 body.writing-focus .writer-intro-fold,
@@ -3374,11 +3376,33 @@ body.writing-focus .writer-card > h1,
 body.writing-focus .markdown-hint,
 body.writing-focus .draft-notice,
 body.writing-focus .editor-side,
+body.writing-focus .editor-tools,
 body.writing-focus .site-footer { visibility: hidden; }
-body.writing-focus .writer-card { border-color: transparent; box-shadow: none; }
-/* Height only: the checks draw their marks on a layer that has to match
-   the textarea's type exactly, so its size and leading are left alone. */
-body.writing-focus textarea[data-editor-tools] { min-height: 70vh; }
+body.writing-focus .wa-editor-wrap {
+  position: fixed; inset: 0; z-index: 90;
+  background: var(--bg); border: 0; box-shadow: none; visibility: visible;
+}
+body.writing-focus .wa-editor-wrap:focus-within { border: 0; box-shadow: none; }
+body.writing-focus .wa-overlay { visibility: hidden; }
+body.writing-focus textarea[data-editor-tools] {
+  display: block; box-sizing: border-box;
+  width: min(100%, 44rem) !important; height: 100vh !important; min-height: 0; max-width: none;
+  margin: 0 auto; padding: 42vh var(--s-6) 55vh; resize: none;
+  font-size: var(--t-md); overflow-y: auto; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.2) 0, rgba(0,0,0,0.18) calc(42% - 1.9em), #000 calc(42% - 0.15em), #000 calc(42% + 1.85em), rgba(0,0,0,0.18) calc(42% + 3.6em), rgba(0,0,0,0.2) 100%);
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,0.2) 0, rgba(0,0,0,0.18) calc(42% - 1.9em), #000 calc(42% - 0.15em), #000 calc(42% + 1.85em), rgba(0,0,0,0.18) calc(42% + 3.6em), rgba(0,0,0,0.2) 100%);
+}
+body.writing-focus textarea[data-editor-tools]::-webkit-scrollbar { display: none; }
+.focus-exit {
+  position: fixed; top: var(--s-6); right: var(--s-6); z-index: 95;
+  font: inherit; font-family: var(--font-ui); font-size: var(--t-sm);
+  background: none; border: 1px solid var(--border); color: var(--text-muted);
+  padding: var(--s-2) var(--s-5); cursor: pointer;
+  opacity: 0.25; transition: opacity 0.4s ease;
+}
+.focus-exit[hidden] { display: none; }
+.focus-exit.is-awake, .focus-exit:hover, .focus-exit:focus-visible { opacity: 1; color: var(--text); border-color: var(--border-strong); }
+@media (prefers-reduced-motion: reduce) { .focus-exit { transition: none; } }
 
 /* ======================================================================
    The front page: who is here, what they are doing, and a way in.
@@ -3622,7 +3646,6 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
 .editor-preview a { text-decoration-color: currentColor; }
 
 /* Typewriter: the line being written stays at the same height. */
-body.typewriter.writing-focus textarea[data-editor-tools] { padding-bottom: 40vh; }
 
 /* The drawer. */
 .desk-drawer {
@@ -4719,3 +4742,7 @@ p.inline-edit.summary.is-editing .inline-input { flex: 1 1 40ch; max-width: 640p
   box-shadow: 0 12px 28px var(--shadow);
 }
 .list-head .tag-filter[open] > .tag-filter-form { max-height: 70vh; overflow-y: auto; }
+/* On the page it opens, + Write keeps its own colours: the current-page
+   rule for the top bar's links would otherwise paint its words in the
+   button's own ink. */
+.topbar a.topbar-write.current, .topbar nav > a.topbar-write.current { color: var(--bg); box-shadow: none; }
