@@ -3615,12 +3615,12 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
    page -- the log-in above all -- look greyed out and disabled.) */
 
 /* ======================================================================
-   The writing desk: the visual editor, typewriter, the session count and
+   The writing desk: the preview, the session count and
    the drawer of scenes and snapshots.
    ====================================================================== */
 .editor-tool.tool-preview { margin-left: var(--s-4); font-family: var(--font-ui); font-size: var(--t-sm); }
 .editor-tool:disabled { opacity: 0.4; cursor: default; }
-.editor-tool.tool-typewriter, .editor-tool.tool-desk { font-family: var(--font-ui); font-size: var(--t-sm); }
+.editor-tool.tool-desk { font-family: var(--font-ui); font-size: var(--t-sm); }
 .session-count { font-size: var(--t-xs); color: var(--text-muted); margin-right: var(--s-4); white-space: nowrap; }
 .session-count.goal-met { color: var(--text); font-weight: 600; }
 
@@ -3644,8 +3644,6 @@ h1 { font-size: clamp(var(--t-2xl), 4vw, var(--t-3xl)); }
 .editor-preview ul, .editor-preview ol { margin: 0 0 1em; padding-left: 1.4em; }
 .editor-preview code { font-family: var(--font-mono); font-size: 0.9em; background: var(--code-bg); padding: 0 var(--s-2); }
 .editor-preview a { text-decoration-color: currentColor; }
-
-/* Typewriter: the line being written stays at the same height. */
 
 /* The drawer. */
 .desk-drawer {

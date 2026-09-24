@@ -17,6 +17,7 @@ here is missing on the site, it has not been restarted yet.
 - **Tags by typing**: the ones you pick sit as chips, the matching ones come up as you type, and every tag is still one click away.
 - **More**, beside Preview: the checks as a list, Scenes & snapshots, **bringing text in from a file** (into the box, not published), what Markdown does, and Formatting here.
 - The **+ Write** button no longer turns into a black box on the page it opens.
+- **An update shows at once.** The app kept its scripts for offline use and ran the kept copy first, so after an update the old editor (with its Typewriter button) came back until a second reload. The network comes first now.
 
 ### Importing
 

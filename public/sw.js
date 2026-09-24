@@ -11,7 +11,7 @@
 (function () {
 'use strict';
 
-const STATIC = 'swarm-static-v3';
+const STATIC = 'swarm-static-v4';
 const PAGES = 'swarm-pages-v1';
 const KEEP_PAGES = 40;
 const OFFLINE = '/offline.html';
@@ -43,11 +43,18 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (isStatic(url)) {
-    // Serve what is kept, and fetch a fresh copy for next time.
+    // The network first, the kept copy only when there is no network.
+    // Serving the kept copy first (and refreshing it behind) meant the
+    // first visit after an update ran the old scripts: a button taken out
+    // of the editor was still there until a second reload.
     event.respondWith(caches.open(STATIC).then(async (cache) => {
-      const kept = await cache.match(req);
-      const fresh = fetch(req).then((res) => { if (res.ok) cache.put(req, res.clone()); return res; }).catch(() => kept);
-      return kept || fresh;
+      try {
+        const res = await fetch(req);
+        if (res.ok) cache.put(req, res.clone());
+        return res;
+      } catch (err) {
+        return (await cache.match(req)) || Response.error();
+      }
     }));
     return;
   }
