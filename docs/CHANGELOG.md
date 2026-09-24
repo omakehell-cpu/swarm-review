@@ -6,6 +6,11 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-24 — Who is who, and changing it where it stands
 
+### Writing
+
+- **Focus is only the text.** The whole screen, no box around it, no toolbar and no checks; the line you are writing stays a little above the middle, and everything above and below it fades. Typewriter comes with it. The one thing left is **Leave focus** in the corner, faint while you type, and Escape.
+- The **+ Write** button no longer turns into a black box on the page it opens.
+
 ### The front page
 
 - **Three shelves**: Being written, Complete and Set aside, with All beside them and a count on each. The list opens on what is being written.

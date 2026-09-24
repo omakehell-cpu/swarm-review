@@ -30,9 +30,8 @@ editor uses -- **Ctrl+B** and **Ctrl+I** (**⌘** on a Mac), **Ctrl+Shift+.**
 for a quote, **Ctrl+Enter** for a scene break. Ctrl+Z undoes them like any
 typing.
 
-**Focus**, at the end of that row, takes everything off the page except the
-title, the text and the buttons that save it. **Escape** brings it all
-back. The site remembers which way you like it.
+**Focus**, at the end of that row, leaves only the text on the screen.
+**Escape** brings everything back.
 
 ## The editor page
 
@@ -61,10 +60,14 @@ preview; the formatting buttons wait until you are back.
 
 ## Focus, typewriter, and how much you have written
 
-**Focus** fades out everything but the title, the text and the buttons,
-where they stand -- nothing moves, so the button is still there to press
-again (or press Escape).
-**Typewriter** keeps the line you are writing at the same height on the
+**Focus** is the text and nothing else: the whole screen, no box around it,
+no toolbar, no checks. The line you are writing stays a little above the
+middle of the screen, and everything above and below it fades, so the eye
+has one place to be. The way out is **Leave focus** in the top corner --
+faint while you type, back when you move the pointer -- or Escape. Nothing
+is lost by leaving: the draft is saved as you go, as always.
+
+**Typewriter**, on its own, keeps the line you are writing at the same height on the
 screen. Beside them,
 the editor counts what you have written since you opened it, and -- with a
 daily goal set on your account page -- how far along today is.
