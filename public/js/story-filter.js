@@ -9,6 +9,28 @@
   const series = /** @type {HTMLSelectElement|null} */ (document.querySelector('[data-autosubmit-series]'));
   if (series && series.form) series.addEventListener('change', () => /** @type {HTMLFormElement} */ (series.form).submit());
 
+  // The two panels under the list's heading: one open at a time, and a
+  // click anywhere else, or Escape, puts it away.
+  const panels = /** @type {HTMLDetailsElement[]} */ (Array.from(document.querySelectorAll('.list-head details')));
+  for (const d of panels) {
+    d.addEventListener('toggle', () => {
+      if (d.open) for (const other of panels) if (other !== d) other.open = false;
+    });
+  }
+  document.addEventListener('click', (ev) => {
+    const t = /** @type {Node} */ (ev.target);
+    for (const d of panels) if (d.open && !d.contains(t)) d.open = false;
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'Escape') return;
+    for (const d of panels) {
+      if (!d.open) continue;
+      d.open = false;
+      const summary = d.querySelector('summary');
+      if (summary) summary.focus();
+    }
+  });
+
   const input = /** @type {HTMLInputElement|null} */ (document.getElementById('story-find'));
   if (!input) return;
   const rows = /** @type {HTMLElement[]} */ (Array.from(document.querySelectorAll('.story-row[data-find]')));
