@@ -6,6 +6,13 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-24 — Who is who, and changing it where it stands
 
+### The front page
+
+- **Three shelves**: Being written, Complete and Set aside, with All beside them and a count on each. The list opens on what is being written.
+- **A search that reaches every story** -- title, author, series, blurb, tags, with or without accents -- and says what it found on the other shelves.
+- **More ways to look**: only stories written here, or only those from StoriesOnline; one series; and a **List** view, one line per story.
+- **Thirty to a page**, and every view of the list is a link you can keep.
+
 ### The story bible
 
 - **A name with a capital is only found with a capital.** *Will* is no longer every "will". A name written in lower case, like *the Old Man*, is found however it is written, and any entry can ask to be.

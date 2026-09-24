@@ -22,14 +22,28 @@ you**:
 - **New to read** -- chapters published since you last looked that you
   have not opened.
 
-Under that is **All stories**, with a count, and **Filter by tag** at the
-right of the heading. Once there are more than a handful of stories, the
-heading also offers an order -- **Latest** (the default), **A–Z**, or
-**Mine**, only the stories you write in -- and a **Find a story** box that
-narrows the list as you type. Each story shows who wrote it, how many chapters and
-words it has, when it last moved, and how many notes on it are still
-**pending**; then its blurb; then who is reading it and, if its author set
-one, how far it is towards its word target.
+Under that are the stories, on **three shelves**: **Being written** (where
+the list opens -- stories in progress, and the ones that have gone quiet),
+**Complete**, and **Set aside**, with **All** beside them. Each says how
+many it holds.
+
+**The search box** beside them looks through every story -- titles,
+authors, series, blurbs and tags, accents or no accents -- and each shelf
+counts what it found there. If nothing on the shelf you were on matches,
+you get everything that does. Typing also narrows what is already on the
+screen straight away; Enter searches the rest.
+
+Under the heading, an order -- **Latest** (the default), **A–Z**, or
+**Mine**, only the stories you write in -- and **More ways to look**:
+**Written here** or **From StoriesOnline**, one **series**, and **List**,
+one line per story instead of covers, for a shelf of hundreds. **Filter by
+tag** is at the right. Thirty stories to a page; every one of these is part
+of the address, so a view of the list can be bookmarked or sent.
+
+Each story shows who wrote it, its series, how many chapters and words it
+has, when it last moved, and how many notes on it are still **pending**;
+then its blurb; then who is reading it and, if its author set one, how far
+it is towards its word target.
 
 At the foot, **Lately** is the last three things people did -- read a
 chapter, left notes, asked for a read -- and **All activity** is the whole

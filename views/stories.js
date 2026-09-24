@@ -6,6 +6,7 @@ const { timeHtml } = require('../lib/time');
 const { storyState, STORY_STATES, CHOOSABLE_STORY_STATES } = require('../lib/story-state');
 const { ICONS, bylineWith, emptyState, storyCoverImg, storyStateBadge, tagChips, tagPicker, wordCount } = require('./shared');
 const { ACCEPT_ATTRIBUTE } = require('../lib/entity-images');
+const { SHELVES, SHELF_ORDER, ORIGINS: ORIGIN_LABELS } = require('../lib/story-shelves');
 
 // One story as it appears in any list -- the front page, a tag's page, a
 // search result. `hiddenBy` is the reader's own hidden tags that this
@@ -45,6 +46,7 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } 
         <h3><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a> ${s.has_new_chapters ? '<span class="badge new">New</span>' : ''}</h3>
         <p class="story-facts">
           <span>${bylineWith(s.author_name, coauthors)}</span>
+          ${s.series ? `<span class="story-series">${escapeHtml(s.series)}</span>` : ''}
           <span>${s.chapter_count} chapter${s.chapter_count === 1 ? '' : 's'}${s.word_count ? ` &middot; ${wordCount(s.word_count)}` : ''}</span>
           ${timeHtml(s.last_chapter_at || s.created_at)}
           ${storyState(s) === 'ongoing' ? '' : storyStateBadge(s)}
@@ -230,30 +232,154 @@ function whatsNewCard(whatsNew) {
 // The order is a link per choice rather than a select, so it works with
 // no script and each is one click; the find box narrows the list as you
 // type (see story-filter.js) and, without a script, is simply not there.
-function listTools(sort, activeTags) {
-  const keep = activeTags.map((t) => `tag=${encodeURIComponent(t.slug)}`);
-  const href = (value) => {
-    const parts = [...keep, ...(value ? [`sort=${value}`] : [])];
-    return parts.length ? `/?${parts.join('&amp;')}` : '/';
+// ---------- the list: shelves, search, and pages ----------
+
+/**
+ * The front page's address with some of its settings changed. Everything
+ * the list is showing -- shelf, search, origin, series, order, view, tags
+ * -- goes into one query string, so every view of it is a link somebody
+ * can keep.
+ * @param {any} state
+ * @param {Record<string, string|number|null>} [change]
+ */
+function listHref(state, change = {}) {
+  const next = {
+    shelf: state.shelf === 'writing' ? '' : state.shelf,
+    q: state.q, origin: state.origin, series: state.series, sort: state.sort, view: state.view,
+    page: '', ...change,
   };
-  const choice = (value, label) => (sort === value
-    ? `<span class="list-sort-current" aria-current="true">${label}</span>`
-    : `<a href="${href(value)}">${label}</a>`);
+  const parts = [];
+  for (const [k, v] of Object.entries(next)) if (v) parts.push(`${k}=${encodeURIComponent(String(v))}`);
+  for (const t of state.activeTags || []) parts.push(`tag=${encodeURIComponent(t.slug)}`);
+  return parts.length ? `/?${parts.join('&amp;')}` : '/';
+}
+
+// The same row, one line tall: title, who, how long, where it stands.
+// For a shelf of two hundred, a list you can scan beats a column of covers.
+function storyLine(s, { sinceQs = '', coauthors = [] } = {}) {
   return `
-    <div class="list-tools">
+    <li class="story-line story-row" data-find="${escapeHtml(`${s.title} ${s.author_name || ''} ${s.series || ''} ${s.description || ''}`.toLowerCase())}">
+      <a class="story-line-title" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a>${s.has_new_chapters ? ' <span class="badge new">New</span>' : ''}
+      <span class="story-line-by">${bylineWith(s.author_name, coauthors)}</span>
+      ${s.series ? `<span class="story-line-series">${escapeHtml(s.series)}</span>` : ''}
+      <span class="story-line-size">${s.chapter_count} ch${s.word_count ? ` &middot; ${wordCount(s.word_count)}` : ''}</span>
+      ${storyState(s) === 'ongoing' ? '' : storyStateBadge(s)}
+      ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} waiting</span>` : ''}
+    </li>`;
+}
+
+function shelfTabs(state) {
+  const tab = (key) => {
+    const current = state.shelf === key;
+    const n = state.counts[key] || 0;
+    // A shelf with nothing on it is only shown when it is the one open.
+    if (!n && !current && key === 'dropped') return '';
+    return `<a class="tag-chip shelf-tab${current ? ' current' : ''}${n ? '' : ' is-empty'}" href="${listHref(state, { shelf: key === 'writing' ? '' : key })}"${current ? ' aria-current="page"' : ''}>${escapeHtml(SHELVES[key].label)}<span class="tag-chip-count">${n}</span></a>`;
+  };
+  return `<nav class="shelf-tabs" aria-label="Which stories">${SHELF_ORDER.map(tab).join('')}</nav>`;
+}
+
+function storySearch(state) {
+  const keep = (name, value) => (value ? `<input type="hidden" name="${name}" value="${escapeHtml(value)}">` : '');
+  return `
+    <form method="get" action="/" class="story-search" role="search">
+      ${keep('shelf', state.shelf === 'writing' ? '' : state.shelf)}${keep('origin', state.origin)}${keep('series', state.series)}${keep('sort', state.sort)}${keep('view', state.view)}
+      ${(state.activeTags || []).map((t) => keep('tag', t.slug)).join('')}
+      <label class="sr-only" for="story-find">Search every story</label>
+      <input type="search" class="list-find" id="story-find" name="q" value="${escapeHtml(state.q)}"
+             placeholder="Title, author, series or tag" autocomplete="off">
+      <button class="btn ghost small" type="submit">Search</button>
+      ${state.q ? `<a class="btn ghost small" href="${listHref(state, { q: '' })}">Clear</a>` : ''}
+    </form>`;
+}
+
+function listFilters(state) {
+  const choice = (param, value, label) => (state[param] === value
+    ? `<span class="list-sort-current" aria-current="true">${label}</span>`
+    : `<a href="${listHref(state, { [param]: value })}">${label}</a>`);
+  const origin = state.hasImported ? `
+    <nav class="list-sort" aria-label="Where the stories were written">
+      ${choice('origin', '', 'Anywhere')}${choice('origin', 'here', 'Written here')}${choice('origin', 'imported', 'From StoriesOnline')}
+    </nav>` : '';
+  const series = state.seriesList.length ? `
+    <form method="get" action="/" class="series-pick">
+      ${state.shelf !== 'writing' ? `<input type="hidden" name="shelf" value="${escapeHtml(state.shelf)}">` : ''}
+      ${state.q ? `<input type="hidden" name="q" value="${escapeHtml(state.q)}">` : ''}
+      ${state.origin ? `<input type="hidden" name="origin" value="${escapeHtml(state.origin)}">` : ''}
+      ${state.view ? `<input type="hidden" name="view" value="${escapeHtml(state.view)}">` : ''}
+      <label for="series-pick" class="filter-label">Series</label>
+      <select name="series" id="series-pick" data-autosubmit-series>
+        <option value="">Any</option>
+        ${state.seriesList.map((s) => `<option value="${escapeHtml(s.name)}"${s.name === state.series ? ' selected' : ''}>${escapeHtml(s.name)} (${s.n})</option>`).join('')}
+      </select>
+      <button class="btn ghost small" type="submit" data-no-js>Show</button>
+    </form>` : '';
+  // The order is always in reach; where from, which series and how the
+  // list looks are folded under one line until somebody wants them.
+  const narrowed = [state.origin && ORIGIN_LABELS[state.origin], state.series, state.view === 'list' && 'as a list'].filter(Boolean);
+  return `
+    <div class="list-filters">
       <nav class="list-sort" aria-label="Order of the stories">
-        ${choice('', 'Latest')}${choice('title', 'A&ndash;Z')}${choice('mine', 'Mine')}
+        ${choice('sort', '', 'Latest')}${choice('sort', 'title', 'A&ndash;Z')}${choice('sort', 'mine', 'Mine')}
       </nav>
-      <input type="search" class="list-find" id="story-find" placeholder="Find a story" aria-label="Find a story by title, author or blurb" hidden>
+      <details class="list-more"${narrowed.length ? ' open' : ''}>
+        <summary>${narrowed.length ? `Showing: ${escapeHtml(narrowed.join(', '))}` : 'More ways to look'}</summary>
+        <div class="list-more-body">
+          ${origin}
+          ${series}
+          <nav class="list-sort" aria-label="How the list looks">
+            ${choice('view', '', 'Covers')}${choice('view', 'list', 'List')}
+          </nav>
+        </div>
+      </details>
     </div>`;
 }
 
-function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null, activity = [], welcome = null, whatsNew = null, sort = '', totalStories = 0 }) {
+function pager(state) {
+  if (state.pages <= 1) return '';
+  const link = (n, label, rel = '') => `<a href="${listHref(state, { page: n > 1 ? n : '' })}"${rel ? ` rel="${rel}"` : ''}>${label}</a>`;
+  return `
+    <nav class="pager" aria-label="Pages">
+      ${state.page > 1 ? link(state.page - 1, '&larr; Previous', 'prev') : '<span></span>'}
+      <span class="pager-where">Page ${state.page} of ${state.pages}</span>
+      ${state.page < state.pages ? link(state.page + 1, 'Next &rarr;', 'next') : '<span></span>'}
+    </nav>`;
+}
+
+// Nothing on this shelf: say which shelves the same search did find
+// something on, rather than an empty page that looks like the end.
+function emptyShelf(state) {
+  const elsewhere = SHELF_ORDER.filter((k) => k !== 'all' && k !== state.shelf && state.counts[k]);
+  const pointers = elsewhere.map((k) => `<a href="${listHref(state, { shelf: k === 'writing' ? '' : k })}">${state.counts[k]} ${escapeHtml(SHELVES[k].label.toLowerCase())}</a>`);
+  // Plain text: emptyState escapes its title.
+  const what = state.q
+    ? `Nothing ${state.shelf === 'all' ? '' : `${SHELVES[state.shelf].label.toLowerCase()} `}matches “${state.q}”`
+    : `Nothing ${SHELVES[state.shelf].label.toLowerCase()} here${state.series || state.origin ? ' with that filter' : ' yet'}`;
+  return emptyState({
+    art: 'sheets',
+    title: `${what}.`,
+    body: pointers.length ? `On the other shelves: ${pointers.join(', ')}.` : (state.q ? 'Try fewer words, or part of a name.' : ''),
+    action: state.q || state.series || state.origin ? `<a class="btn ghost small" href="${listHref(state, { q: '', series: '', origin: '' })}">Clear the search</a>` : '',
+  });
+}
+
+/**
+ * @param {any} props `list` is what lib/story-shelves.js made of the
+ *   stories, plus the order and the view; `stories` is the page of it.
+ */
+function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null, activity = [], welcome = null, whatsNew = null, sort = '', totalStories = 0, list = null }) {
+  const state = list || {
+    shelf: 'all', q: '', origin: '', series: '', counts: { writing: 0, complete: 0, dropped: 0, all: stories.length },
+    total: stories.length, page: 1, pages: 1, seriesList: [], hasImported: false, view: '',
+  };
+  const listState = { ...state, sort, activeTags };
   const sinceQs = since ? `?since=${encodeURIComponent(since)}` : '';
   const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
   const rows = stories.length
-    ? stories.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, coauthors: coauthorsByStory.get(s.id) || [] })).join('')
-    : (activeTags.length
+    ? (state.view === 'list'
+      ? `<ul class="story-lines">${stories.map((s) => storyLine(s, { sinceQs, coauthors: coauthorsByStory.get(s.id) || [] })).join('')}</ul>`
+      : stories.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, coauthors: coauthorsByStory.get(s.id) || [] })).join(''))
+    : totalStories && !activeTags.length ? emptyShelf(listState) : (activeTags.length
       ? emptyState({
         art: 'label',
         title: 'Nothing carries every tag you picked',
@@ -276,6 +402,8 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
         ? `Filtered by ${activeTags.map((t) => escapeHtml(t.name)).join(', ')}`
         : 'Filter by tag'}</summary>
       <form method="get" action="/" class="tag-filter-form">
+        ${state.shelf !== 'writing' ? `<input type="hidden" name="shelf" value="${escapeHtml(state.shelf)}">` : ''}
+        ${state.view ? `<input type="hidden" name="view" value="${escapeHtml(state.view)}">` : ''}
         ${allGroups.map((g) => `
           <fieldset class="tag-group">
             <legend>${escapeHtml(g.group)}</legend>
@@ -312,12 +440,19 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
       ${activeTags.length ? '' : whatsNewCard(whatsNew)}
       ${activeTags.length ? '' : welcomeCard(welcome)}
       ${activeTags.length ? '' : inboxSection(inbox)}
-      <div class="list-head">
-        <h2 class="list-label">${activeTags.length ? 'Stories with those tags' : (sort === 'mine' ? 'Stories you write in' : 'All stories')}${stories.length ? ` <span class="list-count">${stories.length}</span>` : ''}</h2>
-        ${totalStories > 4 || sort ? listTools(sort, activeTags) : ''}
-        ${filter}
-      </div>
-      <div class="chapter-list">${rows}</div>
+      <section class="story-shelves shelf-${escapeHtml(state.shelf)}" aria-labelledby="shelf-heading">
+        <div class="shelf-head">
+          ${totalStories ? shelfTabs(listState) : ''}
+          ${totalStories ? storySearch(listState) : ''}
+        </div>
+        <div class="list-head">
+          <h2 class="list-label" id="shelf-heading">${escapeHtml(state.q ? `${SHELVES[state.shelf].label}, matching “${state.q}”` : (activeTags.length ? `${SHELVES[state.shelf].label}, with those tags` : (sort === 'mine' ? `${SHELVES[state.shelf].label}, that you write in` : SHELVES[state.shelf].label)))}${state.series ? ` &middot; ${escapeHtml(state.series)}` : ''} <span class="list-count" id="story-count" aria-live="polite">${state.total}</span></h2>
+          ${totalStories > 4 || sort || state.view ? listFilters(listState) : ''}
+          ${filter}
+        </div>
+        <div class="chapter-list">${rows}</div>
+        ${pager(listState)}
+      </section>
       ${foldedBlock}
       ${activeTags.length ? '' : activityStrip(activity)}
       <p class="muted archive-link"><a href="/archived-stories">View archived stories &rarr;</a></p>`,
@@ -524,6 +659,8 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, coverError 
 // ---------- glossary (a local, offline mirror of the shared-universe
 
 module.exports = {
+  storyLine,
+  listHref,
   activityPage,
   commentGist,
   editStoryPage,
