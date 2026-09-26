@@ -290,9 +290,6 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
       <a class="skip-link" href="#library">Skip to the stories</a>
       <div class="page-head front-head">
         <h1>Stories</h1>
-        <div class="page-head-actions">
-          <a class="btn ghost small" href="/find">Advanced search</a>
-        </div>
       </div>
       ${activeTags.length ? '' : whatsNewCard(whatsNew)}
       ${activeTags.length ? '' : welcomeCard(welcome)}
@@ -338,7 +335,7 @@ function storyResults(stories, listState, { sinceQs = '', tagsFor, coauthorsFor,
   return `
     <h${level} class="list-label" id="shelf-heading">${escapeHtml(heading)}${state.series ? ` &middot; ${escapeHtml(state.series)}` : ''} <span class="list-count" id="story-count" aria-live="polite">${state.total}</span></h${level}>
     ${rows}
-    ${front.pager(state)}`;
+    ${state.base === '/' ? front.seeAll({ ...state, stories }) : front.pager(state)}`;
 }
 
 // ---------- story tags ----------

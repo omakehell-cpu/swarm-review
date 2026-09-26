@@ -44,7 +44,7 @@ async function handleSearch(req, res, user, query) {
 // The list of stories, as the front page and the advanced search both
 // show it: tagged, hidden-tag folded, ordered, searched, shelved and cut
 // into pages (lib/story-shelves.js). `defaultShelf` is where it opens.
-function storyList(user, query, { since = null, defaultShelf = 'writing' } = {}) {
+function storyList(user, query, { since = null, defaultShelf = 'writing', pageSize = 0 } = {}) {
   // Two spellings on purpose: the filter form posts one `tag` per ticked
   // box, while a shared/bookmarked link is nicer as ?tags=a,b.
   const activeSlugs = [
@@ -87,7 +87,7 @@ function storyList(user, query, { since = null, defaultShelf = 'writing' } = {})
   const shelfOptions = {
     shelf: query.get('shelf') || '', defaultShelf, q: (query.get('q') || '').slice(0, 200),
     author: (query.get('author') || '').slice(0, 100), length: query.get('length') || '', onlyIds,
-    series: query.get('series') || '', page: Number(query.get('page')) || 1, tagsByStory, coauthorsByStory,
+    series: query.get('series') || '', page: pageSize ? 1 : (Number(query.get('page')) || 1), pageSize, tagsByStory, coauthorsByStory,
   };
   let list = shelves.shelve(visible, shelfOptions);
   // A search that finds nothing on the shelf it started on, and something
@@ -110,11 +110,13 @@ function storyList(user, query, { since = null, defaultShelf = 'writing' } = {})
   };
 }
 
+const FRONT_PAGE_STORIES = 12;
+
 async function handleStories(req, res, user, query) {
   const since = models.bumpLastSeen(user.id);
-  // The library opens on what is finished: what is still being written is
-  // in the two columns above it, as the writing and the reviewing it is.
-  const found = storyList(user, query, { since, defaultShelf: 'complete' });
+  // The list opens on what is being written. It is a taste, not the whole
+  // shelf: a dozen, and the rest a click away in the advanced search.
+  const found = storyList(user, query, { since, defaultShelf: 'writing', pageSize: FRONT_PAGE_STORIES });
   // What changed on the site since they last looked, said once, here, and
   // then only under What's new until there is something newer. Somebody
   // still being welcomed has enough to read, so it is marked seen for them

@@ -246,7 +246,7 @@ const segment = (label, items) => `
   </nav>`;
 
 function shelfTabs(state) {
-  const order = state.base === '/find' ? SHELF_ORDER : ['complete', 'writing', 'all'];
+  const order = state.base === '/find' ? SHELF_ORDER : ['writing', 'complete', 'all'];
   const tab = (key) => {
     const current = state.shelf === key;
     const n = state.counts[key] || 0;
@@ -299,6 +299,19 @@ function activeChips(state) {
     </div>`;
 }
 
+// The front page shows a dozen of a shelf; the rest of it is in the
+// advanced search, on the same shelf, in the same order.
+function seeAll(state) {
+  if (state.total <= state.stories.length) return '';
+  const params = [];
+  if (state.shelf !== 'all') params.push(`shelf=${encodeURIComponent(state.shelf)}`);
+  if (state.sort) params.push(`sort=${encodeURIComponent(state.sort)}`);
+  if (state.q) params.push(`q=${encodeURIComponent(state.q)}`);
+  for (const t of state.activeTags || []) params.push(`tag=${encodeURIComponent(t.slug)}`);
+  return `
+    <p class="see-all"><a class="btn ghost" href="/find${params.length ? `?${params.join('&amp;')}` : ''}#results">See all ${state.total} ${escapeHtml(SHELVES[state.shelf].label.toLowerCase())} &rarr;</a></p>`;
+}
+
 // Numbered, with the first and last always there: page 7 of 11 is two
 // clicks from anywhere, and says where you are in words as well.
 function pager(state) {
@@ -344,6 +357,6 @@ function followButton(storyId, following, { back = '', followers = 0, small = fa
 }
 
 module.exports = {
-  activeChips, deskColumn, followButton, followingList, listControls, listHref, pager, recentlyList, reviewColumn, viewControls,
+  activeChips, seeAll, deskColumn, followButton, followingList, listControls, listHref, pager, recentlyList, reviewColumn, viewControls,
   shortWords, stateLabel, storyCard,
 };

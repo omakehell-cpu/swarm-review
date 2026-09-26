@@ -36,13 +36,16 @@ first:
 you follow, and whether there is anything new) and **Recently read** (the
 stories by other people you have been reading, with where to pick each
 one up, or that you read it to the end). Then three shelves:
-**Finished** (where the list opens), **Being written** and **All**, each
+**Being written** (where the list opens), **Finished** and **All**, each
 with how many it holds. A story its writer has set aside is in All.
+
+The front page shows a dozen of a shelf: enough to see what is there
+without a wall of titles. **See all** under them opens the rest in the
+advanced search, on the same shelf and in the same order.
 
 Beside the shelves, the order -- **Latest** or **A–Z** -- and the look:
 **Covers**, or **List**, one line per story, for a shelf of hundreds. The
-look you choose is kept, here and in the advanced search. Thirty stories
-to a page, numbered.
+look you choose is kept, here and in the advanced search.
 
 Each story shows its cover (or its first letter), who wrote it, where it
 stands in a mark and a word -- **✓ Finished**, **✎ Being written**, **On
@@ -54,8 +57,8 @@ it takes to read, its series, its blurb and its first tags.
 The **search box in the top bar** looks through everything: stories,
 chapters, the text of every chapter, the glossary and the bibles.
 
-**Advanced search**, at the top right of the front page (and on the search
-page), is for stories, with every way of narrowing them at once:
+**Advanced**, beside that box, opens the advanced search, which is for
+stories, with every way of narrowing them at once:
 
 - **Title, blurb or tag**, and the **author** -- part of a name is enough.
 - **Words in the text** -- anywhere in the chapters; put a phrase in
@@ -66,7 +69,8 @@ page), is for stories, with every way of narrowing them at once:
   write in**.
 
 What is switched on is shown above the results, each with a × to take it
-off. Every search is its own address, so it can be bookmarked or sent.
+off. Thirty stories to a page, numbered. Every search is its own address,
+so it can be bookmarked or sent.
 
 ### Following a story
 

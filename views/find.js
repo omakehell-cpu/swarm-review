@@ -83,7 +83,7 @@ function findPage({ user, asked = false, stories, list, tagsByStory, coauthorsBy
   return layout({
     title: 'Advanced search',
     user,
-    current: 'stories',
+    current: 'find',
     body: `
       <p class="breadcrumb"><a href="/">&larr; Stories</a></p>
       <div class="page-head"><div>
