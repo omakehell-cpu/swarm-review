@@ -80,7 +80,7 @@ test('the front page: shelves as links, a search form, and a list view', async (
     assert.ok(!library(front).includes(rowOf(done.id)), 'a finished story is on its own shelf');
     assert.match(front, /class="desk-title"><a href="\/stories\/\d+">Still going/, 'and on your desk, as yours to write');
     assert.match(front, /href="\/\?shelf=complete#library"[^>]*>Finished<span class="tag-chip-count">1</);
-    assert.match(front, /class="topbar-advanced" href="\/find"/, 'the advanced search, beside the search box');
+    assert.match(front, /class="topbar-icon topbar-advanced" href="\/find"[^>]*aria-label="Advanced search"/, 'the advanced search, beside the search box');
 
     const finished = await (await ana.request('/?shelf=complete')).text();
     assert.ok(library(finished).includes(rowOf(done.id)));
@@ -90,11 +90,13 @@ test('the front page: shelves as links, a search form, and a list view', async (
     assert.match(found, /All, matching/);
     const stayed = await (await ana.request('/?shelf=writing&q=done')).text();
     assert.match(stayed, /On the other shelves: <a href="\/\?shelf=complete&amp;q=done#library">1 finished<\/a>/);
-    const list = await (await ana.request('/?shelf=all&view=list')).text();
-    assert.match(list, /class="story-lines"/);
+    const table = await (await ana.request('/?shelf=all&view=table')).text();
+    assert.match(table, /class="story-table"/);
     const kept = await (await ana.request('/?shelf=all')).text();
-    assert.match(kept, /class="story-lines"/, 'the look is kept');
-    assert.match(await (await ana.request('/?view=covers')).text(), /class="story-cards"/);
+    assert.match(kept, /class="story-table"/, 'the look is kept');
+    const rows = await (await ana.request('/?view=rows')).text();
+    assert.match(rows, /class="story-wides"/);
+    assert.match(rows, /<dt>Chapters<\/dt>/, 'the facts beside each story');
 
     // A dozen at most, and the rest in the advanced search.
     for (let i = 0; i < 14; i += 1) {

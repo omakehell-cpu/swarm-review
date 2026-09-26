@@ -16,8 +16,8 @@ here is missing on the site, it has not been restarted yet.
 - **One word for where a story stands, everywhere**: *Being written*, *On hiatus*, *Finished*, *Set aside*.
 - **Follow a story.** *☆ Follow* on a story, and at the foot of its latest chapter. Its new chapters are then news for you until you read them: a number beside *Stories* in the top bar, and *New in what you follow*.
 - **Recently read** and **Following**, above the library.
-- **Covers or a list**, chosen once and kept.
-- **Advanced search**, on a page of its own, from *Advanced* beside the search box in the top bar: title, author, words anywhere in the chapters, where it stands, length, series, tags, only what you follow. The search in the top bar still looks through everything.
+- **Rows or a table.** *Rows* is a catalogue: each story across the whole width, with its cover, its whole blurb and tags, and the facts to compare it by set out on the right. *Table* puts a shelf of hundreds in columns. Chosen once and kept.
+- **Advanced search**, on a page of its own, from the lens with sliders beside the search box in the top bar: title, author, words anywhere in the chapters, where it stands, length, series, tags, only what you follow. The search in the top bar still looks through everything.
 - **Numbered pages**, *Skip to the stories*, and bigger, clearer metadata.
 
 ### Somebody's page
