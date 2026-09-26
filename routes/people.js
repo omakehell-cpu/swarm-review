@@ -92,42 +92,42 @@ async function handleStories(req, res, user, query) {
   // Shelved: being written, complete or set aside, then searched, then
   // cut into pages (lib/story-shelves.js). The shelf the list opens on is
   // the stories still being written; a search counts every shelf.
-  // Where from comes first once there is a library from StoriesOnline:
-  // the page opens on what the group writes, and the library is one tab
-  // over (opening on everything in it, not only the one still going).
-  const hasImported = visible.some(shelves.isImported);
-  // A search with no tab chosen looks everywhere: somebody typing a title
-  // should not have to know which side of the page it lives on.
-  const asked = query.get('origin') || '';
-  const originParam = ['imported', 'all'].includes(asked) ? asked
-    : (!asked && (query.get('q') || '').trim() && hasImported ? 'all' : '');
-  const origin = !hasImported ? '' : (originParam === 'all' ? '' : (originParam || 'here'));
+  // The advanced search narrows on top of that: an author, words in the
+  // chapters themselves (the search index, models/follows.js), a length,
+  // and only the stories this reader follows.
+  const text = (query.get('text') || '').slice(0, 200).trim();
+  const onlyFollowing = query.get('following') === '1';
+  const followed = models.followedStoryIds(user.id);
+  let onlyIds = null;
+  if (text) onlyIds = models.storiesWithText(text) || new Set();
+  if (onlyFollowing) onlyIds = new Set([...(onlyIds || followed)].filter((id) => followed.has(id)));
   const shelfOptions = {
-    shelf: query.get('shelf') || '', q: (query.get('q') || '').slice(0, 200), origin,
-    defaultShelf: origin === 'imported' ? 'all' : 'writing',
+    shelf: query.get('shelf') || '', q: (query.get('q') || '').slice(0, 200),
+    author: (query.get('author') || '').slice(0, 100), length: query.get('length') || '', onlyIds,
     series: query.get('series') || '', page: Number(query.get('page')) || 1, tagsByStory, coauthorsByStory,
   };
-  const originCounts = hasImported ? Object.fromEntries(['here', 'imported', 'all'].map((o) => [o,
-    shelves.shelve(visible, { ...shelfOptions, origin: o === 'all' ? '' : o, page: 1 }).counts.all])) : {};
   let list = shelves.shelve(visible, shelfOptions);
   // A search that finds nothing on the shelf it started on, and something
   // elsewhere, shows everything it found rather than an empty shelf.
-  if (!query.get('shelf') && list.q && !list.total && list.counts.all) {
+  if (!query.get('shelf') && (list.q || list.author || text || onlyFollowing || list.length) && !list.total && list.counts.all) {
     shelfOptions.shelf = 'all';
     list = shelves.shelve(visible, shelfOptions);
   }
   const view = query.get('view') === 'list' ? 'list' : '';
   const foldedHere = shelves.shelve(folded, { ...shelfOptions, page: 1 });
-  // For this reader, above the library: what they were in the middle of,
-  // what is new a story at a time, and a few from the library to try.
+  // For this reader, above the list: the stories they follow (those with
+  // news first), what is new elsewhere a story at a time, and what they
+  // have been reading.
+  const following = models.followedStories(user.id);
   const forYou = {
-    continueReading: models.continueReading(user.id),
-    newByStory: models.newChaptersByStory(models.chaptersNewToMe(user.id, 60)),
-    discover: shelves.discoverPicks(visible, { userId: user.id, readStoryIds: models.storiesReadBy(user.id) }),
+    following,
+    newByStory: models.newChaptersByStory(models.chaptersNewToMe(user.id, 60).filter((c) => !followed.has(c.story_id))),
+    recentlyRead: models.recentlyRead(user.id),
   };
+  const authors = [...new Set(visible.map((s2) => s2.author_name).filter(Boolean))].sort((x, y) => x.localeCompare(y));
   sendHtml(res, 200, views.storiesPage({
     user, stories: list.stories, folded: folded.filter((s2) => foldedHere.stories.some((f) => f.id === s2.id)), since, tagsByStory, coauthorsByStory,
-    list: { ...list, view, originParam, originCounts, hasImported }, forYou,
+    list: { ...list, view, text, following: onlyFollowing, authors }, forYou,
     activeTags, allGroups: models.listTagsGrouped(), sort, totalStories: stories.length,
     inbox: models.inboxFor(user.id, { since }),
     activity: models.groupActivity(user),

@@ -8,12 +8,13 @@ here is missing on the site, it has not been restarted yet.
 
 ### The front page
 
-- **What the group writes first; the library a tab over.** *Written here*, *From StoriesOnline* and *Everything*, each with its count. A search with no tab chosen looks everywhere.
+- **Three shelves**: *Being written*, *Finished* and *All*. Nothing on the page says where a story came from.
 - **Stories as cards**, with the cover (or the first letter when there is none), where the story stands as a mark and a word, its length and roughly how long it takes to read, its blurb and its first tags. *List* is still there for a shelf of hundreds.
-- **Pick up where you left off**: the stories you were reading, with the chapter you stopped in, or the next one.
+- **Follow a story.** *☆ Follow* on a story, and at the foot of its latest chapter. Its new chapters are then news for you until you read them: a number beside *Stories* in the top bar, and *Following* at the top of the front page.
+- **Recently read**: the stories by other people you have been reading, with where to pick each one up, or that you have read it to the end.
 - **New to read, a story at a time**, and never the chapters that came in with an import.
-- **Something to read**: four from the library you have not begun, a different four every day.
-- **One row of controls**: the shelves, the order, the look, and *Filters* for series and tags, with what is switched on shown as chips you can take off. Numbered pages. *Skip to the stories* for keyboards and screen readers, and bigger, clearer metadata.
+- **Advanced search**: by author, by words anywhere in the chapters, by length, series and tags, and only the stories you follow. What is switched on is shown as chips you can take off.
+- **Numbered pages**, *Skip to the stories* for keyboards and screen readers, and bigger, clearer metadata.
 
 ### Imported authors
 

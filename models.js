@@ -34,6 +34,7 @@ const modules = [
   ['storyGlossary', require('./models/story-glossary')],
   ['wikiLinks', require('./models/wiki-links')],
   ['front', require('./models/front')],
+  ['follows', require('./models/follows')],
 ];
 
 const all = {};

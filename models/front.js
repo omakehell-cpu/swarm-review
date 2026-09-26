@@ -14,14 +14,15 @@ function storiesReadBy(userId) {
 }
 
 /**
- * The stories somebody was last reading, each with where to pick it up:
- * the chapter they stopped half-way through, or else the first one they
- * have not read. A story they have finished is not in it; nor is one of
- * their own.
+ * The stories somebody has read lately, newest first, each with where to
+ * pick it up: the chapter they stopped half-way through, or else the
+ * first one they have not read -- or, when they have read it all, that
+ * they have. Only other people's: what you wrote yourself is not
+ * something you "read lately".
  * @returns {Array<{ story_id: number, story_title: string, author_name: string, cover_filename: string|null,
- *   chapter_id: number, chapter_number: number, chapter_title: string, chapters: number, read: number, percent: number|null }>}
+ *   finished: boolean, chapter_id: number, chapter_number: number, chapter_title: string, chapters: number, read: number, percent: number|null }>}
  */
-function continueReading(userId, limit = 3) {
+function recentlyRead(userId, limit = 5) {
   const recent = db.prepare(`
     SELECT s.id AS story_id, s.title AS story_title, s.cover_filename, s.cover_focus_x, s.cover_focus_y,
            u.display_name AS author_name, MAX(r.read_at) AS last_at
@@ -43,8 +44,9 @@ function continueReading(userId, limit = 3) {
   for (const s of recent) {
     const chapters = chaptersOf.all(userId, userId, userId, s.story_id);
     const placed = chapters.filter((c) => c.place_at).sort((a, b) => String(b.place_at).localeCompare(String(a.place_at)))[0];
-    const next = placed || chapters.find((c) => !c.is_read);
-    if (!next) continue;
+    if (!chapters.length) continue;
+    const next = placed || chapters.find((c) => !c.is_read) || null;
+    const last = chapters[chapters.length - 1];
     out.push({
       story_id: s.story_id,
       story_title: s.story_title,
@@ -52,9 +54,10 @@ function continueReading(userId, limit = 3) {
       cover_filename: s.cover_filename,
       cover_focus_x: s.cover_focus_x,
       cover_focus_y: s.cover_focus_y,
-      chapter_id: next.id,
-      chapter_number: next.chapter_number,
-      chapter_title: next.title,
+      finished: !next,
+      chapter_id: (next || last).id,
+      chapter_number: (next || last).chapter_number,
+      chapter_title: (next || last).title,
       chapters: chapters.length,
       read: chapters.filter((c) => c.is_read).length,
       percent: placed ? Math.max(1, Math.min(99, Number(placed.percent) || 0)) : null,
@@ -83,4 +86,4 @@ function newChaptersByStory(chapters, limit = 6) {
   });
 }
 
-module.exports = { continueReading, newChaptersByStory, storiesReadBy };
+module.exports = { newChaptersByStory, recentlyRead, storiesReadBy };

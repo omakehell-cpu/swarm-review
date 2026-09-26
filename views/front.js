@@ -9,7 +9,7 @@
 const { escapeHtml } = require('../lib/util');
 const { storyState, STORY_STATES } = require('../lib/story-state');
 const { bylineWith, storyCoverImg } = require('./shared');
-const { SHELVES, SHELF_ORDER } = require('../lib/story-shelves');
+const { LENGTHS, SHELVES, SHELF_ORDER } = require('../lib/story-shelves');
 
 // ---------- small words ----------
 
@@ -37,7 +37,9 @@ function stateLabel(s) {
   const state = storyState(s);
   const meta = STORY_STATES[state];
   if (!meta) return '';
-  return `<span class="story-state state-${state}" title="${escapeHtml(meta.hint)}"><span aria-hidden="true">${STATE_MARK[state] || ''}</span> ${escapeHtml(meta.label)}</span>`;
+  // Said the way the shelves say it.
+  const label = state === 'complete' ? 'Finished' : meta.label;
+  return `<span class="story-state state-${state}" title="${escapeHtml(meta.hint)}"><span aria-hidden="true">${STATE_MARK[state] || ''}</span> ${escapeHtml(label)}</span>`;
 }
 
 // A story with no picture still gets a face: its first letter, set large.
@@ -75,22 +77,48 @@ function storyCard(s, { tags = [], coauthors = [], sinceQs = '', compact = false
 
 // ---------- for you ----------
 
-function continueSection(items) {
+function recentlySection(items) {
   if (!items || !items.length) return '';
   return `
-    <section class="for-you-group" aria-labelledby="continue-title">
-      <h2 id="continue-title">Pick up where you left off</h2>
+    <section class="for-you-group" aria-labelledby="recent-title">
+      <h2 id="recent-title">Recently read</h2>
       <ul class="continue-list">
         ${items.map((c) => `
           <li class="continue-item story-row">
             ${coverOrLetter({ ...c, id: c.story_id, title: c.story_title }, 'continue-cover')}
             <div>
-              <a class="row-link" href="/chapters/${c.chapter_id}">${escapeHtml(c.story_title)}</a>
-              <span class="continue-where">Chapter ${c.chapter_number} of ${c.chapters}${c.percent ? `, ${c.percent}% in` : ''} &middot; by ${escapeHtml(c.author_name)}</span>
-              <span class="continue-bar" aria-hidden="true"><span style="width:${Math.round(((c.read + (c.percent || 0) / 100) / Math.max(1, c.chapters)) * 100)}%"></span></span>
+              <a class="row-link" href="${c.finished ? `/stories/${c.story_id}` : `/chapters/${c.chapter_id}`}">${escapeHtml(c.story_title)}</a>
+              <span class="continue-where">${c.finished
+    ? `Read to the end &middot; ${plural(c.chapters, 'chapter')}`
+    : `${c.percent ? `Chapter ${c.chapter_number} of ${c.chapters}, ${c.percent}% in` : `Next: chapter ${c.chapter_number} of ${c.chapters}`}`} &middot; by ${escapeHtml(c.author_name)}</span>
+              <span class="continue-bar" aria-hidden="true"><span style="width:${c.finished ? 100 : Math.round(((c.read + (c.percent || 0) / 100) / Math.max(1, c.chapters)) * 100)}%"></span></span>
             </div>
           </li>`).join('')}
       </ul>
+    </section>`;
+}
+
+// The stories this reader follows: the ones with something new first,
+// each saying how much, and opening the first new chapter.
+function followingSection(stories, { more = '' } = {}) {
+  if (!stories || !stories.length) return '';
+  const shown = stories.slice(0, 6);
+  return `
+    <section class="for-you-group" aria-labelledby="following-title">
+      <h2 id="following-title"><span aria-hidden="true">&#9733;</span> Following</h2>
+      <ul class="inbox-list following-list">
+        ${shown.map((f) => `
+          <li${f.fresh ? ' class="has-news"' : ''}>
+            <a href="${f.fresh ? `/chapters/${f.first_fresh_id}` : `/stories/${f.id}`}">
+              ${f.fresh ? `<span class="inbox-count">${f.fresh}</span>` : ''}
+              <span class="inbox-what"><strong>${escapeHtml(f.title)}</strong></span>
+              <span class="inbox-where">${f.fresh
+    ? `${plural(f.fresh, 'new chapter')}, from chapter ${f.first_fresh_number}`
+    : 'Up to date'} &middot; by ${escapeHtml(f.author_name)}</span>
+            </a>
+          </li>`).join('')}
+      </ul>
+      ${stories.length > shown.length || more ? `<p class="for-you-more"><a href="${more}">All ${stories.length} you follow &rarr;</a></p>` : ''}
     </section>`;
 }
 
@@ -113,18 +141,6 @@ function newToReadSection(groups) {
     </section>`;
 }
 
-function discoverRow(stories, { tagsFor, coauthorsFor }) {
-  if (!stories || !stories.length) return '';
-  return `
-    <section class="discover" aria-labelledby="discover-title">
-      <div class="discover-head">
-        <h2 id="discover-title">Something to read</h2>
-        <p class="muted">From the library, a different few every day.</p>
-      </div>
-      <ul class="story-cards is-row">${stories.map((s) => storyCard(s, { tags: tagsFor(s), coauthors: coauthorsFor(s), compact: true })).join('')}</ul>
-    </section>`;
-}
-
 // ---------- the library's controls ----------
 
 /**
@@ -136,11 +152,11 @@ function discoverRow(stories, { tagsFor, coauthorsFor }) {
 function listHref(state, change = {}) {
   const { tags: tagsChange, ...rest } = change;
   const next = {
-    origin: state.originParam, shelf: state.shelf === state.defaultShelf ? '' : state.shelf,
-    q: state.q, series: state.series, sort: state.sort, view: state.view,
+    shelf: state.shelf === state.defaultShelf ? '' : state.shelf,
+    q: state.q, author: state.author, text: state.text, length: state.length, following: state.following ? '1' : '',
+    series: state.series, sort: state.sort, view: state.view,
     page: '', ...rest,
   };
-  if ('origin' in rest && !('shelf' in rest)) next.shelf = '';
   const parts = [];
   for (const [k, v] of Object.entries(next)) if (v) parts.push(`${k}=${encodeURIComponent(String(v))}`);
   for (const t of tagsChange || state.activeTags || []) parts.push(`tag=${encodeURIComponent(t.slug)}`);
@@ -154,26 +170,12 @@ const segment = (label, items) => `
     : `<a href="${href}">${text}</a>`)).join('')}
   </nav>`;
 
-function originTabs(state) {
-  if (!state.hasImported) return '';
-  const tab = (key, label) => {
-    const current = state.originParam === key || (!state.originParam && key === 'here');
-    const n = state.originCounts[key] || 0;
-    return `<a class="origin-tab${current ? ' current' : ''}" href="${listHref(state, { origin: key === 'here' ? '' : key, page: '' })}"${current ? ' aria-current="page"' : ''}>${label}<span class="origin-count">${n}</span></a>`;
-  };
-  return `
-    <nav class="origin-tabs" aria-label="Where the stories were written">
-      ${tab('here', 'Written here')}${tab('imported', 'From StoriesOnline')}${tab('all', 'Everything')}
-      <a class="origin-aside" href="/authors">By author &rarr;</a>
-    </nav>`;
-}
-
 function shelfTabs(state) {
   const tab = (key) => {
     const current = state.shelf === key;
     const n = state.counts[key] || 0;
-    // A shelf with nothing on it is only shown when it is the one open.
-    if (!n && !current && key === 'dropped') return '';
+    // Set aside is not a shelf of its own here: those stories are in All.
+    if (key === 'dropped' && !current) return '';
     return `<a class="tag-chip shelf-tab${current ? ' current' : ''}${n ? '' : ' is-empty'}" href="${listHref(state, { shelf: key === state.defaultShelf ? '' : key })}"${current ? ' aria-current="page"' : ''}>${escapeHtml(SHELVES[key].label)}<span class="tag-chip-count">${n}</span></a>`;
   };
   return `<nav class="shelf-tabs" aria-label="Which stories">${SHELF_ORDER.map(tab).join('')}</nav>`;
@@ -183,7 +185,7 @@ function storySearch(state) {
   const keep = (name, value) => (value ? `<input type="hidden" name="${name}" value="${escapeHtml(value)}">` : '');
   return `
     <form method="get" action="/" class="story-search" role="search">
-      ${keep('origin', state.originParam)}${keep('shelf', state.shelf === state.defaultShelf ? '' : state.shelf)}${keep('series', state.series)}${keep('sort', state.sort)}${keep('view', state.view)}
+      ${keep('shelf', state.shelf === state.defaultShelf ? '' : state.shelf)}${keep('author', state.author)}${keep('text', state.text)}${keep('length', state.length)}${keep('following', state.following ? '1' : '')}${keep('series', state.series)}${keep('sort', state.sort)}${keep('view', state.view)}
       ${(state.activeTags || []).map((t) => keep('tag', t.slug)).join('')}
       <label class="sr-only" for="story-find">Search every story</label>
       <input type="search" class="list-find" id="story-find" name="q" value="${escapeHtml(state.q)}"
@@ -192,36 +194,62 @@ function storySearch(state) {
     </form>`;
 }
 
-// Series and tags, in one form: pick any, press Show. The order and the
-// look are one click each and stay outside it.
-function filtersPanel(state, allGroups) {
+// The advanced search: who wrote it, words in the text itself, how long,
+// a series, tags, and only the ones you follow -- one form, one Show. The
+// order and the look are one click each and stay outside it.
+function advancedSearch(state, allGroups) {
   const active = new Set((state.activeTags || []).map((t) => t.slug));
-  const n = (state.series ? 1 : 0) + active.size;
+  const n = [state.author, state.text, state.length, state.series, state.following].filter(Boolean).length + active.size;
   const keep = (name, value) => (value ? `<input type="hidden" name="${name}" value="${escapeHtml(value)}">` : '');
-  if (!state.seriesList.length && !allGroups.length) return '';
   return `
-    <details class="list-more library-filters">
-      <summary>Filters${n ? ` <span class="filter-n">${n}</span>` : ''}</summary>
-      <form method="get" action="/#library" class="list-more-body">
-        ${keep('origin', state.originParam)}${keep('shelf', state.shelf === state.defaultShelf ? '' : state.shelf)}${keep('q', state.q)}${keep('sort', state.sort)}${keep('view', state.view)}
-        ${state.seriesList.length ? `
-          <label class="filter-label" for="series-pick">Series</label>
-          <select name="series" id="series-pick">
-            <option value="">Any</option>
-            ${state.seriesList.map((s) => `<option value="${escapeHtml(s.name)}"${s.name === state.series ? ' selected' : ''}>${escapeHtml(s.name)} (${s.n})</option>`).join('')}
-          </select>` : ''}
-        ${allGroups.map((g) => `
-          <fieldset class="tag-group">
-            <legend>${escapeHtml(g.group)}</legend>
-            <div class="tag-group-options">${g.tags.map((t) => `
-              <label class="tag-pick${active.has(t.slug) ? ' checked' : ''}">
-                <input type="checkbox" name="tag" value="${escapeHtml(t.slug)}"${active.has(t.slug) ? ' checked' : ''}>
-                <span>${escapeHtml(t.name)}</span>
-              </label>`).join('')}</div>
-          </fieldset>`).join('')}
+    <details class="list-more library-filters"${n ? ' data-has-filters' : ''}>
+      <summary>Advanced search${n ? ` <span class="filter-n">${n}</span>` : ''}</summary>
+      <form method="get" action="/#library" class="list-more-body advanced-search">
+        ${keep('shelf', state.shelf === state.defaultShelf ? '' : state.shelf)}${keep('sort', state.sort)}${keep('view', state.view)}
+        <div class="adv-grid">
+          <label class="adv-field">Title, blurb or tag
+            <input type="search" name="q" value="${escapeHtml(state.q)}" autocomplete="off">
+          </label>
+          <label class="adv-field">Author
+            <input type="search" name="author" value="${escapeHtml(state.author || '')}" list="adv-authors" autocomplete="off">
+            <datalist id="adv-authors">${(state.authors || []).map((a) => `<option value="${escapeHtml(a)}"></option>`).join('')}</datalist>
+          </label>
+          <label class="adv-field adv-wide">Words in the text
+            <input type="search" name="text" value="${escapeHtml(state.text || '')}" autocomplete="off" aria-describedby="adv-text-hint">
+            <span class="hint" id="adv-text-hint">Anywhere in the chapters. Put a phrase in "quotes".</span>
+          </label>
+          <label class="adv-field">Length
+            <select name="length">
+              <option value="">Any length</option>
+              ${Object.entries(LENGTHS).map(([k, v]) => `<option value="${k}"${state.length === k ? ' selected' : ''}>${escapeHtml(v.label)}</option>`).join('')}
+            </select>
+          </label>
+          ${state.seriesList.length ? `
+            <label class="adv-field">Series
+              <select name="series">
+                <option value="">Any series</option>
+                ${state.seriesList.map((x) => `<option value="${escapeHtml(x.name)}"${x.name === state.series ? ' selected' : ''}>${escapeHtml(x.name)} (${x.n})</option>`).join('')}
+              </select>
+            </label>` : ''}
+          <label class="adv-check adv-wide"><input type="checkbox" name="following" value="1"${state.following ? ' checked' : ''}> Only stories I follow</label>
+        </div>
+        ${allGroups.length ? `
+          <details class="adv-tags"${active.size ? ' open' : ''}>
+            <summary>Tags${active.size ? ` (${active.size})` : ''}</summary>
+            ${allGroups.map((g) => `
+              <fieldset class="tag-group">
+                <legend>${escapeHtml(g.group)}</legend>
+                <div class="tag-group-options">${g.tags.map((t) => `
+                  <label class="tag-pick${active.has(t.slug) ? ' checked' : ''}">
+                    <input type="checkbox" name="tag" value="${escapeHtml(t.slug)}"${active.has(t.slug) ? ' checked' : ''}>
+                    <span>${escapeHtml(t.name)}</span>
+                  </label>`).join('')}</div>
+              </fieldset>`).join('')}
+            <p class="hint">A story has to carry every tag you pick.</p>
+          </details>` : ''}
         <div class="tag-filter-actions">
           <button class="btn small" type="submit">Show</button>
-          <span class="hint">A story has to carry every tag you pick.</span>
+          ${n || state.q ? `<a class="btn ghost small" href="${listHref(state, { q: '', author: '', text: '', length: '', series: '', following: '', tags: [] })}">Clear</a>` : ''}
         </div>
       </form>
     </details>`;
@@ -230,7 +258,11 @@ function filtersPanel(state, allGroups) {
 function activeChips(state) {
   const chips = [];
   if (state.q) chips.push([`&ldquo;${escapeHtml(state.q)}&rdquo;`, listHref(state, { q: '' })]);
+  if (state.author) chips.push([`Author: ${escapeHtml(state.author)}`, listHref(state, { author: '' })]);
+  if (state.text) chips.push([`In the text: &ldquo;${escapeHtml(state.text)}&rdquo;`, listHref(state, { text: '' })]);
+  if (state.length) chips.push([escapeHtml(LENGTHS[state.length].label), listHref(state, { length: '' })]);
   if (state.series) chips.push([`Series: ${escapeHtml(state.series)}`, listHref(state, { series: '' })]);
+  if (state.following) chips.push(['&#9733; Only stories I follow', listHref(state, { following: '' })]);
   for (const t of state.activeTags || []) {
     chips.push([`Tag: ${escapeHtml(t.name)}`, listHref(state, { tags: state.activeTags.filter((x) => x.slug !== t.slug) })]);
   }
@@ -238,13 +270,12 @@ function activeChips(state) {
   return `
     <div class="active-filters" aria-label="Switched on">
       ${chips.map(([label, href]) => `<a class="active-filter" href="${href}">${label} <span aria-hidden="true">&times;</span><span class="sr-only">, take it off</span></a>`).join('')}
-      ${chips.length > 1 ? `<a class="active-filter-clear" href="${listHref(state, { q: '', series: '', tags: [] })}">Clear all</a>` : ''}
+      ${chips.length > 1 ? `<a class="active-filter-clear" href="${listHref(state, { q: '', author: '', text: '', length: '', series: '', following: '', tags: [] })}">Clear all</a>` : ''}
     </div>`;
 }
 
 function libraryControls(state, allGroups) {
   return `
-    ${originTabs(state)}
     ${storySearch(state)}
     <div class="library-controls">
       ${shelfTabs(state)}
@@ -258,7 +289,7 @@ function libraryControls(state, allGroups) {
     ['Cards', listHref(state, { view: '' }), !state.view],
     ['List', listHref(state, { view: 'list' }), state.view === 'list'],
   ])}
-        ${filtersPanel(state, allGroups)}
+        ${advancedSearch(state, allGroups)}
       </div>
     </div>
     ${activeChips(state)}`;
@@ -288,6 +319,27 @@ function pager(state) {
     <p class="pager-where muted">Page ${state.page} of ${state.pages}</p>`;
 }
 
+// ---------- following ----------
+
+/**
+ * The star on a story: follow it, and its new chapters are called out to
+ * you until you have read them. A real button in a real form; the script
+ * only keeps the page where it is.
+ */
+function followButton(storyId, following, { back = '', followers = 0, small = false } = {}) {
+  return `
+    <form method="post" action="/stories/${storyId}/follow" class="follow-form" data-follow-form>
+      <input type="hidden" name="follow" value="${following ? '0' : '1'}">
+      ${back ? `<input type="hidden" name="back" value="${escapeHtml(back)}">` : ''}
+      <button type="submit" class="btn ghost${small ? ' small' : ''} follow-btn${following ? ' is-following' : ''}" aria-pressed="${following ? 'true' : 'false'}"
+              title="${following ? 'You follow this story: its new chapters are shown to you. Press to stop.' : 'Follow: be told when a new chapter goes up.'}">
+        <span class="follow-star" aria-hidden="true">${following ? '&#9733;' : '&#9734;'}</span>
+        <span class="follow-word">${following ? 'Following' : 'Follow'}</span>${followers ? ` <span class="btn-count follow-n">${followers}</span>` : ''}
+      </button>
+    </form>`;
+}
+
 module.exports = {
-  continueSection, discoverRow, libraryControls, listHref, newToReadSection, pager, shortWords, storyCard,
+  followButton,
+  followingSection, libraryControls, recentlySection, listHref, newToReadSection, pager, shortWords, storyCard,
 };

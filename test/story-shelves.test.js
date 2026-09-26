@@ -77,7 +77,7 @@ test('the front page: shelves as links, a search form, and a list view', async (
     const going = models.listStories().find((s) => s.title === 'Still going');
     assert.ok(front.includes(rowOf(going.id)));
     assert.ok(!front.includes(rowOf(done.id)), 'a finished story is on its own shelf');
-    assert.match(front, /href="\/\?shelf=complete#library"[^>]*>Complete<span class="tag-chip-count">1</);
+    assert.match(front, /href="\/\?shelf=complete#library"[^>]*>Finished<span class="tag-chip-count">1</);
     assert.match(front, /<form method="get" action="\/" class="story-search" role="search">/);
 
     const complete = await (await ana.request('/?shelf=complete')).text();
@@ -87,7 +87,7 @@ test('the front page: shelves as links, a search form, and a list view', async (
     assert.ok(found.includes(rowOf(done.id)), 'found on the complete shelf, shown anyway');
     assert.match(found, /All, matching/);
     const stayed = await (await ana.request('/?shelf=writing&q=done')).text();
-    assert.match(stayed, /On the other shelves: <a href="\/\?shelf=complete&amp;q=done#library">1 complete<\/a>/);
+    assert.match(stayed, /On the other shelves: <a href="\/\?shelf=complete&amp;q=done#library">1 finished<\/a>/);
     const list = await (await ana.request('/?shelf=all&view=list')).text();
     assert.match(list, /class="story-lines"/);
   } finally {
