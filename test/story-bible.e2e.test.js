@@ -561,11 +561,12 @@ test('a name can be added as another name for somebody already there', async () 
   const res = await owner.request(`/stories/${storyId}/bible/unknown-names`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-    body: JSON.stringify({ text: 'Colonel Kessler came in. Colonel Kessler sat down. The Kessler Station was dark.' }),
+    body: JSON.stringify({ text: 'Old Man Kessler came in. Old Man Kessler sat down. The Kessler Station was dark. Colonel Kessler left.' }),
   });
   const data = await res.json();
   assert.ok(data.entries.some((e) => e.id === kesslerId), 'the entries are offered');
-  const offered = data.names.find((n) => n.name === 'Colonel Kessler');
+  assert.ok(!data.names.some((n) => /Colonel/.test(n.name)), 'a form of address is not a new name: Colonel Kessler is Kessler');
+  const offered = data.names.find((n) => n.name === 'Old Man Kessler');
   assert.ok(offered, `the new name is offered: ${data.names.map((n) => n.name).join(', ')}`);
   assert.strictEqual(offered.sameAs, kesslerId, 'and Kessler is the guess');
   // Sharing a word is not being somebody: no guess is chosen in advance.

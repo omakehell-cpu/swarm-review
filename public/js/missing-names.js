@@ -90,6 +90,23 @@
         }
         row.appendChild(note);
       }
+      // A person's name is also found by its parts: once Mara Kessler is
+      // written down, a row asking about "Kessler" has its answer.
+      const kindValue = kind ? kind.value : '';
+      if (kindValue === 'person' && !/\/not-names$/.test(action) && !data.already) {
+        const parts = new Set(name.split(/\s+/).filter((w) => w.length > 2).map((w) => w.toLowerCase()));
+        for (const other of Array.from(section.querySelectorAll('.missing-list li:not(.done)'))) {
+          const otherName = /** @type {HTMLInputElement|null} */ (other.querySelector('input[name="name"]'));
+          if (!otherName || !parts.has(otherName.value.toLowerCase())) continue;
+          other.classList.add('done');
+          const f = other.querySelector('form');
+          if (f) /** @type {HTMLElement} */ (f).hidden = true;
+          const note = document.createElement('p');
+          note.className = 'missing-done';
+          note.textContent = `${otherName.value} is found as part of ${name}.`;
+          other.appendChild(note);
+        }
+      }
       voice.textContent = '';
       window.setTimeout(() => { voice.textContent = said; }, 40);
       left();

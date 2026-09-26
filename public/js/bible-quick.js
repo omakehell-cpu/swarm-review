@@ -64,6 +64,7 @@
         ul.className = 'missing-list';
         for (const candidate of found.names) {
           const li = document.createElement('li');
+          li.setAttribute('data-name', candidate.name);
           const label = document.createElement('span');
           label.className = 'missing-name';
           label.textContent = `${candidate.name} (${candidate.count}×)`;
@@ -110,6 +111,14 @@
               const made = await post(`/stories/${storyId}/bible/quick`, { name: candidate.name, kind: kind.value, summary: summary.hidden ? '' : summary.value });
               li.classList.add('added');
               button.textContent = made.alias ? `Added to ${made.name}` : 'Added';
+              // Its parts are found as it now: "Kessler" is Mara Kessler.
+              if (kind.value === 'person') {
+                const parts = new Set(candidate.name.split(/\s+/).filter((w) => w.length > 2).map((w) => w.toLowerCase()));
+                for (const other of Array.from(ul.querySelectorAll('li:not(.added)'))) {
+                  const who = other.getAttribute('data-name') || '';
+                  if (parts.has(who.toLowerCase())) other.remove();
+                }
+              }
             } catch (err) {
               button.disabled = false;
               say(err.message, true);
