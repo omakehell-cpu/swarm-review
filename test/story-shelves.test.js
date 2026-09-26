@@ -76,25 +76,34 @@ test('the front page: shelves as links, a search form, and a list view', async (
     const rowOf = (id) => `class="row-link" href="/stories/${id}`;
     const going = models.listStories().find((s) => s.title === 'Still going');
     const library = (html) => html.split('id="library"')[1];
-    assert.ok(library(front).includes(rowOf(done.id)), 'the library opens on what is finished');
-    assert.ok(!library(front).includes(rowOf(going.id)), 'a story still going is on its own shelf');
+    assert.ok(library(front).includes(rowOf(going.id)), 'the list opens on what is being written');
+    assert.ok(!library(front).includes(rowOf(done.id)), 'a finished story is on its own shelf');
     assert.match(front, /class="desk-title"><a href="\/stories\/\d+">Still going/, 'and on your desk, as yours to write');
-    assert.match(front, /href="\/\?shelf=writing#library"[^>]*>Being written<span class="tag-chip-count">1</);
-    assert.match(front, /href="\/find">Advanced search/);
+    assert.match(front, /href="\/\?shelf=complete#library"[^>]*>Finished<span class="tag-chip-count">1</);
+    assert.match(front, /class="topbar-advanced" href="\/find"/, 'the advanced search, beside the search box');
 
-    const writing = await (await ana.request('/?shelf=writing')).text();
-    assert.ok(library(writing).includes(rowOf(going.id)));
-    // Nothing finished matches, so the search shows every shelf.
-    const found = await (await ana.request('/?q=still')).text();
-    assert.ok(library(found).includes(rowOf(going.id)), 'found on the other shelf, shown anyway');
+    const finished = await (await ana.request('/?shelf=complete')).text();
+    assert.ok(library(finished).includes(rowOf(done.id)));
+    // Nothing being written matches, so the search shows every shelf.
+    const found = await (await ana.request('/?q=done')).text();
+    assert.ok(library(found).includes(rowOf(done.id)), 'found on the other shelf, shown anyway');
     assert.match(found, /All, matching/);
     const stayed = await (await ana.request('/?shelf=writing&q=done')).text();
-    assert.match(stayed, /On the other shelves: <a href="\/\?q=done#library">1 finished<\/a>/);
+    assert.match(stayed, /On the other shelves: <a href="\/\?shelf=complete&amp;q=done#library">1 finished<\/a>/);
     const list = await (await ana.request('/?shelf=all&view=list')).text();
     assert.match(list, /class="story-lines"/);
     const kept = await (await ana.request('/?shelf=all')).text();
     assert.match(kept, /class="story-lines"/, 'the look is kept');
     assert.match(await (await ana.request('/?view=covers')).text(), /class="story-cards"/);
+
+    // A dozen at most, and the rest in the advanced search.
+    for (let i = 0; i < 14; i += 1) {
+      const made = models.createStoryWithFirstChapter({ title: `Done ${i}`, description: '', authorId: models.getUserByUsername('ana').id, chapterTitle: 'One', chapterSummary: '', content: 'Words.' }).story;
+      models.updateStoryDetails(made.id, { title: made.title, description: '', synopsis: '', status: 'complete' });
+    }
+    const many = library(await (await ana.request('/?shelf=complete')).text());
+    assert.strictEqual((many.match(/class="row-link"/g) || []).length, 12);
+    assert.match(many, /href="\/find\?shelf=complete#results">See all 15 finished/);
   } finally {
     await app.stop();
   }

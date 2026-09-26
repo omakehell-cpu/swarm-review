@@ -5331,3 +5331,8 @@ label.adv-check input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18
   --shadow: rgba(10, 8, 16, 0.45);
   color-scheme: dark;
 }
+/* The advanced search, beside the quick one in the bar. */
+.topbar-search { align-items: center; gap: var(--s-4); }
+.topbar-advanced { font-size: var(--t-sm); color: var(--text-muted); text-decoration: none; white-space: nowrap; }
+.topbar-advanced:hover, .topbar-advanced[aria-current="page"] { color: var(--text); text-decoration: underline; }
+.see-all { margin: var(--s-8) 0 0; text-align: center; }

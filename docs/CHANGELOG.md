@@ -12,12 +12,12 @@ here is missing on the site, it has not been restarted yet.
 
 ### The front page
 
-- **Write, Review, Read -- in that order.** *Write* is your desk: every story of yours being written, its latest chapter, a draft waiting (*Continue the draft*), how far it is towards its target, and *+ New chapter*. *Review*, beside it: what you were asked to read, notes on your chapters, replies, new chapters in what you follow and in the group. *Read* is the library, opening on what is finished.
+- **Write, Review, Read -- in that order.** *Write* is your desk: every story of yours being written, its latest chapter, a draft waiting (*Continue the draft*), how far it is towards its target, and *+ New chapter*. *Review*, beside it: what you were asked to read, notes on your chapters, replies, new chapters in what you follow and in the group. *Read* is the stories, opening on what is being written, a dozen at a time with *See all* for the rest.
 - **One word for where a story stands, everywhere**: *Being written*, *On hiatus*, *Finished*, *Set aside*.
 - **Follow a story.** *☆ Follow* on a story, and at the foot of its latest chapter. Its new chapters are then news for you until you read them: a number beside *Stories* in the top bar, and *New in what you follow*.
 - **Recently read** and **Following**, above the library.
 - **Covers or a list**, chosen once and kept.
-- **Advanced search**, on a page of its own: title, author, words anywhere in the chapters, where it stands, length, series, tags, only what you follow. The search in the top bar still looks through everything.
+- **Advanced search**, on a page of its own, from *Advanced* beside the search box in the top bar: title, author, words anywhere in the chapters, where it stands, length, series, tags, only what you follow. The search in the top bar still looks through everything.
 - **Numbered pages**, *Skip to the stories*, and bigger, clearer metadata.
 
 ### Somebody's page
