@@ -8,7 +8,7 @@ story, a chapter -- and what each part of them is for.
 **Stories**, in the top bar, is the front page, and it is ordered by what
 needs you rather than by what exists.
 
-@figure front-page.png | The front page: what is waiting on you, then every story, then what the group has been doing.
+@figure front-page.png | The front page: what is waiting on you, then the stories, then what the group has been doing.
 
 At the top, only when there is something in it, is **what is waiting on
 you**:
@@ -19,31 +19,41 @@ you**:
 - **Asked to read by you** -- a writer asked you to read a chapter, with
   the question they want answered. See
   [asking somebody to read](/help/reading-and-reviewing).
-- **New to read** -- chapters published since you last looked that you
-  have not opened.
+- **Pick up where you left off** -- the stories you were last reading,
+  each with the chapter you stopped half-way through (and how far in), or
+  the next one you have not read. A story you have finished is not in it.
+- **New to read** -- a story at a time: *Salt Road, 3 new chapters, from
+  chapter 4*, which opens the first of them. The chapters that came in
+  with an imported story are not news, and are never here.
 
-Under that are the stories, on **three shelves**: **Being written** (where
-the list opens -- stories in progress, and the ones that have gone quiet),
-**Complete**, and **Set aside**, with **All** beside them. Each says how
-many it holds.
+Then **Something to read**: four stories from the library you have not
+begun, a different four every day.
 
-**The search box** beside them looks through every story -- titles,
-authors, series, blurbs and tags, accents or no accents -- and each shelf
-counts what it found there. If nothing on the shelf you were on matches,
-you get everything that does. Typing also narrows what is already on the
-screen straight away; Enter searches the rest.
+Then the stories themselves. Once the site has a library from
+StoriesOnline, the first choice is **where from**: **Written here** (where
+the page opens), **From StoriesOnline**, or **Everything**, each with how
+many it holds, and **By author** for the [authors page](/authors).
 
-Under the heading, an order -- **Latest** (the default), **A–Z**, or
-**Mine**, only the stories you write in -- and **More ways to look**:
-**Written here** or **From StoriesOnline**, one **series**, and **List**,
-one line per story instead of covers, for a shelf of hundreds. **Filter by
-tag** is at the right. Thirty stories to a page; every one of these is part
-of the address, so a view of the list can be bookmarked or sent.
+**The search box** looks through every story -- titles, authors, series,
+blurbs and tags, accents or no accents. A search with no tab chosen looks
+everywhere. Typing also narrows what is already on the screen straight
+away; Enter searches the rest.
 
-Each story shows who wrote it, its series, how many chapters and words it
-has, when it last moved, and how many notes on it are still **pending**;
-then its blurb; then who is reading it and, if its author set one, how far
-it is towards its word target.
+Under it, the **shelves**: **Being written** (stories in progress, and the
+ones that have gone quiet), **Complete**, **Set aside** and **All**, each
+with its count. The library opens on All. Beside them, the order --
+**Latest**, **A–Z** or **Mine**, only the stories you write in -- the look
+-- **Cards** or **List**, one line per story, for a shelf of hundreds --
+and **Filters**, for a series and tags (a story has to carry every tag you
+pick). What is switched on is shown under the controls, each with a × to
+take it off. Thirty stories to a page, numbered; every one of these is
+part of the address, so a view of the list can be bookmarked or sent.
+
+Each story is a card: its cover (or its first letter, when it has none),
+who wrote it, where it stands -- **✓ Complete**, **✎ Ongoing** -- in a
+mark and a word, how many chapters and words and roughly how long it
+takes to read, its series, its blurb and its first tags. The title is the
+link; the whole card opens it.
 
 At the foot, **Lately** is the last three things people did -- read a
 chapter, left notes, asked for a read -- and **All activity** is the whole

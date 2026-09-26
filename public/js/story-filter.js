@@ -9,9 +9,9 @@
   const series = /** @type {HTMLSelectElement|null} */ (document.querySelector('[data-autosubmit-series]'));
   if (series && series.form) series.addEventListener('change', () => /** @type {HTMLFormElement} */ (series.form).submit());
 
-  // The two panels under the list's heading: one open at a time, and a
+  // The filters panel (and any other under the list's heading): one open at a time, and a
   // click anywhere else, or Escape, puts it away.
-  const panels = /** @type {HTMLDetailsElement[]} */ (Array.from(document.querySelectorAll('.list-head details')));
+  const panels = /** @type {HTMLDetailsElement[]} */ (Array.from(document.querySelectorAll('.library-filters, .list-head details')));
   for (const d of panels) {
     d.addEventListener('toggle', () => {
       if (d.open) for (const other of panels) if (other !== d) other.open = false;

@@ -33,6 +33,7 @@ const modules = [
   ['imports', require('./models/imports')],
   ['storyGlossary', require('./models/story-glossary')],
   ['wikiLinks', require('./models/wiki-links')],
+  ['front', require('./models/front')],
 ];
 
 const all = {};
