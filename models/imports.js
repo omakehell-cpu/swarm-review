@@ -34,10 +34,24 @@ function findOrCreateImportedAuthor({ name, authorSlug, url }) {
   return db.prepare('SELECT * FROM users WHERE id = ?').get(Number(info.lastInsertRowid));
 }
 
-/** A story already imported from the same place. */
-const findImportedStory = (sourceId) => (sourceId
-  ? db.prepare('SELECT id, title FROM stories WHERE source_id = ?').get(String(sourceId)) || null
-  : null);
+/**
+ * A story already imported: from the same place, or -- for an EPUB that
+ * does not say where it came from -- under the same title by the same
+ * imported author, which is as near as the file lets us get.
+ * @param {string|null|undefined} sourceId
+ * @param {{ title?: string, name?: string, authorSlug?: string }} [also]
+ */
+function findImportedStory(sourceId, also = {}) {
+  if (sourceId) {
+    const hit = db.prepare('SELECT id, title FROM stories WHERE source_id = ?').get(String(sourceId));
+    if (hit) return hit;
+  }
+  if (!also.title) return null;
+  return db.prepare(`
+    SELECT s.id, s.title FROM stories s JOIN users u ON u.id = s.imported_author_id
+    WHERE lower(s.title) = lower(?) AND u.username = ?
+  `).get(String(also.title), `sol-${slug(also.authorSlug || also.name)}`) || null;
+}
 
 /** The imported author this username would be, without making one. */
 const importedAuthorFor = ({ name, authorSlug }) => db.prepare(`

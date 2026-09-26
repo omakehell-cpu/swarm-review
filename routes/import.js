@@ -35,7 +35,7 @@ function describe(parsed) {
   return {
     parsed,
     author: models.importedAuthorFor({ name: parsed.author, authorSlug: parsed.authorSlug }),
-    duplicate: models.findImportedStory(parsed.solId),
+    duplicate: models.findImportedStory(parsed.solId, { title: parsed.title, name: parsed.author, authorSlug: parsed.authorSlug }),
     tags: models.matchTags(parsed.tags),
   };
 }

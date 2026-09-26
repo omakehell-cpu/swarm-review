@@ -123,3 +123,20 @@ test('the wiki pages for a story and its writer are the ones linked, not doubled
   assert.match(writer, /Their stories are here[\s\S]*3 stories by Thinking Horndog[\s\S]*who is <a href="\/users\/thinker55">Thinker/);
   assert.match(await (await admin.request('/authors')).text(), /id="a-sol-thinking-horndog"[\s\S]*href="\/glossary\/Thinking%20Horndog">In the glossary/);
 });
+
+test('a file that does not say where it came from is still not imported twice', async () => {
+  const noSource = async () => {
+    const buf = await solEpub({ id: 77, title: 'Nowhere Story', author: 'Akarge', slug: 'akarge' });
+    const JSZipLocal = JSZip;
+    const zip = await JSZipLocal.loadAsync(buf);
+    zip.file('OEBPS/finish.xhtml', page('Finish', '<p>The End</p>'));
+    return zip.generateAsync({ type: 'nodebuffer' });
+  };
+  const { multipartWithFile } = require('./helpers/app');
+  const send = async () => (await (await admin.request('/admin/import/batch', {
+    method: 'POST', headers: { Accept: 'application/json' },
+    ...multipartWithFile([['tags', 'skip']], { name: 'file', filename: 'nowhere.epub', body: await noSource() }),
+  })).json()).results[0].status;
+  assert.strictEqual(await send(), 'imported');
+  assert.strictEqual(await send(), 'duplicate');
+});
