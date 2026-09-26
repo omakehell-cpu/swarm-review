@@ -3,6 +3,9 @@
 Keeping a cast of hundreds straight: who they are, who they know, and which
 chapters they turn up in.
 
+New to it? [Your first cast, step by step](/help/your-first-cast) walks
+through one small story from the first word.
+
 Every story has one, from the **Bible** button on the story page. Anyone who
 can read the story can read its bible, and only the author and coauthors can
 change it -- unless the owner has closed it, which is the next section.

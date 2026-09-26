@@ -4,6 +4,14 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
+## 2026-09-26 — Your first cast
+
+### The story bible
+
+- **Your first cast, step by step**: a new walkthrough in Help, from a blank story to a cast the chapters link, with pictures of every step.
+- **"Dr Ilse Varn" is offered as Ilse Varn.** A form of address in front (Dr, Captain, Colonel, Señora) is taken off the names the scan offers; Captain Kessler is simply Kessler.
+- **Adding a full name answers its parts.** Add *Mara Kessler* and the row asking about *Kessler* says it is her and goes.
+
 ## 2026-09-24 — Who is who, and changing it where it stands
 
 ### Writing
