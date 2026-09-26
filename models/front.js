@@ -114,10 +114,13 @@ function deskFor(userId, stories) {
     .localeCompare(String((a.draft && a.draft.updated_at) || a.last_chapter_at || a.created_at)));
 }
 
-/** How somebody likes the list of stories to look: '' (covers) or 'list'. */
-const storyViewOf = (userId) => (db.prepare('SELECT story_view FROM users WHERE id = ?').get(userId) || {}).story_view || '';
+/** How somebody likes a shelf to look: '' (rows of the catalogue) or 'table'. */
+const storyViewOf = (userId) => {
+  const v = (db.prepare('SELECT story_view FROM users WHERE id = ?').get(userId) || {}).story_view || '';
+  return v === 'table' || v === 'list' ? 'table' : '';
+};
 function setStoryView(userId, view) {
-  db.prepare('UPDATE users SET story_view = ? WHERE id = ?').run(view === 'list' ? 'list' : '', userId);
+  db.prepare('UPDATE users SET story_view = ? WHERE id = ?').run(view === 'table' ? 'table' : '', userId);
 }
 
 module.exports = { deskFor, newChaptersByStory, recentlyRead, setStoryView, storiesReadBy, storyViewOf };

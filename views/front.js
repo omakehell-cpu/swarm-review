@@ -51,28 +51,69 @@ function coverOrLetter(s, className = 'story-card-cover') {
   return `<span class="${className} cover-letter" aria-hidden="true">${escapeHtml(letter)}</span>`;
 }
 
-// ---------- a story, as a card ----------
+// ---------- a story, as a row of the catalogue ----------
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function monthYear(d) {
+  const m = /^(\d{4})-(\d{2})/.exec(String(d || ''));
+  return m ? `${MONTHS[Number(m[2]) - 1]} ${m[1]}` : '';
+}
 
 /**
- * One link per card -- the title -- stretched across it, so the whole card
- * is a target without a link inside a link. The tags are words, not
- * links, for the same reason; the story's page has them as links.
+ * The whole width for one story: its face, then what it is -- title, who,
+ * series, the whole blurb, its tags -- and, set apart on the right, the
+ * facts to compare it by. Nothing cut short that matters.
  */
-function storyCard(s, { tags = [], coauthors = [], sinceQs = '', compact = false } = {}) {
-  const size = [plural(s.chapter_count || 0, 'chapter'), shortWords(s.word_count), readTime(s.word_count)].filter(Boolean).join(' &middot; ');
+function storyWide(s, { tags = [], coauthors = [], sinceQs = '' } = {}) {
   return `
-    <li class="story-card story-row${compact ? ' is-compact' : ''}" data-find="${escapeHtml(`${s.title} ${s.author_name || ''} ${s.series || ''} ${s.description || ''} ${tags.map((t) => t.name).join(' ')}`.toLowerCase())}">
-      ${coverOrLetter(s)}
-      <div class="story-card-body">
-        <h3 class="story-card-title"><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a>${s.has_new_chapters ? ' <span class="badge new">New</span>' : ''}</h3>
-        <p class="story-card-by">${bylineWith(s.author_name, coauthors)}</p>
-        <p class="story-card-facts">${stateLabel(s)} <span>${size}</span></p>
-        ${s.series && !compact ? `<p class="story-card-series">${escapeHtml(s.series)}</p>` : ''}
-        ${s.description ? `<p class="story-card-blurb">${escapeHtml(s.description)}</p>` : ''}
-        ${tags.length && !compact ? `<p class="story-card-tags"><i class="sr-only">Tags: </i>${tags.slice(0, 3).map((t) => `<span>${escapeHtml(t.name)}</span>`).join('')}${tags.length > 3 ? `<span class="more">+${tags.length - 3}</span>` : ''}</p>` : ''}
-        ${s.pending_comments > 0 ? `<p><span class="badge pending">${s.pending_comments} waiting</span></p>` : ''}
+    <li class="story-wide story-row" data-find="${escapeHtml(`${s.title} ${s.author_name || ''} ${s.series || ''} ${s.description || ''}`.toLowerCase())}">
+      ${coverOrLetter(s, 'story-wide-cover')}
+      <div class="story-wide-main">
+        <h3 class="story-wide-title"><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a>${s.has_new_chapters ? ' <span class="badge new">New</span>' : ''}</h3>
+        <p class="story-wide-by">${bylineWith(s.author_name, coauthors)}${s.series ? ` <span class="story-wide-series">&middot; ${escapeHtml(s.series)}</span>` : ''}</p>
+        ${s.description ? `<p class="story-wide-blurb">${escapeHtml(s.description)}</p>` : ''}
+        ${tags.length ? `<p class="story-card-tags"><i class="sr-only">Tags: </i>${tags.slice(0, 6).map((t) => `<span>${escapeHtml(t.name)}</span>`).join('')}${tags.length > 6 ? `<span class="more">+${tags.length - 6}</span>` : ''}</p>` : ''}
       </div>
+      <dl class="story-wide-facts">
+        <div><dt class="sr-only">Stands</dt><dd>${stateLabel(s) || '&nbsp;'}</dd></div>
+        <div><dt>Chapters</dt><dd>${s.chapter_count || 0}</dd></div>
+        <div><dt>Words</dt><dd>${shortWords(s.word_count).replace(' words', '') || '&ndash;'}</dd></div>
+        ${readTime(s.word_count) ? `<div><dt>To read</dt><dd>${readTime(s.word_count).replace('about ', '')}</dd></div>` : ''}
+        <div><dt>Updated</dt><dd>${monthYear(s.last_chapter_at || s.created_at)}</dd></div>
+        ${s.pending_comments > 0 ? `<div><dt class="sr-only">Notes</dt><dd><span class="badge pending">${s.pending_comments} waiting</span></dd></div>` : ''}
+      </dl>
     </li>`;
+}
+
+/**
+ * Every story as a line of a table, for comparing a shelf at a glance.
+ * @param {any[]} stories
+ * @param {{ coauthorsFor?: (s: any) => any[], sinceQs?: string }} [opts]
+ */
+function storyTable(stories, { coauthorsFor = (_s) => [], sinceQs = '' } = {}) {
+  return `
+    <div class="story-table-wrap">
+      <table class="story-table">
+        <thead><tr>
+          <th scope="col">Story</th><th scope="col">Stands</th><th scope="col" class="num">Chapters</th>
+          <th scope="col" class="num">Words</th><th scope="col">To read</th><th scope="col">Updated</th>
+        </tr></thead>
+        <tbody>
+          ${stories.map((s) => `
+            <tr class="story-row">
+              <th scope="row">
+                <a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a>
+                <span class="story-table-by">${bylineWith(s.author_name, coauthorsFor(s))}${s.series ? ` &middot; ${escapeHtml(s.series)}` : ''}</span>
+              </th>
+              <td>${stateLabel(s)}</td>
+              <td class="num">${s.chapter_count || 0}</td>
+              <td class="num">${(Number(s.word_count) || 0).toLocaleString('en-GB')}</td>
+              <td>${readTime(s.word_count).replace('about ', '') || '&ndash;'}</td>
+              <td>${monthYear(s.last_chapter_at || s.created_at)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 // ---------- write: your desk ----------
@@ -265,8 +306,8 @@ function viewControls(state) {
     ['A&ndash;Z', listHref(state, { sort: 'title' }), state.sort === 'title'],
   ])}
         ${segment('How the stories are shown', [
-    ['Covers', listHref(state, { view: 'covers' }), !state.view],
-    ['List', listHref(state, { view: 'list' }), state.view === 'list'],
+    ['Rows', listHref(state, { view: 'rows' }), state.view !== 'table'],
+    ['Table', listHref(state, { view: 'table' }), state.view === 'table'],
   ])}`;
 }
 
@@ -357,6 +398,6 @@ function followButton(storyId, following, { back = '', followers = 0, small = fa
 }
 
 module.exports = {
-  activeChips, seeAll, deskColumn, followButton, followingList, listControls, listHref, pager, recentlyList, reviewColumn, viewControls,
-  shortWords, stateLabel, storyCard,
+  activeChips, seeAll, storyTable, storyWide, deskColumn, followButton, followingList, listControls, listHref, pager, recentlyList, reviewColumn, viewControls,
+  shortWords, stateLabel,
 };

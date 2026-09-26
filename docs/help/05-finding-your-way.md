@@ -44,21 +44,25 @@ without a wall of titles. **See all** under them opens the rest in the
 advanced search, on the same shelf and in the same order.
 
 Beside the shelves, the order -- **Latest** or **A–Z** -- and the look:
-**Covers**, or **List**, one line per story, for a shelf of hundreds. The
-look you choose is kept, here and in the advanced search.
 
-Each story shows its cover (or its first letter), who wrote it, where it
-stands in a mark and a word -- **✓ Finished**, **✎ Being written**, **On
-hiatus**, **Set aside** -- how many chapters and words and roughly how long
-it takes to read, its series, its blurb and its first tags.
+- **Rows**, the catalogue: one story to a row, with its cover, its title,
+  who wrote it and its series, its blurb and its tags, and on the right
+  the facts to compare it by -- where it stands, chapters, words, how long
+  it takes to read, and when it last moved.
+- **Table**, for going through a shelf of hundreds: one line each, with
+  the same facts in columns.
+
+The look you choose is kept, here and in the advanced search.
+
+Where a story stands is always a mark and a word -- **✓ Finished**, **✎
+Being written**, **On hiatus**, **Set aside** -- never a colour alone.
 
 ### Searching
 
 The **search box in the top bar** looks through everything: stories,
-chapters, the text of every chapter, the glossary and the bibles.
-
-**Advanced**, beside that box, opens the advanced search, which is for
-stories, with every way of narrowing them at once:
+chapters, the text of every chapter, the glossary and the bibles. The lens
+beside it searches; the lens with two sliders in it opens the **advanced
+search**, which is for stories, with every way of narrowing them at once:
 
 - **Title, blurb or tag**, and the **author** -- part of a name is enough.
 - **Words in the text** -- anywhere in the chapters; put a phrase in

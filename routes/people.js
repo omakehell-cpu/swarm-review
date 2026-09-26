@@ -99,8 +99,11 @@ function storyList(user, query, { since = null, defaultShelf = 'writing', pageSi
   // Covers or a list: chosen once and kept, so it is the same on every
   // visit and on every page of the list.
   const asked = query.get('view');
-  if (asked === 'list' || asked === 'covers') models.setStoryView(user.id, asked);
-  const view = asked === 'list' || asked === 'covers' ? (asked === 'list' ? 'list' : '') : models.storyViewOf(user.id);
+  // Rows (the catalogue) or a table. The names the page used before still
+  // mean something: a list was the compact one, covers the full one.
+  const WAS = { rows: '', covers: '', magazine: '', table: 'table', list: 'table' };
+  if (asked && asked in WAS) models.setStoryView(user.id, WAS[asked] || 'rows');
+  const view = asked && asked in WAS ? WAS[asked] : models.storyViewOf(user.id);
   const foldedHere = shelves.shelve(folded, { ...shelfOptions, page: 1 });
   const authors = [...new Set(visible.map((s2) => s2.author_name).filter(Boolean))].sort((x, y) => x.localeCompare(y));
   return {

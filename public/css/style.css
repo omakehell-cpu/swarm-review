@@ -5336,3 +5336,61 @@ label.adv-check input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18
 .topbar-advanced { font-size: var(--t-sm); color: var(--text-muted); text-decoration: none; white-space: nowrap; }
 .topbar-advanced:hover, .topbar-advanced[aria-current="page"] { color: var(--text); text-decoration: underline; }
 .see-all { margin: var(--s-8) 0 0; text-align: center; }
+/* The lenses beside the search box: search, and the advanced search. */
+.topbar-search { gap: var(--s-2); }
+.topbar-icon {
+  display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0;
+  border: 1px solid transparent; background: transparent; color: var(--text-muted); cursor: pointer; text-decoration: none;
+}
+.topbar-icon .ico { width: 20px; height: 20px; }
+.topbar-icon:hover, .topbar-icon:focus-visible { color: var(--text); border-color: var(--border); background: transparent; }
+.topbar-icon[aria-current="page"] { color: var(--text); border-color: var(--text); }
+.topbar-advanced { text-decoration: none !important; }
+
+/* ---------- ways to show a shelf (views/front.js) ---------- */
+.story-wides { list-style: none; margin: 0; padding: 0; }
+.story-wides > .story-wide:first-child { padding-top: var(--s-4); }
+.story-wide {
+  display: grid; grid-template-columns: 84px minmax(0, 1fr) 11rem; gap: var(--s-7); align-items: start;
+  padding: var(--s-7) 0; border-bottom: 1px solid var(--border);
+}
+.story-wide-cover { width: 84px; aspect-ratio: 2 / 3; height: auto; object-fit: cover; display: block; box-shadow: 0 0 0 1px var(--border); }
+.story-wide-cover.cover-letter { display: flex; font-size: 2rem; }
+.story-wide-main { min-width: 0; display: flex; flex-direction: column; gap: var(--s-3); }
+.story-wide-title { margin: 0; font-family: var(--font-prose); font-size: var(--t-xl); line-height: 1.2; letter-spacing: -0.01em; }
+.story-wide:hover .story-wide-title a { text-decoration: underline; }
+.story-wide-by { margin: 0; font-size: var(--t-sm); color: var(--text-muted); }
+.story-wide-series { font-style: italic; }
+.story-wide-blurb { margin: var(--s-2) 0 0; font-size: var(--t-md); line-height: 1.5; max-width: 62ch; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.story-wide-facts { margin: 0; display: grid; gap: var(--s-2); font-size: var(--t-sm); border-left: 1px solid var(--border); padding-left: var(--s-6); }
+.story-wide-facts > div { display: flex; justify-content: space-between; gap: var(--s-4); }
+.story-wide-facts dt { color: var(--text-muted); }
+.story-wide-facts dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+.story-wide-facts > div:first-child { justify-content: flex-start; margin-bottom: var(--s-2); }
+
+.story-cards.is-magazine { grid-template-columns: repeat(auto-fill, minmax(min(100%, 30rem), 1fr)); gap: var(--s-9) var(--s-9); }
+.story-cards.is-magazine .story-card { grid-template-columns: 128px 1fr; gap: var(--s-7); }
+.story-cards.is-magazine .story-card-cover { width: 128px; }
+.story-cards.is-magazine .story-card-title { font-size: var(--t-xl); }
+.story-cards.is-magazine .story-card-blurb { -webkit-line-clamp: 5; }
+
+.story-table-wrap { overflow-x: auto; }
+.story-table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
+.story-table th, .story-table td { padding: var(--s-4) var(--s-5) var(--s-4) 0; text-align: left; border-bottom: 1px solid var(--border); vertical-align: baseline; }
+.story-table thead th { font-size: var(--t-xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); border-bottom: 2px solid var(--text); white-space: nowrap; }
+.story-table tbody th { font-weight: 400; }
+.story-table tbody th .row-link { font-family: var(--font-prose); font-size: var(--t-md); font-weight: 700; display: block; }
+.story-table-by { color: var(--text-muted); }
+.story-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.story-table tr.story-row { position: relative; }
+.story-table tbody tr:hover { background: var(--bg-sunken); }
+
+@media (max-width: 760px) {
+  .story-wide { grid-template-columns: 64px minmax(0, 1fr); gap: var(--s-5); }
+  .story-wide-cover { width: 64px; }
+  .story-wide-facts { grid-column: 2; border-left: 0; padding-left: 0; display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-5); }
+  .story-wide-facts > div { gap: var(--s-2); }
+  .story-wide-facts > div:first-child { margin: 0; }
+  .story-cards.is-magazine .story-card { grid-template-columns: 88px 1fr; }
+  .story-cards.is-magazine .story-card-cover { width: 88px; }
+}

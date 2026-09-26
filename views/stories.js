@@ -219,20 +219,6 @@ function whatsNewCard(whatsNew) {
 // ---------- the list: where from, shelves, search, and pages ----------
 // (the controls themselves are in views/front.js)
 
-// The same story, one line tall: title, who, how long, where it stands.
-// For a shelf of three hundred, a list you can scan beats a wall of cards.
-function storyLine(s, { sinceQs = '', coauthors = [] } = {}) {
-  return `
-    <li class="story-line story-row" data-find="${escapeHtml(`${s.title} ${s.author_name || ''} ${s.series || ''} ${s.description || ''}`.toLowerCase())}">
-      <a class="story-line-title row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a>${s.has_new_chapters ? ' <span class="badge new">New</span>' : ''}
-      <span class="story-line-by">${bylineWith(s.author_name, coauthors)}</span>
-      ${s.series ? `<span class="story-line-series">${escapeHtml(s.series)}</span>` : ''}
-      <span class="story-line-size">${s.chapter_count} ch${s.word_count ? ` &middot; ${front.shortWords(s.word_count)}` : ''}</span>
-      ${storyStateBadge(s)}
-      ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} waiting</span>` : ''}
-    </li>`;
-}
-
 // Nothing on this shelf: say which shelves the same search did find
 // something on, rather than an empty page that looks like the end.
 function emptyShelf(state) {
@@ -316,9 +302,11 @@ function storyResults(stories, listState, { sinceQs = '', tagsFor, coauthorsFor,
     : (state.activeTags.length ? `${SHELVES[state.shelf].label}, with those tags`
       : (state.sort === 'mine' ? `${SHELVES[state.shelf].label}, that you write in` : SHELVES[state.shelf].label));
   const rows = stories.length
-    ? (state.view === 'list'
-      ? `<ul class="story-lines">${stories.map((s) => storyLine(s, { sinceQs, coauthors: coauthorsFor(s) })).join('')}</ul>`
-      : `<ul class="story-cards">${stories.map((s) => front.storyCard(s, { tags: tagsFor(s), sinceQs, coauthors: coauthorsFor(s) })).join('')}</ul>`)
+    // A row of the catalogue for each story, or -- for comparing a shelf of
+    // hundreds -- one line of a table.
+    ? (state.view === 'table'
+      ? front.storyTable(stories, { coauthorsFor, sinceQs })
+      : `<ul class="story-wides">${stories.map((s) => front.storyWide(s, { tags: tagsFor(s), sinceQs, coauthors: coauthorsFor(s) })).join('')}</ul>`)
     : totalStories && !state.activeTags.length ? emptyShelf(state) : (state.activeTags.length
       ? emptyState({
         art: 'label',
@@ -538,7 +526,6 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, coverError 
 // ---------- glossary (a local, offline mirror of the shared-universe
 
 module.exports = {
-  storyLine,
   storyResults,
   activityPage,
   commentGist,
