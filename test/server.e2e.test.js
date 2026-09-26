@@ -127,7 +127,7 @@ test('a story saved with eight tags comes back with eight tags', async () => {
   // And the reader actually sees them.
   const page = await request(`/stories/${story.id}`);
   const html = await page.text();
-  for (const tag of chosen) assert.ok(html.includes(tag.name), `"${tag.name}" is on the page`);
+  for (const tag of chosen) assert.ok(html.includes(tag.name) || html.includes(tag.name.replace(/'/g, '&#39;')), `"${tag.name}" is on the page`);
 });
 
 test('filtering the index by a tag keeps the stories that carry it', async () => {

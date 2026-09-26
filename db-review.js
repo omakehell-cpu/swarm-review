@@ -235,4 +235,15 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   // An entry can last: a siege from day 12 to day 40. The start is
   // story_day; this is the last day, and empty for a single moment.
   ensureColumn('story_entities', 'story_day_end', 'INTEGER');
+
+  // The groups tags are filed under, in the order they are shown: the
+  // fourteen categories StoriesOnline uses, then this group's own (see
+  // lib/sol-tags.js). A group can exist with nothing in it yet. Filled,
+  // and the old groups folded in, once, in db.js after the tag seeds.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS tag_groups (
+      name     TEXT PRIMARY KEY,
+      position INTEGER NOT NULL DEFAULT 0
+    );
+  `);
 };

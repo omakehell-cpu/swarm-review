@@ -13,6 +13,17 @@ into** before they walk into it.
 They are set on **Edit details** for a story, and the whole vocabulary is
 browsable at **Tags**.
 
+They are grouped as StoriesOnline groups them, in its fourteen categories
+and in the same order -- **Age/Gender**, **Level of Consent**, **Sexual
+Orientations**, **Story Types**, **Science Fiction**, **Paranormal**,
+**Couples**, **Incest**, **BDSM Elements**, **Groups**, **Interracial
+Elements**, **Sexual Activities**, **Fetishes** and **Other** -- so a story
+written here is tagged the way the ones brought in from there already are.
+After them come the group's own: **Swarm**, **Cast**, **Length** and
+**Review status**. A tag that arrives with an imported story, or is
+approved without a group chosen, goes in the category StoriesOnline files
+it under.
+
 The vocabulary is curated rather than free: anyone can type a tag that does
 not exist yet and **propose** it, and an admin either approves it or merges
 it into the one that already meant that. Free tags turn into six spellings
@@ -20,13 +31,14 @@ of the same idea within a month.
 
 @figure tag-vocabulary.png | The vocabulary at Tags, grouped the way the codes are.
 
-## Filtering the front page
+## Finding stories by tag
 
-**Filter by tag**, at the right of the *All stories* heading on the front
-page, opens the vocabulary as boxes to tick. A story has to carry **every**
-tag you tick, not any of them, so each one you add narrows the list.
-**Clear** puts the whole list back. The address of a filtered page can be
-bookmarked or sent to somebody.
+The **advanced search** (the lens with sliders beside the search box in the
+top bar) has the vocabulary under **Tags**, as boxes to tick, grouped as
+above. A story has to carry **every** tag you tick, not any of them, so each
+one you add narrows the list. What is ticked is shown above the results,
+each with a × to take it off, and the address can be bookmarked or sent to
+somebody.
 
 ## Tags you would rather not see
 

@@ -42,7 +42,7 @@ function describe(parsed) {
 
 // The groups a new tag can go in: the ones the vocabulary has, less the
 // queue proposals wait in.
-const tagGroups = () => models.listTagsGrouped().map((g) => g.group).filter((g) => g !== 'Proposed');
+const tagGroups = () => models.listTagGroupNames();
 
 async function handleImportPage(req, res, user) {
   sendHtml(res, 200, views.importPage({ user, authors: models.listImportedAuthors() }));

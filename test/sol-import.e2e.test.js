@@ -166,11 +166,11 @@ test('tags the vocabulary lacks are offered: add one, use a near spelling, or le
   assert.match(html, /Not in the vocabulary yet/);
   assert.match(html, /<option value="use" selected>Use Science fiction<\/option>/, 'a near spelling is offered first');
   assert.match(html, /Approve the proposed tag/, 'a waiting proposal is offered for approval');
-  assert.match(html, /name="group1">[\s\S]*?<option selected>Pairings<\/option>/, 'Ma/ft goes with the pairings');
+  assert.match(html, /name="group1">[\s\S]*?<option selected>Age\/Gender<\/option>/, 'Ma/ft goes where StoriesOnline files it');
   const key = /action="\/admin\/import\/([a-f0-9]{24})"/.exec(html)[1];
 
   await admin.request(`/admin/import/${key}`, { method: 'POST', ...form([
-    ['title', 'Tagged'], ['tag0', 'use'], ['tag1', 'add'], ['group1', 'Pairings'],
+    ['title', 'Tagged'], ['tag0', 'use'], ['tag1', 'add'], ['group1', 'Age/Gender'],
     ['tag2', 'skip'], ['group2', 'Content notes'], ['tag3', 'add'], ['group3', 'Content notes'],
   ]) });
   const story = models.listStories().find((st) => st.title === 'Tagged');
@@ -178,7 +178,7 @@ test('tags the vocabulary lacks are offered: add one, use a near spelling, or le
   assert.deepStrictEqual(names, ['Coercion', 'Ma/ft', 'Science fiction']);
   const all = models.listTags();
   const maft = all.find((t) => t.name === 'Ma/ft');
-  assert.strictEqual(maft.tag_group, 'Pairings');
+  assert.strictEqual(maft.tag_group, 'Age/Gender');
   assert.notStrictEqual(maft.status, 'proposed', 'an added tag is in the vocabulary, not the queue');
   assert.strictEqual(all.find((t) => t.name === 'Coercion').status, 'approved');
   assert.ok(!all.some((t) => t.name === 'Reluctant'), 'what was left off was not added');

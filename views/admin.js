@@ -1,5 +1,6 @@
 'use strict';
 
+const { categoryFor } = require('../lib/sol-tags');
 const { layout } = require('../lib/layout');
 const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
@@ -143,7 +144,7 @@ function adminUserRow(u, { currentUserId }) {
     </div>`;
 }
 
-function adminPage({ user, users, claims = [], activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [], proposedTags = [], openTags = false, backups = { list: [], dir: '', keep: 0 } }) {
+function adminPage({ user, users, claims = [], activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice, tagGroups = [], groupNames: allGroupNames = [], proposedTags = [], openTags = false, backups = { list: [], dir: '', keep: 0 } }) {
   const userRows = users.map((u) => adminUserRow(u, { currentUserId: user.id })).join('');
   return layout({
     title: 'Admin',
@@ -228,7 +229,7 @@ function adminPage({ user, users, claims = [], activeInviteCode, inviteCodeHisto
         <div class="admin-user-list">${userRows}</div>
       </section>
 
-      ${tagAdminSection(tagGroups, proposedTags, { open: openTags })}`,
+      ${tagAdminSection(tagGroups, proposedTags, { open: openTags, allGroupNames })}`,
   });
 }
 
@@ -240,7 +241,7 @@ function adminPage({ user, users, claims = [], activeInviteCode, inviteCodeHisto
 // an admin actually wants to do with a proposal: take it as it stands
 // (possibly renaming and filing it under a real group first), fold it
 // into a tag that already says the same thing, or throw it out.
-function proposedTagsSection(proposedTags, tagGroups) {
+function proposedTagsSection(proposedTags, tagGroups, allGroupNames = []) {
   if (!proposedTags.length) {
     return `
     <div class="proposed-queue is-empty" id="tag-queue">
@@ -249,7 +250,7 @@ function proposedTagsSection(proposedTags, tagGroups) {
     </div>`;
   }
   const approved = tagGroups.flatMap((g) => g.tags.filter((t) => t.status !== 'proposed').map((t) => ({ ...t, group: g.group })));
-  const groupNames = Array.from(new Set(tagGroups.map((g) => g.group))).filter((n) => n !== 'Proposed');
+  const groupNames = allGroupNames.length ? allGroupNames : Array.from(new Set(tagGroups.map((g) => g.group))).filter((n) => n !== 'Proposed');
 
   return `
     <div class="proposed-queue" id="tag-queue">
@@ -265,7 +266,7 @@ function proposedTagsSection(proposedTags, tagGroups) {
             <form method="post" action="/admin/tags/${t.id}/approve" class="proposed-form">
               <input type="text" name="name" value="${escapeHtml(t.name)}" aria-label="Name to approve it under">
               <select name="group" aria-label="Group">
-                ${groupNames.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
+                ${groupNames.map((n) => `<option value="${escapeHtml(n)}"${n === categoryFor(t.name) ? ' selected' : ''}>${escapeHtml(n)}</option>`).join('')}
               </select>
               <button class="btn small" type="submit">Approve</button>
             </form>
@@ -291,14 +292,14 @@ function proposedTagsSection(proposedTags, tagGroups) {
 /**
  * @param {Array<{ group: string, tags: any[] }>} tagGroups
  * @param {any[]} [proposedTags]
- * @param {{ open?: boolean }} [options]
+ * @param {{ open?: boolean, allGroupNames?: string[] }} [options]
  */
-function tagAdminSection(tagGroups, proposedTags = [], { open = false } = {}) {
+function tagAdminSection(tagGroups, proposedTags = [], { open = false, allGroupNames = [] } = {}) {
   const vocabulary = tagGroups
     .map((g) => ({ ...g, tags: g.tags.filter((t) => t.status !== 'proposed') }))
     .filter((g) => g.tags.length);
   const tagCount = vocabulary.reduce((n, g) => n + g.tags.length, 0);
-  const groupNames = Array.from(new Set(vocabulary.map((g) => g.group)));
+  const groupNames = allGroupNames.length ? allGroupNames : Array.from(new Set(vocabulary.map((g) => g.group)));
   const rows = vocabulary.map((g) => `
     <h4 class="tag-admin-group">${escapeHtml(g.group)} <span class="tag-admin-count">${g.tags.length}</span></h4>
     <div class="tag-admin-list">${g.tags.map((t) => `
@@ -316,7 +317,7 @@ function tagAdminSection(tagGroups, proposedTags = [], { open = false } = {}) {
     <section class="admin-section" id="tags">
       <h2>Tags</h2>
       <p class="muted">The vocabulary authors pick from when they tag a story (see the <a href="/tags">tag index</a>). Renaming one updates it everywhere at once; its link keeps working, since a tag is identified by its own row rather than by its name.</p>
-      ${proposedTagsSection(proposedTags, tagGroups)}
+      ${proposedTagsSection(proposedTags, tagGroups, allGroupNames)}
       <details class="tag-vocabulary" id="tag-vocabulary"${open ? ' open' : ''}>
         <summary>The vocabulary <span class="tag-admin-count">${tagCount} tag${tagCount === 1 ? '' : 's'} in ${vocabulary.length} group${vocabulary.length === 1 ? '' : 's'}</span></summary>
         <datalist id="tag-groups">${groupNames.map((n) => `<option value="${escapeHtml(n)}"></option>`).join('')}</datalist>

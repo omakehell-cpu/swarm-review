@@ -141,19 +141,9 @@ function editDistance(a, b) {
   return row[b.length];
 }
 
-// StoriesOnline's codes sort into the groups this site already has: the
-// x/y pairings, orientations, a handful of genres, and -- most of the
-// rest -- what a reader might want warning of.
-const ORIENTATIONS = ['heterosexual', 'homosexual', 'bisexual', 'transgender', 'gay', 'lesbian', 'asexual', 'pansexual'];
-const GENRES = ['science fiction', 'fantasy', 'romance', 'humor', 'humour', 'drama', 'horror', 'mystery', 'thriller',
-  'western', 'historical', 'action', 'adventure', 'action/adventure', 'crime', 'paranormal', 'fan fiction', 'tragedy', 'military'];
-function guessTagGroup(name) {
-  const lower = String(name).toLowerCase().trim();
-  if (/^[a-z]{1,4}\/[a-z]{1,4}$/.test(lower) || ['mult', 'group', 'harem', 'solo'].includes(lower)) return 'Pairings';
-  if (ORIENTATIONS.includes(lower)) return 'Orientation';
-  if (GENRES.includes(lower)) return 'Genre';
-  return 'Content notes';
-}
+// A StoriesOnline code goes in the category StoriesOnline files it under
+// (lib/sol-tags.js), which is how this site groups its tags too.
+const guessTagGroup = (name) => require('../lib/sol-tags').categoryFor(name);
 
 /**
  * For each tag the book has and the vocabulary does not: an existing tag
