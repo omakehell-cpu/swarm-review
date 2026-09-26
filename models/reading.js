@@ -173,6 +173,9 @@ function chaptersNewToMe(userId, limit) {
     JOIN users u ON u.id = c.author_id
     WHERE c.author_id <> @userId
       AND c.archived_at IS NULL AND s.archived_at IS NULL
+      -- A chapter that came in with an imported story is not news: it was
+      -- written years ago, somewhere else. One added after the import is.
+      AND (s.imported_at IS NULL OR c.created_at > s.imported_at)
       AND NOT EXISTS (
         SELECT 1 FROM chapter_reads r WHERE r.chapter_id = c.id AND r.user_id = @userId
       )

@@ -6,6 +6,15 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-26 — Your first cast, and a timeline you can see
 
+### The front page
+
+- **What the group writes first; the library a tab over.** *Written here*, *From StoriesOnline* and *Everything*, each with its count. A search with no tab chosen looks everywhere.
+- **Stories as cards**, with the cover (or the first letter when there is none), where the story stands as a mark and a word, its length and roughly how long it takes to read, its blurb and its first tags. *List* is still there for a shelf of hundreds.
+- **Pick up where you left off**: the stories you were reading, with the chapter you stopped in, or the next one.
+- **New to read, a story at a time**, and never the chapters that came in with an import.
+- **Something to read**: four from the library you have not begun, a different four every day.
+- **One row of controls**: the shelves, the order, the look, and *Filters* for series and tags, with what is switched on shown as chips you can take off. Numbered pages. *Skip to the stories* for keyboards and screen readers, and bigger, clearer metadata.
+
 ### Imported authors
 
 - **Authors**, a page of everybody whose stories came from StoriesOnline, each with their stories. Find an author or a story by typing. From the front page: *By author*, next to *From StoriesOnline*.

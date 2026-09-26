@@ -92,10 +92,23 @@ async function handleStories(req, res, user, query) {
   // Shelved: being written, complete or set aside, then searched, then
   // cut into pages (lib/story-shelves.js). The shelf the list opens on is
   // the stories still being written; a search counts every shelf.
+  // Where from comes first once there is a library from StoriesOnline:
+  // the page opens on what the group writes, and the library is one tab
+  // over (opening on everything in it, not only the one still going).
+  const hasImported = visible.some(shelves.isImported);
+  // A search with no tab chosen looks everywhere: somebody typing a title
+  // should not have to know which side of the page it lives on.
+  const asked = query.get('origin') || '';
+  const originParam = ['imported', 'all'].includes(asked) ? asked
+    : (!asked && (query.get('q') || '').trim() && hasImported ? 'all' : '');
+  const origin = !hasImported ? '' : (originParam === 'all' ? '' : (originParam || 'here'));
   const shelfOptions = {
-    shelf: query.get('shelf') || '', q: (query.get('q') || '').slice(0, 200), origin: query.get('origin') || '',
+    shelf: query.get('shelf') || '', q: (query.get('q') || '').slice(0, 200), origin,
+    defaultShelf: origin === 'imported' ? 'all' : 'writing',
     series: query.get('series') || '', page: Number(query.get('page')) || 1, tagsByStory, coauthorsByStory,
   };
+  const originCounts = hasImported ? Object.fromEntries(['here', 'imported', 'all'].map((o) => [o,
+    shelves.shelve(visible, { ...shelfOptions, origin: o === 'all' ? '' : o, page: 1 }).counts.all])) : {};
   let list = shelves.shelve(visible, shelfOptions);
   // A search that finds nothing on the shelf it started on, and something
   // elsewhere, shows everything it found rather than an empty shelf.
@@ -105,9 +118,16 @@ async function handleStories(req, res, user, query) {
   }
   const view = query.get('view') === 'list' ? 'list' : '';
   const foldedHere = shelves.shelve(folded, { ...shelfOptions, page: 1 });
+  // For this reader, above the library: what they were in the middle of,
+  // what is new a story at a time, and a few from the library to try.
+  const forYou = {
+    continueReading: models.continueReading(user.id),
+    newByStory: models.newChaptersByStory(models.chaptersNewToMe(user.id, 60)),
+    discover: shelves.discoverPicks(visible, { userId: user.id, readStoryIds: models.storiesReadBy(user.id) }),
+  };
   sendHtml(res, 200, views.storiesPage({
     user, stories: list.stories, folded: folded.filter((s2) => foldedHere.stories.some((f) => f.id === s2.id)), since, tagsByStory, coauthorsByStory,
-    list: { ...list, view },
+    list: { ...list, view, originParam, originCounts, hasImported }, forYou,
     activeTags, allGroups: models.listTagsGrouped(), sort, totalStories: stories.length,
     inbox: models.inboxFor(user.id, { since }),
     activity: models.groupActivity(user),

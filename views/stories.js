@@ -6,7 +6,9 @@ const { timeHtml } = require('../lib/time');
 const { storyState, STORY_STATES, CHOOSABLE_STORY_STATES } = require('../lib/story-state');
 const { ICONS, bylineWith, emptyState, storyCoverImg, storyStateBadge, tagChips, tagPicker, wordCount } = require('./shared');
 const { ACCEPT_ATTRIBUTE } = require('../lib/entity-images');
-const { SHELVES, SHELF_ORDER, ORIGINS: ORIGIN_LABELS } = require('../lib/story-shelves');
+const { SHELVES, SHELF_ORDER } = require('../lib/story-shelves');
+const front = require('./front');
+const { listHref } = front;
 
 // One story as it appears in any list -- the front page, a tag's page, a
 // search result. `hiddenBy` is the reader's own hidden tags that this
@@ -75,7 +77,7 @@ function commentGist(body, max = 120) {
 // nothing at all when there is nothing -- an empty "you're all caught up"
 // box every single day is furniture, not information.
 function inboxSection(inbox) {
-  if (!inbox || inbox.empty) return '';
+  if (!inbox) return '';
 
   const pending = inbox.pending.length ? `
     <section class="inbox-group">
@@ -106,20 +108,6 @@ function inboxSection(inbox) {
       </ul>
     </section>` : '';
 
-  const fresh = inbox.newChapters.length ? `
-    <section class="inbox-group">
-      <h2>New to read</h2>
-      <ul class="inbox-list">
-        ${inbox.newChapters.map((c) => `
-          <li>
-            <a href="/chapters/${c.id}">
-              <span class="inbox-what">Chapter ${c.chapter_number}: ${escapeHtml(c.title)}</span>
-              <span class="inbox-where">${escapeHtml(c.story_title)} &middot; by ${escapeHtml(c.author_name)}${c.word_count ? ` &middot; ${wordCount(c.word_count)}` : ''}</span>
-            </a>
-          </li>`).join('')}
-      </ul>
-    </section>` : '';
-
   const asked = inbox.asked && inbox.asked.length ? `
     <section class="inbox-group inbox-asked">
       <h2>Asked to read by you</h2>
@@ -135,7 +123,7 @@ function inboxSection(inbox) {
       </ul>
     </section>` : '';
 
-  return `<div class="inbox">${asked}${pending}${replies}${fresh}</div>`;
+  return `${asked}${pending}${replies}`;
 }
 
 // The welcome card: three steps, each ticked off by doing it rather than
@@ -228,122 +216,21 @@ function whatsNewCard(whatsNew) {
     </section>`;
 }
 
-// Order and find, once there are enough stories for either to matter.
-// The order is a link per choice rather than a select, so it works with
-// no script and each is one click; the find box narrows the list as you
-// type (see story-filter.js) and, without a script, is simply not there.
-// ---------- the list: shelves, search, and pages ----------
+// ---------- the list: where from, shelves, search, and pages ----------
+// (the controls themselves are in views/front.js)
 
-/**
- * The front page's address with some of its settings changed. Everything
- * the list is showing -- shelf, search, origin, series, order, view, tags
- * -- goes into one query string, so every view of it is a link somebody
- * can keep.
- * @param {any} state
- * @param {Record<string, string|number|null>} [change]
- */
-function listHref(state, change = {}) {
-  const next = {
-    shelf: state.shelf === 'writing' ? '' : state.shelf,
-    q: state.q, origin: state.origin, series: state.series, sort: state.sort, view: state.view,
-    page: '', ...change,
-  };
-  const parts = [];
-  for (const [k, v] of Object.entries(next)) if (v) parts.push(`${k}=${encodeURIComponent(String(v))}`);
-  for (const t of state.activeTags || []) parts.push(`tag=${encodeURIComponent(t.slug)}`);
-  return parts.length ? `/?${parts.join('&amp;')}` : '/';
-}
-
-// The same row, one line tall: title, who, how long, where it stands.
-// For a shelf of two hundred, a list you can scan beats a column of covers.
+// The same story, one line tall: title, who, how long, where it stands.
+// For a shelf of three hundred, a list you can scan beats a wall of cards.
 function storyLine(s, { sinceQs = '', coauthors = [] } = {}) {
   return `
     <li class="story-line story-row" data-find="${escapeHtml(`${s.title} ${s.author_name || ''} ${s.series || ''} ${s.description || ''}`.toLowerCase())}">
-      <a class="story-line-title" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a>${s.has_new_chapters ? ' <span class="badge new">New</span>' : ''}
+      <a class="story-line-title row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a>${s.has_new_chapters ? ' <span class="badge new">New</span>' : ''}
       <span class="story-line-by">${bylineWith(s.author_name, coauthors)}</span>
       ${s.series ? `<span class="story-line-series">${escapeHtml(s.series)}</span>` : ''}
-      <span class="story-line-size">${s.chapter_count} ch${s.word_count ? ` &middot; ${wordCount(s.word_count)}` : ''}</span>
-      ${storyState(s) === 'ongoing' ? '' : storyStateBadge(s)}
+      <span class="story-line-size">${s.chapter_count} ch${s.word_count ? ` &middot; ${front.shortWords(s.word_count)}` : ''}</span>
+      ${storyStateBadge(s)}
       ${s.pending_comments > 0 ? `<span class="badge pending">${s.pending_comments} waiting</span>` : ''}
     </li>`;
-}
-
-function shelfTabs(state) {
-  const tab = (key) => {
-    const current = state.shelf === key;
-    const n = state.counts[key] || 0;
-    // A shelf with nothing on it is only shown when it is the one open.
-    if (!n && !current && key === 'dropped') return '';
-    return `<a class="tag-chip shelf-tab${current ? ' current' : ''}${n ? '' : ' is-empty'}" href="${listHref(state, { shelf: key === 'writing' ? '' : key })}"${current ? ' aria-current="page"' : ''}>${escapeHtml(SHELVES[key].label)}<span class="tag-chip-count">${n}</span></a>`;
-  };
-  return `<nav class="shelf-tabs" aria-label="Which stories">${SHELF_ORDER.map(tab).join('')}</nav>`;
-}
-
-function storySearch(state) {
-  const keep = (name, value) => (value ? `<input type="hidden" name="${name}" value="${escapeHtml(value)}">` : '');
-  return `
-    <form method="get" action="/" class="story-search" role="search">
-      ${keep('shelf', state.shelf === 'writing' ? '' : state.shelf)}${keep('origin', state.origin)}${keep('series', state.series)}${keep('sort', state.sort)}${keep('view', state.view)}
-      ${(state.activeTags || []).map((t) => keep('tag', t.slug)).join('')}
-      <label class="sr-only" for="story-find">Search every story</label>
-      <input type="search" class="list-find" id="story-find" name="q" value="${escapeHtml(state.q)}"
-             placeholder="Title, author, series or tag" autocomplete="off">
-      <button class="btn ghost small" type="submit">Search</button>
-      ${state.q ? `<a class="btn ghost small" href="${listHref(state, { q: '' })}">Clear</a>` : ''}
-    </form>`;
-}
-
-function listFilters(state) {
-  const choice = (param, value, label) => (state[param] === value
-    ? `<span class="list-sort-current" aria-current="true">${label}</span>`
-    : `<a href="${listHref(state, { [param]: value })}">${label}</a>`);
-  const origin = state.hasImported ? `
-    <nav class="list-sort" aria-label="Where the stories were written">
-      ${choice('origin', '', 'Anywhere')}${choice('origin', 'here', 'Written here')}${choice('origin', 'imported', 'From StoriesOnline')}<a href="/authors">By author</a>
-    </nav>` : '';
-  const series = state.seriesList.length ? `
-    <form method="get" action="/" class="series-pick">
-      ${state.shelf !== 'writing' ? `<input type="hidden" name="shelf" value="${escapeHtml(state.shelf)}">` : ''}
-      ${state.q ? `<input type="hidden" name="q" value="${escapeHtml(state.q)}">` : ''}
-      ${state.origin ? `<input type="hidden" name="origin" value="${escapeHtml(state.origin)}">` : ''}
-      ${state.view ? `<input type="hidden" name="view" value="${escapeHtml(state.view)}">` : ''}
-      <label for="series-pick" class="filter-label">Series</label>
-      <select name="series" id="series-pick" data-autosubmit-series>
-        <option value="">Any</option>
-        ${state.seriesList.map((s) => `<option value="${escapeHtml(s.name)}"${s.name === state.series ? ' selected' : ''}>${escapeHtml(s.name)} (${s.n})</option>`).join('')}
-      </select>
-      <button class="btn ghost small" type="submit" data-no-js>Show</button>
-    </form>` : '';
-  // The order is always in reach; where from, which series and how the
-  // list looks are folded under one line until somebody wants them.
-  const narrowed = [state.origin && ORIGIN_LABELS[state.origin], state.series, state.view === 'list' && 'as a list'].filter(Boolean);
-  return `
-    <div class="list-filters">
-      <nav class="list-sort" aria-label="Order of the stories">
-        ${choice('sort', '', 'Latest')}${choice('sort', 'title', 'A&ndash;Z')}${choice('sort', 'mine', 'Mine')}
-      </nav>
-      <details class="list-more">
-        <summary>${narrowed.length ? `Showing: ${escapeHtml(narrowed.join(', '))}` : 'More ways to look'}</summary>
-        <div class="list-more-body">
-          ${origin}
-          ${series}
-          <nav class="list-sort" aria-label="How the list looks">
-            ${choice('view', '', 'Covers')}${choice('view', 'list', 'List')}
-          </nav>
-        </div>
-      </details>
-    </div>`;
-}
-
-function pager(state) {
-  if (state.pages <= 1) return '';
-  const link = (n, label, rel = '') => `<a href="${listHref(state, { page: n > 1 ? n : '' })}"${rel ? ` rel="${rel}"` : ''}>${label}</a>`;
-  return `
-    <nav class="pager" aria-label="Pages">
-      ${state.page > 1 ? link(state.page - 1, '&larr; Previous', 'prev') : '<span></span>'}
-      <span class="pager-where">Page ${state.page} of ${state.pages}</span>
-      ${state.page < state.pages ? link(state.page + 1, 'Next &rarr;', 'next') : '<span></span>'}
-    </nav>`;
 }
 
 // Nothing on this shelf: say which shelves the same search did find
@@ -367,24 +254,25 @@ function emptyShelf(state) {
  * @param {any} props `list` is what lib/story-shelves.js made of the
  *   stories, plus the order and the view; `stories` is the page of it.
  */
-function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null, activity = [], welcome = null, whatsNew = null, sort = '', totalStories = 0, list = null }) {
+function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], inbox = null, activity = [], welcome = null, whatsNew = null, sort = '', totalStories = 0, list = null, forYou = null }) {
   const state = list || {
-    shelf: 'all', q: '', origin: '', series: '', counts: { writing: 0, complete: 0, dropped: 0, all: stories.length },
+    shelf: 'all', defaultShelf: 'all', q: '', origin: '', originParam: '', originCounts: {}, series: '', counts: { writing: 0, complete: 0, dropped: 0, all: stories.length },
     total: stories.length, page: 1, pages: 1, seriesList: [], hasImported: false, view: '',
   };
   const listState = { ...state, sort, activeTags };
   const sinceQs = since ? `?since=${encodeURIComponent(since)}` : '';
   const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
+  const coauthorsFor = (s) => coauthorsByStory.get(s.id) || [];
   const rows = stories.length
     ? (state.view === 'list'
-      ? `<ul class="story-lines">${stories.map((s) => storyLine(s, { sinceQs, coauthors: coauthorsByStory.get(s.id) || [] })).join('')}</ul>`
-      : stories.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, coauthors: coauthorsByStory.get(s.id) || [] })).join(''))
+      ? `<ul class="story-lines">${stories.map((s) => storyLine(s, { sinceQs, coauthors: coauthorsFor(s) })).join('')}</ul>`
+      : `<ul class="story-cards">${stories.map((s) => front.storyCard(s, { tags: tagsFor(s), sinceQs, coauthors: coauthorsFor(s) })).join('')}</ul>`)
     : totalStories && !activeTags.length ? emptyShelf(listState) : (activeTags.length
       ? emptyState({
         art: 'label',
         title: 'Nothing carries every tag you picked',
         body: `A story has to have <em>all</em> of them, not any. Try taking one off: ${activeTags.map((t) => escapeHtml(t.name)).join(', ')}.`,
-        action: '<a class="btn ghost small" href="/">Clear the filter</a>',
+        action: `<a class="btn ghost small" href="${listHref(listState, { tags: [] })}">Clear the filter</a>`,
       })
       : emptyState({
         art: 'sheets',
@@ -393,65 +281,46 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
         action: '<a class="btn" href="/stories/new">Start the first one</a>',
       }));
 
-  // The filter is a form of checkboxes rather than a list of links, so
-  // picking several tags is one action instead of one page load each.
-  const activeSlugs = new Set(activeTags.map((t) => t.slug));
-  const filter = allGroups.length ? `
-    <details class="tag-filter">
-      <summary>${activeTags.length
-        ? `Filtered by ${activeTags.map((t) => escapeHtml(t.name)).join(', ')}`
-        : 'Filter by tag'}</summary>
-      <form method="get" action="/" class="tag-filter-form">
-        ${state.shelf !== 'writing' ? `<input type="hidden" name="shelf" value="${escapeHtml(state.shelf)}">` : ''}
-        ${state.view ? `<input type="hidden" name="view" value="${escapeHtml(state.view)}">` : ''}
-        ${allGroups.map((g) => `
-          <fieldset class="tag-group">
-            <legend>${escapeHtml(g.group)}</legend>
-            <div class="tag-group-options">${g.tags.map((t) => `
-              <label class="tag-pick${activeSlugs.has(t.slug) ? ' checked' : ''}">
-                <input type="checkbox" name="tag" value="${escapeHtml(t.slug)}"${activeSlugs.has(t.slug) ? ' checked' : ''}>
-                <span>${escapeHtml(t.name)}</span>
-              </label>`).join('')}</div>
-          </fieldset>`).join('')}
-        <div class="tag-filter-actions">
-          <button class="btn small" type="submit">Apply</button>
-          ${activeTags.length ? '<a class="btn ghost small" href="/">Clear</a>' : ''}
-          <span class="hint">A story has to carry every tag you pick.</span>
-        </div>
-      </form>
-    </details>` : '';
-
   // Stories folded away by this reader's own hidden tags (see /account) --
   // out of the way, but never silently gone.
   const foldedBlock = folded.length ? `
     <details class="folded-stories">
       <summary>${folded.length} stor${folded.length === 1 ? 'y' : 'ies'} hidden by your tag settings</summary>
-      <div class="chapter-list">${folded.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, hiddenBy: s.hiddenBy, coauthors: coauthorsByStory.get(s.id) || [] })).join('')}</div>
+      <div class="chapter-list">${folded.map((s) => storyRow(s, { tags: tagsFor(s), sinceQs, hiddenBy: s.hiddenBy, coauthors: coauthorsFor(s) })).join('')}</div>
     </details>` : '';
+
+  // What is this reader's to do or to read, before the library: notes to
+  // answer, replies, what they were in the middle of, what is new. Only
+  // on the page as it opens -- a search or a filter is somebody looking
+  // for something else.
+  const browsing = !state.q && !activeTags.length && !state.series && sort !== 'mine' && state.page === 1;
+  const mine = browsing && forYou ? [
+    inboxSection(inbox),
+    front.continueSection(forYou.continueReading),
+    front.newToReadSection(forYou.newByStory),
+  ].join('').trim() : '';
+  const heading = state.q ? `${SHELVES[state.shelf].label}, matching “${state.q}”`
+    : (activeTags.length ? `${SHELVES[state.shelf].label}, with those tags`
+      : (sort === 'mine' ? `${SHELVES[state.shelf].label}, that you write in` : SHELVES[state.shelf].label));
 
   return layout({
     title: 'Stories',
     user,
     current: 'stories',
     body: `
+      <a class="skip-link" href="#library">Skip to the stories</a>
       <div class="page-head">
         <h1>Stories</h1>
       </div>
       ${activeTags.length ? '' : whatsNewCard(whatsNew)}
       ${activeTags.length ? '' : welcomeCard(welcome)}
-      ${activeTags.length ? '' : inboxSection(inbox)}
-      <section class="story-shelves shelf-${escapeHtml(state.shelf)}" aria-labelledby="shelf-heading">
-        <div class="shelf-head">
-          ${totalStories ? shelfTabs(listState) : ''}
-          ${totalStories ? storySearch(listState) : ''}
-        </div>
-        <div class="list-head">
-          <h2 class="list-label" id="shelf-heading">${escapeHtml(state.q ? `${SHELVES[state.shelf].label}, matching “${state.q}”` : (activeTags.length ? `${SHELVES[state.shelf].label}, with those tags` : (sort === 'mine' ? `${SHELVES[state.shelf].label}, that you write in` : SHELVES[state.shelf].label)))}${state.series ? ` &middot; ${escapeHtml(state.series)}` : ''} <span class="list-count" id="story-count" aria-live="polite">${state.total}</span></h2>
-          ${totalStories > 4 || sort || state.view ? listFilters(listState) : ''}
-          ${filter}
-        </div>
-        <div class="chapter-list">${rows}</div>
-        ${pager(listState)}
+      ${mine ? `<div class="for-you">${mine}</div>` : ''}
+      ${browsing && forYou ? front.discoverRow(forYou.discover, { tagsFor, coauthorsFor }) : ''}
+      <section class="story-shelves library shelf-${escapeHtml(state.shelf)}" id="library" aria-labelledby="shelf-heading" tabindex="-1">
+        ${totalStories ? front.libraryControls(listState, allGroups) : ''}
+        <h2 class="list-label" id="shelf-heading">${escapeHtml(heading)}${state.series ? ` &middot; ${escapeHtml(state.series)}` : ''} <span class="list-count" id="story-count" aria-live="polite">${state.total}</span></h2>
+        ${rows}
+        ${front.pager(listState)}
       </section>
       ${foldedBlock}
       ${activeTags.length ? '' : activityStrip(activity)}
@@ -660,7 +529,6 @@ function editStoryPage({ user, story, groups, selectedTagIds, error, coverError 
 
 module.exports = {
   storyLine,
-  listHref,
   activityPage,
   commentGist,
   editStoryPage,

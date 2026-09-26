@@ -16,6 +16,7 @@ const modules = [
   ['bible', require('./views/bible')],
   ['bible-when', require('./views/bible-when')],
   ['authors', require('./views/authors')],
+  ['front', require('./views/front')],
   ['stories', require('./views/stories')],
   ['story', require('./views/story')],
   ['analysis', require('./views/analysis')],
