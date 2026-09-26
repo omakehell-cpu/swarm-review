@@ -6,6 +6,11 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-26 — Your first cast, and a timeline you can see
 
+### Tags
+
+- **Tags grouped the way StoriesOnline groups them**: its fourteen categories, in its order (Age/Gender, Level of Consent, Sexual Orientations, Story Types, Science Fiction, Paranormal, Couples, Incest, BDSM Elements, Groups, Interracial Elements, Sexual Activities, Fetishes, Other), then the group's own (Swarm, Cast, Length, Review status). The tags already here moved into the category they belong in: pairings to Age/Gender and Groups, orientations to Sexual Orientations, genres to Story Types, settings to Science Fiction, content notes to Other.
+- **A tag goes where it belongs by itself**: one that comes in with an imported story, or is approved without a group chosen, is filed in the category StoriesOnline uses for it.
+
 ### Dusk
 
 - **A third light, between day and night.** The theme button in the top bar now goes light, dusk, dark. Dusk is a soft slate ground with warm, parchment-coloured type and a softer red: less glare than white, less hard than black.

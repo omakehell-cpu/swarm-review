@@ -772,6 +772,25 @@ if (tagSeedVersion < 2) {
   applyTagSeedBatch(SEED_TAGS_V2);
   setMeta('tag_seed_version', 2);
 }
+// The third: tags grouped the way StoriesOnline groups them. Its fourteen
+// categories and then the group's own become the list of groups, and the
+// tags in the groups the site used before move to the category they
+// belong in (lib/sol-tags.js). Any other group somebody made keeps its
+// tags, after the rest.
+if (tagSeedVersion < 3) {
+  const { OLD_GROUPS, TAG_GROUPS } = require('./lib/sol-tags');
+  const add = db.prepare('INSERT OR IGNORE INTO tag_groups (name, position) VALUES (?, ?)');
+  TAG_GROUPS.forEach((name, i) => add.run(name, i));
+  const move = db.prepare('UPDATE tags SET tag_group = ? WHERE id = ?');
+  for (const t of db.prepare('SELECT id, name, tag_group FROM tags').all()) {
+    const to = OLD_GROUPS[t.tag_group];
+    if (to) move.run(to(t.name), t.id);
+  }
+  for (const g of db.prepare("SELECT DISTINCT tag_group FROM tags WHERE tag_group <> 'Proposed'").all()) {
+    add.run(g.tag_group, TAG_GROUPS.length + 1);
+  }
+  setMeta('tag_seed_version', 3);
+}
 
 // A permanent placeholder account that "deleted" users' authored content
 // (stories/chapters/comments) is reassigned to when an admin deletes their

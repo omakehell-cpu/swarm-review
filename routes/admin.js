@@ -32,6 +32,7 @@ async function handleAdminPage(req, res, user, query) {
     user, users: usersWithLog, claims: models.listPendingClaims(), activeInviteCode, inviteCodeHistory, pendingNamedInvites, pendingResetLinks, wikiSyncState, notice,
     backups: { list: backups.listBackups(), dir: backups.backupDir(), keep: backups.KEEP },
     tagGroups: models.listTagsGrouped(),
+    groupNames: models.listTagGroupNames(),
     proposedTags: models.listProposedTags(),
     openTags: query.get('open') === 'tags',
   }));

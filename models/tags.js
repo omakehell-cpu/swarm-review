@@ -58,7 +58,7 @@ function approveTag(id, { name, group } = {}) {
   const clean = String(name || '').trim() || tag.name;
   const clash = db.prepare('SELECT id FROM tags WHERE name = ? COLLATE NOCASE AND id <> ?').get(clean, id);
   db.prepare("UPDATE tags SET name = ?, tag_group = ?, status = 'approved', proposed_by = NULL WHERE id = ?")
-    .run(clash ? tag.name : clean, String(group || '').trim() || 'Other', id);
+    .run(clash ? tag.name : clean, String(group || '').trim() || require('../lib/sol-tags').categoryFor(clean), id);
   return getTagById(id);
 }
 
@@ -95,7 +95,14 @@ function mergeTag(fromId, intoId) {
 // it happens, then who's in it, then what to warn people about -- and the
 // tag index reads better the same way. Anything an admin invents later
 // sorts alphabetically after these.
-const TAG_GROUP_ORDER = ['Genre', 'Setting', 'Swarm', 'Cast', 'Orientation', 'Pairings', 'Content notes', 'Length', 'Review status'];
+const TAG_GROUP_ORDER = require('../lib/sol-tags').TAG_GROUPS;
+
+/** Every group, in order, empty ones too; then any group a tag is in that the table lacks. */
+function listTagGroupNames() {
+  const named = db.prepare('SELECT name FROM tag_groups ORDER BY position, name').all().map((r) => r.name);
+  const used = db.prepare("SELECT DISTINCT tag_group FROM tags WHERE tag_group <> 'Proposed'").all().map((r) => r.tag_group);
+  return [...named, ...used.filter((g) => !named.includes(g)).sort((a, b) => a.localeCompare(b))];
+}
 
 function listTagsGrouped() {
   const groups = [];
@@ -108,9 +115,10 @@ function listTagsGrouped() {
     }
     byGroup.get(tag.tag_group).tags.push(tag);
   }
+  const order = listTagGroupNames();
   const rank = (name) => {
-    const i = TAG_GROUP_ORDER.indexOf(name);
-    return i === -1 ? TAG_GROUP_ORDER.length : i;
+    const i = order.indexOf(name);
+    return i === -1 ? order.length : i;
   };
   return groups.sort((a, b) => rank(a.group) - rank(b.group) || a.group.localeCompare(b.group));
 }
@@ -277,6 +285,7 @@ function setUserHiddenTags(userId, tagIds) {
 
 module.exports = {
   TAG_GROUP_ORDER,
+  listTagGroupNames,
   approveTag,
   createTag,
   deleteTag,
