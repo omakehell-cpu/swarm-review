@@ -58,15 +58,29 @@ makes it work in a reader at all. Keep it to yourself; if it gets out,
 
 ## Your page
 
-Everyone has one, at their name wherever it appears. It shows the stories
-they have written, the chapters they have contributed, and their statistics:
-how much they have written, how much they have read, and what they have said
-on other people's work.
+Everyone has one, at their name wherever it appears, and it shows their
+writing as a body of work:
+
+- **The numbers** -- stories, chapters and words; how many different
+  people have read a chapter of theirs, and follow a story of theirs; and
+  the notes they have given and received.
+- **Latest work**, large: its cover, its dates, where it stands, its
+  blurb and its tags.
+- **Words put up**, month by month (year by year, for a long career), with
+  the busiest marked and the same numbers **as a table** underneath; and
+  **what their stories are about**, their most-used tags.
+- **Everything else, from the first**, oldest first, with the year in the
+  margin: each story's cover, dates, length, followers and a few lines of
+  what it is about.
+- **Latest chapters**.
+
+What somebody has read is not on it: that is between them and whoever
+wrote it.
 
 It is visible to everyone who can log in, and to nobody else. There is no
 public web out there looking at this site.
 
-@figure your-page.png | Your page: what you have written, and what you have been doing.
+@figure your-page.png | Somebody's page: the numbers, the latest work, when they wrote and what about, and everything else from the first.
 
 ## Stories written somewhere else
 

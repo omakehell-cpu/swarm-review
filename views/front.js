@@ -1,12 +1,13 @@
 'use strict';
 
-// The pieces of the front page (views/stories.js storiesPage): a story as
-// a card, what this reader was in the middle of, what is new to read a
-// story at a time, a few things from the library to try, and the library's
-// own controls -- where from, which shelf, the order, the look, and the
-// filters, with what is switched on said back as chips you can take off.
+// The pieces of the front page (views/stories.js storiesPage) and of the
+// advanced search (views/find.js). The front page is weighted the way the
+// group works: writing first, then reviewing, then reading what is
+// finished. So: a story as a card; your desk; what is waiting for your
+// eyes; what you follow and have been reading; and the list's controls.
 
 const { escapeHtml } = require('../lib/util');
+const { timeHtml } = require('../lib/time');
 const { storyState, STORY_STATES } = require('../lib/story-state');
 const { bylineWith, storyCoverImg } = require('./shared');
 const { LENGTHS, SHELVES, SHELF_ORDER } = require('../lib/story-shelves');
@@ -37,8 +38,7 @@ function stateLabel(s) {
   const state = storyState(s);
   const meta = STORY_STATES[state];
   if (!meta) return '';
-  // Said the way the shelves say it.
-  const label = state === 'complete' ? 'Finished' : meta.label;
+  const label = meta.label;
   return `<span class="story-state state-${state}" title="${escapeHtml(meta.hint)}"><span aria-hidden="true">${STATE_MARK[state] || ''}</span> ${escapeHtml(label)}</span>`;
 }
 
@@ -75,77 +75,151 @@ function storyCard(s, { tags = [], coauthors = [], sinceQs = '', compact = false
     </li>`;
 }
 
-// ---------- for you ----------
+// ---------- write: your desk ----------
 
-function recentlySection(items) {
-  if (!items || !items.length) return '';
-  return `
-    <section class="for-you-group" aria-labelledby="recent-title">
-      <h2 id="recent-title">Recently read</h2>
-      <ul class="continue-list">
-        ${items.map((c) => `
-          <li class="continue-item story-row">
-            ${coverOrLetter({ ...c, id: c.story_id, title: c.story_title }, 'continue-cover')}
-            <div>
-              <a class="row-link" href="${c.finished ? `/stories/${c.story_id}` : `/chapters/${c.chapter_id}`}">${escapeHtml(c.story_title)}</a>
-              <span class="continue-where">${c.finished
-    ? `Read to the end &middot; ${plural(c.chapters, 'chapter')}`
-    : `${c.percent ? `Chapter ${c.chapter_number} of ${c.chapters}, ${c.percent}% in` : `Next: chapter ${c.chapter_number} of ${c.chapters}`}`} &middot; by ${escapeHtml(c.author_name)}</span>
-              <span class="continue-bar" aria-hidden="true"><span style="width:${c.finished ? 100 : Math.round(((c.read + (c.percent || 0) / 100) / Math.max(1, c.chapters)) * 100)}%"></span></span>
+// What you have on the go: each story of yours still being written, with
+// the draft waiting in it if there is one, how far it is towards its goal,
+// and the way to the next chapter. The first thing on the page, because
+// writing is what the group is for.
+function deskColumn(desk, { hasStories = false } = {}) {
+  const items = (desk || []).slice(0, 4);
+  const body = items.length ? `
+      <ul class="desk-list">
+        ${items.map((s) => {
+    const goal = s.word_goal > 0 ? Math.max(0, Math.min(100, Math.round(((s.word_count || 0) / s.word_goal) * 100))) : null;
+    return `
+          <li class="desk-item">
+            ${coverOrLetter(s, 'desk-cover')}
+            <div class="desk-body">
+              <h3 class="desk-title"><a href="/stories/${s.id}">${escapeHtml(s.title)}</a></h3>
+              <p class="desk-facts">${stateLabel(s)} <span>${plural(s.chapter_count || 0, 'chapter')}${s.word_count ? ` &middot; ${shortWords(s.word_count)}` : ''}</span>${s.pending_comments > 0 ? ` <span class="badge pending">${s.pending_comments} note${s.pending_comments === 1 ? '' : 's'} waiting</span>` : ''}</p>
+              ${s.draft
+    ? `<p class="desk-draft"><span class="desk-draft-mark" aria-hidden="true">&#9998;</span> Draft of chapter ${s.draft.chapter_number}${s.draft.title ? `, <em>${escapeHtml(s.draft.title)}</em>` : ''}, saved ${timeHtml(s.draft.updated_at)}</p>`
+    : (s.latest ? `<p class="desk-last">Latest: chapter ${s.latest.chapter_number}${s.latest.title ? `, ${escapeHtml(s.latest.title)}` : ''}</p>` : '')}
+              ${goal !== null ? `<p class="desk-goal"><span class="desk-goal-bar" aria-hidden="true"><span style="width:${goal}%"></span></span> ${goal}% of ${shortWords(s.word_goal)}</p>` : ''}
+              <p class="desk-actions">
+                ${s.draft ? `<a class="btn small" href="/chapters/${s.draft.chapter_id}/edit">Continue the draft</a>` : ''}
+                <a class="btn ghost small" href="/stories/${s.id}/chapters/new">+ New chapter</a>
+              </p>
             </div>
-          </li>`).join('')}
+          </li>`;
+  }).join('')}
       </ul>
-    </section>`;
-}
-
-// The stories this reader follows: the ones with something new first,
-// each saying how much, and opening the first new chapter.
-function followingSection(stories, { more = '' } = {}) {
-  if (!stories || !stories.length) return '';
-  const shown = stories.slice(0, 6);
+      ${desk.length > items.length ? `<p class="band-more"><a href="/?sort=mine&amp;shelf=writing#library">All ${desk.length} you are writing &rarr;</a></p>` : ''}`
+    : `
+      <div class="desk-empty">
+        <p>${hasStories ? 'Nothing of yours is being written right now.' : 'You have not started a story yet.'}</p>
+        <a class="btn" href="/stories/new">+ Start a story</a>
+      </div>`;
   return `
-    <section class="for-you-group" aria-labelledby="following-title">
-      <h2 id="following-title"><span aria-hidden="true">&#9733;</span> Following</h2>
-      <ul class="inbox-list following-list">
-        ${shown.map((f) => `
-          <li${f.fresh ? ' class="has-news"' : ''}>
-            <a href="${f.fresh ? `/chapters/${f.first_fresh_id}` : `/stories/${f.id}`}">
-              ${f.fresh ? `<span class="inbox-count">${f.fresh}</span>` : ''}
-              <span class="inbox-what"><strong>${escapeHtml(f.title)}</strong></span>
-              <span class="inbox-where">${f.fresh
-    ? `${plural(f.fresh, 'new chapter')}, from chapter ${f.first_fresh_number}`
-    : 'Up to date'} &middot; by ${escapeHtml(f.author_name)}</span>
-            </a>
-          </li>`).join('')}
-      </ul>
-      ${stories.length > shown.length || more ? `<p class="for-you-more"><a href="${more}">All ${stories.length} you follow &rarr;</a></p>` : ''}
+    <section class="band band-write" aria-labelledby="write-title">
+      <h2 id="write-title" class="band-title">Write</h2>
+      ${body}
     </section>`;
 }
 
-function newToReadSection(groups) {
-  if (!groups || !groups.length) return '';
+// ---------- review: what is waiting for your eyes ----------
+
+function reviewItem(href, what, where, count = 0) {
   return `
-    <section class="for-you-group" aria-labelledby="new-title">
-      <h2 id="new-title">New to read</h2>
-      <ul class="inbox-list">
-        ${groups.map((g) => `
-          <li>
-            <a href="/chapters/${g.first.id}">
-              <span class="inbox-what"><strong>${escapeHtml(g.story_title)}</strong> &middot; ${g.chapters.length === 1
-    ? `chapter ${g.first.chapter_number}${g.first.title && !/^chapter\s+\d+$/i.test(g.first.title) ? `: ${escapeHtml(g.first.title.replace(/^chapter\s+\d+\s*[:.-]\s*/i, ''))}` : ''}`
-    : `${g.chapters.length} new chapters, from chapter ${g.first.chapter_number}`}</span>
-              <span class="inbox-where">by ${escapeHtml(g.author_name)}${g.words ? ` &middot; ${shortWords(g.words)}` : ''}</span>
-            </a>
-          </li>`).join('')}
-      </ul>
-    </section>`;
+    <li>
+      <a href="${href}">
+        ${count ? `<span class="inbox-count">${count}</span>` : ''}
+        <span class="inbox-what">${what}</span>
+        <span class="inbox-where">${where}</span>
+      </a>
+    </li>`;
 }
 
-// ---------- the library's controls ----------
+const chapterWords = (g) => (g.chapters.length === 1
+  ? `chapter ${g.first.chapter_number}${g.first.title && !/^chapter\s+\d+$/i.test(g.first.title) ? `: ${escapeHtml(g.first.title.replace(/^chapter\s+\d+\s*[:.-]\s*/i, ''))}` : ''}`
+  : `${g.chapters.length} new chapters, from chapter ${g.first.chapter_number}`);
 
 /**
- * The front page's address with some of its settings changed, always
- * landing on the list rather than the top of the page.
+ * Everything that wants you to read and say something, most personal
+ * first: asked by name, notes on your own chapters, replies to you, new
+ * chapters in what you follow, and new chapters in the group.
+ */
+function reviewColumn({ inbox, following = [], newByStory = [] }) {
+  const groups = [];
+  const asked = (inbox && inbox.asked) || [];
+  if (asked.length) {
+    groups.push(['Asked to read by you', asked.map((r) => reviewItem(`/chapters/${r.chapter_id}`,
+      `<strong>${escapeHtml(r.requested_by_name || 'Somebody')}</strong> asked: chapter ${r.chapter_number}, ${escapeHtml(r.chapter_title)}`,
+      `${escapeHtml(r.story_title)}${r.question ? ` &middot; &ldquo;${escapeHtml(String(r.question).slice(0, 120))}&rdquo;` : ''}`))]);
+  }
+  const pending = (inbox && inbox.pending) || [];
+  if (pending.length) {
+    groups.push(['Notes on your chapters', pending.map((row) => reviewItem(`/chapters/${row.chapter_id}`,
+      `note${row.pending === 1 ? '' : 's'} to answer`,
+      `${escapeHtml(row.story_title)} &middot; chapter ${row.chapter_number}: ${escapeHtml(row.chapter_title)}`, row.pending))]);
+  }
+  const replies = (inbox && inbox.replies) || [];
+  if (replies.length) {
+    groups.push([replies.some((r) => r.mention) ? 'Replies and mentions' : 'Replies to you', replies.map((r) => reviewItem(`/chapters/${r.chapter_id}#comment-${r.id}`,
+      `<strong>${escapeHtml(r.author_name)}</strong> ${r.mention ? 'mentioned you: ' : ''}${escapeHtml(String(r.body || '').replace(/\s+/g, ' ').slice(0, 110))}`,
+      `${escapeHtml(r.story_title)} &middot; chapter ${r.chapter_number}`))]);
+  }
+  const news = following.filter((f) => f.fresh > 0);
+  if (news.length) {
+    groups.push(['<span aria-hidden="true">&#9733;</span> New in what you follow', news.map((f) => reviewItem(`/chapters/${f.first_fresh_id}`,
+      `<strong>${escapeHtml(f.title)}</strong> &middot; ${plural(f.fresh, 'new chapter')}, from chapter ${f.first_fresh_number}`,
+      `by ${escapeHtml(f.author_name)}`, f.fresh))]);
+  }
+  if (newByStory.length) {
+    groups.push(['New in the group', newByStory.map((g) => reviewItem(`/chapters/${g.first.id}`,
+      `<strong>${escapeHtml(g.story_title)}</strong> &middot; ${chapterWords(g)}`,
+      `by ${escapeHtml(g.author_name)}${g.words ? ` &middot; ${shortWords(g.words)}` : ''}`))]);
+  }
+  return `
+    <section class="band band-review" aria-labelledby="review-title">
+      <h2 id="review-title" class="band-title">Review</h2>
+      ${groups.length ? groups.map(([title, items]) => `
+        <div class="review-group">
+          <h3>${title}</h3>
+          <ul class="inbox-list">${items.join('')}</ul>
+        </div>`).join('') : '<p class="band-empty">Nothing is waiting for you. When somebody asks you to read, answers a note, or puts up a chapter, it shows here.</p>'}
+    </section>`;
+}
+
+// ---------- read: what you follow, and what you have been reading ----------
+
+function followingList(stories) {
+  if (!stories || !stories.length) return '';
+  const shown = stories.slice(0, 5);
+  return `
+    <div class="read-aside">
+      <h3><span aria-hidden="true">&#9733;</span> Following</h3>
+      <ul class="read-list">
+        ${shown.map((f) => `
+          <li><a href="${f.fresh ? `/chapters/${f.first_fresh_id}` : `/stories/${f.id}`}">${escapeHtml(f.title)}</a>
+            <span class="muted">${f.fresh ? plural(f.fresh, 'new chapter') : 'up to date'}</span></li>`).join('')}
+      </ul>
+      ${stories.length > shown.length ? `<p class="band-more"><a href="/find?following=1">All ${stories.length} you follow &rarr;</a></p>` : ''}
+    </div>`;
+}
+
+function recentlyList(items) {
+  if (!items || !items.length) return '';
+  return `
+    <div class="read-aside">
+      <h3>Recently read</h3>
+      <ul class="read-list">
+        ${items.map((c) => `
+          <li><a href="${c.finished ? `/stories/${c.story_id}` : `/chapters/${c.chapter_id}`}">${escapeHtml(c.story_title)}</a>
+            <span class="muted">${c.finished ? 'read to the end'
+    : (c.percent ? `chapter ${c.chapter_number} of ${c.chapters}, ${c.percent}% in` : `next: chapter ${c.chapter_number} of ${c.chapters}`)}</span></li>`).join('')}
+      </ul>
+    </div>`;
+}
+
+// ---------- the list's controls ----------
+
+/**
+ * The address of the list with some of its settings changed. The front
+ * page's list lands on #library, the advanced search's on #results. The
+ * look (covers or list) is kept per person, so it is only in the address
+ * of the link that changes it.
  * @param {any} state
  * @param {Record<string, any>} [change]  `tags` replaces the tags switched on
  */
@@ -154,13 +228,14 @@ function listHref(state, change = {}) {
   const next = {
     shelf: state.shelf === state.defaultShelf ? '' : state.shelf,
     q: state.q, author: state.author, text: state.text, length: state.length, following: state.following ? '1' : '',
-    series: state.series, sort: state.sort, view: state.view,
+    series: state.series, sort: state.sort,
     page: '', ...rest,
   };
   const parts = [];
   for (const [k, v] of Object.entries(next)) if (v) parts.push(`${k}=${encodeURIComponent(String(v))}`);
   for (const t of tagsChange || state.activeTags || []) parts.push(`tag=${encodeURIComponent(t.slug)}`);
-  return `${parts.length ? `/?${parts.join('&amp;')}` : '/'}#library`;
+  const base = state.base || '/';
+  return `${parts.length ? `${base}?${parts.join('&amp;')}` : base}${base === '/' ? '#library' : '#results'}`;
 }
 
 const segment = (label, items) => `
@@ -171,88 +246,37 @@ const segment = (label, items) => `
   </nav>`;
 
 function shelfTabs(state) {
+  const order = state.base === '/find' ? SHELF_ORDER : ['complete', 'writing', 'all'];
   const tab = (key) => {
     const current = state.shelf === key;
     const n = state.counts[key] || 0;
-    // Set aside is not a shelf of its own here: those stories are in All.
-    if (key === 'dropped' && !current) return '';
+    // Set aside is not a shelf of its own on the front page: those are in All.
+    if (key === 'dropped' && !current && (state.base !== '/find' || !n)) return '';
     return `<a class="tag-chip shelf-tab${current ? ' current' : ''}${n ? '' : ' is-empty'}" href="${listHref(state, { shelf: key === state.defaultShelf ? '' : key })}"${current ? ' aria-current="page"' : ''}>${escapeHtml(SHELVES[key].label)}<span class="tag-chip-count">${n}</span></a>`;
   };
-  return `<nav class="shelf-tabs" aria-label="Which stories">${SHELF_ORDER.map(tab).join('')}</nav>`;
+  return `<nav class="shelf-tabs" aria-label="Which stories">${order.map(tab).join('')}</nav>`;
 }
 
-function storySearch(state) {
-  const keep = (name, value) => (value ? `<input type="hidden" name="${name}" value="${escapeHtml(value)}">` : '');
+/** The order and the look. */
+function viewControls(state) {
   return `
-    <form method="get" action="/" class="story-search" role="search">
-      ${keep('shelf', state.shelf === state.defaultShelf ? '' : state.shelf)}${keep('author', state.author)}${keep('text', state.text)}${keep('length', state.length)}${keep('following', state.following ? '1' : '')}${keep('series', state.series)}${keep('sort', state.sort)}${keep('view', state.view)}
-      ${(state.activeTags || []).map((t) => keep('tag', t.slug)).join('')}
-      <label class="sr-only" for="story-find">Search every story</label>
-      <input type="search" class="list-find" id="story-find" name="q" value="${escapeHtml(state.q)}"
-             placeholder="Title, author, series or tag" autocomplete="off">
-      <button class="btn small" type="submit">Search</button>
-    </form>`;
+        ${segment('Order of the stories', [
+    ['Latest', listHref(state, { sort: '' }), !state.sort || state.sort === 'mine'],
+    ['A&ndash;Z', listHref(state, { sort: 'title' }), state.sort === 'title'],
+  ])}
+        ${segment('How the stories are shown', [
+    ['Covers', listHref(state, { view: 'covers' }), !state.view],
+    ['List', listHref(state, { view: 'list' }), state.view === 'list'],
+  ])}`;
 }
 
-// The advanced search: who wrote it, words in the text itself, how long,
-// a series, tags, and only the ones you follow -- one form, one Show. The
-// order and the look are one click each and stay outside it.
-function advancedSearch(state, allGroups) {
-  const active = new Set((state.activeTags || []).map((t) => t.slug));
-  const n = [state.author, state.text, state.length, state.series, state.following].filter(Boolean).length + active.size;
-  const keep = (name, value) => (value ? `<input type="hidden" name="${name}" value="${escapeHtml(value)}">` : '');
+/** Shelves, then the order and the look: one row, nothing else. */
+function listControls(state) {
   return `
-    <details class="list-more library-filters"${n ? ' data-has-filters' : ''}>
-      <summary>Advanced search${n ? ` <span class="filter-n">${n}</span>` : ''}</summary>
-      <form method="get" action="/#library" class="list-more-body advanced-search">
-        ${keep('shelf', state.shelf === state.defaultShelf ? '' : state.shelf)}${keep('sort', state.sort)}${keep('view', state.view)}
-        <div class="adv-grid">
-          <label class="adv-field">Title, blurb or tag
-            <input type="search" name="q" value="${escapeHtml(state.q)}" autocomplete="off">
-          </label>
-          <label class="adv-field">Author
-            <input type="search" name="author" value="${escapeHtml(state.author || '')}" list="adv-authors" autocomplete="off">
-            <datalist id="adv-authors">${(state.authors || []).map((a) => `<option value="${escapeHtml(a)}"></option>`).join('')}</datalist>
-          </label>
-          <label class="adv-field adv-wide">Words in the text
-            <input type="search" name="text" value="${escapeHtml(state.text || '')}" autocomplete="off" aria-describedby="adv-text-hint">
-            <span class="hint" id="adv-text-hint">Anywhere in the chapters. Put a phrase in "quotes".</span>
-          </label>
-          <label class="adv-field">Length
-            <select name="length">
-              <option value="">Any length</option>
-              ${Object.entries(LENGTHS).map(([k, v]) => `<option value="${k}"${state.length === k ? ' selected' : ''}>${escapeHtml(v.label)}</option>`).join('')}
-            </select>
-          </label>
-          ${state.seriesList.length ? `
-            <label class="adv-field">Series
-              <select name="series">
-                <option value="">Any series</option>
-                ${state.seriesList.map((x) => `<option value="${escapeHtml(x.name)}"${x.name === state.series ? ' selected' : ''}>${escapeHtml(x.name)} (${x.n})</option>`).join('')}
-              </select>
-            </label>` : ''}
-          <label class="adv-check adv-wide"><input type="checkbox" name="following" value="1"${state.following ? ' checked' : ''}> Only stories I follow</label>
-        </div>
-        ${allGroups.length ? `
-          <details class="adv-tags"${active.size ? ' open' : ''}>
-            <summary>Tags${active.size ? ` (${active.size})` : ''}</summary>
-            ${allGroups.map((g) => `
-              <fieldset class="tag-group">
-                <legend>${escapeHtml(g.group)}</legend>
-                <div class="tag-group-options">${g.tags.map((t) => `
-                  <label class="tag-pick${active.has(t.slug) ? ' checked' : ''}">
-                    <input type="checkbox" name="tag" value="${escapeHtml(t.slug)}"${active.has(t.slug) ? ' checked' : ''}>
-                    <span>${escapeHtml(t.name)}</span>
-                  </label>`).join('')}</div>
-              </fieldset>`).join('')}
-            <p class="hint">A story has to carry every tag you pick.</p>
-          </details>` : ''}
-        <div class="tag-filter-actions">
-          <button class="btn small" type="submit">Show</button>
-          ${n || state.q ? `<a class="btn ghost small" href="${listHref(state, { q: '', author: '', text: '', length: '', series: '', following: '', tags: [] })}">Clear</a>` : ''}
-        </div>
-      </form>
-    </details>`;
+    <div class="library-controls">
+      ${shelfTabs(state)}
+      <div class="library-view">${viewControls(state)}</div>
+    </div>`;
 }
 
 function activeChips(state) {
@@ -263,6 +287,7 @@ function activeChips(state) {
   if (state.length) chips.push([escapeHtml(LENGTHS[state.length].label), listHref(state, { length: '' })]);
   if (state.series) chips.push([`Series: ${escapeHtml(state.series)}`, listHref(state, { series: '' })]);
   if (state.following) chips.push(['&#9733; Only stories I follow', listHref(state, { following: '' })]);
+  if (state.sort === 'mine') chips.push(['Only stories I write in', listHref(state, { sort: '' })]);
   for (const t of state.activeTags || []) {
     chips.push([`Tag: ${escapeHtml(t.name)}`, listHref(state, { tags: state.activeTags.filter((x) => x.slug !== t.slug) })]);
   }
@@ -270,29 +295,8 @@ function activeChips(state) {
   return `
     <div class="active-filters" aria-label="Switched on">
       ${chips.map(([label, href]) => `<a class="active-filter" href="${href}">${label} <span aria-hidden="true">&times;</span><span class="sr-only">, take it off</span></a>`).join('')}
-      ${chips.length > 1 ? `<a class="active-filter-clear" href="${listHref(state, { q: '', author: '', text: '', length: '', series: '', following: '', tags: [] })}">Clear all</a>` : ''}
+      ${chips.length > 1 ? `<a class="active-filter-clear" href="${listHref(state, { q: '', author: '', text: '', length: '', series: '', following: '', sort: '', tags: [] })}">Clear all</a>` : ''}
     </div>`;
-}
-
-function libraryControls(state, allGroups) {
-  return `
-    ${storySearch(state)}
-    <div class="library-controls">
-      ${shelfTabs(state)}
-      <div class="library-view">
-        ${segment('Order of the stories', [
-    ['Latest', listHref(state, { sort: '' }), !state.sort],
-    ['A&ndash;Z', listHref(state, { sort: 'title' }), state.sort === 'title'],
-    ['Mine', listHref(state, { sort: 'mine' }), state.sort === 'mine'],
-  ])}
-        ${segment('How the list looks', [
-    ['Cards', listHref(state, { view: '' }), !state.view],
-    ['List', listHref(state, { view: 'list' }), state.view === 'list'],
-  ])}
-        ${advancedSearch(state, allGroups)}
-      </div>
-    </div>
-    ${activeChips(state)}`;
 }
 
 // Numbered, with the first and last always there: page 7 of 11 is two
@@ -340,6 +344,6 @@ function followButton(storyId, following, { back = '', followers = 0, small = fa
 }
 
 module.exports = {
-  followButton,
-  followingSection, libraryControls, recentlySection, listHref, newToReadSection, pager, shortWords, storyCard,
+  activeChips, deskColumn, followButton, followingList, listControls, listHref, pager, recentlyList, reviewColumn, viewControls,
+  shortWords, stateLabel, storyCard,
 };

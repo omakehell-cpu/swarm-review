@@ -101,6 +101,9 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   ensureColumn('users', 'is_placeholder', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn('users', 'source_url', 'TEXT');
   ensureColumn('users', 'claimed_by', 'INTEGER');
+  // How this reader likes lists of stories to look: '' (with covers) or
+  // 'list' (one line each). Chosen once, kept (views/front.js).
+  ensureColumn('users', 'story_view', "TEXT NOT NULL DEFAULT ''");
   // Where an imported story came from, and the series it belongs to there.
   ensureColumn('stories', 'source_url', 'TEXT');
   ensureColumn('stories', 'source_id', 'TEXT');

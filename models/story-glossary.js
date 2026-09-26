@@ -21,7 +21,7 @@ const { titleKey, wikiPagesByKey } = require('./wiki-links');
 // The categories a story page is filed under: Stories is the one the
 // glossary's kinds are sorted by; In this group tells them from the wiki's.
 const STORY_CATEGORIES = ['Stories', 'In this group'];
-const STATUS_WORDS = { ongoing: 'Still being written', complete: 'Complete', dropped: 'Set aside' };
+const STATUS_WORDS = { ongoing: 'Being written', complete: 'Finished', dropped: 'Set aside' };
 const SUMMARY_CHARS = 220;
 const MAX_PEOPLE = 40;
 

@@ -26,8 +26,11 @@ async function handleProfilePage(req, res, user, username, query) {
     pendingClaim: person.is_placeholder ? models.pendingClaimBy(person.id, user.id) : null,
     notice: query ? (query.get('notice') || '').slice(0, 300) : '',
     stats: models.userStats(person.id),
-    stories: models.listStoriesForUser(person.id),
-    chapters: models.listChaptersByUser(person.id),
+    works: models.authorWorks(person.id),
+    output: models.authorOutput(person.id),
+    tags: models.authorTags(person.id),
+    reach: models.authorReach(person.id),
+    chapters: models.listChaptersByUser(person.id, 6),
   }));
 }
 
@@ -38,8 +41,10 @@ async function handleSearch(req, res, user, query) {
 
 // ---------- story tags (vocabulary curated on /admin, see models.js) ----------
 
-async function handleStories(req, res, user, query) {
-  const since = models.bumpLastSeen(user.id);
+// The list of stories, as the front page and the advanced search both
+// show it: tagged, hidden-tag folded, ordered, searched, shelved and cut
+// into pages (lib/story-shelves.js). `defaultShelf` is where it opens.
+function storyList(user, query, { since = null, defaultShelf = 'writing' } = {}) {
   // Two spellings on purpose: the filter form posts one `tag` per ticked
   // box, while a shared/bookmarked link is nicer as ?tags=a,b.
   const activeSlugs = [
@@ -50,10 +55,6 @@ async function handleStories(req, res, user, query) {
   const stories = models.listStories({ since, tagIds: activeTags.map((t) => t.id) });
   const tagsByStory = models.tagsForStories(stories.map((s2) => s2.id));
   const coauthorsByStory = models.coauthorsForStories(stories.map((s2) => s2.id));
-  // A reader's hidden tags fold a story away rather than deleting it from
-  // the list: they stay reachable behind a "show anyway" summary, since
-  // hiding something outright makes an app feel broken when you know the
-  // story exists but can't find it.
   // How the list is ordered: newest movement first (the default), A to Z,
   // or only the stories you write in. A plain GET parameter, so the
   // choice can be bookmarked and needs no script.
@@ -61,6 +62,10 @@ async function handleStories(req, res, user, query) {
   if (sort === 'title') stories.sort((a, b) => a.title.localeCompare(b.title, 'en', { sensitivity: 'base' }));
   const writesIn = (s2) => s2.author_id === user.id
     || (coauthorsByStory.get(s2.id) || []).some((c) => c.id === user.id);
+  // A reader's hidden tags fold a story away rather than deleting it from
+  // the list: they stay reachable behind a "show anyway" summary, since
+  // hiding something outright makes an app feel broken when you know the
+  // story exists but can't find it.
   const hiddenTagIds = new Set(models.listUserHiddenTagIds(user.id));
   const visible = [];
   const folded = [];
@@ -70,13 +75,53 @@ async function handleStories(req, res, user, query) {
     const hit = tags.filter((t) => hiddenTagIds.has(t.id));
     (hit.length ? folded : visible).push({ ...story, hiddenBy: hit });
   }
+  // The advanced search narrows on top of the shelves: an author, words in
+  // the chapters themselves (the search index, models/follows.js), a
+  // length, and only the stories this reader follows.
+  const text = (query.get('text') || '').slice(0, 200).trim();
+  const onlyFollowing = query.get('following') === '1';
+  const followed = models.followedStoryIds(user.id);
+  let onlyIds = null;
+  if (text) onlyIds = models.storiesWithText(text) || new Set();
+  if (onlyFollowing) onlyIds = new Set([...(onlyIds || followed)].filter((id) => followed.has(id)));
+  const shelfOptions = {
+    shelf: query.get('shelf') || '', defaultShelf, q: (query.get('q') || '').slice(0, 200),
+    author: (query.get('author') || '').slice(0, 100), length: query.get('length') || '', onlyIds,
+    series: query.get('series') || '', page: Number(query.get('page')) || 1, tagsByStory, coauthorsByStory,
+  };
+  let list = shelves.shelve(visible, shelfOptions);
+  // A search that finds nothing on the shelf it started on, and something
+  // elsewhere, shows everything it found rather than an empty shelf.
+  if (!query.get('shelf') && (list.q || list.author || text || onlyFollowing || list.length) && !list.total && list.counts.all) {
+    shelfOptions.shelf = 'all';
+    list = shelves.shelve(visible, shelfOptions);
+  }
+  // Covers or a list: chosen once and kept, so it is the same on every
+  // visit and on every page of the list.
+  const asked = query.get('view');
+  if (asked === 'list' || asked === 'covers') models.setStoryView(user.id, asked);
+  const view = asked === 'list' || asked === 'covers' ? (asked === 'list' ? 'list' : '') : models.storyViewOf(user.id);
+  const foldedHere = shelves.shelve(folded, { ...shelfOptions, page: 1 });
+  const authors = [...new Set(visible.map((s2) => s2.author_name).filter(Boolean))].sort((x, y) => x.localeCompare(y));
+  return {
+    stories, visible, writesIn, followed, tagsByStory, coauthorsByStory, activeTags, sort,
+    folded: folded.filter((s2) => foldedHere.stories.some((f) => f.id === s2.id)),
+    list: { ...list, view, text, following: onlyFollowing, authors },
+  };
+}
+
+async function handleStories(req, res, user, query) {
+  const since = models.bumpLastSeen(user.id);
+  // The library opens on what is finished: what is still being written is
+  // in the two columns above it, as the writing and the reviewing it is.
+  const found = storyList(user, query, { since, defaultShelf: 'complete' });
   // What changed on the site since they last looked, said once, here, and
   // then only under What's new until there is something newer. Somebody
   // still being welcomed has enough to read, so it is marked seen for them
   // without being shown; a filtered list is not the moment either.
   const welcome = models.welcomeState(user);
   let whatsNew = null;
-  const unseen = activeTags.length ? [] : docs.unseenReleases(user);
+  const unseen = found.activeTags.length ? [] : docs.unseenReleases(user);
   if (unseen.length) {
     if (!(welcome && welcome.show)) {
       whatsNew = {
@@ -89,49 +134,37 @@ async function handleStories(req, res, user, query) {
     models.markChangelogSeen(user.id, docs.latestReleaseDate(), docs.latestReleaseKey());
     user = { ...user, changelog_seen_key: docs.latestReleaseKey() };
   }
-  // Shelved: being written, complete or set aside, then searched, then
-  // cut into pages (lib/story-shelves.js). The shelf the list opens on is
-  // the stories still being written; a search counts every shelf.
-  // The advanced search narrows on top of that: an author, words in the
-  // chapters themselves (the search index, models/follows.js), a length,
-  // and only the stories this reader follows.
-  const text = (query.get('text') || '').slice(0, 200).trim();
-  const onlyFollowing = query.get('following') === '1';
-  const followed = models.followedStoryIds(user.id);
-  let onlyIds = null;
-  if (text) onlyIds = models.storiesWithText(text) || new Set();
-  if (onlyFollowing) onlyIds = new Set([...(onlyIds || followed)].filter((id) => followed.has(id)));
-  const shelfOptions = {
-    shelf: query.get('shelf') || '', q: (query.get('q') || '').slice(0, 200),
-    author: (query.get('author') || '').slice(0, 100), length: query.get('length') || '', onlyIds,
-    series: query.get('series') || '', page: Number(query.get('page')) || 1, tagsByStory, coauthorsByStory,
-  };
-  let list = shelves.shelve(visible, shelfOptions);
-  // A search that finds nothing on the shelf it started on, and something
-  // elsewhere, shows everything it found rather than an empty shelf.
-  if (!query.get('shelf') && (list.q || list.author || text || onlyFollowing || list.length) && !list.total && list.counts.all) {
-    shelfOptions.shelf = 'all';
-    list = shelves.shelve(visible, shelfOptions);
-  }
-  const view = query.get('view') === 'list' ? 'list' : '';
-  const foldedHere = shelves.shelve(folded, { ...shelfOptions, page: 1 });
-  // For this reader, above the list: the stories they follow (those with
-  // news first), what is new elsewhere a story at a time, and what they
-  // have been reading.
+  // Write, then review, then read -- in that order, by weight.
+  const mineInProgress = found.stories.filter((s2) => found.writesIn(s2) && ['writing'].includes(shelves.shelfOf(s2)));
   const following = models.followedStories(user.id);
   const forYou = {
+    desk: models.deskFor(user.id, mineInProgress),
+    hasStories: found.stories.some(found.writesIn),
     following,
-    newByStory: models.newChaptersByStory(models.chaptersNewToMe(user.id, 60).filter((c) => !followed.has(c.story_id))),
+    newByStory: models.newChaptersByStory(models.chaptersNewToMe(user.id, 60).filter((c) => !found.followed.has(c.story_id))),
     recentlyRead: models.recentlyRead(user.id),
   };
-  const authors = [...new Set(visible.map((s2) => s2.author_name).filter(Boolean))].sort((x, y) => x.localeCompare(y));
   sendHtml(res, 200, views.storiesPage({
-    user, stories: list.stories, folded: folded.filter((s2) => foldedHere.stories.some((f) => f.id === s2.id)), since, tagsByStory, coauthorsByStory,
-    list: { ...list, view, text, following: onlyFollowing, authors }, forYou,
-    activeTags, allGroups: models.listTagsGrouped(), sort, totalStories: stories.length,
+    user, stories: found.list.stories, folded: found.folded, since,
+    tagsByStory: found.tagsByStory, coauthorsByStory: found.coauthorsByStory,
+    list: found.list, forYou,
+    activeTags: found.activeTags, sort: found.sort, totalStories: found.stories.length,
     inbox: models.inboxFor(user.id, { since }),
     activity: models.groupActivity(user),
     welcome, whatsNew,
+  }));
+}
+
+// The advanced search: every way of narrowing the list at once, on a page
+// of its own (/find). The bar's search box is the quick one; this is the
+// one for "a long finished story by Akarge with a colony in it".
+async function handleFind(req, res, user, query) {
+  const found = storyList(user, query, { defaultShelf: 'all' });
+  const asked = ['q', 'author', 'text', 'length', 'series', 'following', 'tag', 'tags', 'shelf'].some((k) => query.get(k));
+  sendHtml(res, 200, views.findPage({
+    user, asked, stories: found.list.stories, list: found.list,
+    tagsByStory: found.tagsByStory, coauthorsByStory: found.coauthorsByStory,
+    activeTags: found.activeTags, allGroups: models.listTagsGrouped(), sort: found.sort,
   }));
 }
 
@@ -186,6 +219,7 @@ const routes = [
   ['POST', '/markdown/import', (c) => handleMarkdownImport(c.req, c.res, c.user)],
   ['GET', '/search', (c) => handleSearch(c.req, c.res, c.user, c.url.searchParams)],
   ['GET', '/', (c) => handleStories(c.req, c.res, c.user, c.url.searchParams)],
+  ['GET', '/find', (c) => handleFind(c.req, c.res, c.user, c.url.searchParams)],
   ['GET', '/activity', (c) => handleActivity(c.req, c.res, c.user)],
   ['POST', '/welcome/dismiss', (c) => handleDismissWelcome(c.req, c.res, c.user)],
   ['GET', /^\/users\/([A-Za-z0-9_.-]+)$/, (c) => handleProfilePage(c.req, c.res, c.user, c.m[1], c.url.searchParams)],

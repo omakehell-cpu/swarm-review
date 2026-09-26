@@ -5,71 +5,76 @@ story, a chapter -- and what each part of them is for.
 
 ## The front page
 
-**Stories**, in the top bar, is the front page, and it is ordered by what
-needs you rather than by what exists.
+**Stories**, in the top bar, is the front page. It is weighted the way the
+group works: **writing** first, then **reviewing**, then **reading** what
+is finished.
 
-@figure front-page.png | The front page: what is waiting on you, then the stories, then what the group has been doing.
+@figure front-page.png | The front page: Write and Review side by side, then Read.
 
-At the top, only when there is something in it, is **what is waiting on
-you**:
+**Write**, on the left, is your desk: each story of yours still being
+written, with where it stands, its latest chapter, how far it is towards
+its word target, and **+ New chapter**. A draft you have not published yet
+is said there -- *Draft of chapter 4, saved 2 hours ago* -- with
+**Continue the draft**. With nothing on the go, it offers to start a story.
 
-- **Waiting on you** -- notes on your chapters that you have not answered
-  yet, by chapter.
-- **Replies to you** -- somebody answered a note you left.
+**Review**, beside it, is everything that wants your eyes, most personal
+first:
+
 - **Asked to read by you** -- a writer asked you to read a chapter, with
   the question they want answered. See
   [asking somebody to read](/help/reading-and-reviewing).
-- **Following** -- the stories you follow (see below), the ones with
-  something new first: *2 new chapters, from chapter 5*, which opens the
-  first of them, or *Up to date*.
-- **New to read** -- chapters published since you last looked that you
-  have not opened, a story at a time: *Salt Road, 3 new chapters, from
-  chapter 4*. The chapters that came in with an imported story are not
-  news, and are never here.
-- **Recently read** -- the stories by other people you have been reading,
-  newest first, each with where to pick it up: the chapter you stopped in
-  and how far in, the next one you have not read, or *Read to the end*.
-  What you wrote yourself is not in it.
+- **Notes on your chapters** -- notes you have not answered yet, by
+  chapter.
+- **Replies to you** -- somebody answered a note you left, or named you.
+- **New in what you follow** -- new chapters in the stories you follow
+  (see below), which open the first of them.
+- **New in the group** -- other chapters published since you last looked
+  that you have not opened, a story at a time. The chapters that came in
+  with an imported story are never here.
 
-Then the stories, on **three shelves**: **Being written** (where the list
-opens -- stories in progress, and the ones that have gone quiet),
-**Finished**, and **All**, each with how many it holds. A story its
-writer has set aside is in All.
+**Read** is the stories themselves. Above them, **Following** (every story
+you follow, and whether there is anything new) and **Recently read** (the
+stories by other people you have been reading, with where to pick each
+one up, or that you read it to the end). Then three shelves:
+**Finished** (where the list opens), **Being written** and **All**, each
+with how many it holds. A story its writer has set aside is in All.
 
-**The search box** looks through every story -- titles, authors, series,
-blurbs and tags, accents or no accents. Typing also narrows what is
-already on the screen straight away; Enter searches the rest. If nothing
-on the shelf you were on matches, you get everything that does.
+Beside the shelves, the order -- **Latest** or **A–Z** -- and the look:
+**Covers**, or **List**, one line per story, for a shelf of hundreds. The
+look you choose is kept, here and in the advanced search. Thirty stories
+to a page, numbered.
 
-**Advanced search**, beside the order, narrows it further, all at once:
+Each story shows its cover (or its first letter), who wrote it, where it
+stands in a mark and a word -- **✓ Finished**, **✎ Being written**, **On
+hiatus**, **Set aside** -- how many chapters and words and roughly how long
+it takes to read, its series, its blurb and its first tags.
 
-- **Author** -- part of a name is enough.
-- **Words in the text** -- anywhere in the chapters themselves, not only
-  the titles; put a phrase in "quotes".
-- **Length** -- short, medium, long or very long, in words.
-- **Series**, and **tags** (a story has to carry every tag you pick).
-- **Only stories I follow**.
+### Searching
 
-What is switched on is shown under the controls, each with a × to take
-it off. Beside it, the order -- **Latest**, **A–Z** or **Mine**, only the
-stories you write in -- and the look: **Cards**, or **List**, one line per
-story, for a shelf of hundreds. Thirty stories to a page, numbered; every
-one of these is part of the address, so a view of the list can be
-bookmarked or sent.
+The **search box in the top bar** looks through everything: stories,
+chapters, the text of every chapter, the glossary and the bibles.
 
-Each story is a card: its cover (or its first letter, when it has none),
-who wrote it, where it stands -- **✓ Finished**, **✎ Ongoing** -- in a
-mark and a word, how many chapters and words and roughly how long it
-takes to read, its series, its blurb and its first tags. The title is the
-link; the whole card opens it.
+**Advanced search**, at the top right of the front page (and on the search
+page), is for stories, with every way of narrowing them at once:
+
+- **Title, blurb or tag**, and the **author** -- part of a name is enough.
+- **Words in the text** -- anywhere in the chapters; put a phrase in
+  "quotes".
+- **Where it stands**, **length**, **series** and **tags** (a story has to
+  carry every tag you pick).
+- **Only stories I follow**, and the order, including **only stories I
+  write in**.
+
+What is switched on is shown above the results, each with a × to take it
+off. Every search is its own address, so it can be bookmarked or sent.
 
 ### Following a story
 
 **☆ Follow**, on a story's page -- and at the foot of its latest chapter
 -- stars it. From then on, every new chapter somebody else puts up in it
 is news for you until you have read it: a number beside **Stories** in the
-top bar, the story at the top of **Following** on the front page, and the
-chapter in your [feed](/help/your-account), if you use one. Press it again
+top bar, the story under **New in what you follow**, and the chapter in
+your [feed](/help/your-account), if you use one. Press it again
 (**★ Following**) to stop. The number beside the star is how many people
 follow the story.
 

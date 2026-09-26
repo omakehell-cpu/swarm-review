@@ -53,10 +53,10 @@ test('the page remembers the paragraph you stopped at, and forgets it at the end
 
 test('the front page can be ordered, and narrowed to your own stories', async () => {
   const latest = await (await ana.request('/')).text();
-  assert.match(latest, /id="story-find"/);
-  const az = await (await ana.request('/?sort=title')).text();
+  assert.match(latest, /href="\/find">Advanced search/);
+  const az = (await (await ana.request('/?shelf=all&sort=title')).text()).split('id="library"')[1];
   assert.ok(az.indexOf('>Anchorage<') < az.indexOf('>Zebra crossing<'), 'A to Z');
-  const mine = await (await ana.request('/?sort=mine')).text();
+  const mine = (await (await ana.request('/?shelf=all&sort=mine')).text()).split('id="library"')[1];
   assert.match(mine, /that you write in/);
   assert.match(mine, />Zebra crossing</);
   assert.doesNotMatch(mine, />Anchorage</);
