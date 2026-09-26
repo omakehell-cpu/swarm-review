@@ -6,6 +6,10 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-26 — Your first cast, and a timeline you can see
 
+### Dusk
+
+- **A third light, between day and night.** The theme button in the top bar now goes light, dusk, dark. Dusk is a soft slate ground with warm, parchment-coloured type and a softer red: less glare than white, less hard than black.
+
 ### The front page
 
 - **Write, Review, Read -- in that order.** *Write* is your desk: every story of yours being written, its latest chapter, a draft waiting (*Continue the draft*), how far it is towards its target, and *+ New chapter*. *Review*, beside it: what you were asked to read, notes on your chapters, replies, new chapters in what you follow and in the group. *Read* is the library, opening on what is finished.

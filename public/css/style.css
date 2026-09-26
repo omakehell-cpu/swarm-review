@@ -166,7 +166,7 @@
   }
 }
 
-:root[data-theme="dark"] {
+:root[data-theme="dark"], :root[data-theme="dusk"] {
   --bg: #1a1a19;
   --bg-elevated: #1f1f1e;
   --bg-sunken: #252523;
@@ -386,7 +386,7 @@ h1 { margin-top: 0; }
    red when you point at it, like everything else -- the difference is
    that here the red is a warning rather than an invitation. */
 .btn.danger { background: transparent; color: var(--accent); border-color: var(--accent); }
-.btn.danger:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.danger:hover { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
 
 /* --- auth --- */
 .auth-card {
@@ -886,7 +886,7 @@ input[type="file"] { padding: var(--s-3) var(--s-2); }
 .general-comment form { display: flex; flex-direction: column; gap: var(--s-4); margin-top: var(--s-4); }
 
 .selection-toast {
-  position: absolute; z-index: 50; background: var(--accent); color: #fff;
+  position: absolute; z-index: 50; background: var(--accent); color: var(--on-accent, #fff);
   border: none; border-radius: 0; padding: var(--s-3) var(--s-5); cursor: pointer;
   font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.11em;
   box-shadow: none;
@@ -2034,7 +2034,7 @@ mark.search-hit {
   padding: var(--s-1) var(--s-3);
   border-radius: 0;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent, #fff);
   font-size: var(--t-sm);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -2216,7 +2216,7 @@ mark.search-hit {
 /* On the author's own chapter, in words. */
 .readers-line { margin: var(--s-3) 0 0; font-size: var(--t-sm); }
 .readers { color: var(--text-muted); }
-.readers.none { font-style: italic; opacity: 0.8; }
+.readers.none { font-style: italic; }
 .readers-note { opacity: 0.75; }
 
 /* In a list of chapters, one initial per person: the names would not fit
@@ -3167,10 +3167,10 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
   :root:not([data-theme="light"]) .cell.step-3 { background: #96948e; border-color: #a09e97; }
   :root:not([data-theme="light"]) .cell.step-4 { background: #f0f0ec; border-color: #f0f0ec; }
 }
-:root[data-theme="dark"] .cell.step-1 { background: #35352f; border-color: #3d3d37; }
-:root[data-theme="dark"] .cell.step-2 { background: #5c5a53; border-color: #656258; }
-:root[data-theme="dark"] .cell.step-3 { background: #96948e; border-color: #a09e97; }
-:root[data-theme="dark"] .cell.step-4 { background: #f0f0ec; border-color: #f0f0ec; }
+:root[data-theme="dark"] .cell.step-1, :root[data-theme="dusk"] .cell.step-1 { background: #35352f; border-color: #3d3d37; }
+:root[data-theme="dark"] .cell.step-2, :root[data-theme="dusk"] .cell.step-2 { background: #5c5a53; border-color: #656258; }
+:root[data-theme="dark"] .cell.step-3, :root[data-theme="dusk"] .cell.step-3 { background: #96948e; border-color: #a09e97; }
+:root[data-theme="dark"] .cell.step-4, :root[data-theme="dusk"] .cell.step-4 { background: #f0f0ec; border-color: #f0f0ec; }
 /* A single value is a figure, not a chart. Proportional digits: tabular
    ones make a large standalone number look loose. */
 .chart-figure { display: flex; align-items: baseline; gap: var(--s-4); margin: 0; }
@@ -3927,7 +3927,7 @@ main:focus { outline: none; }
     --wa-fill-opening: #45453f;
   }
 }
-:root[data-theme="dark"] {
+:root[data-theme="dark"], :root[data-theme="dusk"] {
   --wa-fill-hard: #5c4f1a;
   --wa-fill-veryhard: #6a2b31;
   --wa-fill-adverb: #1f4d6d;
@@ -5079,7 +5079,7 @@ label.batch-choice { display: flex; flex-direction: row; gap: var(--s-3); align-
 }
 .library-filters > summary::-webkit-details-marker { display: none; }
 .library-filters[open] > summary { background: var(--text); color: var(--bg); }
-.filter-n { display: inline-block; min-width: 1.4em; padding: 0 var(--s-2); margin-left: var(--s-2); background: var(--accent); color: #fff; text-align: center; font-variant-numeric: tabular-nums; }
+.filter-n { display: inline-block; min-width: 1.4em; padding: 0 var(--s-2); margin-left: var(--s-2); background: var(--accent); color: var(--on-accent, #fff); text-align: center; font-variant-numeric: tabular-nums; }
 .library-filters .list-more-body {
   position: absolute; right: 0; top: calc(100% + var(--s-3)); z-index: 20; width: min(40rem, calc(100vw - 32px));
   max-height: 70vh; overflow-y: auto; padding: var(--s-7); background: var(--bg-elevated); border: 1px solid var(--border-strong);
@@ -5127,7 +5127,7 @@ label.batch-choice { display: flex; flex-direction: row; gap: var(--s-3); align-
 .follow-slot { display: flex; flex-direction: column; align-items: flex-end; gap: var(--s-3); }
 .nav-count {
   display: inline-block; min-width: 1.5em; padding: 0 var(--s-2); margin-left: var(--s-3);
-  background: var(--accent); color: #fff; font-size: var(--t-xs); font-weight: 700; line-height: 1.5; text-align: center;
+  background: var(--accent); color: var(--on-accent, #fff); font-size: var(--t-xs); font-weight: 700; line-height: 1.5; text-align: center;
   font-variant-numeric: tabular-nums; vertical-align: 0.1em;
 }
 .following-list li:not(.has-news) .inbox-what strong { font-weight: 500; }
@@ -5299,3 +5299,35 @@ label.adv-check input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18
 }
 .author-featured .author-featured-title, .desk-title { font-family: var(--font-prose); font-weight: 700; }
 .profile-section > h2.band-title { border-top: 0; padding-top: 0; }
+
+/* ---------- dusk ----------
+   A third light, between day and night: for the hour when white is too
+   bright and black too hard. Everything dark mode does for the drawing
+   (the heat-map steps, the writing checks' fills) it does here too; on
+   top of that the ground is a soft slate with a little violet in it, not
+   near-black, and the ink is a warm parchment rather than white -- about
+   ten to one, where night is fifteen. The red is a softer coral, and what
+   sits on it is set in the ground colour, which reads better than white. */
+:root[data-theme="dusk"] {
+  --bg: #2d2b33;
+  --bg-elevated: #33313a;
+  --bg-sunken: #38363f;
+  --border: #4b4854;
+  --border-strong: #c9c2b4;
+  --text: #e2dccf;
+  --text-muted: #aaa398;
+  --accent: #f2836e;
+  --accent-strong: #f69c8a;
+  --accent-rgb: 242, 131, 110;
+  --pending: #f2836e;
+  --pending-rgb: 242, 131, 110;
+  --accepted: #e2dccf;
+  --accepted-rgb: 226, 220, 207;
+  --rejected: #8f897f;
+  --rejected-rgb: 143, 137, 127;
+  --btn-text: #2d2b33;
+  --on-accent: #2d2b33;
+  --code-bg: rgba(226, 220, 207, 0.08);
+  --shadow: rgba(10, 8, 16, 0.45);
+  color-scheme: dark;
+}

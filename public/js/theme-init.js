@@ -13,7 +13,7 @@
   document.documentElement.classList.add('js');
   try {
     const saved = localStorage.getItem('theme');
-    if (saved === 'dark' || saved === 'light') {
+    if (saved === 'dark' || saved === 'light' || saved === 'dusk') {
       document.documentElement.setAttribute('data-theme', saved);
     }
   } catch (e) { /* ignore -- falls back to prefers-color-scheme */ }
