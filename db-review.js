@@ -213,4 +213,7 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   // found in parts ("Kessler" for Anna Kessler).
   ensureColumn('story_entities', 'any_case', 'INTEGER NOT NULL DEFAULT 0');
   ensureColumn('story_entities', 'match_parts', 'INTEGER NOT NULL DEFAULT 1');
+  // An entry can last: a siege from day 12 to day 40. The start is
+  // story_day; this is the last day, and empty for a single moment.
+  ensureColumn('story_entities', 'story_day_end', 'INTEGER');
 };

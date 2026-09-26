@@ -4,13 +4,21 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
-## 2026-09-26 — Your first cast
+## 2026-09-26 — Your first cast, and a timeline you can see
 
 ### The story bible
 
 - **Your first cast, step by step**: a new walkthrough in Help, from a blank story to a cast the chapters link, with pictures of every step.
 - **"Dr Ilse Varn" is offered as Ilse Varn.** A form of address in front (Dr, Captain, Colonel, Señora) is taken off the names the scan offers; Captain Kessler is simply Kessler.
 - **Adding a full name answers its parts.** Add *Mara Kessler* and the row asking about *Kessler* says it is her and goes.
+
+### The timeline
+
+- **The timeline, drawn.** Above the list, everything with a day on one line, in three lanes: the chapters as they are told, the events, and everybody and everything else. Evenly spaced by moment, not to scale.
+- **Events that last.** *Until day* beside the day number makes an event a bar from its first day to its last -- a siege, a voyage, a winter.
+- **What ties them.** A relation between two dated entries is a line between them. Point at anything and it keeps what it is tied to, including the chapters that name it; the rest steps back. The list says the same in words: *leads to* the Long Drift, *told in* ch. 2.
+- **Every event is on the page**, dated or not; the ones with no day wait under *Not on the line yet*.
+- **On the entry**: *On the timeline* says its day, what comes just before and just after, and links to its place on the drawing. Relations offer the usual words for events (*leads to*, *caused by*, *happens during*) and for people.
 
 ## 2026-09-24 — Who is who, and changing it where it stands
 

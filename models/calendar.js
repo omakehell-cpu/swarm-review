@@ -19,40 +19,72 @@ function storyTimeline(storyId) {
      ORDER BY chapter_number
   `).all(storyId);
   const entities = db.prepare(`
-    SELECT id, name, kind, summary, story_when, story_day
+    SELECT id, name, kind, summary, story_when, story_day, story_day_end
       FROM story_entities
      WHERE story_id = ?
      ORDER BY name COLLATE NOCASE
   `).all(storyId);
+  const byEntity = new Map(entities.map((e) => [e.id, e]));
 
+  // What ties things together, so the timeline can draw it: the relations
+  // written in the bible, and the chapters each entry is named in.
+  const relations = db.prepare(`
+    SELECT id, from_id, to_id, label, reverse_label FROM story_entity_links WHERE story_id = ?
+  `).all(storyId);
+  const toldIn = new Map();
+  for (const row of db.prepare(`
+    SELECT sc.entity_id, ch.id AS chapter_id, ch.chapter_number
+      FROM story_entity_chapters sc JOIN chapters ch ON ch.id = sc.chapter_id
+     WHERE ch.story_id = ? AND ch.archived_at IS NULL
+     ORDER BY ch.chapter_number
+  `).all(storyId)) {
+    if (!toldIn.has(row.entity_id)) toldIn.set(row.entity_id, []);
+    toldIn.get(row.entity_id).push({ id: row.chapter_id, number: row.chapter_number });
+  }
+
+  /** @type {any[]} */
   const placed = [];
+  /** @type {any[]} */
   const undated = [];
   for (const c of chapters) {
     const item = {
       type: 'chapter',
+      key: `c${c.id}`,
       id: c.id,
       day: c.story_day,
+      end: null,
       when: c.story_when,
       title: `${c.chapter_number}. ${c.title}`,
       note: c.arc_title || '',
       url: `/chapters/${c.id}`,
       order: c.chapter_number,
+      kind: 'chapter',
     };
     (item.day === null || item.day === undefined ? undated : placed).push(item);
   }
   for (const e of entities) {
+    const item = {
+      type: 'entry', key: `e${e.id}`, id: e.id, day: e.story_day, end: e.story_day_end,
+      when: e.story_when, title: e.name, note: e.summary || '', url: `/bible/${e.id}`, order: null, kind: e.kind,
+      toldIn: toldIn.get(e.id) || [],
+      related: relations
+        .filter((r) => r.from_id === e.id || r.to_id === e.id)
+        .map((r) => {
+          const other = byEntity.get(r.from_id === e.id ? r.to_id : r.from_id);
+          const label = r.from_id === e.id ? r.label : (r.reverse_label || r.label);
+          return other ? { key: `e${other.id}`, id: other.id, name: other.name, kind: other.kind, label: label || 'related to' } : null;
+        })
+        .filter(Boolean),
+    };
     if (e.story_day === null || e.story_day === undefined) {
-      // An entry with a date written out but no number can be shown; one
-      // with neither is just an entry, and does not belong on a timeline.
-      if (String(e.story_when || '').trim()) {
-        undated.push({ type: 'entry', id: e.id, day: null, when: e.story_when, title: e.name, note: e.kind, url: `/bible/${e.id}`, order: null });
-      }
+      // An entry with a date written out but no number can be shown, and
+      // so can an event with neither -- an event is something that
+      // happens, so it is waiting for a day. Anything else undated is
+      // just an entry, and does not belong on a timeline.
+      if (String(e.story_when || '').trim() || e.kind === 'event') undated.push({ ...item, day: null });
       continue;
     }
-    placed.push({
-      type: 'entry', id: e.id, day: e.story_day, when: e.story_when,
-      title: e.name, note: e.summary || e.kind, url: `/bible/${e.id}`, order: null,
-    });
+    placed.push(item);
   }
 
   // Same day: chapters before entries, then by the order they are told
@@ -79,14 +111,55 @@ function storyTimeline(storyId) {
     if (item.day > highestDay) highestDay = item.day;
   }
 
+  // The lines between things on the timeline: a relation between two
+  // dated entries, and an entry to the dated chapters that name it.
+  const onLine = new Set(placed.map((i) => i.key));
+  const links = [];
+  for (const r of relations) {
+    const a = `e${r.from_id}`;
+    const b = `e${r.to_id}`;
+    if (onLine.has(a) && onLine.has(b)) links.push({ from: a, to: b, label: r.label || 'related to', type: 'relation' });
+  }
+  for (const item of placed) {
+    if (item.type !== 'entry') continue;
+    for (const c of item.toldIn) {
+      if (onLine.has(`c${c.id}`)) links.push({ from: item.key, to: `c${c.id}`, label: 'told in', type: 'told' });
+    }
+  }
+  // Each chapter, the dated entries it names.
+  for (const item of placed) {
+    if (item.type !== 'chapter') continue;
+    item.names = placed.filter((e) => e.type === 'entry' && e.toldIn.some((c) => c.id === item.id))
+      .map((e) => ({ key: e.key, name: e.title, kind: e.kind }));
+  }
+
+  const last = placed.reduce((m, i) => Math.max(m, i.end || i.day), -Infinity);
   return {
     placed,
     undated,
+    links,
     chapters: chapters.length,
     dated: placed.filter((i) => i.type === 'chapter').length,
-    span: placed.length ? { from: placed[0].day, to: placed[placed.length - 1].day } : null,
+    events: placed.filter((i) => i.kind === 'event').length,
+    span: placed.length ? { from: placed[0].day, to: last } : null,
     outOfOrder: placed.filter((i) => i.outOfOrder).length,
   };
+}
+
+/**
+ * Where one entry sits among the story's dated events: the event just
+ * before it and the one just after, for the entry's own page.
+ */
+function timelineNeighbours(entityId) {
+  const e = db.prepare('SELECT id, story_id, story_day FROM story_entities WHERE id = ?').get(entityId);
+  if (!e || e.story_day === null || e.story_day === undefined) return null;
+  const ask = (op, order) => db.prepare(`
+    SELECT id, name, story_day, story_when FROM story_entities
+     WHERE story_id = ? AND kind = 'event' AND id != ? AND story_day IS NOT NULL
+       AND (story_day ${op} ? OR (story_day = ? AND id ${op} ?))
+     ORDER BY story_day ${order}, id ${order} LIMIT 1
+  `).get(e.story_id, e.id, e.story_day, e.story_day, e.id) || null;
+  return { before: ask('<', 'DESC'), after: ask('>', 'ASC') };
 }
 
 
@@ -213,6 +286,7 @@ function feedItemsFor(userId, { days = 30, limit = 40 } = {}) {
 // ---------- coauthors ----------
 
 module.exports = {
+  timelineNeighbours,
   clearFeedToken,
   createFeedToken,
   feedItemsFor,

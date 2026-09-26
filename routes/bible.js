@@ -114,6 +114,7 @@ function entityFieldsFromBody(body) {
     fields: storyBible.parseFields(body.fieldLabel, body.fieldValue),
     storyWhen: body.storyWhen,
     storyDay: body.storyDay,
+    storyDayEnd: body.storyDayEnd,
   };
 }
 
@@ -268,6 +269,7 @@ function renderEntity(res, user, entityId, error = '', status = 200, notice = ''
     canWrite, error, notice,
     statusChanges: canWrite ? changes : changes.filter((c) => c.chapter_number <= upTo),
     matching: canWrite ? models.entityMatching(entityId) : null,
+    neighbours: models.timelineNeighbours(entityId),
     aliases: models.listEntityAliases(entityId),
     links: models.listStoryEntityLinks(entityId),
     appearances: models.listEntityAppearances(entityId),

@@ -4910,3 +4910,57 @@ label.batch-choice { display: flex; flex-direction: row; gap: var(--s-3); align-
 .batch-row.is-duplicate .batch-status { color: var(--text-muted); }
 .batch-row.is-error .batch-status { color: var(--accent); }
 .batch-progress progress { accent-color: var(--text); }
+
+/* ---------- the timeline, drawn (views/analysis.js timelineChart) ---------- */
+.tl-chart { margin: var(--s-8) 0 var(--s-6); }
+.tl-canvas { position: relative; container-type: inline-size; overflow-x: clip; }
+.tl-axis { position: absolute; top: 0; left: 0; right: 0; height: 26px; border-bottom: 1px solid var(--border); }
+.tl-tick {
+  position: absolute; top: 4px; transform: translateX(-50%);
+  font-size: var(--t-2xs); font-weight: 700; color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+.tl-lane { position: absolute; left: 0; right: 0; border-bottom: 1px solid var(--border); }
+.tl-lane-name {
+  position: absolute; top: 4px; left: 0; z-index: 1; background: var(--bg); padding-right: 6px; font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: var(--label-tracking); color: var(--text-muted);
+}
+.tl-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.tl-line { fill: none; stroke: var(--text-muted); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.tl-line-told { stroke-dasharray: 3 3; opacity: 0; }
+.tl-item {
+  position: absolute; height: 30px; width: 12px; display: flex; align-items: center;
+  white-space: nowrap; text-decoration: none; color: var(--text); font-size: var(--t-xs);
+  transform: translateX(-6px); z-index: 1;
+}
+.tl-item.is-span { width: max(12px, var(--span, 0)); transform: none; }
+.tl-mark { width: 12px; height: 12px; flex: 0 0 12px; border-radius: 50%; border: 2px solid var(--text); background: var(--bg); box-shadow: 0 0 0 2px var(--bg); }
+.tl-item-event .tl-mark { background: var(--text); }
+.tl-item-chapter .tl-mark { border-radius: 2px; }
+.tl-item-chapter .tl-label { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tl-bar { display: block; height: 10px; width: 100%; border-radius: 5px; background: var(--text); box-shadow: 0 0 0 2px var(--bg); }
+.tl-item-other .tl-bar { background: var(--bg); border: 2px solid var(--text); }
+/* The label sits on the line beside its mark, with the page colour behind
+   it so a line passing underneath never runs through the words. */
+.tl-label {
+  position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%);
+  line-height: 1.2; padding: 0 3px; background: var(--bg); border-radius: 3px;
+}
+.tl-item.is-flipped .tl-label { left: auto; right: calc(100% + 6px); }
+.tl-item:hover .tl-label, .tl-item:focus-visible .tl-label { text-decoration: underline; }
+.tl-item:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+/* Pointing at one thing: it and what it is tied to stay, the rest steps back. */
+.tl-chart.is-pointing .tl-item { opacity: 0.25; }
+.tl-chart.is-pointing .tl-item.is-lit { opacity: 1; z-index: 2; }
+.tl-chart.is-pointing .tl-line { opacity: 0.12; }
+.tl-chart.is-pointing .tl-line.is-lit { opacity: 1; stroke: var(--text); stroke-width: 2; }
+@media (prefers-reduced-motion: no-preference) { .tl-item, .tl-line { transition: opacity 0.12s ease; } }
+/* The list under it: what each thing is tied to. */
+.tl-ties { display: inline-flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); font-size: var(--t-sm); color: var(--text-muted); flex-basis: 100%; }
+.tl-tie { white-space: nowrap; }
+.tl-tie-label { font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); }
+.tl-ties a { font-weight: 400 !important; font-style: normal !important; }
+.tl-row:target { background: var(--bg-sunken); box-shadow: inset 3px 0 0 var(--text); }
+.tl-kind-event .tl-what > a { font-style: normal; font-weight: 700; }
+.tl-chart { overflow-x: auto; }
+.tl-canvas { min-width: 900px; }
+.tl-chart.is-pointing .tl-line-told:not(.is-lit) { opacity: 0; }

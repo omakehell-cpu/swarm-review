@@ -239,7 +239,12 @@ function arcField(selectedValue) {
 // with the order it is told in. Two fields because they answer two
 // different questions: what the story calls this moment, and where it
 // goes on a line. The line needs a number; the reader needs the words.
-function whenFields(storyWhen, storyDay, { whens = [] } = {}) {
+/**
+ * @param {string} storyWhen @param {any} storyDay
+ * @param {{ whens?: string[], dayEnd?: any, withEnd?: boolean }} [opts] withEnd: a bible
+ *   entry can last (a siege, a voyage), so it also takes the day it ends.
+ */
+function whenFields(storyWhen, storyDay, { whens = [], dayEnd = null, withEnd = false } = {}) {
   const list = whens.length
     ? `<datalist id="known-whens">${whens.map((v) => `<option value="${escapeHtml(v)}"></option>`).join('')}</datalist>`
     : '';
@@ -251,6 +256,9 @@ function whenFields(storyWhen, storyDay, { whens = [] } = {}) {
       <label>Day number
         <input type="number" name="storyDay" value="${storyDay === null || storyDay === undefined ? '' : escapeHtml(String(storyDay))}" step="1" placeholder="412">
       </label>
+      ${withEnd ? `<label>Until day <span class="muted">(if it lasts)</span>
+        <input type="number" name="storyDayEnd" value="${dayEnd === null || dayEnd === undefined ? '' : escapeHtml(String(dayEnd))}" step="1" placeholder="440">
+      </label>` : ''}
     </div>
     <span class="hint">Both optional. The words are what the story calls it; the number is what puts it on the timeline, on whatever scale you pick -- days, years, chapters of a war. Leave the number empty and nothing is assumed: undated is not day zero.</span>
     ${list}`;

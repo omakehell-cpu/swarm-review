@@ -168,7 +168,14 @@ in it, so a half-illustrated cast still reads as one column of names.
 An entry takes a date too -- **When this happens** and a **day number** --
 so a battle, a founding or a death sits on the story's
 [timeline](/help/targets-and-analysis) beside the chapters that tell it.
-Both optional, and an entry with neither simply does not appear there.
+Both optional, and an entry with neither simply does not appear there --
+except an event, which is always listed, waiting for its day.
+
+An event that lasts takes an **until day** too, and is drawn as a bar.
+The entry page says where it stands under **On the timeline**: its day,
+what happens just before and just after it, and a link to it on the
+drawing. The lines on the drawing are its relations, so *leads to* the
+Long Drift or *happens during* the siege is what ties two events together.
 
 ## Custom fields
 
