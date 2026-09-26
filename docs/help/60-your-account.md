@@ -104,11 +104,21 @@ author here. And once an author is somebody's, any story of theirs
 imported later goes straight to that member, while the authors page
 still shows it under the name it came in with.
 
-## Light and dark
+## Light, dusk and dark
 
-The moon at the right of the top bar moves between light and dark, and
-follows your system until you press it. It is remembered in your browser,
-not your account, so it can be different on your phone and your desk.
+The round button at the right of the top bar moves between three lights,
+in the order the day goes: **light** (☀), **dusk** (◑) and **dark** (☾),
+and round again. It shows the one you are in; hover over it to see which
+comes next.
+
+**Dusk** is for when white is too bright and black too hard: a soft slate
+ground with warm, parchment-coloured type, a little less contrast than
+dark mode and a softer red -- still comfortably readable, and easier on
+the eyes over a long chapter in the evening.
+
+Until you press it, the site follows your system's own light or dark. Your
+choice is remembered in your browser, not your account, so it can be
+different on your phone and your desk.
 
 ## Admin
 
@@ -168,9 +178,3 @@ presses the button.
 There is no AI anywhere in this app. The spellchecker is a dictionary, the
 writing checks are rules, and the story bible's scan is a regular
 expression. Nothing you write is sent anywhere to be read by anything.
-
-## Light and dark
-
-The moon button in the top bar switches the site between light and dark.
-Until you press it, the site follows your system's own setting.
-
