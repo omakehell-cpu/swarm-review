@@ -4,6 +4,7 @@ const { layout } = require('../lib/layout');
 const { escapeHtml } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { ICONS, bible, bibleImages, emptyState, whenFields } = require('./shared');
+const { entityTimelineBlock, entityStatusBlock } = require('./bible-when');
 // One per story: its people, places, groups, things and events. Not the
 // glossary -- that mirrors the shared wiki and is read-only here. This is
 // the author's own, and it is the only thing in the app that knows which
@@ -187,7 +188,7 @@ function bibleIndexPage({
           <button class="btn ghost small" type="submit">Filter</button>
         </form>
         ${bibleSortBar(story, kind, sort)}
-        <p class="muted"><span id="glossary-count">${entities.length} entr${entities.length === 1 ? 'y' : 'ies'}</span>${kind ? ` &middot; ${escapeHtml(bible.KIND_PLURALS[kind])}` : ''}.</p>` : ''}
+        <p class="muted"><span id="glossary-count">${entities.length} entr${entities.length === 1 ? 'y' : 'ies'}</span>${kind ? ` &middot; ${escapeHtml(bible.KIND_PLURALS[kind])}` : ''}.${kind === 'event' ? ` <a href="/stories/${story.id}/timeline">See them on the timeline &rarr;</a>` : ''}</p>` : ''}
       ${list}
       ${canWrite ? notNamesBlock(story, notNames) : ''}`,
   });
@@ -265,8 +266,14 @@ function entityRelationBlock(entity, links, others, canWrite) {
   const form = canWrite && others.length ? `
     <form method="post" action="/bible/${entity.id}/links" class="relation-form">
       <label>Relation
-        <input type="text" name="label" placeholder="sister of, serves under, owns..." maxlength="80">
+        <input type="text" name="label" placeholder="sister of, serves under, owns..." maxlength="80" list="relation-words">
       </label>
+      <datalist id="relation-words">
+        ${(entity.kind === 'event'
+    ? ['leads to', 'caused by', 'part of', 'happens during', 'fought in', 'was at', 'ends', 'begins']
+    : ['sister of', 'brother of', 'parent of', 'child of', 'married to', 'serves under', 'commands', 'lives in', 'member of', 'took part in', 'owns'])
+    .map((w) => `<option value="${w}"></option>`).join('')}
+      </datalist>
       <label>To
         <select name="to">
           ${others.map((o) => `<option value="${o.id}">${escapeHtml(o.name)}</option>`).join('')}
@@ -479,45 +486,6 @@ const KIND_OPTIONS = () => bible.KINDS.map((k) => /** @type {[string, string]} *
 /** @returns {Array<[string, string]>} */
 const ROLE_OPTIONS = () => bible.ROLES.map((r) => /** @type {[string, string]} */ ([r, r ? bible.ROLE_LABELS[r] : 'No role']));
 
-// The status, chapter by chapter: how they start, then every change and
-// the chapter it happens in. A reader is only ever given the part of this
-// they have read up to; the people writing it get all of it, and the form.
-function entityStatusBlock(entity, changes, chapters, canWrite) {
-  const label = (s) => escapeHtml(bible.STATUS_LABELS[s || ''] || bible.STATUS_LABELS['']);
-  const start = entity.start_status != null ? entity.start_status : entity.status;
-  const rows = [`
-    <li><span class="status-when">At the start</span> <span class="ent-badge status-${escapeHtml(start || 'none')}">${label(start)}</span></li>`]
-    .concat(changes.map((c) => `
-    <li>
-      <span class="status-when">From <a href="/chapters/${c.chapter_id}">chapter ${c.chapter_number}</a></span>
-      <span class="ent-badge status-${escapeHtml(c.status || 'none')}">${label(c.status)}</span>
-      ${canWrite ? `
-        <form method="post" action="/bible/${entity.id}/status/${c.id}/delete" class="inline-form" data-inline-form data-then="reload">
-          <button class="btn ghost tiny" type="submit" aria-label="Take back the change in chapter ${c.chapter_number}">Remove</button>
-        </form>` : ''}
-    </li>`)).join('');
-  const live = chapters.filter((c) => !c.archived_at);
-  const form = canWrite ? `
-    <form method="post" action="/bible/${entity.id}/status" class="status-form" data-inline-form data-then="reload">
-      <label class="sr-only" for="status-${entity.id}">Status</label>
-      <select name="status" id="status-${entity.id}">
-        ${bible.STATUSES.map((s) => `<option value="${s}">${label(s)}</option>`).join('')}
-      </select>
-      <label class="sr-only" for="status-from-${entity.id}">From</label>
-      <select name="chapterId" id="status-from-${entity.id}">
-        <option value="">from the start</option>
-        ${live.map((c) => `<option value="${c.id}">from chapter ${c.chapter_number}: ${escapeHtml(c.title)}</option>`).join('')}
-      </select>
-      <button class="btn ghost small" type="submit">Set</button>
-    </form>
-    <p class="hint">Readers only see a change once they have read that far.</p>` : '';
-  return `
-    <section id="status">
-      <h2 class="side-head">Status</h2>
-      <ul class="status-list">${rows}</ul>
-      ${form}
-    </section>`;
-}
 
 // How the scan finds this entry, said out loud: the names, the parts of a
 // person's name it finds on their own, and what it leaves out and why. The
@@ -585,7 +553,7 @@ function entityMergeBlock(entity, others) {
 function entityPage({
   user, story, entity, aliases = [], links = [], appearances = [], chapters = [],
   others = [], images = [], fields = [], canWrite = false, error = '', notice = '',
-  statusChanges = [], matching = null,
+  statusChanges = [], matching = null, neighbours = null,
 }) {
   const aliasText = aliases.map((a) => escapeHtml(a)).join(', ');
   const deleteWarning = [
@@ -638,6 +606,7 @@ function entityPage({
         </div>
         <aside class="entity-side">
           ${entityFieldList(fields)}
+          ${entityTimelineBlock(entity, story, neighbours, canWrite)}
           ${entityStatusBlock(entity, statusChanges, chapters, canWrite)}
           <section>
             <h2 class="side-head">Appears in</h2>
@@ -700,7 +669,7 @@ function entityFormPage({ user, story, entity = null, aliases = [], fields = [],
             </select>
           </label>
         </div>
-        ${whenFields(entity ? entity.story_when : '', entity ? entity.story_day : null, { whens })}
+        ${whenFields(entity ? entity.story_when : '', entity ? entity.story_day : null, { whens, dayEnd: entity ? entity.story_day_end : null, withEnd: true })}
         ${entityFieldFieldset({
     templates, fields, usedLabels,
     currentKind: (entity && entity.kind) || bible.DEFAULT_KIND,

@@ -34,7 +34,7 @@ function setEntityField(entityId, field, value, userId) {
     entityId, kind: entity.kind, name: entity.name, summary: entity.summary, description: entity.description,
     secret: entity.secret, status: entity.status, role: entity.role, aliases,
     fields: listEntityFields(entityId).map((f) => ({ label: String(f.label), value: String(f.value) })),
-    userId, storyWhen: entity.story_when, storyDay: entity.story_day,
+    userId, storyWhen: entity.story_when, storyDay: entity.story_day, storyDayEnd: entity.story_day_end,
   };
   if (field === 'any_case' || field === 'match_parts') {
     const on = value === true || value === 1 || value === '1' || value === 'on' || value === 'true';
@@ -244,10 +244,12 @@ function mergeStoryEntities(fromId, intoId, userId) {
     };
     db.prepare(`UPDATE story_entities SET
         summary = ?, description = ?, secret = ?, role = ?, status = ?,
-        story_when = COALESCE(NULLIF(story_when, ''), ?), story_day = COALESCE(story_day, ?),
+        story_when = COALESCE(NULLIF(story_when, ''), ?),
+        story_day_end = CASE WHEN story_day IS NULL THEN ? ELSE story_day_end END,
+        story_day = COALESCE(story_day, ?),
         updated_at = datetime('now') WHERE id = ?`).run(
       into.summary || from.summary, joined(into.description, from.description), joined(into.secret, from.secret),
-      into.role || from.role, into.status || from.status, from.story_when || '', from.story_day, intoId
+      into.role || from.role, into.status || from.status, from.story_when || '', from.story_day_end, from.story_day, intoId
     );
     db.prepare('DELETE FROM story_entities WHERE id = ?').run(fromId);
     db.exec('COMMIT');

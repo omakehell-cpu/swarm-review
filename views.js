@@ -14,6 +14,7 @@ const modules = [
   ['glossary', require('./views/glossary')],
   ['help', require('./views/help')],
   ['bible', require('./views/bible')],
+  ['bible-when', require('./views/bible-when')],
   ['stories', require('./views/stories')],
   ['story', require('./views/story')],
   ['analysis', require('./views/analysis')],

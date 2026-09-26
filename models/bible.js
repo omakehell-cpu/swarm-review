@@ -195,8 +195,16 @@ function teachDictionary(storyId, names, userId) {
 }
 
 
-/** @param {{ storyId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], createdBy: number , storyWhen?: string, storyDay?: string|number|null }} entry */
-function createStoryEntity({ storyId, kind, name, summary, description, secret, status, role, aliases, fields, createdBy, storyWhen, storyDay }) {
+// The last day of something that lasts: only with a first day, only after
+// it, and nothing at all for a single moment.
+function dayEnd(start, end) {
+  const from = cleanDay(start);
+  const to = cleanDay(end);
+  return from === null || to === null || to <= from ? null : to;
+}
+
+/** @param {{ storyId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], createdBy: number , storyWhen?: string, storyDay?: string|number|null, storyDayEnd?: string|number|null }} entry */
+function createStoryEntity({ storyId, kind, name, summary, description, secret, status, role, aliases, fields, createdBy, storyWhen, storyDay, storyDayEnd }) {
   const clean = bible.cleanName(name);
   if (!clean) return null;
   const list = (aliases || []).map(bible.cleanName).filter(Boolean);
@@ -204,8 +212,8 @@ function createStoryEntity({ storyId, kind, name, summary, description, secret, 
   db.exec('BEGIN');
   try {
     const info = db.prepare(`
-      INSERT INTO story_entities (story_id, kind, name, name_lower, summary, description, secret, status, role, created_by, story_when, story_day)
-      VALUES (@storyId, @kind, @name, @nameLower, @summary, @description, @secret, @status, @role, @createdBy, @storyWhen, @storyDay)
+      INSERT INTO story_entities (story_id, kind, name, name_lower, summary, description, secret, status, role, created_by, story_when, story_day, story_day_end)
+      VALUES (@storyId, @kind, @name, @nameLower, @summary, @description, @secret, @status, @role, @createdBy, @storyWhen, @storyDay, @storyDayEnd)
     `).run({
       storyId,
       kind: bible.entityKind(kind),
@@ -219,6 +227,7 @@ function createStoryEntity({ storyId, kind, name, summary, description, secret, 
       createdBy: createdBy || null,
       storyWhen: cleanLabel(storyWhen),
       storyDay: cleanDay(storyDay),
+      storyDayEnd: dayEnd(storyDay, storyDayEnd),
     });
     entityId = Number(info.lastInsertRowid);
     writeAliases(entityId, storyId, list);
@@ -237,8 +246,8 @@ function createStoryEntity({ storyId, kind, name, summary, description, secret, 
 }
 
 
-/** @param {{ entityId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], userId?: number , storyWhen?: string, storyDay?: string|number|null }} entry */
-function updateStoryEntity({ entityId, kind, name, summary, description, secret, status, role, aliases, fields, userId, storyWhen, storyDay }) {
+/** @param {{ entityId: number, kind?: string, name: string, summary?: string, description?: string, secret?: string, status?: string, role?: string, aliases?: string[], fields?: {label: string, value: string}[], userId?: number , storyWhen?: string, storyDay?: string|number|null, storyDayEnd?: string|number|null }} entry */
+function updateStoryEntity({ entityId, kind, name, summary, description, secret, status, role, aliases, fields, userId, storyWhen, storyDay, storyDayEnd }) {
   const current = db.prepare('SELECT id, story_id, name, name_lower FROM story_entities WHERE id = ?').get(entityId);
   if (!current) return null;
   const clean = bible.cleanName(name);
@@ -255,7 +264,7 @@ function updateStoryEntity({ entityId, kind, name, summary, description, secret,
       UPDATE story_entities SET
         kind = @kind, name = @name, name_lower = @nameLower, summary = @summary,
         description = @description, secret = @secret, status = @status, role = @role,
-        story_when = @storyWhen, story_day = @storyDay,
+        story_when = @storyWhen, story_day = @storyDay, story_day_end = @storyDayEnd,
         updated_at = datetime('now')
       WHERE id = @entityId
     `).run({
@@ -270,6 +279,7 @@ function updateStoryEntity({ entityId, kind, name, summary, description, secret,
       role: bible.entityRole(role),
       storyWhen: cleanLabel(storyWhen),
       storyDay: cleanDay(storyDay),
+      storyDayEnd: dayEnd(storyDay, storyDayEnd),
     });
     writeAliases(entityId, current.story_id, list);
     writeEntityFields(entityId, current.story_id, fields);

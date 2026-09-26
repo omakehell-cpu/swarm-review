@@ -96,6 +96,25 @@ as day zero: an undated chapter stays off the line rather than being
 dragged to the front of it. Anything with words but no number is listed
 underneath, waiting for one.
 
+### The drawing
+
+Above the list the same things are drawn on one line, left to right, in
+three lanes: **Told** (the chapters, as numbered squares), **Events** and
+**People, places, things**. It is evenly spaced by moment rather than to
+scale -- to scale, one busy afternoon vanishes next to a ten-year silence
+-- so the real distances stay in the list.
+
+An event can last: give it an **until day** as well and it is drawn as a
+bar from its first day to its last. A relation written in the bible between
+two dated entries (*leads to*, *happens during*, *sister of*) is drawn as a line
+between them. Point at anything, or move to it with Tab, and it keeps what
+it is tied to -- its relations and the chapters that name it -- while the
+rest steps back. Click it to jump to its row in the list, where the same
+ties are written out.
+
+Every event in the bible is on this page. One with no day number is listed
+under *Not on the line yet* until it has one.
+
 A chapter marked **told out of order** is one that goes backwards: it
 happens before a chapter the reader has already been through. That is a
 flashback, which is a decision rather than a mistake, so the page marks it
