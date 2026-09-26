@@ -5,7 +5,7 @@ const { layout } = require('../lib/layout');
 const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
 const { entityKindLabel } = require('./bible');
-const { emptyState, hiddenTagsSection, wordCount, writingBlock } = require('./shared');
+const { emptyState, hiddenTagsSection, writingBlock } = require('./shared');
 // A window of text around the first occurrence, with the term marked.
 // Works on plain text, so anything HTML (a glossary body) has to be
 // flattened before it gets here.
@@ -30,6 +30,7 @@ function searchPage({ user, results, query }) {
     <form method="get" action="/search" class="search-page-form">
       <input type="search" name="q" value="${escapeHtml(query || '')}" placeholder="Search stories, chapters and the glossary" autofocus>
       <button class="btn" type="submit">Search</button>
+      <a class="btn ghost" href="/find${query ? `?q=${encodeURIComponent(query)}` : ''}">Advanced search</a>
     </form>`;
 
   if (!results) {
@@ -183,96 +184,6 @@ function eventLog(events) {
   return `<ol class="log-list">${events.map(eventLine).join('')}</ol>`;
 }
 
-// ---------- somebody's page ----------
-
-// Everything the group can see about a member in one place: who they are,
-// what they have written, and the numbers underneath it. No activity feed
-// and no reading history -- what somebody has read is between them and
-// the author whose chapter it was.
-/** @param {{ user: Row, person: Row, stats: any, stories: any[], chapters: any[], pendingClaim?: any, notice?: string }} props */
-function profilePage({ user, person, stats, stories, chapters, pendingClaim = null, notice = '' }) {
-  const isSelf = person.id === user.id;
-  const stat = (value, label) => `<div class="story-stat"><span class="story-stat-value">${value}</span><span class="story-stat-label">${label}</span></div>`;
-
-  const storyRows = stories.length ? `<div class="chapter-list">${stories.map((s) => `
-    <a class="chapter-row" href="/stories/${s.id}">
-      <div class="chapter-row-main">
-        <h3>${escapeHtml(s.title)}</h3>
-        ${s.description ? `<p class="muted">${escapeHtml(s.description)}</p>` : ''}
-      </div>
-      <div class="chapter-row-meta">
-        <span>${s.is_owner ? 'author' : 'coauthor'}</span>
-        <span>${s.own_chapters} of ${s.chapters} chapter${s.chapters === 1 ? '' : 's'}</span>
-      </div>
-    </a>`).join('')}</div>` : `<p class="muted">${isSelf ? 'You have not started or been invited into a story yet.' : 'Nothing yet.'}</p>`;
-
-  const chapterRows = chapters.length ? `<div class="chapter-list">${chapters.map((c) => `
-    <a class="chapter-row" href="/chapters/${c.id}">
-      <div class="chapter-row-main">
-        <h3>${escapeHtml(c.title)}</h3>
-        <p class="muted">${escapeHtml(c.story_title)}</p>
-      </div>
-      <div class="chapter-row-meta">
-        ${c.word_count ? `<span>${wordCount(c.word_count)}</span>` : ''}
-        ${timeHtml(c.created_at)}
-      </div>
-    </a>`).join('')}</div>` : `<p class="muted">${isSelf ? 'Nothing written yet.' : 'Nothing yet.'}</p>`;
-
-  // An imported author: a name the stories came with, not a member. Who
-  // they are elsewhere, and -- for a member who is them -- a way to say so.
-  const imported = person.is_placeholder ? `
-      <section class="imported-author">
-        <p><strong>Imported author.</strong> These stories were brought in from StoriesOnline${person.source_url ? ` (<a href="${escapeHtml(person.source_url)}" target="_blank" rel="noopener noreferrer">their page there</a>)` : ''}. Nobody here has claimed them yet. <a href="/authors">Every imported author</a>.</p>
-        ${pendingClaim
-    ? '<p class="muted">You have said this is you. An admin will look at it; once they agree, these stories move to your account.</p>'
-    : `<details class="claim-form">
-            <summary>This is me</summary>
-            <form method="post" action="/users/${encodeURIComponent(person.username)}/claim">
-              <label>Anything that will help an admin see it is you (optional)
-                <textarea name="message" rows="3" maxlength="1000" placeholder="e.g. I post there as ${escapeHtml(person.display_name)}; ask me anything about the stories."></textarea>
-              </label>
-              <button class="btn small" type="submit">Claim these stories</button>
-            </form>
-          </details>`}
-      </section>` : '';
-
-  return layout({
-    title: person.display_name,
-    user,
-    flash: notice ? { type: 'info', message: notice } : null,
-    body: `
-      <div class="page-head">
-        <div>
-          <h1>${escapeHtml(person.display_name)}</h1>
-          <p class="muted byline">${person.is_placeholder
-    ? 'Imported from StoriesOnline'
-    : `@${escapeHtml(person.username)} &middot; joined ${timeHtml(person.created_at)}${person.last_seen_at ? ` &middot; last seen ${timeHtml(person.last_seen_at)}` : ''}`}</p>
-        </div>
-        ${isSelf ? '<div class="page-head-actions"><a class="btn ghost small" href="/account">Account</a></div>' : ''}
-      </div>
-
-      ${imported}
-      <div class="story-stats">
-        ${stat(stats.words.toLocaleString('en-GB'), 'words')}
-        ${stat(stats.chapters, `chapter${stats.chapters === 1 ? '' : 's'}`)}
-        ${stat(stats.versions, `version${stats.versions === 1 ? '' : 's'}`)}
-        ${stat(stats.storiesStarted, `stor${stats.storiesStarted === 1 ? 'y' : 'ies'} started`)}
-        ${stat(stats.commentsWritten, 'notes given')}
-        ${stat(stats.commentsReceived, 'notes taken')}
-      </div>
-
-      <section class="profile-section">
-        <h2>Stories</h2>
-        ${storyRows}
-      </section>
-
-      <section class="profile-section">
-        <h2>Chapters</h2>
-        ${chapterRows}
-      </section>`,
-  });
-}
-
 // ---------- account settings ----------
 
 
@@ -370,7 +281,6 @@ module.exports = {
   eventLine,
   eventLog,
   feedBlock,
-  profilePage,
   searchPage,
   searchSnippet,
 };

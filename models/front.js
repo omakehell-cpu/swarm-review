@@ -86,4 +86,38 @@ function newChaptersByStory(chapters, limit = 6) {
   });
 }
 
-module.exports = { newChaptersByStory, recentlyRead, storiesReadBy };
+/**
+ * What this writer has on the go, for the top of the front page: for each
+ * story of theirs still being written, its latest chapter and any draft of
+ * theirs waiting in it. `stories` is the front page's own list (so the
+ * counts and words are the ones shown everywhere else).
+ * @param {number} userId
+ * @param {any[]} stories  their stories, already chosen
+ */
+function deskFor(userId, stories) {
+  if (!stories.length) return [];
+  const drafts = db.prepare(`
+    SELECT c.story_id, c.id AS chapter_id, c.chapter_number, c.title, d.updated_at
+    FROM chapter_drafts d JOIN chapters c ON c.id = d.chapter_id
+    WHERE d.user_id = ? AND c.archived_at IS NULL
+    ORDER BY d.updated_at DESC
+  `).all(userId);
+  const latest = db.prepare(`
+    SELECT id, chapter_number, title, created_at FROM chapters
+    WHERE story_id = ? AND archived_at IS NULL ORDER BY chapter_number DESC LIMIT 1
+  `);
+  return stories.map((s) => ({
+    ...s,
+    draft: drafts.find((d) => d.story_id === s.id) || null,
+    latest: latest.get(s.id) || null,
+  })).sort((a, b) => String((b.draft && b.draft.updated_at) || b.last_chapter_at || b.created_at)
+    .localeCompare(String((a.draft && a.draft.updated_at) || a.last_chapter_at || a.created_at)));
+}
+
+/** How somebody likes the list of stories to look: '' (covers) or 'list'. */
+const storyViewOf = (userId) => (db.prepare('SELECT story_view FROM users WHERE id = ?').get(userId) || {}).story_view || '';
+function setStoryView(userId, view) {
+  db.prepare('UPDATE users SET story_view = ? WHERE id = ?').run(view === 'list' ? 'list' : '', userId);
+}
+
+module.exports = { deskFor, newChaptersByStory, recentlyRead, setStoryView, storiesReadBy, storyViewOf };

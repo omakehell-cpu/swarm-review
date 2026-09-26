@@ -35,6 +35,7 @@ const modules = [
   ['wikiLinks', require('./models/wiki-links')],
   ['front', require('./models/front')],
   ['follows', require('./models/follows')],
+  ['authorPage', require('./models/author-page')],
 ];
 
 const all = {};

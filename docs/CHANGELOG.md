@@ -8,13 +8,17 @@ here is missing on the site, it has not been restarted yet.
 
 ### The front page
 
-- **Three shelves**: *Being written*, *Finished* and *All*. Nothing on the page says where a story came from.
-- **Stories as cards**, with the cover (or the first letter when there is none), where the story stands as a mark and a word, its length and roughly how long it takes to read, its blurb and its first tags. *List* is still there for a shelf of hundreds.
-- **Follow a story.** *☆ Follow* on a story, and at the foot of its latest chapter. Its new chapters are then news for you until you read them: a number beside *Stories* in the top bar, and *Following* at the top of the front page.
-- **Recently read**: the stories by other people you have been reading, with where to pick each one up, or that you have read it to the end.
-- **New to read, a story at a time**, and never the chapters that came in with an import.
-- **Advanced search**: by author, by words anywhere in the chapters, by length, series and tags, and only the stories you follow. What is switched on is shown as chips you can take off.
-- **Numbered pages**, *Skip to the stories* for keyboards and screen readers, and bigger, clearer metadata.
+- **Write, Review, Read -- in that order.** *Write* is your desk: every story of yours being written, its latest chapter, a draft waiting (*Continue the draft*), how far it is towards its target, and *+ New chapter*. *Review*, beside it: what you were asked to read, notes on your chapters, replies, new chapters in what you follow and in the group. *Read* is the library, opening on what is finished.
+- **One word for where a story stands, everywhere**: *Being written*, *On hiatus*, *Finished*, *Set aside*.
+- **Follow a story.** *☆ Follow* on a story, and at the foot of its latest chapter. Its new chapters are then news for you until you read them: a number beside *Stories* in the top bar, and *New in what you follow*.
+- **Recently read** and **Following**, above the library.
+- **Covers or a list**, chosen once and kept.
+- **Advanced search**, on a page of its own: title, author, words anywhere in the chapters, where it stands, length, series, tags, only what you follow. The search in the top bar still looks through everything.
+- **Numbered pages**, *Skip to the stories*, and bigger, clearer metadata.
+
+### Somebody's page
+
+- **A body of work, not a list.** The numbers (stories, chapters, words, readers, followers, notes), the latest work shown large with its cover and blurb, a chart of the words they put up month by month (or year by year), the tags their stories carry most, and everything else from the first story on, with its dates, cover and a few lines of what it is about.
 
 ### Imported authors
 

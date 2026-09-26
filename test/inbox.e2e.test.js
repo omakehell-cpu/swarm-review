@@ -169,7 +169,7 @@ test('an archived story stops being anybody\'s business', () => {
 
 test('the panel reaches the page, and disappears when there is nothing', async () => {
   const html = await (await ana.request('/')).text();
-  assert.match(html, /Waiting on you/);
+  assert.match(html, /Notes on your chapters/);
   assert.match(html, /notes? to answer/);
 
   for (const c of models.listCommentsForVersion(versionId)) {
@@ -179,5 +179,5 @@ test('the panel reaches the page, and disappears when there is nothing', async (
   }
 
   const after = await (await ana.request('/')).text();
-  assert.ok(!after.includes('Waiting on you'), 'gone once nothing is outstanding');
+  assert.ok(!after.includes('Notes on your chapters'), 'gone once nothing is outstanding');
 });

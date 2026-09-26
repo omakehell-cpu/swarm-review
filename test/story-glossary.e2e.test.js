@@ -73,7 +73,7 @@ test('the page follows the story: renamed, and gone when it is archived', async 
   models.updateStoryDetails(story.id, { title: 'The Longest Watch', description: story.description, synopsis: '', status: 'complete' });
   models.refreshStoryGlossary();
   assert.strictEqual(models.getWikiPageByTitleLower('the long watch'), null);
-  assert.match(models.getWikiPageByTitleLower('the longest watch').content_html, /Complete; 1 chapter/);
+  assert.match(models.getWikiPageByTitleLower('the longest watch').content_html, /Finished; 1 chapter/);
 
   models.archiveStory(story.id);
   models.refreshStoryGlossary();

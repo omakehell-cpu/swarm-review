@@ -247,7 +247,7 @@ test('a private bible stays out of the activity of people who cannot open it', (
 
 test('a story has a cover only if its author uploads one, and it can be cropped and taken off', async () => {
   const story = models.listStories()[0];
-  const home = async () => (await luis.request('/')).text();
+  const home = async () => (await luis.request('/?shelf=all')).text();
   assert.doesNotMatch(await home(), /class="story-cover"/, 'no cover, no picture and no stand-in');
 
   // The smallest real PNG there is: one transparent pixel.
