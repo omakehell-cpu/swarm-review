@@ -260,6 +260,7 @@ async function handleStoryPage(req, res, user, storyId, query) {
     bibleVisible: models.canReadBible(story, user),
     coauthors: models.listStoryCoauthors(storyId),
     addableCoauthors: isStoryAuthor ? models.listAddableCoauthors(story) : [],
+    glossary: models.glossaryPageForStory(story),
   }));
 }
 

@@ -247,7 +247,25 @@ function entryChips(categories) {
   </div>`;
 }
 
-function glossaryPage({ user, page, summaries = new Map(), categories = [] }) {
+// A wiki page that is about something in the group -- a story that was
+// brought in, or the writer of some -- says so at the top, with the way
+// to it. The wiki's text stays as it is under it.
+function inGroupNote(inGroup) {
+  if (!inGroup) return '';
+  const bits = [];
+  for (const s of inGroup.stories) {
+    bits.push(`<p><strong>This story is here.</strong> <a href="/stories/${s.id}">Read <em>${escapeHtml(s.title)}</em></a> &middot; ${s.chapters} chapter${s.chapters === 1 ? '' : 's'}, by <a href="/users/${encodeURIComponent(s.author_username)}">${escapeHtml(s.author_name)}</a>.</p>`);
+  }
+  const a = inGroup.author;
+  if (a) {
+    bits.push(`<p><strong>Their stories are here.</strong> <a href="/authors#a-${encodeURIComponent(a.username)}">${a.stories} ${a.stories === 1 ? 'story' : 'stories'} by ${escapeHtml(a.display_name)}</a>${a.claimed_by
+      ? `, who is <a href="/users/${encodeURIComponent(a.claimed_by_username)}">${escapeHtml(a.claimed_by_name)}</a> in the group.`
+      : '; nobody in the group has claimed them yet.'}</p>`);
+  }
+  return bits.length ? `<div class="glossary-in-group">${bits.join('')}</div>` : '';
+}
+
+function glossaryPage({ user, page, summaries = new Map(), categories = [], inGroup = null }) {
   // A page can be in the index (title + summary, from an older sync) with
   // no body yet, if the sync that stored it predates full-content syncing
   // or the most recent sync failed. Say so plainly instead of rendering an
@@ -276,6 +294,7 @@ function glossaryPage({ user, page, summaries = new Map(), categories = [] }) {
     ? `Made from the story, which is in this group${page.fetched_at ? `; brought up to date ${timeHtml(page.fetched_at)}` : ''}.`
     : `A local copy${page.fetched_at ? `, last synced ${timeHtml(page.fetched_at)}` : ''}.`}</p>
       ${entryChips(categories)}
+      ${inGroupNote(inGroup)}
       <div class="glossary-body">
         <div class="reading-pane">
           ${body}

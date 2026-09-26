@@ -63,6 +63,7 @@ async function handleGlossaryPage(req, res, user, title) {
     page,
     summaries: models.summariesForTitles(linked),
     categories: models.categoriesByPage().get(page.title_lower) || [],
+    inGroup: page.story_id ? null : models.groupThingsForWikiPage(page),
   }));
 }
 
