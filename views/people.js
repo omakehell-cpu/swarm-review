@@ -222,7 +222,7 @@ function profilePage({ user, person, stats, stories, chapters, pendingClaim = nu
   // they are elsewhere, and -- for a member who is them -- a way to say so.
   const imported = person.is_placeholder ? `
       <section class="imported-author">
-        <p><strong>Imported author.</strong> These stories were brought in from StoriesOnline${person.source_url ? ` (<a href="${escapeHtml(person.source_url)}" target="_blank" rel="noopener noreferrer">their page there</a>)` : ''}. Nobody here has claimed them yet.</p>
+        <p><strong>Imported author.</strong> These stories were brought in from StoriesOnline${person.source_url ? ` (<a href="${escapeHtml(person.source_url)}" target="_blank" rel="noopener noreferrer">their page there</a>)` : ''}. Nobody here has claimed them yet. <a href="/authors">Every imported author</a>.</p>
         ${pendingClaim
     ? '<p class="muted">You have said this is you. An admin will look at it; once they agree, these stories move to your account.</p>'
     : `<details class="claim-form">

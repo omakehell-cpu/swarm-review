@@ -155,7 +155,7 @@ function adminPage({ user, users, claims = [], activeInviteCode, inviteCodeHisto
 
       <section class="admin-section" id="claims">
         <h2>Imported stories</h2>
-        <p class="muted">Stories brought in from StoriesOnline belong to an imported author until the writer claims them. <a href="/admin/import">Import a story</a></p>
+        <p class="muted">Stories brought in from StoriesOnline belong to an imported author until the writer claims them. <a href="/admin/import">Import a story</a> &middot; <a href="/authors">Every imported author, and their stories</a></p>
         ${claims.length ? `
           <h3 class="tag-admin-group">Claims waiting (${claims.length})</h3>
           <ul class="claim-list">

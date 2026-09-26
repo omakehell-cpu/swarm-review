@@ -11,7 +11,7 @@ function importedAuthorsList(authors) {
   if (!authors.length) return '';
   return `
     <section class="import-authors">
-      <h2 class="side-head">Imported authors</h2>
+      <h2 class="side-head">Imported authors <a class="side-head-link" href="/authors">All of them, with their stories &rarr;</a></h2>
       <ul class="plain-list">
         ${authors.map((a) => `
           <li>
@@ -148,7 +148,7 @@ function importPreviewPage({ user, key, filename, parsed, author, duplicate, tag
         <dl class="import-facts">
           <dt>Title</dt><dd><input type="text" name="title" value="${escapeHtml(parsed.title)}" maxlength="200" required></dd>
           <dt>Author</dt><dd>${escapeHtml(parsed.author)} <span class="muted">${author
-    ? `&middot; already here as an imported author${author.claimed_by ? ' (claimed; the story will go to the imported author, and can be moved after)' : ''}`
+    ? `&middot; already here as an imported author${author.claimed_by ? ` &middot; <strong>${escapeHtml(author.claimed_by_name || 'claimed')}</strong> here, so the story goes to them` : ''}`
     : '&middot; new: an imported author will be made'}</span></dd>
           ${parsed.series ? `<dt>Series</dt><dd>${escapeHtml(parsed.series)}</dd>` : ''}
           <dt>Published</dt><dd>${escapeHtml(parsed.published || 'unknown')}${parsed.updated ? `, updated ${escapeHtml(parsed.updated)}` : ''} &middot; ${parsed.status === 'complete' ? 'complete' : 'ongoing'}</dd>

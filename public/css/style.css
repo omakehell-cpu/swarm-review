@@ -4964,3 +4964,27 @@ label.batch-choice { display: flex; flex-direction: row; gap: var(--s-3); align-
 .tl-chart { overflow-x: auto; }
 .tl-canvas { min-width: 900px; }
 .tl-chart.is-pointing .tl-line-told:not(.is-lit) { opacity: 0; }
+
+/* ---------- /authors (views/authors.js) ---------- */
+.side-head-link { float: right; font-size: var(--t-xs); font-weight: 400; text-transform: none; letter-spacing: 0; }
+.author-find { margin: var(--s-6) 0; max-width: 28rem; }
+.author-find input { width: 100%; }
+.author-list { list-style: none; margin: 0 0 var(--s-8); padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: var(--s-5); align-items: start; }
+.author-card[hidden], .author-list-box[hidden] { display: none; }
+.author-card { border: 1px solid var(--border); border-radius: 8px; padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-3); background: var(--bg); }
+.author-card:target { box-shadow: 0 0 0 2px var(--text); }
+.author-card.is-claimed { background: var(--bg-sunken); }
+.author-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); flex-wrap: wrap; }
+.author-head h3 { margin: 0; font-size: var(--t-md); }
+.author-state { font-size: var(--t-sm); }
+.author-links { margin: 0; font-size: var(--t-sm); }
+.author-stories summary { cursor: pointer; font-size: var(--t-sm); }
+.author-stories ul { margin: var(--s-3) 0 0; display: flex; flex-direction: column; gap: var(--s-2); font-size: var(--t-sm); max-height: 18rem; overflow-y: auto; }
+.author-claims { list-style: none; margin: 0; padding: var(--s-3) 0 0; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: var(--s-3); font-size: var(--t-sm); }
+.author-claims p { margin: 0; }
+.author-claim-actions { display: flex; gap: var(--s-3); margin-top: var(--s-2); }
+.author-actions { display: flex; flex-direction: column; gap: var(--s-3); }
+.author-actions:empty { display: none; }
+.author-assign { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); align-items: center; font-size: var(--t-sm); }
+.author-assign label { font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); }
+.author-assign select { flex: 1 1 10rem; min-width: 0; }

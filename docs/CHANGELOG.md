@@ -6,6 +6,13 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-26 — Your first cast, and a timeline you can see
 
+### Imported authors
+
+- **Authors**, a page of everybody whose stories came from StoriesOnline, each with their stories. Find an author or a story by typing. From the front page: *By author*, next to *From StoriesOnline*.
+- **Two ways to give an author their stories.** A member presses **This is me** on the card and an admin says yes or no right there; or an admin who knows who it is chooses the member under **Give to**, without waiting for a claim.
+- **Once an author is somebody's, new imports go to them.** A story by an author already claimed or given goes straight to that member, not to the imported name.
+- **The name it came with is kept**, so the authors page still lists a claimed author's stories, under *Here now*.
+
 ### The story bible
 
 - **Your first cast, step by step**: a new walkthrough in Help, from a blank story to a cast the chapters link, with pictures of every step.

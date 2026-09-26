@@ -106,6 +106,12 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   ensureColumn('stories', 'source_id', 'TEXT');
   ensureColumn('stories', 'series', "TEXT NOT NULL DEFAULT ''");
   ensureColumn('stories', 'imported_at', 'TEXT');
+  // The imported author a story came in under, kept after it is claimed so
+  // the authors page (/authors) can still say whose it was on StoriesOnline.
+  ensureColumn('stories', 'imported_author_id', 'INTEGER');
+  db.exec(`UPDATE stories SET imported_author_id = author_id
+    WHERE imported_author_id IS NULL AND source_url IS NOT NULL
+      AND author_id IN (SELECT id FROM users WHERE is_placeholder = 1)`);
   // Glossary pages made from a story written here (models/story-glossary.js)
   // rather than copied from the wiki. A wiki sync replaces only the rows
   // where this is empty.

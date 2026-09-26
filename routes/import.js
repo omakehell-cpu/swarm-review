@@ -4,7 +4,8 @@
 
 // Bringing a StoriesOnline story in (admins, /admin/import), and a member
 // claiming the imported author as themselves (/users/<author>/claim, then
-// an admin says yes or no on /admin).
+// an admin says yes or no on /admin or /authors), or an admin giving an
+// author's stories to the member they know it is (/authors).
 //
 // An import is two steps. The upload is read and shown -- title, author,
 // tags, and every chapter as it was cut, with its length and first line --
@@ -91,8 +92,10 @@ async function handleImportConfirm(req, res, user, key) {
     action: String(body[`tag${i}`] || 'skip'), group: String(body[`group${i}`] || ''),
   })));
   const tagIds = [...new Set([...tags.matched.map((t) => t.id), ...chosen.ids])];
+  // An author somebody has already been given: the story goes straight
+  // to them, and still remembers whose name it came in under.
   const storyId = models.importStory({ ...parsed, title, chapters }, {
-    authorId: author.id, tagIds, coverImage,
+    authorId: author.claimed_by || author.id, importedAuthorId: author.id, tagIds, coverImage,
   });
   if (chosen.added.length) {
     logEvent(user, 'tags-added', { subject: chosen.added.join(', '), href: '/admin?open=tags#tag-vocabulary' });
@@ -149,10 +152,14 @@ async function importOne(buffer, filename, { tagMode, user }) {
       if (tag) { tagIds.push(tag.id); proposed.push(tag.name); }
     }
   }
-  const storyId = models.importStory(parsed, { authorId: author.id, tagIds: [...new Set(tagIds)], coverImage });
+  const owner = author.claimed_by ? models.getUserById(author.claimed_by) : null;
+  const storyId = models.importStory(parsed, {
+    authorId: owner ? owner.id : author.id, importedAuthorId: author.id, tagIds: [...new Set(tagIds)], coverImage,
+  });
   logEvent(user, 'story-imported', { subject: `${parsed.title} by ${author.display_name}`, href: `/stories/${storyId}`, storyId });
   return {
-    file: filename, status: 'imported', storyId, title: parsed.title, author: author.display_name,
+    file: filename, status: 'imported', storyId, title: parsed.title,
+    author: owner ? `${author.display_name} (${owner.display_name})` : author.display_name,
     chapters: parsed.chapters.length, proposed,
   };
 }
@@ -200,8 +207,45 @@ async function handleClaim(req, res, user, username) {
   if (user.is_placeholder) return sendError(res, 403, 'Not from this account.', user);
   const body = await parseBody(req);
   models.requestClaim(author.id, user.id, body.message);
-  logEvent(user, 'author-claimed', { subject: author.display_name, href: `/users/${encodeURIComponent(author.username)}` });
-  redirect(res, `/users/${encodeURIComponent(author.username)}?notice=${encodeURIComponent('Your claim is with the admins. Once one of them agrees, these stories move to your account.')}`);
+  logEvent(user, 'author-claimed', { subject: author.display_name, href: '/authors' });
+  const said = 'Your claim is with the admins. Once one of them agrees, these stories move to your account.';
+  redirect(res, body.back === 'authors'
+    ? authorsUrl(author, said)
+    : `/users/${encodeURIComponent(author.username)}?notice=${encodeURIComponent(said)}`);
+}
+
+// Back to the author's place on /authors, with a line saying what happened.
+const authorsUrl = (author, notice) => `/authors?notice=${encodeURIComponent(notice)}#a-${encodeURIComponent(author.username)}`;
+
+async function handleAuthorsPage(req, res, user, query) {
+  sendHtml(res, 200, views.authorsPage({
+    user,
+    authors: models.importedAuthorsWithStories().map((a) => {
+      // The wiki keeps a page for most of these writers, under the name
+      // they write as; where it does, the card links to it.
+      const page = models.getWikiPageByTitleLower(a.display_name.toLowerCase());
+      return { ...a, wiki: page ? page.title : null };
+    }),
+    members: user.is_admin ? models.listMentionable() : [],
+    notice: (query.get('notice') || '').slice(0, 300),
+  }));
+}
+
+// The other way in: an admin who knows who an author is gives them their
+// stories directly, without a claim to wait for.
+async function handleAssignAuthor(req, res, user, authorId) {
+  const author = models.getUserById(authorId);
+  if (!author || !author.is_placeholder) return sendError(res, 404, 'No such imported author', user);
+  const body = await parseBody(req);
+  const member = models.getUserByUsername(String(body.member || '').toLowerCase());
+  if (!member || member.is_placeholder) {
+    return redirect(res, authorsUrl(author, 'Choose who they are from the list first.'));
+  }
+  const moved = models.assignImportedAuthor(author.id, member.id, user.id);
+  if (!moved) return redirect(res, authorsUrl(author, `${author.display_name} already belongs to somebody.`));
+  logEvent(user, 'author-assigned', { subject: `${author.display_name} is ${member.display_name}`, href: '/authors' });
+  const n = moved.stories;
+  redirect(res, authorsUrl(author, `${author.display_name} is ${member.display_name} now: ${n} ${n === 1 ? 'story' : 'stories'} moved to their account.`));
 }
 
 async function handleClaimDecision(req, res, user, claimId, yes) {
@@ -209,13 +253,16 @@ async function handleClaimDecision(req, res, user, claimId, yes) {
   if (!claim) return sendError(res, 404, 'No such claim', user);
   const author = models.getUserById(claim.placeholder_id);
   const member = models.getUserById(claim.user_id);
+  const { back } = await parseBody(req);
   if (yes) {
     const moved = models.approveClaim(claimId, user.id);
     const n = moved ? moved.stories : 0;
-    return redirect(res, `/admin?notice=${encodeURIComponent(`${author.display_name} is ${member.display_name} now: ${n} ${n === 1 ? 'story' : 'stories'} moved to their account.`)}#claims`);
+    const said = `${author.display_name} is ${member.display_name} now: ${n} ${n === 1 ? 'story' : 'stories'} moved to their account.`;
+    return redirect(res, back === 'authors' ? authorsUrl(author, said) : `/admin?notice=${encodeURIComponent(said)}#claims`);
   }
   models.declineClaim(claimId, user.id);
-  redirect(res, `/admin?notice=${encodeURIComponent(`Turned down ${member.display_name}'s claim to be ${author.display_name}.`)}#claims`);
+  const said = `Turned down ${member.display_name}'s claim to be ${author.display_name}.`;
+  redirect(res, back === 'authors' ? authorsUrl(author, said) : `/admin?notice=${encodeURIComponent(said)}#claims`);
 }
 
 /** @type {Array<[string, string|RegExp, (c: RouteContext) => any]>} */
@@ -227,6 +274,8 @@ const routes = [
   ['POST', /^\/admin\/claims\/(\d+)\/approve$/, (c) => handleClaimDecision(c.req, c.res, c.user, Number(c.m[1]), true)],
   ['POST', /^\/admin\/claims\/(\d+)\/decline$/, (c) => handleClaimDecision(c.req, c.res, c.user, Number(c.m[1]), false)],
   ['POST', /^\/users\/([A-Za-z0-9_.-]+)\/claim$/, (c) => handleClaim(c.req, c.res, c.user, c.m[1])],
+  ['GET', '/authors', (c) => handleAuthorsPage(c.req, c.res, c.user, c.url.searchParams)],
+  ['POST', /^\/admin\/authors\/(\d+)\/assign$/, (c) => handleAssignAuthor(c.req, c.res, c.user, Number(c.m[1]))],
 ];
 
 module.exports = { routes };
