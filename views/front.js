@@ -70,7 +70,7 @@ function storyWide(s, { tags = [], coauthors = [], sinceQs = '' } = {}) {
       ${coverOrLetter(s, 'story-wide-cover')}
       <div class="story-wide-main">
         <h3 class="story-wide-title"><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a>${s.has_new_chapters ? ' <span class="badge new">New</span>' : ''}</h3>
-        <p class="story-wide-by">${bylineWith(s.author_name, coauthors)}${s.series ? ` <span class="story-wide-series">&middot; ${escapeHtml(s.series)}</span>` : ''}</p>
+        <p class="story-wide-by">${bylineWith(s.author_name, coauthors, s.author_username)}${s.series ? ` <span class="story-wide-series">&middot; ${escapeHtml(s.series)}</span>` : ''}</p>
         ${s.description ? `<p class="story-wide-blurb">${escapeHtml(s.description)}</p>` : ''}
         ${tags.length ? `<p class="story-card-tags"><i class="sr-only">Tags: </i>${tags.slice(0, 6).map((t) => `<span>${escapeHtml(t.name)}</span>`).join('')}${tags.length > 6 ? `<span class="more">+${tags.length - 6}</span>` : ''}</p>` : ''}
       </div>
@@ -103,7 +103,7 @@ function storyTable(stories, { coauthorsFor = (_s) => [], sinceQs = '' } = {}) {
             <tr class="story-row">
               <th scope="row">
                 <a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a>
-                <span class="story-table-by">${bylineWith(s.author_name, coauthorsFor(s))}${s.series ? ` &middot; ${escapeHtml(s.series)}` : ''}</span>
+                <span class="story-table-by">${bylineWith(s.author_name, coauthorsFor(s), s.author_username)}${s.series ? ` &middot; ${escapeHtml(s.series)}` : ''}</span>
               </th>
               <td>${stateLabel(s)}</td>
               <td class="num">${s.chapter_count || 0}</td>

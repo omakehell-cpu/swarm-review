@@ -5394,3 +5394,5 @@ label.adv-check input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18
   .story-cards.is-magazine .story-card { grid-template-columns: 88px 1fr; }
   .story-cards.is-magazine .story-card-cover { width: 88px; }
 }
+/* The names under a story are links of their own, above the row's link. */
+.story-wide-by a, .story-table-by a { position: relative; z-index: 1; }
