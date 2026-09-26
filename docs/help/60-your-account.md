@@ -80,6 +80,16 @@ admin can tell. When an admin approves it, the stories and every chapter
 in them become yours, as if you had written them here, and the old page
 leads to yours.
 
+**[Authors](/authors)** lists every imported author at once, with the
+stories each one came in with -- the quickest way to find yourself among
+fifty-odd names. Type in the box to narrow it to an author or a story
+title. **This is me** is on every card there too.
+
+An author who writes under two spellings (*Akarge* and *akarge*) is one
+author here. And once an author is somebody's, any story of theirs
+imported later goes straight to that member, while the authors page
+still shows it under the name it came in with.
+
 ## Light and dark
 
 The moon at the right of the top bar moves between light and dark, and
@@ -121,7 +131,10 @@ What they do:
   batch, chosen before you start: proposed (waiting for you under Tags),
   added, or left off.
 - **Claims.** Approving, or turning down, somebody's word that an
-  imported author is them (below).
+  imported author is them (below) -- on Admin, or next to the author on
+  [Authors](/authors). If you already know who an author is, **Give to**
+  on their card moves their stories to that member directly, without
+  waiting for a claim.
 - **Backup.** The server keeps a copy of everything every day, for two
   weeks. An admin can take one on demand, download the whole database as
   one file, and **put a copy back**: choose it, type RESTORE, and the site

@@ -40,17 +40,18 @@ const findImportedStory = (sourceId) => (sourceId
   : null);
 
 /** The imported author this username would be, without making one. */
-const importedAuthorFor = ({ name, authorSlug }) =>
-  db.prepare('SELECT * FROM users WHERE username = ?').get(`sol-${slug(authorSlug || name)}`) || null;
+const importedAuthorFor = ({ name, authorSlug }) => db.prepare(`
+  SELECT u.*, c.display_name AS claimed_by_name FROM users u LEFT JOIN users c ON c.id = u.claimed_by
+  WHERE u.username = ?`).get(`sol-${slug(authorSlug || name)}`) || null;
 
 /**
  * Writes an imported story: the story, its chapters as version 1 each,
  * dated as they were published, and its tags where the vocabulary has
  * them. One transaction: a half-imported story is worse than none.
  * @param {any} parsed  what lib/sol-import.js read
- * @param {{ authorId: number, tagIds?: number[], coverImage?: {filename: string, contentType: string}|null }} opts
+ * @param {{ authorId: number, importedAuthorId?: number|null, tagIds?: number[], coverImage?: {filename: string, contentType: string}|null }} opts
  */
-function importStory(parsed, { authorId, tagIds = [], coverImage = null }) {
+function importStory(parsed, { authorId, importedAuthorId = null, tagIds = [], coverImage = null }) {
   const when = (d) => (/^\d{4}-\d{2}-\d{2}$/.test(String(d || '')) ? `${d} 12:00:00` : null);
   const published = when(parsed.published);
   const updated = when(parsed.updated) || published;
@@ -59,9 +60,9 @@ function importStory(parsed, { authorId, tagIds = [], coverImage = null }) {
   db.exec('BEGIN');
   try {
     const info = db.prepare(`
-      INSERT INTO stories (title, description, author_id, status, series, source_url, source_id, imported_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), COALESCE(?, datetime('now')))
-    `).run(parsed.title, parsed.description || '', authorId, parsed.status === 'complete' ? 'complete' : 'ongoing',
+      INSERT INTO stories (title, description, author_id, imported_author_id, status, series, source_url, source_id, imported_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), COALESCE(?, datetime('now')))
+    `).run(parsed.title, parsed.description || '', authorId, importedAuthorId || authorId, parsed.status === 'complete' ? 'complete' : 'ongoing',
       parsed.series || '', parsed.storyUrl || null, parsed.solId || null, published);
     storyId = Number(info.lastInsertRowid);
     const insertChapter = db.prepare(`
@@ -233,31 +234,92 @@ function listPendingClaims() {
 
 const getClaim = (id) => db.prepare('SELECT * FROM author_claims WHERE id = ?').get(id) || null;
 
+// Everything the imported author holds becomes the member's, the author is
+// marked as theirs, and any claim still waiting on it is answered no. The
+// one step both ways share: a claim an admin agrees to, and an admin
+// giving the stories to a member directly.
+function moveImportedAuthor(placeholderId, userId, adminId) {
+  const stories = db.prepare('UPDATE stories SET author_id = ? WHERE author_id = ?').run(userId, placeholderId).changes;
+  const chapters = db.prepare('UPDATE chapters SET author_id = ? WHERE author_id = ?').run(userId, placeholderId).changes;
+  db.prepare('UPDATE users SET claimed_by = ? WHERE id = ?').run(userId, placeholderId);
+  db.prepare("UPDATE author_claims SET status = 'declined', decided_by = ?, decided_at = datetime('now') WHERE placeholder_id = ? AND status = 'pending'")
+    .run(adminId, placeholderId);
+  return { stories, chapters };
+}
+
+function inOneGo(run) {
+  db.exec('BEGIN');
+  try {
+    const out = run();
+    db.exec('COMMIT');
+    return out;
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}
+
 /**
- * Yes: everything the imported author holds becomes the member's, and the
- * author is marked as theirs. Every other claim on the same author is
- * answered no at the same time.
+ * Yes to a claim: the author's stories move to the member who made it.
  * @returns {{ stories: number, chapters: number }|null}
  */
 function approveClaim(claimId, adminId) {
   const claim = getClaim(claimId);
   if (!claim || claim.status !== 'pending') return null;
-  let moved;
-  db.exec('BEGIN');
-  try {
-    const stories = db.prepare('UPDATE stories SET author_id = ? WHERE author_id = ?').run(claim.user_id, claim.placeholder_id).changes;
-    const chapters = db.prepare('UPDATE chapters SET author_id = ? WHERE author_id = ?').run(claim.user_id, claim.placeholder_id).changes;
-    db.prepare('UPDATE users SET claimed_by = ? WHERE id = ?').run(claim.user_id, claim.placeholder_id);
+  return inOneGo(() => {
     db.prepare("UPDATE author_claims SET status = 'approved', decided_by = ?, decided_at = datetime('now') WHERE id = ?").run(adminId, claimId);
-    db.prepare("UPDATE author_claims SET status = 'declined', decided_by = ?, decided_at = datetime('now') WHERE placeholder_id = ? AND status = 'pending'")
-      .run(adminId, claim.placeholder_id);
-    db.exec('COMMIT');
-    moved = { stories, chapters };
-  } catch (err) {
-    db.exec('ROLLBACK');
-    throw err;
+    return moveImportedAuthor(claim.placeholder_id, claim.user_id, adminId);
+  });
+}
+
+/**
+ * An admin who knows who an imported author is, giving them their stories
+ * without waiting for a claim. Only an author nobody has yet, and only to
+ * a member.
+ * @returns {{ stories: number, chapters: number }|null}
+ */
+function assignImportedAuthor(placeholderId, userId, adminId) {
+  const author = db.prepare('SELECT * FROM users WHERE id = ? AND is_placeholder = 1').get(placeholderId);
+  const member = db.prepare('SELECT * FROM users WHERE id = ? AND is_placeholder = 0 AND locked_at IS NULL').get(userId);
+  if (!author || author.claimed_by || !member) return null;
+  return inOneGo(() => moveImportedAuthor(placeholderId, userId, adminId));
+}
+
+/**
+ * Every imported author with the stories they came in with, for the
+ * authors page: whoever has them now, and whether anybody is asking.
+ */
+function importedAuthorsWithStories() {
+  const authors = db.prepare(`
+    SELECT u.id, u.username, u.display_name, u.source_url, u.claimed_by,
+           c.display_name AS claimed_by_name, c.username AS claimed_by_username
+    FROM users u LEFT JOIN users c ON c.id = u.claimed_by
+    WHERE u.is_placeholder = 1
+    ORDER BY u.display_name COLLATE NOCASE
+  `).all();
+  const stories = db.prepare(`
+    SELECT s.id, s.title, s.status, s.imported_author_id,
+      (SELECT COUNT(*) FROM chapters ch WHERE ch.story_id = s.id AND ch.archived_at IS NULL) AS chapters
+    FROM stories s
+    WHERE s.imported_author_id IS NOT NULL AND s.archived_at IS NULL
+    ORDER BY s.title COLLATE NOCASE
+  `).all();
+  const claims = db.prepare(`
+    SELECT a.id, a.placeholder_id, a.user_id, a.message, a.created_at, m.display_name AS member_name, m.username AS member_username
+    FROM author_claims a JOIN users m ON m.id = a.user_id
+    WHERE a.status = 'pending' ORDER BY a.created_at
+  `).all();
+  const claimsOf = new Map();
+  for (const c of claims) {
+    if (!claimsOf.has(c.placeholder_id)) claimsOf.set(c.placeholder_id, []);
+    claimsOf.get(c.placeholder_id).push(c);
   }
-  return moved;
+  const byAuthor = new Map();
+  for (const s of stories) {
+    if (!byAuthor.has(s.imported_author_id)) byAuthor.set(s.imported_author_id, []);
+    byAuthor.get(s.imported_author_id).push(s);
+  }
+  return authors.map((a) => ({ ...a, stories: byAuthor.get(a.id) || [], claims: claimsOf.get(a.id) || [] }));
 }
 
 function declineClaim(claimId, adminId) {
@@ -268,6 +330,8 @@ function declineClaim(claimId, adminId) {
 module.exports = {
   applyTagChoices,
   approveClaim,
+  assignImportedAuthor,
+  importedAuthorsWithStories,
   declineClaim,
   findImportedStory,
   findOrCreateImportedAuthor,

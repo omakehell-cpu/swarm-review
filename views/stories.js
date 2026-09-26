@@ -299,7 +299,7 @@ function listFilters(state) {
     : `<a href="${listHref(state, { [param]: value })}">${label}</a>`);
   const origin = state.hasImported ? `
     <nav class="list-sort" aria-label="Where the stories were written">
-      ${choice('origin', '', 'Anywhere')}${choice('origin', 'here', 'Written here')}${choice('origin', 'imported', 'From StoriesOnline')}
+      ${choice('origin', '', 'Anywhere')}${choice('origin', 'here', 'Written here')}${choice('origin', 'imported', 'From StoriesOnline')}<a href="/authors">By author</a>
     </nav>` : '';
   const series = state.seriesList.length ? `
     <form method="get" action="/" class="series-pick">
