@@ -1,6 +1,7 @@
 'use strict';
 
 const { layout } = require('../lib/layout');
+const { followButton } = require('./front');
 const { escapeHtml, toScriptJson } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
@@ -201,7 +202,7 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = 
 // Moving between chapters without going back to the story page. Absent
 // entirely for a one-chapter story, where "next" and "previous" are just
 // two dead controls.
-function chapterNav(chapter, neighbours, { compact = false, canWrite = false } = {}) {
+function chapterNav(chapter, neighbours, { compact = false, canWrite = false, following = null } = {}) {
   const total = neighbours ? neighbours.total : 1;
   const prev = neighbours ? neighbours.prev : null;
   const next = neighbours ? neighbours.next : null;
@@ -237,8 +238,14 @@ function chapterNav(chapter, neighbours, { compact = false, canWrite = false } =
           <span class="chapter-nav-dir">Next &rarr;</span>
           <span class="chapter-nav-title">${ICONS.plus}Write the next chapter</span>
         </a>`
-    : '<span></span>';
-  if (total < 2 && !canWrite) return '';
+    // For a reader at the latest chapter, the question "what next?" has
+    // one answer here: follow it, and hear when there is more.
+    : (following !== null ? `
+        <div class="chapter-nav-link next follow-slot">
+          <span class="chapter-nav-dir">${following ? 'You follow this story' : 'That is the latest'}</span>
+          ${followButton(chapter.story_id, following, { back: `/chapters/${chapter.id}`, small: true })}
+        </div>` : '<span></span>');
+  if (total < 2 && !canWrite && following === null) return '';
   return `
     <nav class="chapter-nav foot" aria-label="Chapters, after the text">
       ${prev ? `<a class="chapter-nav-link prev" href="/chapters/${prev.id}" rel="prev">
@@ -404,7 +411,7 @@ function reviewBlock({ chapter, isChapterAuthor, requests = [], mine = null, peo
     </section>`;
 }
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '', place = null, mentionable = [], reactions = null, notice = '' }) {
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '', place = null, mentionable = [], reactions = null, notice = '', following = null }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -604,7 +611,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
     </div>
     ${chapterCastBlock(cast, chapter.story_id)}
     ${missingNamesBlock(missingNames, chapter.story_id, `/chapters/${chapter.id}`, entities)}
-    ${chapterNav(chapter, neighbours, { canWrite })}
+    ${chapterNav(chapter, neighbours, { canWrite, following })}
     ${chapterFloatNav(chapter, neighbours)}
     <button id="selection-toast" class="selection-toast hidden" type="button">+ Note on these words</button>
     <script type="application/json" id="chapter-meta">${toScriptJson({ chapterId: chapter.id })}</script>

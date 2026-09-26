@@ -293,13 +293,16 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
   // answer, replies, what they were in the middle of, what is new. Only
   // on the page as it opens -- a search or a filter is somebody looking
   // for something else.
-  const browsing = !state.q && !activeTags.length && !state.series && sort !== 'mine' && state.page === 1;
+  const browsing = !state.q && !activeTags.length && !state.series && !state.author && !state.text && !state.length && !state.following
+    && sort !== 'mine' && state.page === 1;
   const mine = browsing && forYou ? [
     inboxSection(inbox),
-    front.continueSection(forYou.continueReading),
+    front.followingSection(forYou.following, { more: forYou.following.length > 6 ? listHref(listState, { following: '1', shelf: 'all' }) : '' }),
     front.newToReadSection(forYou.newByStory),
+    front.recentlySection(forYou.recentlyRead),
   ].join('').trim() : '';
-  const heading = state.q ? `${SHELVES[state.shelf].label}, matching “${state.q}”`
+  const searching = state.q || state.author || state.text || state.length || state.following;
+  const heading = searching ? `${SHELVES[state.shelf].label}, matching your search`
     : (activeTags.length ? `${SHELVES[state.shelf].label}, with those tags`
       : (sort === 'mine' ? `${SHELVES[state.shelf].label}, that you write in` : SHELVES[state.shelf].label));
 
@@ -315,7 +318,6 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
       ${activeTags.length ? '' : whatsNewCard(whatsNew)}
       ${activeTags.length ? '' : welcomeCard(welcome)}
       ${mine ? `<div class="for-you">${mine}</div>` : ''}
-      ${browsing && forYou ? front.discoverRow(forYou.discover, { tagsFor, coauthorsFor }) : ''}
       <section class="story-shelves library shelf-${escapeHtml(state.shelf)}" id="library" aria-labelledby="shelf-heading" tabindex="-1">
         ${totalStories ? front.libraryControls(listState, allGroups) : ''}
         <h2 class="list-label" id="shelf-heading">${escapeHtml(heading)}${state.series ? ` &middot; ${escapeHtml(state.series)}` : ''} <span class="list-count" id="story-count" aria-live="polite">${state.total}</span></h2>

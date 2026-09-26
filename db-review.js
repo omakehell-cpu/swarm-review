@@ -155,6 +155,16 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     PRIMARY KEY (version_id, user_id, paragraph, kind)
   );
+  -- Stories somebody follows: a star on the story, and its new chapters
+  -- are then called out to them -- on the front page, in the bar, in
+  -- their feed -- until they have read them.
+  CREATE TABLE IF NOT EXISTS story_follows (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    story_id   INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, story_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_story_follows_story ON story_follows(story_id);
   CREATE TABLE IF NOT EXISTS reading_places (
     user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     chapter_id INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,

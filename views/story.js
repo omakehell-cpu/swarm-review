@@ -1,6 +1,7 @@
 'use strict';
 
 const { layout } = require('../lib/layout');
+const { followButton } = require('./front');
 const { escapeHtml } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
@@ -210,7 +211,7 @@ function readingStart(chapters, readersByChapter, userId) {
 // line per chapter with a dotted leader to its length. Everything the
 // authors need (outline, analysis, the bible, the details) is still here,
 // on a quieter row under the title page.
-function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], notNames = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0, bibleVisible = true, glossary = null }) {
+function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], notNames = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0, bibleVisible = true, glossary = null, following = false, followers = 0 }) {
   const pad = (n) => String(n).padStart(2, '0');
   const chapterRow = (c, i) => `
     <div class="chapter-row-outer toc-entry">
@@ -271,6 +272,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           <div class="title-page-actions">
             ${start ? `<a class="btn" href="/chapters/${start.chapter.id}">${ICONS.book}${escapeHtml(start.label)}</a>` : ''}
             ${canWrite ? `<a class="btn ghost" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
+            ${isStoryAuthor ? '' : followButton(story.id, following, { followers })}
           </div>
         </div>
       </section>

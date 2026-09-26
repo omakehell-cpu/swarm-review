@@ -5118,3 +5118,34 @@ label.batch-choice { display: flex; flex-direction: row; gap: var(--s-3); align-
   .library-filters .list-more-body { position: fixed; left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; }
 }
 @media (prefers-reduced-motion: reduce) { .story-cards.is-row { scroll-behavior: auto; } }
+
+/* Following a story (views/front.js followButton) */
+.follow-form { display: inline-flex; margin: 0; }
+.follow-btn .follow-star { font-size: 1.1em; line-height: 1; margin-right: var(--s-2); }
+.follow-btn.is-following { border-color: var(--text); }
+.follow-btn.is-following .follow-star { color: var(--accent); }
+.follow-slot { display: flex; flex-direction: column; align-items: flex-end; gap: var(--s-3); }
+.nav-count {
+  display: inline-block; min-width: 1.5em; padding: 0 var(--s-2); margin-left: var(--s-3);
+  background: var(--accent); color: #fff; font-size: var(--t-xs); font-weight: 700; line-height: 1.5; text-align: center;
+  font-variant-numeric: tabular-nums; vertical-align: 0.1em;
+}
+.following-list li:not(.has-news) .inbox-what strong { font-weight: 500; }
+.for-you-more { margin: var(--s-4) 0 0; font-size: var(--t-sm); }
+
+/* The advanced search */
+.advanced-search { gap: var(--s-6); }
+.adv-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s-5) var(--s-6); }
+.adv-field { display: flex; flex-direction: column; gap: var(--s-2); font-size: var(--t-xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); }
+.adv-field input, .adv-field select { font-size: var(--t-md); text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text); width: 100%; }
+.adv-field .hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.adv-wide { grid-column: 1 / -1; }
+.adv-check { display: flex; gap: var(--s-4); align-items: center; font-size: var(--t-md); }
+.adv-tags > summary { cursor: pointer; font-weight: 700; font-size: var(--t-sm); padding: var(--s-3) 0; }
+.adv-tags[open] > summary { margin-bottom: var(--s-4); }
+.adv-tags .tag-group + .tag-group { margin-top: var(--s-5); }
+@media (max-width: 720px) {
+  .adv-grid { grid-template-columns: 1fr; }
+}
+label.adv-check { flex-direction: row; justify-content: flex-start; align-items: center; gap: var(--s-4); text-transform: none; letter-spacing: 0; font-weight: 400; font-size: var(--t-md); color: var(--text); text-align: left; }
+label.adv-check input { width: auto; margin: 0; }

@@ -253,6 +253,7 @@ async function handleStoryPage(req, res, user, storyId, query) {
   const notNames = canWrite ? models.listNotNames(storyId) : [];
   sendHtml(res, 200, views.storyPage({
     user, story, chapters, isStoryAuthor, canWrite, dictionary, notNames,
+    following: models.isFollowing(user.id, storyId), followers: models.followerCount(storyId),
     stats: models.getStoryStats(storyId),
     readersByChapter,
     tags: models.getStoryTags(storyId),
@@ -351,8 +352,27 @@ async function handleRemoveCoauthor(req, res, user, storyId, coauthorId) {
 // The routes this file answers. server.js walks the tables in order
 // and hands the first match a context: the request, the response, who is
 // asking, the parsed URL and the regex groups.
+
+// ---------- following a story ----------
+
+// The star on a story. A form, so it works with nothing switched on; with
+// a script (public/js/follow.js) it answers in JSON and the page stays put.
+async function handleFollow(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  const wantsJson = (req.headers.accept || '').includes('application/json');
+  if (!story) return wantsJson ? sendJson(res, 404, { error: 'Story not found' }) : sendError(res, 404, 'Story not found', user);
+  const body = await parseBody(req);
+  const on = String(body.follow) === '1';
+  if (on) models.followStory(user.id, storyId);
+  else models.unfollowStory(user.id, storyId);
+  if (wantsJson) return sendJson(res, 200, { following: on, followers: models.followerCount(storyId) });
+  const back = String(body.back || '');
+  redirect(res, back.startsWith('/') && !back.startsWith('//') ? back : `/stories/${storyId}`);
+}
+
 /** @type {Array<[string, string|RegExp, (c: RouteContext) => any]>} */
 const routes = [
+  ['POST', /^\/stories\/(\d+)\/follow$/, (c) => handleFollow(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', '/archived-stories', (c) => handleArchivedStories(c.req, c.res, c.user)],
   ['GET', '/stories/new', (c) => handleNewStoryPage(c.req, c.res, c.user)],
   ['POST', '/stories/new', (c) => handleNewStorySubmit(c.req, c.res, c.user)],

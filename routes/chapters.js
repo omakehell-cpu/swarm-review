@@ -269,6 +269,8 @@ async function handleChapterPage(req, res, user, chapterId, query) {
     place: currentVersion.id === versions[0].id ? models.readingPlace(user.id, chapterId) : null,
     mentionable: models.listMentionable().filter((p) => p.username !== user.username),
     notice: (query.get('notice') || '').slice(0, 300),
+    // The star, for a reader: not on your own story.
+    following: models.canWriteInStory(story, user) ? null : models.isFollowing(user.id, chapter.story_id),
     reactions: isChapterAuthor
       ? { mode: 'author', versionId: currentVersion.id, map: models.reactionMap(currentVersion.id) }
       : { mode: 'reader', versionId: currentVersion.id, mine: models.myReactions(currentVersion.id, user.id) },
