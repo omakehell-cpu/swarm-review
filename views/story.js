@@ -210,7 +210,7 @@ function readingStart(chapters, readersByChapter, userId) {
 // line per chapter with a dotted leader to its length. Everything the
 // authors need (outline, analysis, the bible, the details) is still here,
 // on a quieter row under the title page.
-function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], notNames = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0, bibleVisible = true }) {
+function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dictionary = [], notNames = [], tags = [], coauthors = [], addableCoauthors = [], stats = null, readersByChapter = new Map(), bibleCount = 0, bibleVisible = true, glossary = null }) {
   const pad = (n) => String(n).padStart(2, '0');
   const chapterRow = (c, i) => `
     <div class="chapter-row-outer toc-entry">
@@ -262,7 +262,11 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           <h1>${escapeHtml(story.title)}</h1>
           ${story.description ? `<p class="title-page-blurb">${escapeHtml(story.description)}</p>` : ''}
           <p class="title-page-facts">${storyStateBadge(story)} ${chapters.length} chapter${chapters.length === 1 ? '' : 's'}${stats && stats.words ? ` &middot; ${wordCount(stats.words)}` : ''} &middot; started ${timeHtml(story.created_at)}</p>
-          ${story.series || story.source_url ? `<p class="title-page-source">${story.series ? `Part of <em>${escapeHtml(story.series)}</em>` : ''}${story.series && story.source_url ? ' &middot; ' : ''}${story.source_url ? `<a href="${escapeHtml(story.source_url)}" target="_blank" rel="noopener noreferrer">first published on StoriesOnline</a>` : ''}</p>` : ''}
+          ${story.series || story.source_url || glossary ? `<p class="title-page-source">${[
+    story.series ? `Part of <em>${escapeHtml(story.series)}</em>` : '',
+    story.source_url ? `<a href="${escapeHtml(story.source_url)}" target="_blank" rel="noopener noreferrer">first published on StoriesOnline</a>` : '',
+    glossary ? `<a href="/glossary/${encodeURIComponent(glossary.title)}">${glossary.fromWiki ? 'its page in the glossary' : 'in the glossary'}</a>` : '',
+  ].filter(Boolean).join(' &middot; ')}</p>` : ''}
           ${tagChips(tags)}
           <div class="title-page-actions">
             ${start ? `<a class="btn" href="/chapters/${start.chapter.id}">${ICONS.book}${escapeHtml(start.label)}</a>` : ''}

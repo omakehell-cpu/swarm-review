@@ -102,3 +102,24 @@ test('a story by an author somebody already has goes straight to them', async ()
   assert.strictEqual(story.author_id, models.getUserByUsername('thinker55').id);
   assert.match(await (await admin.request('/authors')).text(), /id="a-sol-thinking-horndog"[\s\S]*Pickup Three/, 'and is listed under the name it came with');
 });
+
+test('the wiki pages for a story and its writer are the ones linked, not doubled', async () => {
+  models.replaceWikiPages([
+    { title: 'Far Out (story)', summary: 'A story.', contentHtml: '<p>A story by Akarge.</p>', categories: ['Stories'] },
+    { title: 'Pickup One!', summary: 'Another.', contentHtml: '<p>By Thinking Horndog.</p>', categories: ['Stories'] },
+    { title: 'Thinking Horndog', summary: 'A writer.', contentHtml: '<p>Writes pickups.</p>', categories: ['Authors'] },
+  ]);
+  models.refreshStoryGlossary();
+  const own = models.listWikiPagesForGlossary().map((p) => p.title);
+  assert.ok(!own.includes('Far Out'), 'no second page for a story the wiki already has');
+  assert.ok(!own.includes('Pickup One'), 'nor for one it spells with a mark more');
+  assert.ok(own.includes('Farther Out'), 'a story the wiki lacks still gets its own');
+
+  const far = models.listStories().find((s) => s.title === 'Far Out');
+  assert.match(await (await luis.request(`/stories/${far.id}`)).text(), /href="\/glossary\/Far%20Out%20\(story\)">its page in the glossary/);
+  const page = await (await luis.request('/glossary/Far%20Out%20(story)')).text();
+  assert.match(page, new RegExp(`This story is here.*href="/stories/${far.id}"`, 's'));
+  const writer = await (await luis.request('/glossary/Thinking%20Horndog')).text();
+  assert.match(writer, /Their stories are here[\s\S]*3 stories by Thinking Horndog[\s\S]*who is <a href="\/users\/thinker55">Thinker/);
+  assert.match(await (await admin.request('/authors')).text(), /id="a-sol-thinking-horndog"[\s\S]*href="\/glossary\/Thinking%20Horndog">In the glossary/);
+});

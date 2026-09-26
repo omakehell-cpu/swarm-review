@@ -16,6 +16,7 @@
 
 const { db } = require('./shared');
 const { escapeHtml } = require('../lib/util');
+const { titleKey, wikiPagesByKey } = require('./wiki-links');
 
 // The categories a story page is filed under: Stories is the one the
 // glossary's kinds are sorted by; In this group tells them from the wiki's.
@@ -123,15 +124,16 @@ function refreshStoryGlossary() {
   const have = new Map(db.prepare(`
     SELECT id, story_id, title, summary, content_html FROM wiki_pages WHERE story_id IS NOT NULL
   `).all().map((r) => [Number(r.story_id), r]));
-  const wikiTitles = new Set(db.prepare('SELECT title_lower FROM wiki_pages WHERE story_id IS NULL').all().map((r) => r.title_lower));
-
-  // One page per title: the wiki's first, then the oldest story's.
-  const taken = new Set(wikiTitles);
+  // One page per title: the wiki's first, then the oldest story's. Titles
+  // are compared by their letters and numbers (models/wiki-links.js), so
+  // "A Perfect 10, Part 1" is the wiki's "A Perfect 10 Part 1", not a
+  // second page beside it.
+  const taken = new Set(wikiPagesByKey().keys());
   const keep = [];
   for (const page of wanted) {
-    const lower = page.title.toLowerCase();
-    if (taken.has(lower)) continue;
-    taken.add(lower);
+    const key = titleKey(page.title);
+    if (taken.has(key)) continue;
+    taken.add(key);
     keep.push(page);
   }
 

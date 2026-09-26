@@ -32,6 +32,7 @@ const modules = [
   ['writing', require('./models/writing')],
   ['imports', require('./models/imports')],
   ['storyGlossary', require('./models/story-glossary')],
+  ['wikiLinks', require('./models/wiki-links')],
 ];
 
 const all = {};

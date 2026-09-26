@@ -26,9 +26,14 @@ chapters, and the people in its bible, unless the bible is private -- and
 follows it: a new story gets its page straight away, a renamed one moves,
 an archived one leaves. **Open the story** at the top goes back to it.
 
-A sync leaves these pages alone. If the wiki has a page of the same title,
-the wiki's is the one the glossary shows. A story's title is not a name, so
-it is never linked in anybody's chapter.
+A sync leaves these pages alone. If the wiki has a page for the same
+story, the wiki's is the one the glossary shows -- and "the same" means the
+same letters and numbers, so *A Perfect 10 Part 1* on the wiki is *A
+Perfect 10, Part 1* here, and *Albion (story)* is *Albion*. That page then
+says, at the top, that the story is here, with the way to read it; and the
+story links back to it. A writer's page on the wiki does the same for the
+stories brought in under their name (see [Authors](/authors)). A story's
+title is not a name, so it is never linked in anybody's chapter.
 
 ## Finding something
 

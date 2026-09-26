@@ -223,8 +223,7 @@ async function handleAuthorsPage(req, res, user, query) {
     authors: models.importedAuthorsWithStories().map((a) => {
       // The wiki keeps a page for most of these writers, under the name
       // they write as; where it does, the card links to it.
-      const page = models.getWikiPageByTitleLower(a.display_name.toLowerCase());
-      return { ...a, wiki: page ? page.title : null };
+      return { ...a, wiki: models.wikiPageForName(a.display_name) };
     }),
     members: user.is_admin ? models.listMentionable() : [],
     notice: (query.get('notice') || '').slice(0, 300),
@@ -278,4 +277,4 @@ const routes = [
   ['POST', /^\/admin\/authors\/(\d+)\/assign$/, (c) => handleAssignAuthor(c.req, c.res, c.user, Number(c.m[1]))],
 ];
 
-module.exports = { routes };
+module.exports = { epubsInZip, importOne, routes };

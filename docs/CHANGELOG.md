@@ -12,6 +12,8 @@ here is missing on the site, it has not been restarted yet.
 - **Two ways to give an author their stories.** A member presses **This is me** on the card and an admin says yes or no right there; or an admin who knows who it is chooses the member under **Give to**, without waiting for a claim.
 - **Once an author is somebody's, new imports go to them.** A story by an author already claimed or given goes straight to that member, not to the imported name.
 - **The name it came with is kept**, so the authors page still lists a claimed author's stories, under *Here now*.
+- **Imported stories and the wiki are one page, linked both ways.** A story the wiki already has a page for gets no second page in the glossary, even when the wiki spells the title a little differently (*A Perfect 10 Part 1*, *Albion (story)*). The story links to that page, and the page says the story is here, with the way to read it. A writer's wiki page says their stories are here, and who they are in the group once somebody has claimed them.
+- **A whole folder at once, from the server** (for admins): `node scripts/import-epubs.js <folder> --as <you>` imports every EPUB in it the same way *Many at once* does, after taking a backup.
 
 ### The story bible
 

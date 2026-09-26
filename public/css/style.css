@@ -4988,3 +4988,5 @@ label.batch-choice { display: flex; flex-direction: row; gap: var(--s-3); align-
 .author-assign { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); align-items: center; font-size: var(--t-sm); }
 .author-assign label { font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); }
 .author-assign select { flex: 1 1 10rem; min-width: 0; }
+.glossary-in-group { border-left: 3px solid var(--text); background: var(--bg-sunken); padding: var(--s-4) var(--s-5); margin: var(--s-5) 0; font-size: var(--t-sm); display: flex; flex-direction: column; gap: var(--s-2); }
+.glossary-in-group p { margin: 0; }
