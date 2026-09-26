@@ -107,9 +107,10 @@ test('the advanced search, on its own page: author, words in the text, length, f
   const res = (html) => html.split('id="results"')[1];
   const blank = await (await ana.request('/find')).text();
   assert.match(blank, /<h1>Advanced search<\/h1>/);
-  assert.match(blank, /press Search/);
+  assert.match(res(blank), /All <span class="list-count"[^>]*>3</, 'nothing filled in is everything');
   const byAuthor = res(await (await ana.request('/find?author=prado')).text());
   assert.match(byAuthor, />Salt Road</);
+  assert.match(byAuthor, /by <a[^>]*href="\/users\/luis"/, 'the author is a link to their page');
   assert.doesNotMatch(byAuthor, />Far Out</);
   const inText = res(await (await ana.request('/find?text=lighthouse')).text());
   assert.match(inText, />Salt Road</);

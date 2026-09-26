@@ -165,9 +165,8 @@ async function handleStories(req, res, user, query) {
 // one for "a long finished story by Akarge with a colony in it".
 async function handleFind(req, res, user, query) {
   const found = storyList(user, query, { defaultShelf: 'all' });
-  const asked = ['q', 'author', 'text', 'length', 'series', 'following', 'tag', 'tags', 'shelf'].some((k) => query.get(k));
   sendHtml(res, 200, views.findPage({
-    user, asked, stories: found.list.stories, list: found.list,
+    user, stories: found.list.stories, list: found.list,
     tagsByStory: found.tagsByStory, coauthorsByStory: found.coauthorsByStory,
     activeTags: found.activeTags, allGroups: models.listTagsGrouped(), sort: found.sort,
   }));

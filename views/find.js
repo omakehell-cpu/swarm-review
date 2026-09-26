@@ -76,7 +76,7 @@ function findForm(state, allGroups) {
     </form>`;
 }
 
-function findPage({ user, asked = false, stories, list, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], sort = '' }) {
+function findPage({ user, stories, list, tagsByStory, coauthorsByStory = new Map(), activeTags = [], allGroups = [], sort = '' }) {
   const state = { ...list, sort, activeTags, base: '/find' };
   const tagsFor = (s) => (tagsByStory && tagsByStory.get(s.id)) || [];
   const coauthorsFor = (s) => coauthorsByStory.get(s.id) || [];
@@ -92,14 +92,13 @@ function findPage({ user, asked = false, stories, list, tagsByStory, coauthorsBy
       </div></div>
       ${findForm(state, allGroups)}
       <section class="find-results" id="results" aria-labelledby="shelf-heading" tabindex="-1">
-        ${asked ? `
+        ${`
           ${front.activeChips(state)}
           <div class="library-controls find-controls">
             <span></span>
             <div class="library-view">${front.viewControls(state)}</div>
           </div>
-          ${storyResults(stories, state, { tagsFor, coauthorsFor, totalStories: 1, level: 2 })}`
-    : '<p class="find-hint muted">Fill in as much or as little as you like, and press Search.</p>'}
+          ${storyResults(stories, state, { tagsFor, coauthorsFor, totalStories: 1, level: 2 })}`}
       </section>`,
   });
 }
