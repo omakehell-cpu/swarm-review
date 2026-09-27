@@ -6,7 +6,7 @@ const { parseBody, sendHtml, redirect, clearCookie } = require('../lib/util');
 const auth = require('../auth');
 const models = require('../models');
 const views = require('../views');
-const { SESSION_COOKIE, logEvent, login } = require('./shared');
+const { NAME_PATTERN, SESSION_COOKIE, isReservedName, logEvent, login } = require('./shared');
 async function handleLoginPage(req, res, query) {
   const error = query.get('locked') ? 'This account is locked. Ask an admin to reactivate it.' : null;
   const notice = query.get('notice') || null;
@@ -15,12 +15,17 @@ async function handleLoginPage(req, res, query) {
 
 async function handleLoginSubmit(req, res) {
   const body = await parseBody(req);
-  // Registration stores the username lowercased (see handleRegisterSubmit),
+  // Registration stores the name lowercased (see handleRegisterSubmit),
   // so it has to be normalized the same way here -- otherwise someone who
-  // types their username with uppercase letters would never find their
+  // types their name with uppercase letters would never find their
   // account when logging in.
-  const username = (body.username || '').trim().toLowerCase();
-  const user = models.getUserByUsername(username);
+  //
+  // By login_name, not by the public handle: since they came apart, the
+  // handle is what the group calls somebody and this is what they type
+  // into this box. For everybody who has never changed it, the two are
+  // still the same string.
+  const loginName = (body.username || '').trim().toLowerCase();
+  const user = models.getUserByLoginName(loginName);
 
   // Second, explicit safeguard against the "deleted-user" placeholder ever
   // being used to log in, on top of its unusable random password hash.
@@ -75,10 +80,10 @@ async function handleRegisterSubmit(req, res) {
       values,
     }));
   }
-  if (username === models.DELETED_USER_USERNAME || username.startsWith('sol-')) {
+  if (isReservedName(username)) {
     return sendHtml(res, 400, views.registerPage({ error: 'That username is reserved.', values }));
   }
-  if (!/^[a-zA-Z0-9_-]{3,30}$/.test(username)) {
+  if (!NAME_PATTERN.test(username)) {
     return sendHtml(res, 400, views.registerPage({ error: 'Invalid username (3-30 characters, letters/numbers/_/-).', values }));
   }
   if (!displayName) {
@@ -87,7 +92,9 @@ async function handleRegisterSubmit(req, res) {
   if (password.length < 8) {
     return sendHtml(res, 400, views.registerPage({ error: 'Password must be at least 8 characters long.', values }));
   }
-  if (models.getUserByUsername(username)) {
+  // Taken as a handle or taken as a sign-in name: at registration the two
+  // are the same string, so it has to be free in both places.
+  if (models.getUserByUsername(username) || models.loginNameTaken(username, 0)) {
     return sendHtml(res, 409, views.registerPage({ error: 'That username is already taken.', values }));
   }
 

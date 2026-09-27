@@ -13,6 +13,32 @@ const getUserByUsername = (username) =>
 const getUserById = (id) =>
   db.prepare('SELECT * FROM users WHERE id = ?').get(id);
 
+// Who is signing in. Not the same question as "whose page is /users/luis":
+// see the login_name migration in db.js. Nothing public calls this.
+const getUserByLoginName = (loginName) =>
+  db.prepare('SELECT * FROM users WHERE login_name = ?').get(loginName);
+
+// A name is free to sign in with when no other account signs in with it
+// **and** no other account wears it in public. The second half is not a
+// technical requirement -- the two are separate columns and the login
+// never looks at the handle -- it is so that "I sign in as luis" and
+// "@luis is somebody else" cannot both be true in a group of five people.
+function loginNameTaken(loginName, exceptUserId) {
+  const row = db.prepare(`
+    SELECT id FROM users
+    WHERE (login_name = @name OR username = @name) AND id <> @exceptId
+    LIMIT 1
+  `).get({ name: loginName, exceptId: exceptUserId || 0 });
+  return Boolean(row);
+}
+
+// Deliberately does not touch session_version: this is not a password, and
+// somebody renaming what they type into a login box has not asked to be
+// thrown out of the browser they are sitting in front of.
+function setLoginName(userId, loginName) {
+  db.prepare('UPDATE users SET login_name = ? WHERE id = ?').run(loginName, userId);
+}
+
 const listUsers = () =>
   db.prepare('SELECT id, username, display_name, is_admin FROM users WHERE is_placeholder = 0 ORDER BY display_name').all();
 
@@ -88,9 +114,12 @@ function createUser({ username, displayName, passwordHash, isAdmin }) {
   // database migrated by db.js's ensureColumn() has no such default -- see
   // the comment there.
   const stmt = db.prepare(
-    "INSERT INTO users (username, display_name, password_hash, is_admin, last_seen_at) VALUES (?, ?, ?, ?, datetime('now'))"
+    'INSERT INTO users (username, login_name, display_name, password_hash, is_admin, last_seen_at)'
+    + " VALUES (?, ?, ?, ?, ?, datetime('now'))"
   );
-  const info = stmt.run(username, displayName, passwordHash, isAdmin ? 1 : 0);
+  // The name they registered under is both things to begin with. It stops
+  // being both the first time they change one of them.
+  const info = stmt.run(username, username, displayName, passwordHash, isAdmin ? 1 : 0);
   return getUserById(Number(info.lastInsertRowid));
 }
 
@@ -407,6 +436,7 @@ module.exports = {
   getPasswordResetTokenById,
   getPlaceholderUserId,
   getUserById,
+  getUserByLoginName,
   getUserByUsername,
   getValidPasswordResetToken,
   listInviteCodes,
@@ -420,6 +450,8 @@ module.exports = {
   resetFailedLogins,
   revokeNamedInvite,
   revokePasswordResetToken,
+  loginNameTaken,
+  setLoginName,
   setOwnPassword,
   userCount,
   validateInviteCode,

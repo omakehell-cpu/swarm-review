@@ -114,6 +114,7 @@ const EVENT_SENTENCES = {
   joined: () => 'joined the Swarm',
   'signed-in': () => 'signed in',
   'password-changed': () => 'changed their password',
+  'login-name-changed': () => 'changed the name they sign in with',
   'name-changed': (s) => `changed their name to ${s}`,
   'story-started': (s) => `started ${s}`,
   'story-edited': (s) => `edited the details of ${s}`,
@@ -214,8 +215,8 @@ function feedBlock(user, origin) {
 }
 
 
-/** @param {{ user: Row, error?: string|null, notice?: string|null, groups?: any[], hiddenTagIds?: number[], streak?: any, origin?: string }} props */
-function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], streak = null, origin = '' }) {
+/** @param {{ user: Row, error?: string|null, errorIn?: 'password'|'login-name', notice?: string|null, groups?: any[], hiddenTagIds?: number[], streak?: any, origin?: string }} props */
+function accountPage({ user, error, errorIn = 'password', notice, groups = [], hiddenTagIds = [], streak = null, origin = '' }) {
   return layout({
     title: 'Account',
     user,
@@ -226,7 +227,7 @@ function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], stre
       <h1>Account</h1>
       <div class="auth-card">
         <h2>Your name</h2>
-        <p class="muted">The name on everything you write and every note you leave. Your sign-in name, <strong>@${escapeHtml(user.username)}</strong>, does not change -- it is what the app knows you by.</p>
+        <p class="muted">The name on everything you write and every note you leave. Your handle, <strong>@${escapeHtml(user.username)}</strong>, is a different thing and does not change: it is the address of your page and what a note means when it says &ldquo;@${escapeHtml(user.username)}&rdquo;.</p>
         <form method="post" action="/account/name">
           <label>Name people see<input type="text" name="displayName" value="${escapeHtml(user.display_name)}" required maxlength="60"></label>
           <button class="btn" type="submit">Save name</button>
@@ -257,9 +258,20 @@ function accountPage({ user, error, notice, groups = [], hiddenTagIds = [], stre
         <h2>Being told there is something waiting</h2>
         ${feedBlock(user, origin)}
       </div>
+      <div class="auth-card" id="sign-in">
+        <h2>The name you sign in with</h2>
+        <p class="muted">Only yours: it is what you type into the login box and nothing else. Changing it leaves your page, your handle and every note that ever named you exactly where they are.</p>
+        ${error && errorIn === 'login-name' ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+        <form method="post" action="/account/sign-in-name">
+          <label>Sign-in name<input type="text" name="loginName" value="${escapeHtml(user.login_name || user.username)}" required minlength="3" maxlength="30" pattern="[A-Za-z0-9_-]+" autocomplete="username"></label>
+          <label>Your password<input type="password" name="currentPassword" required autocomplete="current-password"></label>
+          <button class="btn" type="submit">Change sign-in name</button>
+        </form>
+        <p class="muted">3 to 30 characters: letters, numbers, <code>_</code> and <code>-</code>. You stay signed in here; it is the next login that wants the new one.</p>
+      </div>
       <div class="auth-card">
         <h2>Change password</h2>
-        ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
+        ${error && errorIn === 'password' ? `<p class="error">${escapeHtml(error)}</p>` : ''}
         <form method="post" action="/account/password">
           <label>Current password<input type="password" name="currentPassword" required></label>
           <label>New password<input type="password" name="newPassword" required minlength="8"></label>

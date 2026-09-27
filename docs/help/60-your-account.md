@@ -8,10 +8,9 @@ admins touch.
 **Account**, in the menu behind your name in the top bar, is everything about the site
 that is yours to set. From the top:
 
-- **Your name** -- the name people see. Your username is how you log in
-  and never changes; the display name is what appears on everything you
-  write, and you can change it whenever you like. Under it, a link to
-  **your page as the group sees it**.
+- **Your name** -- the name people see, on everything you write and every
+  note you leave. Change it whenever you like. Under it, a link to **your
+  page as the group sees it**.
 - **Reading chapters** -- two settings for reading with nothing in the way:
   *open every chapter in Read mode*, and *no links in the prose* (names
   from the bible and the glossary read as plain words). See
@@ -20,6 +19,8 @@ that is yours to set. From the top:
 - **Writing** -- a target of your own in words a day, and how this week
   has gone; see [targets](/help/targets-and-analysis).
 - **Being told there is something waiting** -- your private feed; below.
+- **The name you sign in with** -- yours alone, and changeable with your
+  password in hand; below.
 - **Change password** -- with the current one in hand. If you have lost
   it, an admin can make you a reset link. Changing it signs
   you out everywhere else.
@@ -29,6 +30,33 @@ All of it follows you to every device you sign in on, except light and
 dark, which each browser remembers for itself.
 
 @figure account-page.png | The top of the account page: your name, reading settings and your daily target.
+
+## Three names, and which is which
+
+It is worth knowing them apart, because only one of them is anybody else's
+business:
+
+- **Your name** is what the group reads: the byline on a chapter, the name
+  above a note. Change it as often as you like — it changes everywhere at
+  once, on old work as well as new.
+- **Your handle** is the `@luis` a note uses to call you, and the address
+  of your page (`/users/luis`). It does not move. Everything written about
+  you, and every link anybody has to your page, is made of it.
+- **The name you sign in with** is what you type into the login box, and
+  nothing else in the site uses it. **Account → The name you sign in
+  with** changes it, with your password beside it — the password is asked
+  for because this is the half of the login that is not secret, and a
+  screen left unlocked should not be able to change what its owner has to
+  type tomorrow.
+
+They all start out the same word, the one you registered with. The first
+two are the same thing to most people most of the time; the third is only
+yours.
+
+Changing the sign-in name does not sign you out anywhere: the next login
+is the one that wants the new name. Somebody else cannot take a name you
+sign in with, and you cannot take one somebody else signs in with or
+wears as a handle.
 
 ## Being told there is something waiting
 

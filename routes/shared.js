@@ -29,6 +29,24 @@ const SECURE_COOKIES = process.env.SECURE_COOKIES === '1' || process.env.SECURE_
 // page with the site's own type and a way back rather than as a bare
 // string in a blank window. `user` may be absent (nobody is signed in, or
 // the handler never looked one up), and the layout copes.
+// What a name may be, in one place rather than three. Registration, an
+// admin's invite made out to somebody, and changing the name you sign in
+// with all ask the same question, and the day the rule changes it must
+// change for all of them or one form starts letting through what another
+// refuses.
+//
+// Short, plain, and no spaces: these names live in URLs (/users/luis),
+// in prose (@luis) and in a login box, and each of those is unforgiving
+// in its own way.
+const NAME_PATTERN = /^[a-zA-Z0-9_-]{3,30}$/;
+
+// Names the app keeps for itself: the placeholder that inherits a deleted
+// account's work, and the sol- prefix every imported author is made
+// under (models/imports.js).
+function isReservedName(name) {
+  return name === models.DELETED_USER_USERNAME || String(name).startsWith('sol-');
+}
+
 function sendError(res, status, message, user) {
   sendHtml(res, status, views.errorPage({ user: user || null, status, message }));
 }
@@ -184,6 +202,7 @@ function slugForFilename(title) {
   return slug || 'chapter';
 }
 module.exports = {
+  NAME_PATTERN,
   SECURE_COOKIES,
   SESSION_COOKIE,
   UPLOAD_LIMIT_BYTES,
@@ -191,6 +210,7 @@ module.exports = {
   extractUploadedText,
   getCurrentUser,
   handleFeed,
+  isReservedName,
   logEvent,
   login,
   proposedTagIdsFromBody,
