@@ -1,37 +1,42 @@
 # Swarm Review
 
-A small self-hosted web app for a shared-universe writing group: authors
-organize their work into stories, each made up of chapters written in
-Markdown. Everyone else selects passages of text and leaves inline
-comments (like Google Docs suggestions), and the chapter's author accepts
-or rejects each comment. Authors can upload multiple revised versions of
-the same chapter; older versions and their comments stay around for
-reference.
+A self-hosted archive for one shared-universe writing group: a place to
+write chapters, to read each other's, and to leave the kind of note the
+author can act on. It also keeps a local copy of the group's wiki, and
+takes in stories published elsewhere so that everything the group has
+written is in one place.
+
+Everything in it is plain: chapters are Markdown, notes are anchored to
+the passage they are about, and every version ever saved stays where it
+was with its notes still on it. There is no email, no notification
+service, no account it talks to. One process, one SQLite file, one
+machine.
 
 ## What it needs to run
 
 Almost nothing. The web server, the database, the sessions, the Markdown
-and the file uploads are all Node.js built-ins — including SQLite itself,
+and the file uploads are all Node.js built-ins -- including SQLite itself,
 via `node:sqlite`. There is no build step, no bundler and no framework.
 
-Two libraries are the exception, and both exist for one feature: reading
-and writing Word files.
+Four libraries are the exception, and each one is there because writing
+it by hand would have been worse:
 
 | package | what it does |
 | --- | --- |
-| `mammoth` | reads an uploaded `.docx`. Word's file format is genuinely complicated — real numbering, styles, footnotes — and the hand-written reader this replaced quietly lost most of it. |
-| `docx` | writes the `.docx` you get from a chapter's download link, as a document Word will edit further rather than a flat approximation of one. |
 | `markdown-it` | parses the Markdown a chapter is written in. It replaced a hand-written parser that made `file_name_here` italic, had no escape syntax, and couldn't see an indented list at all. |
+| `mammoth` | reads an uploaded `.docx`. Word's file format is genuinely complicated -- real numbering, styles, footnotes -- and the hand-written reader this replaced quietly lost most of it. |
+| `docx` | writes the `.docx` you get from a download link, as a document Word will edit further rather than a flat approximation of one. |
+| `pdfkit` | draws the PDF a story compiles to. The alternative was writing a line breaker. |
 
 Nothing else was worth its weight. The writing checks were the obvious
-candidate — `compromise` can conjugate an irregular verb, which is what
-turning a passive round needs — but it is 352KB in every reader's browser
+candidate -- `compromise` can conjugate an irregular verb, which is what
+turning a passive round needs -- but it is 352KB in every reader's browser
 and the only thing needed from it is a table of 138 irregular participles.
 That table is 2.7KB and is inlined in `public/js/writing-analyzer.js`,
 taken from [english-verbs-irregular](https://www.npmjs.com/package/english-verbs-irregular)
-(Apache-2.0, part of RosaeNLG). The prose linters in that corner of npm —
-`write-good`, `retext-passive`, `no-cliches` — only detect, and this app
-already detects with per-check toggles, positions and suggestions.
+(Apache-2.0, part of RosaeNLG). The EPUB is written by hand, including its
+zip, in ninety lines (`lib/epub.js`, `lib/zip.js`): an EPUB is a zip of
+five XML files, and a library for that would have cost more than it saved.
 
 So a fresh copy does need one `npm install` before it will start. The
 development tools under [Checking your work](#checking-your-work) come
@@ -39,7 +44,7 @@ down with it and the server never loads them; `npm install --omit=dev`
 skips them if you'd rather not have them on the server.
 
 **Requirement: Node.js >= 22.5.0** (built-in SQLite support). Check with
-`node -v`. Node 22 LTS or newer works well.
+`node -v`.
 
 ## Running it
 
@@ -49,8 +54,8 @@ node server.js
 ```
 
 Then open `http://localhost:3000`. The first account you register becomes
-the admin — that's the account that gets the "Admin" link in the top nav
-and access to `/admin` (see below).
+the admin -- that's the account that gets the "Admin" link in the top nav
+and access to `/admin`.
 
 On first run the app auto-generates an invite code (printed to the
 console at startup) and a session-signing secret, both stored in the
@@ -58,99 +63,157 @@ console at startup) and a session-signing secret, both stored in the
 `SESSION_SECRET` yourself, either as environment variables or in a `.env`
 file (see `.env.example`).
 
-All data (accounts, stories, chapters, versions, comments, invite codes)
-lives in a single SQLite file at `data/swarm-review.sqlite`. Back that
-file up and you have the whole site.
+Everything the group has written lives in `data/`: the SQLite database at
+`data/swarm-review.sqlite`, the pictures uploaded to bible entries in
+`data/entity-images/`, and the nightly copies in `data/backups/`. Back up
+that folder and you have the whole site. **One writer at a time, on the
+machine the file is on** -- see `docs/DATABASE.md` before you touch the
+database by hand.
 
 ## How it works
 
-- **Stories & chapters** — a story is the container (title + description)
-  for a piece of writing; an author starts one with its first chapter and
-  adds more chapters to it over time. Only the story's original author can
-  add chapters to it or edit its chapters.
-- **Markdown** — chapter text is written in a small Markdown subset:
-  `**bold**`, `*italic*`, `***both***`, `~~strikethrough~~`, `` `code` ``,
-  `[link](url)`, `# Headings`, `> quotes`, `---` for a scene break, and
-  `-`/`1.` lists. Unlike strict Markdown, single line breaks are kept as
-  you typed them (no need for a blank line between every line) — friendlier
-  for pasted prose. See `lib/markdown.js`.
-- **Editing a chapter** — the chapter's author can click "Edit chapter" at
-  any time to change its title, summary, and the text itself, the same way
-  you'd edit any document. Behind the scenes, saving publishes the edited
-  text as a new version automatically (only if the text actually changed;
-  an edit that only touches the title/summary doesn't create one). This
-  keeps every past version, and any comments already anchored to them, on
-  record — reviewers can always go back and see exactly what a comment was
-  originally about via the "Version" dropdown on the chapter page.
-- **Inline comments** — any logged-in user selects a piece of text in the
-  chapter (this works against the rendered Markdown, so a selection can
-  span across bold/italic text and still anchors correctly) and leaves a
-  comment anchored to that exact passage; it shows up as a highlight in
-  the text and a matching card in the sidebar. You can also leave a
-  general comment not tied to any specific passage.
-- **Accept / reject** — only the chapter's author can mark a comment as
-  accepted or rejected, from the comment card in the sidebar. Anyone can
-  reply to a comment thread.
-- Comments are attached to one specific version. When the author uploads
-  a new version, previous comments stay on the old version (as a record
-  of what was discussed) and the new version starts with a clean slate.
-- **Archiving & deleting** — stories and chapters can be archived (hidden
-  from the main lists, but not lost) by their author, from a button on the
-  story/chapter page. An archived item can be unarchived at any time from
-  its "Archived stories" / "Archived chapters" list. Permanent deletion is
-  only offered from that archived list (never on an active item), as a
-  safety gate against one-click data loss — you have to archive something
-  first, look at it again on the archived list, and only then delete it
-  forever. Deleting a story or chapter forever also removes its chapters/
-  versions/comments with it.
-- **Comment edit / retract / reopen** — the author of a comment (or reply)
-  can edit its text at any time (an "(edited)" tag shows it was changed),
-  or retract it, which keeps the thread intact but shows "[retracted]"
-  instead of the text. If the chapter's author accepted or rejected a
-  comment by mistake, they can hit "Reopen" to put it back to pending.
-- **Timestamps** — every story, chapter, version, and comment shows when
-  it was created (and comments show when edited). Server-rendered in UTC
-  so it works even without JavaScript, then upgraded in the browser to a
-  relative time ("3h ago") or your local time/timezone once the page
-  loads (`lib/time.js` + `public/js/timestamps.js`).
-- **"What's new" indicator** — no email notifications, but the dashboard
-  and each story page mark chapters published (and stories with new
-  chapters) since your last visit with a "New" badge, and a chapter with
-  new comments since then gets a "New comments" badge. This updates
-  automatically every time you load the dashboard — no setup needed.
-- **File upload/download** — anywhere there's a chapter-text box (new
-  story, add chapter, edit chapter), you can either paste text or upload a
-  `.md`, `.txt`, or `.docx` file instead, which replaces whatever's in the
-  box. `.docx` is read by pulling out its paragraphs/formatting (bold,
-  italic, strikethrough, headings, bullet lists, blockquote-style
-  paragraphs, hyperlinks) and converting them into this app's Markdown.
-  From any chapter page you can also download the version you're viewing
-  as `.md` (the raw Markdown source), `.txt` (clean plain text, Markdown
-  syntax stripped), or `.docx` (a real, independently-verified Word
-  document with actual bold/italic/headings/etc., not just formatted
-  text pasted in). Both directions (`lib/docx.js`) are hand-written
-  against the raw OOXML/zip format with no external library, matching the
-  rest of the app's zero-dependency approach; it covers the Markdown
-  subset this app supports well, but isn't a general-purpose Word
-  converter -- see the limitations below.
-- **Wiki linking** — character/place/ship names recognized from the
-  shared-universe wiki (`WIKI_BASE_URL`, default `https://swarmwiki.tampaad.net`)
-  get auto-linked in chapter text, with a hover preview of that page's
-  summary. Readers can turn it off with the "Wiki links" toggle on the
-  chapter page if it's more noise than help for a given story.
-- **Glossary** — a full local, offline mirror of the shared-universe wiki
-  (`/glossary`), built from the same sync as wiki linking above. Every
-  page's full content is rendered from its wikitext (`lib/wiki.js`'s
-  `wikitextToHtml`) and pages link to each other the same way they do on
-  the wiki itself -- a link to a page this app has a local copy of stays
-  inside the app; a link to anything else (a page in another namespace, a
-  red link, or simply a page that hasn't been synced) falls back to the
-  original wiki, opened in a new tab. Both this and the auto-linking above
-  are backed by the same local cache (`lib/wiki.js`, `wiki_pages` table),
-  so neither ever depends on the wiki being reachable at read time --
-  syncing is entirely manual (the "Sync wiki now" button on `/admin`),
-  deliberately with no automatic timer, since a full sync now fetches
-  every page's complete content rather than just a short summary.
+### Writing
+
+- **Stories, chapters, versions.** A story is the container; an author
+  starts one with its first chapter and adds more over time. Saving an
+  edit publishes a new version automatically, but only if the text
+  actually changed -- fixing a title does not. Every past version stays,
+  with the notes that were made on it, reachable from the **Version**
+  dropdown on the chapter page. `/chapters/:id/diff` shows what changed
+  between any two, paragraph by paragraph and then word by word.
+- **Markdown**, in a small subset: `**bold**`, `*italic*`, `~~strike~~`,
+  `` `code` ``, `[link](url)`, `# headings`, `> quotes`, `---` for a scene
+  break, `-`/`1.` lists. Unlike strict Markdown, a single line break is
+  kept as you typed it -- friendlier for pasted prose. `\*` escapes.
+- **The writing checks** run in the editor as you type: long and dense
+  sentences, passive voice, adverbs propping up a verb, filler, complex
+  words, repeated words, filter verbs, said-bookisms, repeated openings,
+  and a spellchecker that knows the story's own invented names. Each can
+  be switched off on its own, and where there is an honest rewrite the
+  check **proposes it** rather than only complaining. Beside the word
+  count is the **reading grade**. All of it runs in a worker, in the
+  reader's own browser; nothing is sent anywhere.
+- **The desk.** Scene notes and snapshots belong to the chapter's author:
+  a snapshot is a copy of the text kept under a name, to compare against
+  or go back to, without publishing a version for everybody to see.
+- **Not losing work.** A draft is kept on the server as you write, so one
+  started on a phone is there on the laptop, and the browser keeps its own
+  copy as well. Saving asks nothing; closing the tab on unsaved writing
+  asks.
+- **Replacing a chapter with a file** you wrote somewhere else -- `.md`,
+  `.txt` or `.docx` -- publishes it as the next version, from a control
+  under the text box with its own button and its own question.
+- **The outline** lists every chapter on one line with the things you sort
+  a draft by (summary, point of view, strand, state), draggable to
+  reorder. **Analysis** counts the same draft: words per chapter and per
+  arc, who the story is told through, which threads carry it, what was
+  written week by week, who is in what. **The timeline** puts the chapters
+  on the story's own calendar rather than in the order they are told.
+
+### Reviewing
+
+- **Notes on a passage.** Select text in a chapter and leave a note
+  anchored to exactly those words -- it shows as a highlight and as a card
+  in the margin. Selection works against the rendered text, so a note can
+  span bold and italic and still land. `C` does it from the keyboard.
+- **What kind of note it is**, in one word: a plain note, a typo, pacing,
+  continuity, a question, or praise. A label, not a workflow: every kind
+  is answered the same way, except praise, which asks nothing of the
+  author.
+- **A rewrite, offered rather than described.** A reviewer can suggest the
+  replacement text for the passage they quoted; accepting it puts it into
+  the chapter.
+- **Accept, turn down, retract, reopen, reply** -- all in place, without
+  losing your position on a chapter with forty notes. A note follows its
+  passage into the next version where the passage can still be found.
+- **Reactions** mark a paragraph as *hooked*, *lost*, *slow* or
+  *unconvinced* -- one click, for the things a note is too much for.
+- **@names** in a note reach the person named, and the editor offers the
+  names as you type one.
+- **Asking for a read**: the author asks particular people to read a
+  chapter, with a question if they have one, and it waits on the front
+  page of whoever was asked until they have been.
+
+### Reading
+
+- **Read or Review.** Read mode is the chapter and nothing else -- no
+  highlights, no margin. **Aa** sets the type size, measure and line
+  spacing, and **Fill screen** takes the rest of the page away. All of it
+  follows you between devices.
+- **A name you do not remember** -- a character from the bible, a page
+  from the glossary -- opens beside the chapter when you click it, with
+  its picture if it has one, and the name on the card is the way on to the
+  entry itself.
+- **The front page** is what the group is doing: what is being written,
+  what is waiting for a read, what you were in the middle of, and the
+  shelves (being written, complete, set aside). You can **follow** a story
+  to keep it in front of you.
+- **Your own feed**, as Atom, for a reader that checks on your behalf. It
+  is off until you ask for one, and its address is a secret.
+
+### The bible and the glossary
+
+- **The story bible** is who and what is in a story: people, places,
+  ships, whatever the story needs, with a picture, aliases, custom fields,
+  who knows whom, and which chapters each one turns up in -- worked out by
+  reading the chapters rather than ticked by hand. A bible can be kept
+  private to the people who write the story.
+- Names from the bible are **linked in the prose**, and so are names from
+  the shared wiki. A reader who would rather have plain prose turns them
+  off once, in Account.
+- **The glossary** is a full local mirror of the group's wiki
+  (`WIKI_BASE_URL`, default `https://swarmwiki.tampaad.net`): every page's
+  content, rendered from its wikitext, with the links between pages kept
+  inside the app where the page exists here and falling back to the wiki
+  where it does not. It is the one thing in the app that ever talks to
+  another machine, and only when an admin presses **Sync wiki now**.
+
+### Bringing work in, and taking it out
+
+- **In**: a chapter from `.md`, `.txt` or `.docx`; a whole shelf of
+  StoriesOnline EPUBs at once, from `/admin/import` or from a folder on
+  the server, with their tags mapped onto this app's own; the notes
+  somebody left in a Word file, read back as notes on the chapter.
+- **Out**: a chapter as `.md`, `.txt` or `.docx` -- with the chapter's
+  notes as real Word comments, if you want them. A whole story as
+  **`.pdf`** or **`.epub`**, as well as `.docx`, `.md` and `.txt`.
+- The PDF is typeset rather than printed from a web page, in one of two
+  layouts: **manuscript** (double-spaced, ragged right, running heads --
+  what a competition asks for) or **book** (justified, chapters opening on
+  the right, typographic quotes). Both read the same document model
+  (`lib/typeset.js`), so they cannot disagree about what a scene break is,
+  and the same story compiles to the same bytes twice.
+
+### Finding things
+
+- **Search** is SQLite's FTS5 over chapters, stories, bible entries and
+  the glossary: whole words, `"exact phrases"`, half-typed names, accents
+  folded, best first, each hit with the line it was found in.
+- **/find** is the advanced one, with the questions a group actually
+  asks: by author, by tag, by where a story stands, by length, by series,
+  by words in the text, and only the ones you follow.
+- **Tags** come from a list an admin curates, grouped the way
+  StoriesOnline groups them; an author can propose one while tagging a
+  story, and it works immediately and waits in a queue to be approved.
+  Anyone can hide tags they would rather not see.
+- **/help** is this app explaining itself, and **/help/changelog** is what
+  changed and when. Both are the markdown files in `docs/`, rendered by
+  the app -- there is no copy of them in a table to drift.
+
+## Three names, and which is which
+
+Worth knowing apart, because only one of them is anybody else's business:
+
+- **Your name** is what the group reads: the byline on a chapter, the name
+  above a note. Changeable whenever you like, everywhere at once.
+- **Your handle** is the `@luis` a note calls you by and the address of
+  your page (`/users/luis`). It does not move: everything written about
+  you, and every link to your page, is made of it.
+- **The name you sign in with** is what you type into the login box and
+  nothing else. Yours alone, and changeable in Account with your password
+  beside it.
+
+All three start out as the name you registered with.
 
 ## Coauthors
 
@@ -164,43 +227,54 @@ can add anyone else in the group as a **coauthor**, and a coauthor can:
 
 A coauthor cannot rewrite a chapter somebody else wrote, edit the story's
 details or tags, reorder its chapters, archive it or delete it. Those stay
-with the owner, and being a site admin does not change any of it — admins
+with the owner, and being a site admin does not change any of it -- admins
 run the site, they don't get a key to everyone's drafts.
 
 Either side can end it: the owner can remove a coauthor, and a coauthor
 can step back on their own. Either way the chapters they already wrote
-stay theirs — their name is on them and they can still edit them. This is
+stay theirs -- their name is on them and they can still edit them. This is
 a writing group, not a permissions system, and quietly reassigning
 somebody's prose because they left a story would be the wrong thing to do.
 
+## Archiving, and deleting
+
+Stories and chapters can be **archived** by their author: out of the way,
+not lost, readable, with their notes, and back with one click. Permanent
+deletion is only offered from the archived list, never on an active item
+-- you have to archive something, look at it again, and only then delete
+it for good. That one is a real SQL delete: there is no trash behind it.
+
+A deleted **account** is different: their stories, chapters and notes are
+not deleted with them. They are re-credited to a placeholder "Deleted
+user", because the group should not lose a discussion because somebody
+left.
+
 ## Admin & account security
 
-- **Invite codes** are single-use now, not a shared static password. The
-  admin generates one from `/admin`, shares it with exactly the one person
-  who's about to register, and it stops working the moment either that
-  person registers with it, or the admin generates a new one (which
-  invalidates whatever code was active before), or the admin hits "Close
-  registration" (deactivates the current code without creating a new one
-  — nobody can register at all until a fresh code is generated). The admin
-  panel always shows the current active code, plus a history of past codes
-  and who used them.
-- **Account lockout** — after 3 wrong passwords in a row, an account is
-  locked automatically and can't log in (even with the right password)
-  until an admin reactivates it from `/admin`. This also applies mid-
-  session: if the admin locks someone's account manually while they're
-  already logged in, their session stops working on their very next
-  request, not just their next login.
-- **Admin panel** (`/admin`, only visible/reachable for the admin account)
-  lets the admin, per user: set a new password directly (no email flow
-  exists, so this is how a forgotten password gets fixed), lock the
-  account manually (same effect as the automatic lockout above — handy for
-  someone who's left the group or is misbehaving) and reactivate it later,
-  or delete the account outright. Deleting an account is permanent, but
-  their stories/chapters/comments are *not* deleted with them — they're
-  kept and re-credited to a placeholder "Deleted user" so the group
-  doesn't lose chapters or discussion just because someone's account went
-  away. An admin can't lock or delete their own account (to avoid locking
-  themselves out), and can't delete the only remaining admin account.
+- **Invite codes** are single-use. The admin generates one from `/admin`
+  and shares it with the one person about to register; it stops working
+  the moment it is used, replaced, or registration is closed. A code can
+  also be **made out to one name**, so it is no use to anybody else.
+- **Account lockout** after three wrong passwords, until an admin
+  reactivates it. An admin can also lock an account by hand, and that
+  takes effect on the locked person's very next request, not their next
+  login.
+- **Password resets** are a single-use link, good for 24 hours, that the
+  admin generates and the person uses to choose their own password. There
+  is no email here, so this is how a forgotten password gets fixed; the
+  admin never sees or sets it, and the link can be revoked before use.
+- **Changing a password signs out every other session** -- a token
+  carries the version it was issued under, and changing the password
+  moves it.
+- **Every form carries a CSRF token**, added to the form by the layout and
+  checked before anything is written.
+- **Backups happen by themselves**, daily into `data/backups/`, keeping
+  the last fortnight, plus "take one now" on `/admin`. A copy can also be
+  **restored from the admin page**, which names the file and its date,
+  takes a copy of the current database first, and refuses while anybody
+  else is writing.
+- **The log rotates itself**, so `server.log` does not grow for ever under
+  a service that never closes it.
 
 ## Deployment
 
@@ -209,7 +283,7 @@ services (`com.swarmreview.server` for the app itself,
 `com.swarmreview.tunnel` for the tunnel below) that start automatically on
 boot and restart the process if it ever crashes -- see
 **`SETUP-MAC-MINI.md`** for the plist files and the `launchctl` commands
-to check on/restart/stop either one.
+to check on, restart or stop either one.
 
 It's reachable from anywhere at **https://swarmarchive.com**, via a
 Cloudflare Tunnel (no router configuration or open ports) -- see
@@ -221,74 +295,97 @@ just running it locally to try it out): install Node.js 22+
 (`brew install node` on macOS, or an LTS installer from nodejs.org
 elsewhere), copy this folder over, and run `node server.js` -- see
 **`SETUP-MAC-MINI.md`** (Part 1) or **`SETUP-WINDOWS.md`** for a more
-step-by-step walkthrough of that part. A Docker option
-(`docker compose up -d --build`, using the included `Dockerfile` and
-`docker-compose.yml`) is also there if you'd rather have it in a
-container instead of a plain `launchd`/Node setup -- the SQLite database
-lives in a mounted `./data` folder next to the compose file either way, so
+step-by-step walkthrough. A Docker option (`docker compose up -d --build`,
+using the included `Dockerfile` and `docker-compose.yml`) is there if
+you'd rather have it in a container; the SQLite database lives in a
+mounted `./data` folder next to the compose file either way, so
 `docker compose down` / `up` again doesn't lose data.
+
 ## Project layout
 
 ```
-server.js        entry point: HTTP server + routing
-db.js            SQLite schema (via node:sqlite)
-models.js        query helpers (users, stories, chapters, versions, comments)
-auth.js          password hashing, session cookies, invite code generator
-views.js         server-rendered HTML pages
-lib/markdown.js  Markdown (via markdown-it) + offset-aware comment highlighting
-lib/docx.js      .docx (Word) in and out, over mammoth and the docx package
-lib/multipart.js parser for file-upload (multipart/form-data) requests
-lib/time.js      renders SQLite timestamps as <time> elements (UTC fallback)
-lib/wiki.js      syncs + matches names against the shared-universe wiki
-lib/diff.js      paragraph- then word-level comparison of two versions
-lib/             other small shared helpers (HTML escaping, cookies, layout)
-public/          client-side CSS/JS (text-selection + highlighting logic)
-test/            the test suite (Node's own runner; see below)
-types.d.ts       type declarations used by the checker, never by the app
-data/            created at runtime: the SQLite database + secrets
+server.js        entry point: the HTTP server and one routing table
+db.js            the schema, in SQLite (node:sqlite), migrations and all
+db-review.js     the schema for the review loop, applied by db.js
+auth.js          password hashing, session cookies, invite codes
+routes/          one file per area; each exports a table of routes
+models/          the queries, one file per area, behind models.js
+views/           server-rendered HTML, one file per area, behind views.js
+lib/             everything that is neither a route, a query nor a page:
+                   markdown.js    markdown + offset-aware highlighting
+                   typeset.js     the document a story compiles to
+                   pdf.js         that document, drawn (pdfkit)
+                   epub.js zip.js that document, as an EPUB, by hand
+                   docx.js        Word in and out
+                   word-comments  notes as Word comments, both ways
+                   sol-import.js  a StoriesOnline EPUB, read into a story
+                   wiki.js        the glossary's local mirror of the wiki
+                   story-bible.js who is in what, worked out from the text
+                   search-query   what somebody typed, as an FTS5 query
+                   diff.js        two versions, compared
+                   suggestions.js a reviewer's rewrite, put into the text
+                   backup.js logrotate.js csrf.js feed.js ...
+public/           the browser's share: CSS, and one small script per job
+docs/             help/, CHANGELOG.md, TODO.md, DATABASE.md, accessibility/
+scripts/          things run by hand: imports, a11y audit, rebuild-archive
+test/             the suite (Node's own runner; see below)
+types.d.ts        declarations for the checker, never loaded by the app
+data/             created at runtime: the database, secrets, pictures, backups
 ```
+
+`models.js` and `views.js` still exist and still export what they always
+did; each is now a barrel over its folder, and a test fails the moment two
+files inside one of them export the same name.
 
 ## Checking your work
 
 ```
-npm install     # the two runtime libraries, plus the dev tools below
+npm install     # the runtime libraries, plus the dev tools below
 npm run check   # lint, then types, then tests
 ```
 
-Or one at a time:
-
 | command | what it does |
 | --- | --- |
-| `npm run lint` | ESLint. Mostly there for `no-undef`, which catches a name that doesn't exist — the mistake that breaks a rarely-taken branch of the browser code and shows up weeks later as "the editor stopped working for me". |
+| `npm run lint` | ESLint. Mostly there for `no-undef`, which catches a name that doesn't exist -- the mistake that breaks a rarely-taken branch of the browser code and shows up weeks later as "the editor stopped working for me". |
 | `npm run typecheck` | TypeScript reading the plain `.js` files (`checkJs`), no compile step and no conversion. It honours JSDoc where it exists and infers the rest. `strict` is off on purpose: see the comment at the top of `tsconfig.json`. |
-| `npm test` | Node's built-in test runner over `test/`. |
+| `npm test` | Node's built-in test runner over `test/`: 46 files, and rather more tests than that. |
+| `npm run a11y` | walks the pages with an audit of its own (`scripts/a11y-audit.js`) -- see `docs/accessibility/`. |
 
-The suite is small and deliberately weighted towards the things that have
-actually gone wrong:
+The suite is weighted towards the things that have actually gone wrong:
 
-- `test/form-parsing.test.js` — a form field sent more than once (a row of
+- `test/markdown-anchoring.test.js` -- comment offsets are counted against
+  the text with the markdown stripped out. Read this before replacing the
+  markdown renderer with a library: a renderer that emits the same HTML
+  but counts characters differently would slide every existing note in the
+  archive off its quote.
+- `test/form-parsing.test.js` -- a form field sent more than once (a row of
   tag checkboxes) must arrive as all of its values. It once arrived as the
   last one only, so eight ticked tags saved as one, with nothing thrown and
   nothing logged.
-- `test/markdown-anchoring.test.js` — comment offsets are counted against
-  the text with the markdown stripped out. Read this before replacing the
-  markdown renderer with a library: a renderer that emits the same HTML but
-  counts characters differently would slide every existing comment in the
-  archive off its quote.
-- `test/diff.test.js` — version comparison, including that a 400-paragraph
-  chapter diffs in well under a second.
-- `test/wiki-html.test.js` — the glossary converter, against the shapes the
-  real wiki actually contains rather than tidy textbook wikitext.
-- `test/server.e2e.test.js` — a throwaway database in a temp directory, the
-  real `node server.js` in a child process, and an HTTP client doing what a
-  browser does: register, log in, post a story with eight tags, edit a
-  chapter, read the diff, search, log out.
+- `test/comment-actions.test.js` -- `new FormData(form)` does not include
+  the button that submitted it, so Accept and Reject posted nothing at all.
+  Found by driving a real browser and looking at what arrived.
+- `test/every-page.e2e.test.js` -- opens every page in the app once. A
+  route that calls a model by a name it does not export looks fine in every
+  unit test around it and throws the moment somebody opens the page.
+- `test/typeset.test.js` -- the two layouts really are two layouts, and the
+  book is the shorter document. It was not: a folio written below the
+  bottom margin made pdfkit start a new page for every page it stamped.
+- `test/structure.test.js` -- the barrels export what the app asks them
+  for, and no two modules fight over one name.
+- `test/server.e2e.test.js` -- a throwaway database, the real `node
+  server.js` in a child process, and an HTTP client doing what a browser
+  does: register, log in, post a story, edit a chapter, read the diff,
+  search, log out.
 
-Tests never touch `data/swarm-review.sqlite`; they set `SWARM_DB_PATH`,
-which is the only thing that environment variable exists for.
+**A test never touches `data/swarm-review.sqlite`.** `test/helpers/tmpdb.js`
+gives each run its own file, and `db.js` refuses to open the real one from
+inside a test process at all -- it throws rather than obeys. That guard
+exists because a test file once required a library at the top that pulled
+`db.js` in before its own setup ran, and the suite emptied the live
+glossary into a fixture.
 
-To have all three run automatically before every commit, enable the hook
-once per clone:
+To have all three run before every commit, enable the hook once per clone:
 
 ```
 git config core.hooksPath .githooks
@@ -299,23 +396,19 @@ installed, and `git commit --no-verify` skips it when you need it to.
 
 ## Known limitations / ideas for later
 
-- Password resets need an admin to start them: there is no email, so
-  nobody can ask for a reset link on their own. What the admin generates
-  from `/admin` is a single-use link, good for 24 hours, that lets the
-  person choose their own password — the admin never sees or sets it, and
-  the link can be revoked before it's used.
-- `.docx` handling is good but not lossless, because a chapter is stored
-  as Markdown and Markdown has less in it than Word does. Headings,
-  bold/italic/strikethrough, links, inline code, blockquotes and both
-  kinds of list survive in both directions. Images are dropped. A table
-  keeps its text, one row per line with ` | ` between cells, but stops
-  being a table. A stray literal `*`/`_`/`~` in an uploaded Word document
-  can still be misread as Markdown formatting, since nothing escapes it on
-  the way in — though typing `\*` by hand in the editor now produces a
-  literal asterisk, and `file_name_here` is no longer turned into italics.
-- No email notifications when someone comments on your chapter — just the
-  in-app "New" / "New comments" badges since your last visit (see above).
-  A real email digest could be added later if the group wants it, but it
-  needs an SMTP setup this app deliberately doesn't have yet.
-- Deleting a story or chapter "forever" is a real, permanent SQL delete —
-  there's no trash/undo beyond the archive step before it.
+- **No email at all**, by choice: no notifications, and no "forgot my
+  password" that does not go through an admin. The feed and the front page
+  are how you find out something is waiting. `docs/TODO.md` records what
+  the shape would be if it ever comes back, and why it is not worth it
+  here.
+- **`.docx` is good, not lossless**, because a chapter is stored as
+  Markdown and Markdown has less in it than Word does. Headings, bold,
+  italic, strikethrough, links, inline code, blockquotes and both kinds of
+  list survive in both directions. Images are dropped. A table keeps its
+  text, one row per line, but stops being a table.
+- **The glossary is a copy**, synced by hand. It is never fetched while
+  somebody is reading, which is the point, but it is as old as the last
+  time an admin pressed the button.
+- **Deleting for good is for good** -- the archive step is the only undo.
+- The rest is in `docs/TODO.md`, with what each thing would cost and what
+  it would touch.
