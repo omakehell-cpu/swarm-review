@@ -4,6 +4,14 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
+## 2026-09-27 — The name you sign in with is your own business
+
+- **You can change the name you log in with**, under *Account → The name you sign in with*, with your password beside it.
+- It used to be impossible, and for a good reason: that name was also your **handle** — the `@luis` a note uses to call you and the address of your page. Moving it would have taken every old mention and every old link with it, for everybody else as well as you.
+- They are two different names now. The handle stays exactly where it is, your page keeps its address, and a note written last year still means you. What changes is only what you type into the login box.
+- Nobody can take a name somebody else signs in with, or one that is somebody else's handle. You stay signed in where you are; it is the next login that wants the new name.
+- Nothing to do if you are happy as you are: every account kept the name it had.
+
 ## 2026-09-26 — Your first cast, and a timeline you can see
 
 ### Tags

@@ -638,6 +638,29 @@ ensureColumn('story_entity_images', 'focus_y', 'INTEGER NOT NULL DEFAULT 50');
 // so this one stays under the length the structure test allows.
 require('./db-review')(db, ensureColumn);
 
+// The name somebody signs in with, which starts as the handle they
+// registered under and then goes its own way.
+//
+// `username` stays what it always was in public: the @name on their page,
+// the one a note means by "@luis", the address of /users/luis. What it
+// stops being is the credential. Those were one field because at the
+// start they were the same thing, and a person who wanted to sign in as
+// something else had to ask for the public name to change with it --
+// which breaks every old mention and every old link for everybody else.
+//
+// Backfilled from the handle, so nobody has to do anything and every
+// existing password still goes with the name it always went with -- but
+// only for accounts somebody can sign in to. An imported author is a
+// name on a story, not an account, and is left without one, which is why
+// the index is unique only where the column is set.
+//
+// It runs down here rather than with the other user columns because the
+// backfill reads is_placeholder, and that column is db-review's.
+ensureColumn('users', 'login_name', 'TEXT');
+db.exec('UPDATE users SET login_name = username WHERE login_name IS NULL AND is_placeholder = 0');
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_login_name ON users(login_name) WHERE login_name IS NOT NULL');
+
+
 
 // One-time migration: older versions of this app gated registration with a
 // single static code stored in data/invite-code.txt (valid forever, for

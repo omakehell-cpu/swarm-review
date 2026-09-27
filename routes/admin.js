@@ -11,7 +11,7 @@ const models = require('../models');
 const views = require('../views');
 const wiki = require('../lib/wiki');
 const backups = require('../lib/backup');
-const { SECURE_COOKIES, logEvent, sendError } = require('./shared');
+const { NAME_PATTERN, SECURE_COOKIES, isReservedName, logEvent, sendError } = require('./shared');
 async function handleAdminPage(req, res, user, query) {
   const users = models.listUsersForAdmin();
   const activeInviteCode = models.getActiveInviteCode();
@@ -98,10 +98,10 @@ async function handleAdminCreateNamedInvite(req, res, user) {
   const body = await parseBody(req);
   const username = (body.username || '').trim().toLowerCase();
 
-  if (!/^[a-zA-Z0-9_-]{3,30}$/.test(username)) {
+  if (!NAME_PATTERN.test(username)) {
     return redirect(res, '/admin?notice=Invalid username for the invite (3-30 characters, letters/numbers/_/-).');
   }
-  if (username === models.DELETED_USER_USERNAME) {
+  if (isReservedName(username)) {
     return redirect(res, '/admin?notice=That username is reserved.');
   }
   if (models.getUserByUsername(username)) {

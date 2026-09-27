@@ -13,8 +13,8 @@ function loginPage({ error, notice } = /** @type {{ error?: string, notice?: str
         <h1>Log in</h1>
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
         <form method="post" action="/login">
-          <label>Username<input type="text" name="username" required autofocus></label>
-          <label>Password<input type="password" name="password" required></label>
+          <label>Sign-in name<input type="text" name="username" required autofocus autocomplete="username"></label>
+          <label>Password<input type="password" name="password" required autocomplete="current-password"></label>
           <button class="btn" type="submit">Log in</button>
         </form>
         <p class="muted">No account yet? <a href="/register">Register</a></p>
@@ -33,8 +33,9 @@ function registerPage({ error, values = /** @type {FormValues} */ ({}) } = /** @
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
         <form method="post" action="/register">
           <label>Display name<input type="text" name="displayName" value="${escapeHtml(values.displayName || '')}" required></label>
-          <label>Username<input type="text" name="username" value="${escapeHtml(values.username || '')}" required pattern="[a-zA-Z0-9_\\-]{3,30}"></label>
-          <label>Password<input type="password" name="password" required minlength="8"></label>
+          <label>Username<input type="text" name="username" value="${escapeHtml(values.username || '')}" required pattern="[a-zA-Z0-9_\\-]{3,30}" autocomplete="username"></label>
+          <p class="hint">Your handle: the <code>@name</code> a note calls you by and the address of your page. It is also what you sign in with to begin with &mdash; that half you can change later, in Account.</p>
+          <label>Password<input type="password" name="password" required minlength="8" autocomplete="new-password"></label>
           <label>Invite code<input type="text" name="inviteCode" value="${escapeHtml(values.inviteCode || '')}" required></label>
           <button class="btn" type="submit">Create account</button>
         </form>

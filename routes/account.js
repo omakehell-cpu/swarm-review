@@ -6,7 +6,7 @@ const { parseBody, sendHtml, redirect } = require('../lib/util');
 const auth = require('../auth');
 const models = require('../models');
 const views = require('../views');
-const { logEvent, login, siteOrigin, tagIdsFromBody } = require('./shared');
+const { NAME_PATTERN, isReservedName, logEvent, login, siteOrigin, tagIdsFromBody } = require('./shared');
 async function handleAccountPage(req, res, user, query) {
   const notice = query.get('notice') || null;
   sendHtml(res, 200, views.accountPage({
@@ -83,6 +83,51 @@ async function handleAccountNameSubmit(req, res, user) {
   redirect(res, '/account?notice=Name changed. It shows on everything you have written, not just what you write next.');
 }
 
+// The name you type into the login box, which is nobody else's business.
+//
+// It used to be the same field as the @name on your page, so it could not
+// move without taking every old mention and every old link with it. They
+// are two columns now (see db.js), and this changes only the one the
+// login reads: your page keeps its address and "@luis" in a note written
+// last year still means you.
+//
+// The password is asked for because this is the half of the credential
+// that is not secret, and somebody who walks past an unlocked screen
+// should not be able to change what its owner has to type tomorrow.
+async function handleAccountLoginNameSubmit(req, res, user) {
+  const body = await parseBody(req);
+  const loginName = (body.loginName || '').trim().toLowerCase();
+  const again = (message, status) => sendHtml(res, status, views.accountPage({
+    user, error: message, errorIn: 'login-name',
+    groups: models.listTagsGrouped(),
+    hiddenTagIds: models.listUserHiddenTagIds(user.id),
+    streak: models.writingStreak(user.id, user.daily_goal),
+    origin: siteOrigin(req),
+  }));
+
+  if (!auth.verifyPassword(body.currentPassword || '', user.password_hash)) {
+    return again('Password is incorrect, so nothing was changed.', 401);
+  }
+  if (loginName === (user.login_name || user.username)) {
+    return again('That is already the name you sign in with.', 400);
+  }
+  if (!NAME_PATTERN.test(loginName)) {
+    return again('A sign-in name is 3-30 characters: letters, numbers, _ and - only.', 400);
+  }
+  if (isReservedName(loginName)) {
+    return again('That name is reserved.', 400);
+  }
+  if (models.loginNameTaken(loginName, user.id)) {
+    return again('Somebody else is already that, either to sign in or on their page.', 409);
+  }
+
+  models.setLoginName(user.id, loginName);
+  // No value in the log: an admin has a reason to know the account was
+  // renamed, and no reason to be told what to type into its login box.
+  logEvent(user, 'login-name-changed');
+  redirect(res, '/account?notice=Sign-in name changed. Use it the next time you log in -- everything else, including your page and how the group sees you, is exactly where it was.#sign-in');
+}
+
 async function handleAccountReadingSubmit(req, res, user) {
   const body = await parseBody(req);
   models.setReadingPrefs(user.id, { readFirst: body.readFirst === '1', plainNames: body.plainNames === '1' });
@@ -106,6 +151,7 @@ const routes = [
   ['POST', '/account/password', (c) => handleAccountPasswordSubmit(c.req, c.res, c.user)],
   ['POST', '/account/hidden-tags', (c) => handleHiddenTagsSubmit(c.req, c.res, c.user)],
   ['POST', '/account/name', (c) => handleAccountNameSubmit(c.req, c.res, c.user)],
+  ['POST', '/account/sign-in-name', (c) => handleAccountLoginNameSubmit(c.req, c.res, c.user)],
   ['POST', '/account/reading', (c) => handleAccountReadingSubmit(c.req, c.res, c.user)],
   ['POST', '/account/goal', (c) => handleAccountGoalSubmit(c.req, c.res, c.user)],
   ['POST', /^\/account\/feed\/(new|off)$/, (c) => handleAccountFeedSubmit(c.req, c.res, c.user, c.m[1])],
@@ -113,6 +159,7 @@ const routes = [
 
 module.exports = {
   handleAccountFeedSubmit,
+  handleAccountLoginNameSubmit,
   handleAccountGoalSubmit,
   handleAccountNameSubmit,
   handleAccountPage,
