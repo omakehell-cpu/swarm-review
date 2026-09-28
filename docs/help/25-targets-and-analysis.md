@@ -96,6 +96,24 @@ as day zero: an undated chapter stays off the line rather than being
 dragged to the front of it. Anything with words but no number is listed
 underneath, waiting for one.
 
+### Dating the whole story at once
+
+You do not have to open every chapter to date it. **Put things on the
+line**, at the top of the timeline page, lists every chapter in the order
+it is told and every event, each with the same two fields, and **Save the
+dates** keeps them all in one go.
+
+The day can be counted from the row above, which is how "the next
+morning" gets written down without doing the sum on day 412:
+
+- **+1** -- one day after the row above. **+0** is the same day.
+- **-10** -- ten days before it: a flashback.
+- A plain number is just that day.
+
+A chapter's date is changed by whoever wrote it, or by the story's owner;
+an event's, by anybody who writes in the story. Rows you may not change are
+shown and not offered.
+
 ### The drawing
 
 Above the list the same things are drawn on one line, left to right, in

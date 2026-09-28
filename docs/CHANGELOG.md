@@ -4,12 +4,17 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
-## 2026-09-28 — Story notes, and leaving dialogue alone
+## 2026-09-28 — Story notes, a timeline you can write on, and dialogue left alone
 
 ### Story notes
 
 - **The story bible is now called *story notes*.** It was never a bible: it is the notes you keep on who and what is in a story -- people, places, ships, events. Everything in it is where it was; only the name has changed, on the buttons, the tabs, the pages and the help.
 - The help pages moved with it: *Story notes*, and *Your first characters, step by step*. The old links still get there.
+
+### The timeline
+
+- **Date the whole story from the timeline.** *Put things on the line*, at the top of the timeline page, lists every chapter and every event with its two fields, and saves them all at once -- no more opening each chapter to give it a day.
+- **A day can be counted from the row above**: *+1* is the next day, *+0* the same day, *-10* ten days back. "The next morning" no longer needs the sum done on day 412.
 
 ### The writing checks
 

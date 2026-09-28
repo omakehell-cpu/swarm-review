@@ -2,7 +2,7 @@
 
 const { chaptersNewToMe, mentionsOf, pendingOnMyChapters, repliesToMe } = require('./reading');
 const { reviewQueueFor } = require('./reviews');
-const { auth, db } = require('./shared');
+const { auth, cleanDay, cleanLabel, db } = require('./shared');
 // The order chapters are told in and the order things happen in are two
 // different orders, and the gap between them is where a long book with a
 // lot of people in it goes wrong. This reads both and puts them side by
@@ -13,7 +13,7 @@ const { auth, db } = require('./shared');
 // gets an empty timeline and a sentence saying so, not an error.
 function storyTimeline(storyId) {
   const chapters = db.prepare(`
-    SELECT id, chapter_number, title, story_when, story_day, arc_title
+    SELECT id, chapter_number, title, story_when, story_day, arc_title, author_id
       FROM chapters
      WHERE story_id = ? AND archived_at IS NULL
      ORDER BY chapter_number
@@ -59,6 +59,7 @@ function storyTimeline(storyId) {
       url: `/chapters/${c.id}`,
       order: c.chapter_number,
       kind: 'chapter',
+      authorId: c.author_id,
     };
     (item.day === null || item.day === undefined ? undated : placed).push(item);
   }
@@ -162,6 +163,91 @@ function timelineNeighbours(entityId) {
   return { before: ask('<', 'DESC'), after: ask('>', 'ASC') };
 }
 
+
+// ---------- putting things on the line, from the timeline itself ----------
+
+// Dating a story one chapter form at a time is how nobody ever dates a
+// story. The timeline page takes the whole list at once instead, and a day
+// can be written relative to the row above it: "+2" is two days after
+// whatever came before, "-10" a flashback ten days back, "+0" the same
+// day. That is how a writer thinks about it -- "the next morning" --
+// and it saves doing the arithmetic on day 412.
+//
+// Each row counts from the nearest row above it that ended up with a day.
+// A relative day with nothing above it to count from stays empty rather
+// than being counted from zero: undated is not day zero.
+/**
+ * @param {{ day?: any }[]} rows in the order they were shown
+ * @returns {(number|null)[]}
+ */
+function resolveDays(rows) {
+  const out = [];
+  let previous = null;
+  for (const row of rows) {
+    const text = String(row.day == null ? '' : row.day).trim();
+    let day;
+    const rel = /^([+-])\s*(\d+)$/.exec(text);
+    if (rel && text[0] === '+') day = previous === null ? null : previous + Number(rel[2]);
+    else if (rel && previous !== null) day = previous - Number(rel[2]);
+    else day = cleanDay(text);
+    out.push(day);
+    if (day !== null) previous = day;
+  }
+  return out;
+}
+
+/**
+ * Writes the dates sent from the timeline page. Each row names what it is
+ * ("c12" a chapter, "e5" an entry); anything not in this story, or that
+ * this person may not change, is passed over rather than trusted.
+ * @param {number} storyId
+ * @param {{ key: string, when?: string, day?: any, end?: any }[]} rows
+ * @param {{ chapter: (c: any) => boolean, entry: (e: any) => boolean }} may
+ * @returns {number} how many rows changed
+ */
+function setTimelineDates(storyId, rows, may) {
+  const chapters = new Map(db.prepare('SELECT id, author_id, story_when, story_day FROM chapters WHERE story_id = ? AND archived_at IS NULL').all(storyId).map((c) => [c.id, c]));
+  const entries = new Map(db.prepare('SELECT id, story_when, story_day, story_day_end FROM story_entities WHERE story_id = ?').all(storyId).map((e) => [e.id, e]));
+  const chapterRows = rows.filter((r) => /^c\d+$/.test(r.key));
+  const entryRows = rows.filter((r) => /^e\d+$/.test(r.key));
+  // Chapters and entries are two lists on the page, so "+2" counts within
+  // its own list: the row above an entry is an entry.
+  const days = new Map();
+  for (const list of [chapterRows, entryRows]) {
+    resolveDays(list).forEach((day, i) => days.set(list[i], day));
+  }
+  const setChapter = db.prepare('UPDATE chapters SET story_when = ?, story_day = ? WHERE id = ?');
+  const setEntry = db.prepare("UPDATE story_entities SET story_when = ?, story_day = ?, story_day_end = ?, updated_at = datetime('now') WHERE id = ?");
+  let changed = 0;
+  db.exec('BEGIN');
+  try {
+    for (const row of rows) {
+      const id = Number(row.key.slice(1));
+      const when = cleanLabel(row.when);
+      const day = days.get(row) ?? null;
+      if (row.key[0] === 'c') {
+        const c = chapters.get(id);
+        if (!c || !may.chapter(c)) continue;
+        if (c.story_when === when && c.story_day === day) continue;
+        setChapter.run(when, day, id);
+        changed++;
+      } else if (row.key[0] === 'e') {
+        const e = entries.get(id);
+        if (!e || !may.entry(e)) continue;
+        const endDay = cleanDay(row.end);
+        const end = day === null || endDay === null || endDay <= day ? null : endDay;
+        if (e.story_when === when && e.story_day === day && e.story_day_end === end) continue;
+        setEntry.run(when, day, end, id);
+        changed++;
+      }
+    }
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  return changed;
+}
 
 /** Every date label this story has used, so they settle into one shape. */
 const listStoryWhens = (storyId) => db.prepare(`
@@ -292,5 +378,7 @@ module.exports = {
   feedItemsFor,
   getUserByFeedToken,
   listStoryWhens,
+  resolveDays,
+  setTimelineDates,
   storyTimeline,
 };

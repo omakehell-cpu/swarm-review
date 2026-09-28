@@ -133,9 +133,35 @@ async function handleTimeline(req, res, user, storyId) {
     timeline.placed = timeline.placed.filter((item) => item.type !== 'entry');
     timeline.undated = timeline.undated.filter((item) => item.type !== 'entry');
   }
+  const canWrite = models.canWriteInStory(story, user);
   sendHtml(res, 200, views.timelinePage({
-    user, story, timeline, canWrite: models.canWriteInStory(story, user),
+    user, story, timeline, canWrite,
+    whens: canWrite ? models.listStoryWhens(storyId) : [],
+    notice: new URL(req.url, 'http://x').searchParams.get('notice') || '',
   }));
+}
+
+// The whole story dated from one form on the timeline page. A chapter's
+// date is its writer's to change, or the owner's, who arranges the story;
+// an entry's is anybody's who writes in the story, as the rest of it is.
+async function handleTimelineDates(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (!models.canWriteInStory(story, user)) return sendError(res, 403, 'Only the people who write this story can date it.', user);
+  const body = await parseBody(req);
+  const list = (name) => [].concat(body[name] === undefined ? [] : body[name]);
+  const keys = list('key');
+  const whens = list('when');
+  const days = list('day');
+  const ends = list('end');
+  // Every row sends all four, "end" included, so the lists stay in step.
+  const rows = keys.map((key, i) => ({ key: String(key), when: whens[i], day: days[i], end: ends[i] }));
+  const changed = models.setTimelineDates(storyId, rows, {
+    chapter: (c) => c.author_id === user.id || story.author_id === user.id,
+    entry: () => true,
+  });
+  const notice = changed ? `${changed} ${changed === 1 ? 'date' : 'dates'} saved.` : 'Nothing had changed.';
+  redirect(res, `/stories/${storyId}/timeline?notice=${encodeURIComponent(notice)}`);
 }
 
 // ---------- the outline (Scrivener's outliner, in this app's shape) ----------
@@ -387,6 +413,7 @@ const routes = [
   ['GET', /^\/stories\/(\d+)\/download\.(md|txt|docx|pdf|epub)$/, (c) => handleCompile(c.req, c.res, c.user, Number(c.m[1]), c.m[2], c.url.searchParams)],
   ['GET', /^\/stories\/(\d+)\/analysis$/, (c) => handleAnalysis(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/timeline$/, (c) => handleTimeline(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/stories\/(\d+)\/timeline$/, (c) => handleTimelineDates(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/outline$/, (c) => handleOutline(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['POST', /^\/stories\/(\d+)\/outline\/order$/, (c) => handleOutlineOrder(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/dictionary$/, (c) => handleGetStoryDictionary(c.req, c.res, c.user, Number(c.m[1]))],
@@ -413,6 +440,7 @@ module.exports = {
   handleRemoveStoryDictionaryWord,
   handleStoryPage,
   handleTimeline,
+  handleTimelineDates,
   handleUnarchiveStory,
   routes,
 };

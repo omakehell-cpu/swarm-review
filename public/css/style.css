@@ -2795,6 +2795,22 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 }
 .tl-back .tl-day { color: var(--text); }
 .timeline-loose .tl-row { border-bottom-style: dashed; }
+/* Dating the whole story from the timeline page: one row per chapter or
+   entry, the two fields the forms have, and a table that scrolls inside
+   its own box on a narrow screen rather than pushing the page sideways. */
+.timeline-edit summary { cursor: pointer; }
+.timeline-edit summary .side-head { display: inline; }
+.timeline-edit form { overflow-x: auto; }
+.timeline-dates { width: 100%; border-collapse: collapse; margin: var(--s-5) 0; font-size: var(--t-sm); }
+.timeline-dates caption { text-align: left; font-weight: 600; padding-bottom: var(--s-2); }
+.timeline-dates th, .timeline-dates td { text-align: left; padding: var(--s-1) var(--s-3) var(--s-1) 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.timeline-dates th[scope="row"] { font-weight: 500; }
+.timeline-dates { table-layout: fixed; min-width: 34em; }
+.timeline-dates thead th:first-child { width: 28%; }
+.timeline-dates thead th:nth-child(n+3) { width: 8em; }
+.timeline-dates input[name="when"] { width: 100%; min-width: 10em; }
+.timeline-dates input[name="day"], .timeline-dates input[name="end"] { width: 6em; }
+.timeline-dates tr.is-readonly { color: var(--text-muted); }
 @media (max-width: 620px) {
   .tl-row, .tl-gap { grid-template-columns: 3.5rem 1fr; }
   .tl-flag { grid-column: 2; }
@@ -4052,7 +4068,7 @@ mark.wa-sentence, mark.wa-word { border-radius: 0; }
    own, the same tick in a box, and unticked until somebody asks. */
 .wa-panel-option {
   display: flex; align-items: center; gap: var(--s-3); align-self: flex-start; cursor: pointer;
-  padding: var(--s-1) 0; border: 0; background: none; font: inherit; font-size: var(--t-xs); color: var(--text-muted);
+  min-height: 28px; padding: var(--s-1) 0; border: 0; background: none; font: inherit; font-size: var(--t-xs); color: var(--text-muted);
 }
 .wa-panel-option:hover { color: var(--text); }
 .wa-panel-option .wa-pcard-box { width: 12px; height: 12px; background: transparent; border-color: var(--text-muted); }

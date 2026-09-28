@@ -68,3 +68,64 @@ test('the page draws it, and an event says where it sits', async () => {
   assert.match(entry, new RegExp(`Before it</span> <a href="/bible/${ids.blackout}">`));
   assert.match(entry, /list="relation-words"/);
 });
+
+// ---- dating the story from the timeline page -------------------------
+
+test('a day can be counted from the row above', () => {
+  const days = (list) => Array.from(models.resolveDays(list.map((day) => ({ day }))));
+  assert.deepStrictEqual(days(['10', '+2', '+0', '-5', '', '+1']), [10, 12, 12, 7, null, 8]);
+  assert.deepStrictEqual(days(['+3', '4', '+1']), [null, 4, 5], 'nothing above to count from stays undated');
+  assert.deepStrictEqual(days(['x', '0', '+1']), [null, 0, 1], 'day zero is a day');
+});
+
+test('the timeline page dates the whole story in one go', async () => {
+  // Two more chapters, so there is a row above to count from.
+  for (const title of ['Two', 'Three']) {
+    await ana.request(`/stories/${storyId}/chapters/new`, { method: 'POST', ...multipart([['title', title], ['summary', ''], ['content', `Chapter ${title}.`]]) });
+  }
+  const [one, two, three] = models.listChaptersForStory(storyId);
+  const page = await (await ana.request(`/stories/${storyId}/timeline`)).text();
+  assert.match(page, /Put things on the line/);
+  assert.match(page, new RegExp(`name="key" value="c${two.id}"`));
+  assert.match(page, new RegExp(`name="key" value="e${ids.later}"`), 'an undated event is offered too');
+
+  const res = await ana.request(`/stories/${storyId}/timeline`, {
+    method: 'POST',
+    ...form([
+      ['key', `c${one.id}`], ['end', ''], ['when', 'The first night'], ['day', '1'],
+      ['key', `c${two.id}`], ['end', ''], ['when', 'The next morning'], ['day', '+1'],
+      ['key', `c${three.id}`], ['end', ''], ['when', ''], ['day', '-10'],
+      ['key', `e${ids.later}`], ['when', 'Much later'], ['day', '40'], ['end', '44'],
+    ]),
+  });
+  assert.strictEqual(res.status, 302);
+  assert.match(res.headers.get('location'), /notice=/);
+  const byId = (id) => models.listChaptersForStory(storyId).find((c) => c.id === id);
+  assert.strictEqual(byId(one.id).story_when, 'The first night');
+  assert.strictEqual(byId(two.id).story_day, 2);
+  assert.strictEqual(byId(three.id).story_day, -8, 'a flashback, counted back from the row above');
+  const later = models.getStoryEntity(ids.later);
+  assert.strictEqual(later.story_day, 40);
+  assert.strictEqual(later.story_day_end, 44);
+  assert.strictEqual(models.storyTimeline(storyId).outOfOrder, 1, 'and the flashback is marked as told out of order');
+});
+
+test('a chapter is dated by its writer or the owner, and nobody from outside', async () => {
+  const auth = require('../auth');
+  models.createUser({ username: 'luis', displayName: 'Luis', passwordHash: auth.hashPassword(PASSWORD), isAdmin: false });
+  const luis = makeClient(app.base);
+  await luis.login('luis', PASSWORD);
+  const one = models.listChaptersForStory(storyId)[0];
+
+  const outsider = await luis.request(`/stories/${storyId}/timeline`, { method: 'POST', ...form([['key', `c${one.id}`], ['end', ''], ['when', ''], ['day', '99']]) });
+  assert.strictEqual(outsider.status, 403);
+  assert.ok(!(await (await luis.request(`/stories/${storyId}/timeline`)).text()).includes('Put things on the line'));
+
+  // A coauthor can date the entries, but not a chapter somebody else wrote.
+  models.addStoryCoauthor(storyId, models.getUserByUsername('luis').id, models.getUserByUsername('ana').id);
+  await luis.request(`/stories/${storyId}/timeline`, { method: 'POST', ...form([['key', `c${one.id}`], ['end', ''], ['when', ''], ['day', '99'], ['key', `e${ids.later}`], ['when', ''], ['day', '41'], ['end', '']]) });
+  assert.strictEqual(models.listChaptersForStory(storyId)[0].story_day, 1);
+  assert.strictEqual(models.getStoryEntity(ids.later).story_day, 41);
+  const theirs = await (await luis.request(`/stories/${storyId}/timeline`)).text();
+  assert.ok(!theirs.includes(`value="c${one.id}"`), 'and the chapter is shown to them, not offered');
+});

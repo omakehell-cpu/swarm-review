@@ -381,7 +381,55 @@ function timelineChart(timeline) {
     </figure>`;
 }
 
-function timelinePage({ user, story, timeline, canWrite = false }) {
+// Dating the whole story in one place: every chapter in reading order, then
+// every entry that belongs on a timeline, each with the same two fields the
+// chapter and entry forms have. A day can be counted from the row above
+// ("+2"), which is how "the next morning" gets written down without doing
+// the sum. A row this person may not change is shown, not offered.
+function timelineDatesForm(story, timeline, user, whens) {
+  const all = timeline.placed.concat(timeline.undated);
+  const chapters = all.filter((i) => i.type === 'chapter').sort((a, b) => a.order - b.order);
+  const entries = all.filter((i) => i.type === 'entry')
+    .sort((a, b) => (a.day ?? Infinity) - (b.day ?? Infinity) || String(a.title).localeCompare(String(b.title)));
+  if (!chapters.length && !entries.length) return '';
+  const mayChapter = (c) => c.authorId === user.id || story.author_id === user.id;
+  const val = (v) => (v === null || v === undefined ? '' : escapeHtml(String(v)));
+  const row = (item, editable, withEnd) => {
+    const name = escapeHtml(item.title);
+    if (!editable) {
+      return `<tr class="is-readonly"><th scope="row">${name}</th><td>${escapeHtml(item.when || '')}</td><td>${val(item.day)}</td>${withEnd ? `<td>${val(item.end)}</td>` : ''}</tr>`;
+    }
+    return `
+      <tr>
+        <th scope="row">${name}<input type="hidden" name="key" value="${item.key}">${withEnd ? '' : '<input type="hidden" name="end" value="">'}</th>
+        <td><input type="text" name="when" value="${escapeHtml(item.when || '')}" maxlength="80" list="known-whens" aria-label="When ${name} happens, in the story's words"></td>
+        <td><input type="text" name="day" value="${val(item.day)}" inputmode="numeric" size="6" aria-label="Day number for ${name}, or +N from the row above"></td>
+        ${withEnd
+    ? `<td><input type="text" name="end" value="${val(item.end)}" inputmode="numeric" size="6" aria-label="Until day, for ${name}, if it lasts"></td>`
+    : ''}
+      </tr>`;
+  };
+  const table = (caption, items, editable, withEnd) => (items.length ? `
+    <table class="timeline-dates">
+      <caption>${caption}</caption>
+      <thead><tr><th scope="col">What</th><th scope="col">When this happens</th><th scope="col">Day</th>${withEnd ? '<th scope="col">Until day</th>' : ''}</tr></thead>
+      <tbody>${items.map((i) => row(i, editable(i), withEnd)).join('')}</tbody>
+    </table>` : '');
+  const nothingDated = !timeline.placed.length;
+  return `
+    <details class="chart chart-wide timeline-edit"${nothingDated ? ' open' : ''}>
+      <summary><h2 class="side-head">Put things on the line</h2></summary>
+      <form method="post" action="/stories/${story.id}/timeline">
+        <p class="muted chart-note">The words are what the story calls the moment; the day is what puts it in order. Write a day as <strong>+2</strong> for two days after the row above, <strong>+0</strong> for the same day, or <strong>-10</strong> for ten days before -- a flashback. Leave it empty and nothing is assumed.</p>
+        ${table('Chapters, in the order they are told', chapters, mayChapter, false)}
+        ${table('Events and entries in the story notes', entries, () => true, true)}
+        ${whens.length ? `<datalist id="known-whens">${whens.map((v) => `<option value="${escapeHtml(v)}"></option>`).join('')}</datalist>` : ''}
+        <p><button class="btn" type="submit">Save the dates</button></p>
+      </form>
+    </details>`;
+}
+
+function timelinePage({ user, story, timeline, canWrite = false, whens = [], notice = '' }) {
   const { placed, undated } = timeline;
   const rows = placed.map((item) => timelineRow(item, { showGap: true })).join('');
   const nothing = !placed.length && !undated.length;
@@ -399,8 +447,10 @@ function timelinePage({ user, story, timeline, canWrite = false }) {
         </div>
         ${storyViewSwitch(story)}
       </div>
+      ${notice ? `<p class="flash info" role="status">${escapeHtml(notice)}</p>` : ''}
+      ${canWrite ? timelineDatesForm(story, timeline, user, whens) : ''}
       ${nothing ? `
-        <p class="muted">Nothing has a date yet. Chapters take one under <strong>Details</strong> in the editor, and entries in the story notes under <strong>When this happens</strong> -- a word for what the story calls the moment, a number to put it in line, and for an event that lasts, the day it ends. Date two things and this page starts working.</p>`
+        <p class="muted">Nothing has a date yet. Chapters take one ${canWrite ? '<strong>above</strong>, or ' : ''}under <strong>Details</strong> in the editor, and entries in the story notes under <strong>When this happens</strong> -- a word for what the story calls the moment, a number to put it in line, and for an event that lasts, the day it ends. Date two things and this page starts working.</p>`
     : `
         <p class="outline-totals">
           <span>${timeline.dated} of ${timeline.chapters} chapter${timeline.chapters === 1 ? '' : 's'} dated</span>
@@ -413,7 +463,7 @@ function timelinePage({ user, story, timeline, canWrite = false }) {
         ${undated.length ? `
           <section class="chart chart-wide">
             <h2 class="side-head">Not on the line yet</h2>
-            <p class="muted chart-note">These are events, or say when they happen, but have no day number to sort by${canWrite ? ' -- give them one on the entry, under When this happens' : ''}.</p>
+            <p class="muted chart-note">These are events, or say when they happen, but have no day number to sort by${canWrite ? ' -- give them one under Put things on the line, above' : ''}.</p>
             <ol class="timeline timeline-loose">${undated.map((item) => timelineRow(item, { showGap: false })).join('')}</ol>
           </section>` : ''}`}`,
   });
