@@ -5425,3 +5425,20 @@ label.adv-check input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18
 }
 /* The names under a story are links of their own, above the row's link. */
 .story-wide-by a, .story-table-by a { position: relative; z-index: 1; }
+
+/* Split or merge: every paragraph a choice, its first line enough to know
+   it by, and the scene breaks set apart because they are where a chapter
+   most often wants to end. */
+.split-section { margin-top: var(--s-8); }
+.split-form fieldset { border: 0; padding: 0; margin: 0 0 var(--s-5); }
+.split-form legend { font-weight: 600; padding: 0; }
+.split-points { list-style: none; padding: 0; margin: var(--s-3) 0 0; max-height: 60vh; overflow-y: auto; border: 1px solid var(--border); }
+.split-point { border-bottom: 1px solid var(--border); }
+.split-point:last-child { border-bottom: 0; }
+.split-point label { display: flex; flex-direction: row; gap: var(--s-3); align-items: baseline; padding: var(--s-2) var(--s-3); cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: var(--t-md); color: var(--text); }
+.split-point input[type="radio"] { width: 16px; height: 16px; flex: 0 0 16px; margin: 0; align-self: center; }
+.split-point label:hover { background: var(--bg-sunken); }
+.split-line { font-family: var(--font-prose); }
+.split-point.is-break .split-break { font-weight: 600; text-transform: uppercase; font-size: var(--t-xs); letter-spacing: var(--label-tracking); }
+/* The line picked opens the new chapter, so the cut is drawn above it. */
+.split-point:has(input:checked) { background: var(--bg-sunken); border-top: 2px solid var(--text); }

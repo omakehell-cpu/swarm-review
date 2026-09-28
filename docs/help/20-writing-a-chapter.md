@@ -211,6 +211,29 @@ will want in six months.
 Next to it is **Analysis**, which counts the same draft instead of listing
 it -- [what that page shows](/help/targets-and-analysis).
 
+## Splitting a chapter, or merging two
+
+A chapter that has grown into two, or two that turn out to be one: **More
+→ Split or merge**, on the chapter page, moves where the chapter ends.
+
+- **Split it in two.** Pick the paragraph the new chapter starts at -- the
+  first line of each is listed, and a scene break is offered as a place of
+  its own -- and give the new chapter a title. It goes straight after this
+  one with the same point of view, strand, stage and date, and the
+  chapters after it move down one.
+- **Merge the next chapter into it.** The next chapter's text goes on the
+  end of this one, and the next chapter is archived, not deleted.
+
+Either way, the notes still waiting go with the words they are about: a
+note on the second half of a split chapter is on the same words in the new
+chapter, and a merge brings them back. Nothing is rewritten: the chapter
+gets a new version, so its old shape is still in the history. Anybody who
+had read the chapter before a split has read both halves.
+
+It is the chapter's writer who can do it, and a merge needs both chapters
+to be theirs. With unpublished writing waiting in the editor, publish it or
+throw it away first, so the chapter being cut is the one you mean.
+
 ## The whole story in one file
 
 At the foot of the story page: the entire thing as one **.pdf**, **.epub**,

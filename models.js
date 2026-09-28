@@ -29,6 +29,7 @@ const modules = [
   ['bible', require('./models/bible')],
   ['bibleEdits', require('./models/bible-edits')],
   ['chapters', require('./models/chapters')],
+  ['split', require('./models/split')],
   ['writing', require('./models/writing')],
   ['imports', require('./models/imports')],
   ['storyGlossary', require('./models/story-glossary')],

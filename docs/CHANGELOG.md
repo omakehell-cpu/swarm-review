@@ -4,12 +4,17 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
-## 2026-09-28 — Story notes, a timeline you can write on, and dialogue left alone
+## 2026-09-28 — Split and merge chapters, story notes, a timeline you can write on
 
 ### Story notes
 
 - **The story bible is now called *story notes*.** It was never a bible: it is the notes you keep on who and what is in a story -- people, places, ships, events. Everything in it is where it was; only the name has changed, on the buttons, the tabs, the pages and the help.
 - The help pages moved with it: *Story notes*, and *Your first characters, step by step*. The old links still get there.
+
+### Chapters
+
+- **Split a chapter in two, or merge two into one**, from *More → Split or merge* on the chapter page. Pick the paragraph (or the scene break) the new chapter starts at; the chapters after it move down one. Merging puts the next chapter's text on the end of this one and archives it.
+- **The notes go with their words.** A note waiting on the second half of a split chapter is on the same words in the new chapter; a merge brings it back. The old shape is kept as a version, and somebody who had read the chapter is not told the new half is new.
 
 ### The timeline
 
