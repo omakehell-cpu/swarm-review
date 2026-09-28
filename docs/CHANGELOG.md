@@ -4,12 +4,19 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
-## 2026-09-28 — Split and merge chapters, story notes, a timeline you can write on
+## 2026-09-28 — A plan for the story, split and merge chapters, story notes, a timeline you can write on
 
 ### Story notes
 
 - **The story bible is now called *story notes*.** It was never a bible: it is the notes you keep on who and what is in a story -- people, places, ships, events. Everything in it is where it was; only the name has changed, on the buttons, the tabs, the pages and the help.
 - The help pages moved with it: *Story notes*, and *Your first characters, step by step*. The old links still get there.
+
+### The plan
+
+- **Plan a story before you write it.** *Plan*, on the story page, is the scaffold: the arcs the story is built from, and chapters planned but not written, in the order they will be read. Only the people writing the story see it.
+- **Plan a chapter** with a working title and what happens in it, anywhere in the story; **Write it** opens it in the editor with its notes as the summary and puts it where it was planned. Write them in any order.
+- **Arcs inside arcs**, as deep as the story is built, each able to start or end on a chapter nobody has written yet. An arc asks what happens in it, what is different at the end, and why it matters to the whole story -- and says so when it has not been told.
+- The top level is still the *Arc* on a chapter: the compiled story's headings, the analysis and the chapter form all work as before, and stay in step with the plan.
 
 ### Chapters
 

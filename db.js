@@ -637,6 +637,8 @@ ensureColumn('story_entity_images', 'focus_y', 'INTEGER NOT NULL DEFAULT 50');
 // asking for a read, drafts, the welcome card. Its own file (db-review.js)
 // so this one stays under the length the structure test allows.
 require('./db-review')(db, ensureColumn);
+// The plan: nested arcs and chapters not written yet (db-plan.js).
+require('./db-plan')(db);
 
 // The name somebody signs in with, which starts as the handle they
 // registered under and then goes its own way.

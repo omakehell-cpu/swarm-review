@@ -70,13 +70,19 @@ async function handleDeleteChapter(req, res, user, chapterId) {
   redirect(res, `/stories/${storyId}/archived-chapters`);
 }
 
-async function handleNewChapterPage(req, res, user, storyId) {
+async function handleNewChapterPage(req, res, user, storyId, query) {
   const story = models.getStoryById(storyId);
   if (!story) return sendError(res, 404, 'Story not found', user);
   if (!models.canWriteInStory(story, user)) return sendError(res, 403, "Only the story's authors can add chapters.", user);
   const chapters = models.listChaptersForStory(storyId);
+  // Writing a chapter from the plan: its title and notes to start from, and
+  // the place in the story it was planned for.
+  const slot = query && query.get('plan') ? models.getPlanSlot(Number(query.get('plan'))) : null;
+  const values = slot && slot.story_id === storyId
+    ? { planSlot: slot.id, title: slot.title, summary: slot.notes, position: models.planSlotPosition(slot.id) }
+    : {};
   sendHtml(res, 200, views.newChapterPage({
-    user, story, chapters, values: {}, vocabulary: storyVocabulary(storyId),
+    user, story, chapters, values, vocabulary: storyVocabulary(storyId),
     castList: besideCast(story, user),
   }));
 }
@@ -97,7 +103,7 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   const storyWhen = (body.storyWhen || '').trim();
   const storyDay = body.storyDay;
   let content = (body.content || '').replace(/\r\n/g, '\n');
-  const values = { title, summary, content, position: body.position, stage, arcTitle, pov, strand, storyWhen, storyDay };
+  const values = { title, summary, content, position: body.position, stage, arcTitle, pov, strand, storyWhen, storyDay, planSlot: body.planSlot };
 
   try {
     const uploaded = await extractUploadedText(files.file);
@@ -120,6 +126,9 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   const chapter = insertBeforeNumber !== null
     ? models.insertChapterAt({ storyId, position: insertBeforeNumber, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand, storyWhen, storyDay })
     : models.createChapter({ storyId, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand, storyWhen, storyDay });
+  // Written from the plan: the planned chapter is this one now.
+  const slot = body.planSlot ? models.getPlanSlot(Number(body.planSlot)) : null;
+  if (slot && slot.story_id === storyId) models.planSlotWritten(slot.id, chapter);
   if (arcTitle) {
     logEvent(user, 'arc-started', { subject: arcTitle, href: `/stories/${storyId}`, storyId, chapterId: chapter.id });
   }
@@ -262,6 +271,9 @@ async function handleChapterPage(req, res, user, chapterId, query) {
       ? castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches, models.listChapterExclusions(chapterId))
       : wiki.findWikiMatches,
     missingNames: models.canWriteInStory(story, user) ? models.missingNamesInChapter(chapterId) : [],
+    // Which arcs of the plan this chapter is in, for the people who write
+    // it: the plan is theirs, and a smaller arc's name can be a spoiler.
+    arcs: models.canWriteInStory(story, user) ? models.arcsOfChapter(chapter) : [],
     entities: bibleVisible ? models.listStoryEntities(chapter.story_id) : [],
     leftBehind: models.notesLeftBehind(chapterId),
     appliedFrom: appliedNote && appliedNote.suggestion != null ? appliedNote.author_name : null,
@@ -583,7 +595,7 @@ const routes = [
   ['POST', /^\/chapters\/(\d+)\/react$/, (c) => handleReaction(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/place$/, (c) => handleReadingPlace(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/summary$/, (c) => handleChapterSummary(c.req, c.res, c.user, Number(c.m[1]))],
-  ['GET', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterPage(c.req, c.res, c.user, Number(c.m[1]))],
+  ['GET', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterPage(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['POST', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterSubmit(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/chapters\/(\d+)$/, (c) => handleChapterPage(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['GET', /^\/chapters\/(\d+)\/versions\/new$/, (c) => redirect(c.res, `/chapters/${c.m[1]}/edit`)],

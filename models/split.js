@@ -162,6 +162,10 @@ function splitChapter({ chapterId, at, title }) {
     }
     carryPendingNotes(latest, firstVersion);
 
+    // An arc that ended on this chapter ended at the end of its text, which
+    // is the end of the new chapter now.
+    db.prepare('UPDATE story_arcs SET end_ref = ? WHERE story_id = ? AND end_ref = ?').run(`c${secondId}`, chapter.story_id, `c${chapterId}`);
+
     // Whoever had read the chapter has read both halves of it.
     db.prepare(`
       INSERT OR IGNORE INTO chapter_reads (chapter_id, user_id, version_number, read_at)
@@ -242,8 +246,15 @@ function mergeWithNext({ chapterId }) {
         SELECT id, arc_title FROM chapters WHERE story_id = ? AND chapter_number > ? AND archived_at IS NULL
         ORDER BY chapter_number LIMIT 1
       `).get(chapter.story_id, next.chapter_number);
-      if (after && !after.arc_title) db.prepare('UPDATE chapters SET arc_title = ? WHERE id = ?').run(next.arc_title, after.id);
+      if (after && !after.arc_title) {
+        db.prepare('UPDATE chapters SET arc_title = ? WHERE id = ?').run(next.arc_title, after.id);
+        db.prepare('UPDATE story_arcs SET start_ref = ? WHERE story_id = ? AND start_ref = ? AND parent_id IS NULL').run(`c${after.id}`, chapter.story_id, `c${next.id}`);
+      }
     }
+    // Smaller arcs that started or ended on it start or end on the text
+    // it is part of now.
+    db.prepare('UPDATE story_arcs SET start_ref = ? WHERE story_id = ? AND start_ref = ? AND parent_id IS NOT NULL').run(`c${chapterId}`, chapter.story_id, `c${next.id}`);
+    db.prepare('UPDATE story_arcs SET end_ref = ? WHERE story_id = ? AND end_ref = ?').run(`c${chapterId}`, chapter.story_id, `c${next.id}`);
     // Archived, and moved out of the running order: its number goes past
     // the end and everything after it moves up one, so the story reads
     // 1, 2, 3 rather than 1, 3 with a hole where the merge was.

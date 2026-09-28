@@ -64,19 +64,22 @@ test.before(async () => {
   client = makeClient(app.base);
   await client.login(ME.username, ME.password);
 
+  const slot = models.addPlanSlot({ storyId: story.id, title: 'Not written yet', notes: 'Something happens.', afterRef: `c${chapter.id}` });
+  const arc = models.addArc({ storyId: story.id, title: 'Book One', startRef: `c${chapter.id}`, purpose: 'It starts it.' });
   const wiki = models.listWikiPages()[0];
   pages = [
     '/', '/tags', '/glossary', '/glossary?view=all', '/glossary?kind=person',
     `/glossary/${encodeURIComponent(wiki.title)}`,
     `/glossary/${encodeURIComponent(wiki.title)}/beside`,
     '/help', '/help/changelog', '/help/reading-and-reviewing', '/help/writing-a-chapter',
-    '/help/targets-and-analysis', '/help/story-notes', '/help/your-first-characters', '/help/glossary',
+    '/help/targets-and-analysis', '/help/the-plan', '/help/story-notes', '/help/your-first-characters', '/help/glossary',
     '/help/tags-and-search', '/help/your-account', '/help/finding-your-way',
     '/help/writing-checks', '/help/screen-readers', '/help/keys', '/help/questions',
     '/account', '/admin', '/search?q=kessler', '/search?q=%22service+spine%22',
     '/stories/new', `/users/${ME.username}`,
     `/stories/${story.id}`, `/stories/${story.id}/edit`, `/stories/${story.id}/outline`,
-    `/stories/${story.id}/analysis`, `/stories/${story.id}/timeline`,
+    `/stories/${story.id}/analysis`, `/stories/${story.id}/timeline`, `/stories/${story.id}/plan`,
+    `/plan/arcs/${arc.id}/edit`, `/plan/slots/${slot.id}/edit`, `/stories/${story.id}/chapters/new?plan=${slot.id}`,
     `/stories/${story.id}/bible`, `/stories/${story.id}/bible/new`, `/stories/${story.id}/bible/fields`,
     `/stories/${story.id}/chapters/new`, `/stories/${story.id}/download.md`, `/stories/${story.id}/download.txt`,
     `/chapters/${chapter.id}`, `/chapters/${chapter.id}/edit`, `/chapters/${chapter.id}/beside`, `/chapters/${chapter.id}/split`,

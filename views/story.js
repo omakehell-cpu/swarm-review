@@ -277,6 +277,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
         </div>
       </section>
       <nav class="story-tools" aria-label="About this story">
+        ${canWrite ? `<a href="/stories/${story.id}/plan">Plan</a>` : ''}
         <a href="/stories/${story.id}/outline">Outline</a>
         <a href="/stories/${story.id}/analysis">Analysis</a>
         <a href="/stories/${story.id}/timeline">Timeline</a>

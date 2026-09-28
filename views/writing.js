@@ -177,7 +177,8 @@ function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), gr
 
 /** @param {{ user: Row, story: Row, chapters?: Row[], castList?: Row[], error?: string|null, vocabulary?: any, values?: FormValues }} props */
 function newChapterPage({ user, story, chapters = [], castList = [], error, vocabulary = {}, values = /** @type {FormValues} */ ({}) }) {
-  const next = chapters.length + 1;
+  // Where it will go: the planned place when there is one, otherwise the end.
+  const next = values.position && values.position !== 'end' ? Number(values.position) : chapters.length + 1;
   return layout({
     title: `New chapter - ${story.title}`,
     user,
@@ -190,6 +191,8 @@ function newChapterPage({ user, story, chapters = [], castList = [], error, voca
         <p class="writer-kicker">${escapeHtml(story.title)} &middot; chapter ${next}</p>
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
         <form method="post" action="/stories/${story.id}/chapters/new" class="chapter-form" id="${FORM_ID}" enctype="multipart/form-data">
+          ${values.planSlot ? `<input type="hidden" name="planSlot" value="${escapeHtml(String(values.planSlot))}">
+          <p class="flash info">Writing <strong>${escapeHtml(values.title || '')}</strong> from the plan. Its notes are in the summary, under Details; it goes where it was planned.</p>` : ''}
           <label class="title-field"><span class="sr-only">Chapter title</span><input type="text" name="title" value="${escapeHtml(values.title || '')}" required placeholder="Chapter title" autofocus></label>
           ${mainField({ content: values.content || '', placeholder: 'Write the chapter here...', storyId: story.id })}
           ${detailsDrawer(`

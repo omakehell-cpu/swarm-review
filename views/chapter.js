@@ -411,7 +411,7 @@ function reviewBlock({ chapter, isChapterAuthor, requests = [], mine = null, peo
     </section>`;
 }
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '', place = null, mentionable = [], reactions = null, notice = '', following = null }) {
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '', place = null, mentionable = [], reactions = null, notice = '', following = null, arcs = [] }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -470,6 +470,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
         // line of facts under the title rather than two.
         isChapterAuthor ? ` &middot; ${readersLine(readers, currentVersion.version_number)}` : ''
       }</p>
+      ${arcs.length ? `<p class="muted chapter-arcs"><a href="/stories/${chapter.story_id}/plan#arc-${arcs[arcs.length - 1].id}">In the plan</a>: ${arcs.map((a) => escapeHtml(a.title)).join(' &rsaquo; ')}</p>` : ''}
       ${chapter.summary ? `<p class="summary">${escapeHtml(chapter.summary)}</p>` : ''}
       <div class="version-bar">
         ${versions.length > 1 ? `

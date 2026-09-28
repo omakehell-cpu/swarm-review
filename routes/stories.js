@@ -175,6 +175,7 @@ async function handleOutline(req, res, user, storyId, query) {
     // Only the story's own author moves chapters around, the same rule the
     // up/down buttons have always had.
     canOrder: story.author_id === user.id,
+    canWrite: models.canWriteInStory(story, user),
     castByChapter: models.canReadBible(story, user) ? models.castByChapter(storyId) : new Map(),
     stats: models.getStoryStats(storyId),
     notice: query.get('notice') || '',

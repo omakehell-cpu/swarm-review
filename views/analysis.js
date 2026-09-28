@@ -130,7 +130,7 @@ function analysisPage({ user, story, analysis, canWrite = false }) {
           <h1>Analysis</h1>
           <p class="muted">What <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> is made of, counted. Nothing here is set by hand: it is the chapters, the story notes and the reviewers' notes, added up.</p>
         </div>
-        ${storyViewSwitch(story)}
+        ${storyViewSwitch(story, { canWrite })}
       </div>
       ${goalBar(analysis.words, story.word_goal)}
       <div class="chart-grid">
@@ -203,12 +203,13 @@ function outlineRow(chapter, { cast = [], canOrder = false, index = 0, total = 0
 }
 
 
-// The three ways of looking at a story that is already written: the list,
-// the count, and the calendar. One switch, so adding a fourth does not
+// The ways of looking at a story: the plan (for the people writing it),
+// the list, the count, and the calendar. One switch, so adding a fourth does not
 // mean finding three copies of it.
-function storyViewSwitch(story) {
+function storyViewSwitch(story, { canWrite = false } = {}) {
   return `
     <div class="page-head-actions">
+      ${canWrite ? `<a class="btn ghost small" href="/stories/${story.id}/plan">Plan</a>` : ''}
       <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
       <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
       <a class="btn ghost small" href="/stories/${story.id}/timeline">Timeline</a>
@@ -445,7 +446,7 @@ function timelinePage({ user, story, timeline, canWrite = false, whens = [], not
           <h1>Timeline</h1>
           <p class="muted">When things happen in <a href="/stories/${story.id}">${escapeHtml(story.title)}</a>, which is not the order they are told in. Nothing here is guessed: it is what has been given a day, and what the story notes tie together.</p>
         </div>
-        ${storyViewSwitch(story)}
+        ${storyViewSwitch(story, { canWrite })}
       </div>
       ${notice ? `<p class="flash info" role="status">${escapeHtml(notice)}</p>` : ''}
       ${canWrite ? timelineDatesForm(story, timeline, user, whens) : ''}
@@ -469,7 +470,7 @@ function timelinePage({ user, story, timeline, canWrite = false, whens = [], not
   });
 }
 
-function outlinePage({ user, story, chapters = [], castByChapter = new Map(), canOrder = false, stats = null, notice = '' }) {
+function outlinePage({ user, story, chapters = [], castByChapter = new Map(), canOrder = false, canWrite = false, stats = null, notice = '' }) {
   const rows = chapters.map((c, i) => outlineRow(c, {
     cast: castByChapter.get(c.id) || [], canOrder, index: i, total: chapters.length,
   })).join('');
@@ -488,7 +489,7 @@ function outlinePage({ user, story, chapters = [], castByChapter = new Map(), ca
           <h1>Outline</h1>
           <p class="muted">Every chapter of <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> on one line: what happens, who is in it, how long it is, and what is still waiting on somebody.${canOrder ? ' Drag a row to move a chapter.' : ''}</p>
         </div>
-        ${storyViewSwitch(story)}
+        ${storyViewSwitch(story, { canWrite })}
       </div>
       ${notice ? `<p class="flash info">${escapeHtml(notice)}</p>` : ''}
       <p class="outline-totals">
