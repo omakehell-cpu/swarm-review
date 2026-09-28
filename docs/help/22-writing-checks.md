@@ -40,6 +40,13 @@ on a yellow one rather than a muddy mix of the two.
   say it is hidden. The card keeps counting either way. Hard and very hard
   sentences are two cards, so you can keep the red ones and put away the
   yellow.
+- **Leave dialogue alone**, under the cards: people do not talk in
+  correct prose, and a character's bad grammar is often the point of the
+  line. Tick it and nothing inside quotation marks is marked or counted --
+  no adverbs, no passives, no long sentences. Two things still are:
+  **spelling**, because a typo is a typo wherever it is (put dialect words
+  like *gonna* in the story's dictionary), and **dialogue tags**, which
+  are about the narration around the quote. Off until you tick it.
 - **Writing style checks**, the switch at the top of the panel: **Off**
   takes every mark out of the text while you draft; **On** brings them
   back. A first draft and a second pass are different jobs.

@@ -4047,7 +4047,20 @@ mark.wa-sentence, mark.wa-word { border-radius: 0; }
 .wa-pcard-craft .wa-pcard-box { width: 12px; height: 12px; }
 .wa-pcard-craft .wa-pcard-box::after { left: 2.5px; top: 0; width: 3.5px; height: 7px; }
 .wa-panel-writenote { display: none; margin: 0; color: var(--text-muted); }
-.wa-panel-writing .wa-panel-cards, .wa-panel-writing .wa-panel-craft { display: none; }
+.wa-panel-writing .wa-panel-cards, .wa-panel-writing .wa-panel-craft, .wa-panel-writing .wa-panel-option { display: none; }
+/* A way of reading the checks rather than one of them: no colour of its
+   own, the same tick in a box, and unticked until somebody asks. */
+.wa-panel-option {
+  display: flex; align-items: center; gap: var(--s-3); align-self: flex-start; cursor: pointer;
+  padding: var(--s-1) 0; border: 0; background: none; font: inherit; font-size: var(--t-xs); color: var(--text-muted);
+}
+.wa-panel-option:hover { color: var(--text); }
+.wa-panel-option .wa-pcard-box { width: 12px; height: 12px; background: transparent; border-color: var(--text-muted); }
+.wa-panel-option .wa-pcard-box::after { content: none; left: 2.5px; top: 0; width: 3.5px; height: 7px; }
+.wa-panel-option.is-on { color: var(--text); }
+.wa-panel-option.is-on .wa-pcard-box { background: var(--text); border-color: var(--text); }
+.wa-panel-option.is-on .wa-pcard-box::after { content: ""; }
+.wa-panel-option:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 .wa-panel-writing .wa-panel-writenote { display: block; }
 
 /* Folded above the text, on a phone: one line that opens. */

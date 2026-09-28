@@ -4,6 +4,11 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
+## 2026-09-28 — Leave dialogue alone
+
+- **The writing checks can leave dialogue alone.** Tick *Leave dialogue alone* under the cards in the checks panel and nothing inside quotation marks is marked or counted: people do not speak correct prose, and a character's grammar is often the point of the line. Spelling and dialogue tags are still checked. Off until you tick it.
+- A line of dialogue is now recognised across its sentences (*"Stop. Put it down."*), in curly quotes, and in British single quotes.
+
 ## 2026-09-27 — The name you sign in with is your own business
 
 - **You can change the name you log in with**, under *Account → The name you sign in with*, with your password beside it.

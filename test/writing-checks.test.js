@@ -216,6 +216,63 @@ test('an unclosed quote protects the rest of the line, the way dialogue runs on'
   assert.deepStrictEqual(kinds('"I know what I saw and I heard it too', 'filter'), []);
 });
 
+// ---- leaving dialogue alone -------------------------------------------
+
+const spans = (text) => Array.from(wa.dialogueSpans(text), (s) => text.slice(s[0], s[1]));
+
+test('dialogue is found across sentences, in straight and curly quotes', () => {
+  assert.deepStrictEqual(spans('"Stop. Put it down." She did.'), ['"Stop. Put it down."']);
+  assert.deepStrictEqual(spans('“Go,” she said. “Now.”'), ['“Go,”', '“Now.”']);
+  assert.deepStrictEqual(spans('‘I don’t know,’ he said.'), ['‘I don’t know,’']);
+});
+
+test('an open quote runs to the end of its paragraph and no further', () => {
+  const text = '"I went down to the hold\nThe hold was empty.';
+  assert.deepStrictEqual(spans(text), ['"I went down to the hold']);
+});
+
+test('an apostrophe is not the start of a line of dialogue', () => {
+  assert.deepStrictEqual(spans("The captain's log. The Swarm's ships."), []);
+});
+
+const shown = (text, quiet) => {
+  const settings = {};
+  for (const id of wa.CHECK_ORDER) settings[id] = true;
+  settings['quiet-dialogue'] = quiet;
+  return Array.from(wa.shownRanges(run(text).ranges, settings), (r) => ({ kind: r.kind, text: text.slice(r.start, r.end) }));
+};
+
+test('with dialogue left alone, its grammar is not marked but the narration still is', () => {
+  const text = '"It was really very badly done," she said. He walked slowly to the door.';
+  const loud = shown(text, false).map((r) => r.text);
+  assert.ok(loud.includes('really'), 'off by default: the dialogue is checked like anything else');
+  const quiet = shown(text, true);
+  assert.ok(!quiet.some((r) => r.text === 'really' || r.text === 'badly'), 'nothing inside the quotes');
+  assert.ok(quiet.some((r) => r.text === 'slowly' || r.text === 'walked slowly'), 'the narration is still checked');
+});
+
+test('a long line of dialogue is not a long sentence, a long narration still is', () => {
+  const speech = '"' + Array.from({ length: 30 }, () => 'and then we went').join(' ') + '," he said.';
+  assert.ok(shown(speech, false).some((r) => r.kind.startsWith('sentence-')));
+  assert.ok(!shown(speech, true).some((r) => r.kind.startsWith('sentence-')));
+  const narration = Array.from({ length: 30 }, () => 'and then we went').join(' ') + '.';
+  assert.ok(shown(narration, true).some((r) => r.kind.startsWith('sentence-')));
+});
+
+test('the dialogue-tag check is about the narration, so it stays', () => {
+  const text = '"Get out," he snarled.';
+  assert.ok(shown(text, true).some((r) => r.kind === 'dialogue'));
+});
+
+test('the counts leave dialogue out too when it is left alone', () => {
+  const text = '"It was really very badly done," she said. He walked quietly home.';
+  const { stats } = run(text);
+  const settings = { 'quiet-dialogue': true };
+  const quiet = wa.quietStats(stats, settings);
+  assert.ok(stats.adverb > quiet.adverb, 'the adverbs in the dialogue are no longer counted');
+  assert.strictEqual(wa.quietStats(stats, { 'quiet-dialogue': false }), stats);
+});
+
 // ---- turning the diagnosis into a rewrite ----------------------------
 
 const suggestionFor = (text, kind) => {
