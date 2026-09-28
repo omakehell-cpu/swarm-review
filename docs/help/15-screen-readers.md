@@ -13,7 +13,7 @@ A chapter's text is one region, named after the chapter, so the rotor's landmark
 On your **Account** page, under **Reading chapters**, two settings are for exactly this:
 
 - **Open every chapter in Read mode**: the notes, the underlined passages and the list of who is in the chapter stay out of the way until you switch to Review.
-- **No links in the prose**: names from the story's bible and the shared glossary are read as the words they are, not as links.
+- **No links in the prose**: names from the story's notes and the shared glossary are read as the words they are, not as links.
 
 Both follow you to every device you sign in on. The second can also be changed for the moment from **Aa** on the chapter page, under **Names**: *Linked* or *Plain*.
 

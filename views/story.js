@@ -280,7 +280,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
         <a href="/stories/${story.id}/outline">Outline</a>
         <a href="/stories/${story.id}/analysis">Analysis</a>
         <a href="/stories/${story.id}/timeline">Timeline</a>
-        ${bibleVisible ? `<a href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
+        ${bibleVisible ? `<a href="/stories/${story.id}/bible">Story notes${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
         ${isStoryAuthor ? `<a href="/stories/${story.id}/edit">Edit details</a>` : ''}
         ${isStoryAuthor ? `
           <details class="menu story-more">

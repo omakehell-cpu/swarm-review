@@ -28,7 +28,7 @@ const SHOWN = {
   'suggestion-applied': 'put a suggested rewrite into',
   'review-requested': 'asked for a read of',
   'review-done': 'finished reading',
-  'bible-entry-added': 'added to the bible:',
+  'bible-entry-added': 'added to the story notes:',
   joined: 'joined the group',
 };
 

@@ -67,7 +67,7 @@ test.after(() => app.stop());
 
 test('an empty bible says what it is for', async () => {
   const html = await (await owner.request(`/stories/${storyId}/bible`)).text();
-  assert.match(html, /The bible is empty/);
+  assert.match(html, /The story notes are empty/);
   assert.match(html, /Add the first entry/);
 });
 
@@ -183,7 +183,7 @@ test('two entries cannot share a name, and a shared alias is reported', async ()
     method: 'POST', ...form([['name', 'kessler'], ['kind', 'person']]),
   });
   assert.strictEqual(clash.status, 400);
-  assert.match(await clash.text(), /already in this bible/);
+  assert.match(await clash.text(), /already in the story notes/);
 
   await owner.request(`/bible/${pradoId}`, {
     method: 'POST',
@@ -520,13 +520,13 @@ test('names the bible has never heard of are offered, to writers only', async ()
     ]),
   });
   const html = await (await owner.request(`/chapters/${chapterTwo}`)).text();
-  assert.match(html, /not in the bible/);
+  assert.match(html, /not in the story notes/);
   assert.match(html, /Iona Vell/);
   assert.match(html, new RegExp(`action="/stories/${storyId}/bible/quick"`));
 
   // A reader is not offered somebody else's homework.
   const readerHtml = await (await reader.request(`/chapters/${chapterTwo}`)).text();
-  assert.ok(!readerHtml.includes('not in the bible'));
+  assert.ok(!readerHtml.includes('not in the story notes'));
 });
 
 test('one click writes the entry, and the name stops being offered', async () => {
@@ -647,7 +647,7 @@ test('the editor can ask about a draft that has not been saved', async () => {
 
 test('the bible is in the site search', async () => {
   const html = await (await owner.request('/search?q=' + encodeURIComponent('Iona'))).text();
-  assert.match(html, /Bibles/);
+  assert.match(html, /Story notes/);
   assert.match(html, new RegExp(`href="/bible/${models.getStoryEntityByName(storyId, 'Iona Vell').id}"`));
 });
 

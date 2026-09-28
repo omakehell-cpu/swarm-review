@@ -47,7 +47,7 @@ function glossaryDirectoryPage({ user, totalPages = 0, kinds = { world: 0, stori
     body: 'This is the shared universe: its people, ships, places and history, brought in from the wiki. Once it is here, names in every chapter link to it, and a card tells you who someone is without leaving the page.',
     action: user.is_admin
       ? '<a class="btn" href="/admin#wiki">Bring the wiki in</a>'
-      : 'An admin brings it in from the admin page. Until then, each story\'s own bible still works.',
+      : 'An admin brings it in from the admin page. Until then, each story\'s own story notes still work.',
   })}`,
     });
   }

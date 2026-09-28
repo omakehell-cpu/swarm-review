@@ -4,7 +4,14 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
-## 2026-09-28 — Leave dialogue alone
+## 2026-09-28 — Story notes, and leaving dialogue alone
+
+### Story notes
+
+- **The story bible is now called *story notes*.** It was never a bible: it is the notes you keep on who and what is in a story -- people, places, ships, events. Everything in it is where it was; only the name has changed, on the buttons, the tabs, the pages and the help.
+- The help pages moved with it: *Story notes*, and *Your first characters, step by step*. The old links still get there.
+
+### The writing checks
 
 - **The writing checks can leave dialogue alone.** Tick *Leave dialogue alone* under the cards in the checks panel and nothing inside quotation marks is marked or counted: people do not speak correct prose, and a character's grammar is often the point of the line. Spelling and dialogue tags are still checked. Off until you tick it.
 - A line of dialogue is now recognised across its sentences (*"Stop. Put it down."*), in curly quotes, and in British single quotes.

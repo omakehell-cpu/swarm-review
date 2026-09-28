@@ -1,19 +1,19 @@
-# Your first cast, step by step
+# Your first characters, step by step
 
-From a blank story to a cast the chapters know by name: starting the story,
+From a blank story to characters the chapters know by name: starting the story,
 writing people down, fixing what the app guessed wrong, and using them while
 you read and write.
 
 This walks through one small story, *The Long Watch*, from the first word.
 Every step is a click or two, and nothing here has to be done in this order
--- the [story bible](/help/story-bible) page explains each part in full.
+-- the [story notes](/help/story-notes) page explains each part in full.
 
 ## 1. Start the story and write the first chapter
 
 **+ Write**, in the top bar. The page is the story itself: its title written
 large, the first chapter's title under it, and the text. Just write. Names
 you have not written down yet may be underlined as possible misspellings --
-that stops the moment they are in the bible.
+that stops the moment they are in the story notes.
 
 @figure first-cast-01-new-story.png | A new story: the title, the first chapter's title, and the text. Kessler and Prado are underlined because nobody has told the app who they are yet.
 
@@ -25,7 +25,7 @@ about the story and its tags; both can be changed later.
 ## 2. Let the chapter tell you who is in it
 
 On the chapter page, switch to **Revise**. Under the text is a list headed
-*names here are not in the bible*: every proper name in the chapter that
+*names here are not in the story notes*: every proper name in the chapter that
 nothing accounts for yet. It is guesswork, so it will offer a few things that
 are not names -- those get **Not a name** and are never offered again.
 
@@ -33,7 +33,7 @@ For each real one, pick what it is -- **Person**, **Place**, **Group**,
 **Thing** or **Event** -- type its one line if you have it, and press
 **Add**.
 
-@figure first-cast-03-missing-names.png | Every name the chapter uses that the bible does not know. Mara Kessler is about to go in as a person, with her one line.
+@figure first-cast-03-missing-names.png | Every name the chapter uses that the story notes do not know. Mara Kessler is about to go in as a person, with her one line.
 
 Add the full name, not the short one. Once *Mara Kessler* is in, *Kessler* on
 its own is her too -- the list says so and puts that row away -- and the same
@@ -46,13 +46,13 @@ If a name in the list is somebody you already have under another name --
 *the Old Man* for Kessler -- choose them under **Another name for** instead of
 a kind, and it becomes one of their aliases.
 
-## 3. Look at the bible
+## 3. Look at the story notes
 
-**Bible**, on the story page, is every entry, with the chapters each one is
+**Story notes**, on the story page, are every entry, with the chapters each one is
 named in -- worked out from the text, so you never tick a box to say who was
 in a scene.
 
-@figure first-cast-05-bible.png | The bible after one chapter: people, places and groups, each with the chapters it appears in.
+@figure first-cast-05-bible.png | The story notes after one chapter: people, places and groups, each with the chapters it appears in.
 
 ## 4. Fill an entry in where it stands
 
@@ -72,12 +72,12 @@ her brother is also a Kessler -- **Not them** puts it away for her.
 ## 5. Add people while you write
 
 Write the next chapter with **Add chapter** on the story page. Beside the
-text, the **Bible** tab lets you write somebody down without leaving the
+text, the **Story notes** tab lets you write somebody down without leaving the
 editor, and **Names in this draft** lists the new names in what you have
 typed, before it is even saved. *Dr Ilse Varn* comes up as *Ilse Varn*: a form
 of address is not part of the name.
 
-@figure first-cast-08-editor-bible.png | Writing chapter two: the Bible tab offers Ilse Varn, the one new name in the draft.
+@figure first-cast-08-editor-bible.png | Writing chapter two: the Story notes tab offers Ilse Varn, the one new name in the draft.
 
 ## 6. Say what happens to them, and when
 
@@ -88,15 +88,15 @@ in chapter 2: choose *Missing*, *from chapter 2*, **Set**.
 @figure first-cast-09-status.png | Alive at the start, missing from chapter 2.
 
 A reader only ever sees as far as they have read. Somebody on chapter 1 still
-sees her as alive, in the bible and everywhere else.
+sees her as alive, in the story notes and everywhere else.
 
 ## 7. Use them while you read
 
-In **Read**, every name in the bible is a link. Hover over one for its one
+In **Read**, every name in the story notes is a link. Hover over one for its one
 line; click it and the entry opens on a card beside the text, without losing
 your place. On a phone the card comes up from the bottom of the screen.
 
-@figure first-cast-10-linked.png | Chapter one, read: every name in the bible is a link.
+@figure first-cast-10-linked.png | Chapter one, read: every name in the story notes is a link.
 
 The card shows the entry as it stands *in that chapter*. For the people
 writing the story it also tells them what is still to come and carries the
@@ -117,4 +117,4 @@ who appears for the first time.
 - **Merge** two entries that turn out to be the same person, from the foot of
   either one.
 
-All of it is in [the story bible](/help/story-bible).
+All of it is in [the story notes](/help/story-notes).

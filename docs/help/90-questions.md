@@ -51,7 +51,7 @@ unpublished draft.
 
 **The spellchecker keeps marking my characters' names.**
 Click the mark and add the name to the story's dictionary, or put the
-character in the [story bible](/help/story-bible), which adds it for you.
+character in the [story notes](/help/story-notes), which adds it for you.
 
 **The coloured marks are distracting while I draft.**
 Turn **Writing style checks** off, at the top of the checks panel, and

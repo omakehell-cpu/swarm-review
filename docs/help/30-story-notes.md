@@ -1,28 +1,28 @@
-# The story bible
+# Story notes
 
-Keeping a cast of hundreds straight: who they are, who they know, and which
+Keeping hundreds of characters straight: who they are, who they know, and which
 chapters they turn up in.
 
-New to it? [Your first cast, step by step](/help/your-first-cast) walks
+New to it? [Your first characters, step by step](/help/your-first-characters) walks
 through one small story from the first word.
 
-Every story has one, from the **Bible** button on the story page. Anyone who
-can read the story can read its bible, and only the author and coauthors can
+Every story has one, from the **Story notes** button on the story page. Anyone who
+can read the story can read its story notes, and only the author and coauthors can
 change it -- unless the owner has closed it, which is the next section.
 
-@figure bible-index.png | The bible front page: a door per kind, a filter that narrows as you type, and the cast underneath.
+@figure bible-index.png | The story notes' front page: a door per kind, a filter that narrows as you type, and the names underneath.
 
 ## Open or private
 
-A bible holds working notes, and some of them are not things you want your
+The story notes hold working notes, and some of them are not things you want your
 readers holding while they read: who is secretly whose father, who does not
 survive book two, which of them is lying in chapter four.
 
-So the story's owner can close it. The switch is at the top of the bible
+So the story's owner can close it. The switch is at the top of the story notes
 page, and it says which way round things currently are.
 
-**Open** -- the state a bible starts in -- means anyone who can read the
-story can read its bible. **Private** means only the people who write the
+**Open** -- the state story notes start in -- means anyone who can read the
+story can read its story notes. **Private** means only the people who write the
 story can: the button disappears from the story page, the pages answer with
 a plain refusal rather than pretending not to exist, the entries drop out of
 everyone else's search, and the chapters stop linking names or listing who
@@ -30,7 +30,7 @@ is in them. A reader gets the chapter exactly as it was before any of this
 existed.
 
 It is the owner's switch, and only the owner sees it -- a coauthor writes in
-the bible, but who else may read it is the one thing about it that is not
+the story notes, but who else may read it is the one thing about it that is not
 theirs to set. Either way it can be turned back, and nothing is lost by
 closing it.
 
@@ -50,7 +50,7 @@ than they look:
   on the entry page.
 
 Every name you write down also joins the story's spelling dictionary, so the
-editor stops underlining your cast.
+editor stops underlining your characters.
 
 @figure bible-form.png | Also called is what makes the scan honest; the fields under it come from the story's template.
 
@@ -127,7 +127,7 @@ the chapter it happens in -- *dead from chapter 12*. The card beside a
 chapter can set it *from this chapter on*.
 
 **Readers only see as far as they have read.** Somebody who has read up to
-chapter 5 sees whoever dies in chapter 12 alive, in the cast list and on
+chapter 5 sees whoever dies in chapter 12 alive, in the list of names and on
 the entry; a card opened from a chapter shows how that person stands there.
 The people writing the story see all of it, and the card tells them what is
 still to come.
@@ -144,7 +144,7 @@ growing a second one. The card beside a chapter can add one too, under
 ## Pictures
 
 Several per entry, with captions. The **first one is the entry's face** — at
-the top of its page and as a thumbnail in the cast list — so changing the
+the top of its page and as a thumbnail in the list of names — so changing the
 portrait means moving a picture to the front.
 
 PNG, JPEG, GIF and WebP. Large pictures are shrunk in your browser before
@@ -156,12 +156,12 @@ click the spot on the picture and the little square underneath shows you
 the result at the size it will actually be used. The two numbers beside it
 are the same setting typed out, and they work on their own if you would
 rather type than click. *Save crop* keeps it, and the entry's page and the
-cast list are both cut the same way.
+list of names are both cut the same way.
 
 @figure entry-crop.png | Pointing at the face: the pin on the picture, the crop beside it, and the two numbers that are what gets saved.
 
 Entries without a picture keep the same box in the list, with their initial
-in it, so a half-illustrated cast still reads as one column of names.
+in it, so a half-illustrated list still reads as one column of names.
 
 ## When it happens
 
@@ -184,7 +184,7 @@ Two kinds, and you can use both.
 - **A template per kind**, from *Set the fields every entry of a kind is
   asked for* at the foot of the entry form. Every person gets asked for a
   Rank and a Home world; every ship for a Class. That is what makes a big
-  cast comparable instead of a hundred private habits.
+  list comparable instead of a hundred private habits.
 - **Extras on one entry**, for what that entry alone needs. The label box
   offers back every label already used in this story, so "Rank" gets reused
   instead of reinvented as "Grade".
@@ -194,11 +194,11 @@ under it: it stops being asked for and stays where it was answered.
 
 ## Starting from a story that is already written
 
-You do not have to type a hundred forms. The bible finds people you have
+You do not have to type a hundred forms. The story notes find people you have
 written down, but it also **finds the names you have not**: open a chapter
-and look under the text for *names here are not in the bible*. It is
+and look under the text for *names here are not in the story notes*. It is
 guesswork over the prose, so some of it will be wrong — the top of the list
-is usually your cast, and one click writes the entry, with its **one line**
+is usually your characters, and one click writes the entry, with its **one line**
 if you type it in the same row. Names with small words in the middle --
 *Order of the Silent Star*, *Pedro de Alvarado* -- arrive whole.
 
@@ -214,7 +214,7 @@ line: they are linked to the glossary as they are, but one of them may be
 somebody of your own in this story.
 
 A word that is not a name at all gets **Not a name**, and is not offered
-again anywhere in the story. The bible lists what you have put away, at the
+again anywhere in the story. The story notes list what you have put away, at the
 foot of its page under *Words that are not names*, so one clicked by mistake
 can be brought back. The same panel is in the chapter editor, working on
 the draft you have not saved yet. The list is shown in Review, not in Read.

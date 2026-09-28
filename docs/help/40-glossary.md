@@ -8,8 +8,8 @@ The glossary mirrors the wiki. It is **read-only here**: it is written on the
 wiki, and every sync wipes and rewrites this copy. It knows nothing about
 anybody's chapters.
 
-Your own account of your own cast belongs in that story's
-[bible](/help/story-bible) instead, which is the opposite on all three
+Your own account of your own characters belongs in that story's
+[story notes](/help/story-notes) instead, which is the opposite on all three
 counts. A name can honestly live in both — the wiki's public account of a
 ship, and what you privately know about it.
 
@@ -22,7 +22,7 @@ or not.
 There is one exception to *read-only*: every story in this group has a
 page of its own, under **Stories** and filed as *In this group*. Nobody
 writes it. It is made from the story -- who wrote it, where it stands, its
-chapters, and the people in its bible, unless the bible is private -- and
+chapters, and the people in its story notes, unless they are private -- and
 follows it: a new story gets its page straight away, a renamed one moves,
 an archived one leaves. **Open the story** at the top goes back to it.
 

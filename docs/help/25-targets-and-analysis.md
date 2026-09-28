@@ -46,7 +46,7 @@ the **outline**, and they are what the two charts below are counting.
 ## The analysis
 
 **Analysis**, next to *Outline* on the story page. Nothing on it is set by
-hand: it is the chapters, the bible and the notes, added up.
+hand: it is the chapters, the story notes and the reviewers' notes, added up.
 
 @figure analysis-charts.png | Chapter lengths, the weight of each arc, and who the story is told through.
 
@@ -59,10 +59,10 @@ hand: it is the chapters, the bible and the notes, added up.
   the page drawn in red, because it is the only thing there waiting on
   somebody.
 
-At the foot is **who is in what**: every name in the bible against every
+At the foot is **who is in what**: every name in the story notes against every
 chapter, darker where somebody is named more often.
 
-@figure who-is-in-what.png | The cast against the chapters. The last column is how many chapters each one is named in.
+@figure who-is-in-what.png | Every name against the chapters. The last column is how many chapters each one is named in.
 
 It is read out of the chapters themselves, by name and alias, so a row of
 empty squares in the middle of the book is a character who has wandered off
@@ -80,7 +80,7 @@ of people in it quietly goes wrong. **Timeline**, next to *Outline* and
 *Analysis*, puts the second one on a line.
 
 Two fields feed it, both optional, on chapters (*Details* in the
-editor) and on bible entries (*When this happens*):
+editor) and on entries in the story notes (*When this happens*):
 
 - **When this happens** -- what the story calls the moment. "Day 412",
   "Third of Marrow, 1123", "the morning after". Words, for reading.
@@ -89,7 +89,7 @@ editor) and on bible entries (*When this happens*):
   and for the distance between two rows, which is why the gaps are written
   as `+407` rather than as days.
 
-@figure timeline.png | The timeline: chapters and dated bible entries in one line, with the distance between them, and a chapter marked as told out of order.
+@figure timeline.png | The timeline: chapters and dated entries in the story notes in one line, with the distance between them, and a chapter marked as told out of order.
 
 Leaving the number empty means **nobody has said**, which is not the same
 as day zero: an undated chapter stays off the line rather than being
@@ -105,14 +105,14 @@ scale -- to scale, one busy afternoon vanishes next to a ten-year silence
 -- so the real distances stay in the list.
 
 An event can last: give it an **until day** as well and it is drawn as a
-bar from its first day to its last. A relation written in the bible between
+bar from its first day to its last. A relation written in the story notes between
 two dated entries (*leads to*, *happens during*, *sister of*) is drawn as a line
 between them. Point at anything, or move to it with Tab, and it keeps what
 it is tied to -- its relations and the chapters that name it -- while the
 rest steps back. Click it to jump to its row in the list, where the same
 ties are written out.
 
-Every event in the bible is on this page. One with no day number is listed
+Every event in the story notes is on this page. One with no day number is listed
 under *Not on the line yet* until it has one.
 
 A chapter marked **told out of order** is one that goes backwards: it

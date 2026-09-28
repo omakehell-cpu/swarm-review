@@ -13,7 +13,7 @@ that is yours to set. From the top:
   page as the group sees it**.
 - **Reading chapters** -- two settings for reading with nothing in the way:
   *open every chapter in Read mode*, and *no links in the prose* (names
-  from the bible and the glossary read as plain words). See
+  from the story notes and the glossary read as plain words). See
   [with a screen reader](/help/screen-readers) for why they exist; they are
   for anybody.
 - **Writing** -- a target of your own in words a day, and how this week
@@ -204,5 +204,5 @@ here calls out to anywhere except the wiki sync, and that only when an admin
 presses the button.
 
 There is no AI anywhere in this app. The spellchecker is a dictionary, the
-writing checks are rules, and the story bible's scan is a regular
+writing checks are rules, and the story notes' scan is a regular
 expression. Nothing you write is sent anywhere to be read by anything.

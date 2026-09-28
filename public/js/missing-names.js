@@ -24,7 +24,7 @@
     const n = section.querySelectorAll(':scope > .missing-list li:not(.done)').length;
     if (!heading) return;
     heading.textContent = n
-      ? `${n} name${n === 1 ? '' : 's'} here ${n === 1 ? 'is' : 'are'} not in the bible`
+      ? `${n} name${n === 1 ? '' : 's'} here ${n === 1 ? 'is' : 'are'} not in the story notes`
       : 'Every name here is accounted for';
   }
 
@@ -71,8 +71,8 @@
       let said;
       if (/\/not-names$/.test(action)) said = `${name}: not a name. Put away for the whole story.`;
       else if (data.alias) said = `${name} is now another name for ${data.name}.`;
-      else if (data.already) said = `${data.name} was already in the bible.`;
-      else said = `${name} is in the bible, as ${String(chosen || 'an entry').toLowerCase()}.`;
+      else if (data.already) said = `${data.name} was already in the story notes.`;
+      else said = `${name} is in the story notes, as ${String(chosen || 'an entry').toLowerCase()}.`;
 
       if (row) {
         row.classList.add('done');

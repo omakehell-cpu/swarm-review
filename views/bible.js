@@ -121,7 +121,7 @@ function biblePrivacyBlock(story, isOwner) {
   const isPrivate = !!story.bible_private;
   const line = isPrivate
     ? 'Only the people who write this story can see it, and its names do not link in the chapters.'
-    : 'Anyone who can read the story can read its bible.';
+    : 'Anyone who can read the story can read its story notes.';
   return `
     <form method="post" action="/stories/${story.id}/bible/privacy" class="bible-privacy inline-form">
       <span class="ent-badge${isPrivate ? ' status-private' : ''}">${isPrivate ? 'Private' : 'Open'}</span>
@@ -149,7 +149,7 @@ function bibleIndexPage({
        <p class="no-matches" id="glossary-no-matches" hidden>Nothing here matches.</p>`
     : emptyState({
       art: 'sheets',
-      title: total ? 'Nothing of that kind yet' : 'The bible is empty',
+      title: total ? 'Nothing of that kind yet' : 'The story notes are empty',
       body: total
         ? 'Every entry is filed under one kind. Nothing has been filed under this one yet.'
         : 'This is where the people, places and things of the story live -- who they are, who they know, and which chapters they turn up in. The chapters are worked out from the text itself, so an entry starts paying for itself the moment you write it down.',
@@ -157,13 +157,13 @@ function bibleIndexPage({
     });
 
   return layout({
-    title: `Bible &middot; ${story.title}`,
+    title: `Story notes &middot; ${story.title}`,
     user,
     body: `
       <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
       <div class="page-head">
         <div>
-          <h1>Story bible</h1>
+          <h1>Story notes</h1>
           <p class="muted">The people, places and things of <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> &mdash; ${total} entr${total === 1 ? 'y' : 'ies'}. Which chapters each one appears in is read out of the chapters themselves, every time they change.</p>
         </div>
         <div class="page-head-actions">
@@ -201,7 +201,7 @@ function notNamesBlock(story, notNames) {
   return `
     <details class="not-names" id="not-names">
       <summary>Words that are not names (${notNames.length})</summary>
-      <p class="muted">Put away from the chapters' lists of names that are not in the bible. Bring one back and it is offered again.</p>
+      <p class="muted">Put away from the chapters' lists of names that are not in the story notes. Bring one back and it is offered again.</p>
       <ul class="not-names-list">
         ${notNames.map((n) => `
           <li>
@@ -436,7 +436,7 @@ function fieldTemplatePage({ user, story, templates = {}, notice = '' }) {
     title: `Fields &middot; ${story.title}`,
     user,
     body: `
-      <p class="breadcrumb"><a href="/stories/${story.id}/bible">&larr; ${escapeHtml(story.title)} bible</a></p>
+      <p class="breadcrumb"><a href="/stories/${story.id}/bible">&larr; ${escapeHtml(story.title)}: story notes</a></p>
       <div class="writer-card">
         <h1>What every entry says</h1>
         <p class="muted writer-intro">The fields the form should ask for, per kind. Every person gets a Rank and a Home world; every ship a Class. One label per line, in the order you want them asked.</p>
@@ -557,7 +557,7 @@ function entityPage({
 }) {
   const aliasText = aliases.map((a) => escapeHtml(a)).join(', ');
   const deleteWarning = [
-    `Delete ${entity.name} from the bible?`,
+    `Delete ${entity.name} from the story notes?`,
     appearances.length ? ` The list of the ${appearances.length} chapter${appearances.length === 1 ? '' : 's'} it is in goes too (the chapters stay).` : '',
     links.length ? ` ${links.length} relation${links.length === 1 ? '' : 's'} will be removed.` : '',
     images.length ? ` ${images.length} picture${images.length === 1 ? '' : 's'} will be deleted.` : '',
@@ -573,7 +573,7 @@ function entityPage({
     user,
     flash: notice ? { type: 'info', message: notice } : null,
     body: `
-      <p class="breadcrumb"><a href="/stories/${story.id}/bible">&larr; ${escapeHtml(story.title)} bible</a></p>
+      <p class="breadcrumb"><a href="/stories/${story.id}/bible">&larr; ${escapeHtml(story.title)}: story notes</a></p>
       ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
       <div class="page-head entity-head">
         <div class="entity-head-main">
@@ -633,12 +633,12 @@ function entityFormPage({ user, story, entity = null, aliases = [], fields = [],
   const value = (field) => escapeHtml(entity ? entity[field] || '' : '');
   const selected = (field, option) => ((entity ? entity[field] : '') === option ? ' selected' : '');
   return layout({
-    title: entity ? `Edit ${entity.name}` : 'New bible entry',
+    title: entity ? `Edit ${entity.name}` : 'New entry in the story notes',
     user,
     body: `
       <p class="breadcrumb"><a href="${entity ? `/bible/${entity.id}` : `/stories/${story.id}/bible`}">&larr; Back</a></p>
       <div class="writer-card">
-      <h1>${entity ? `Edit ${escapeHtml(entity.name)}` : 'New bible entry'}</h1>
+      <h1>${entity ? `Edit ${escapeHtml(entity.name)}` : 'New entry in the story notes'}</h1>
       <p class="muted writer-intro">An entry is for you, not the reader: who this is, who they know, and which chapters they turn up in. The chapters are worked out from the text -- you only write the rest.</p>
       ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
       <form method="post" action="${entity ? `/bible/${entity.id}` : `/stories/${story.id}/bible`}" class="chapter-form entity-form">
@@ -734,7 +734,7 @@ function missingNamesBlock(names, storyId, returnTo, entities = []) {
   const glossary = names.filter((n) => n.inGlossary);
   return `
     <section class="missing-names">
-      <h2 class="side-head">${own.length ? `${own.length} name${own.length === 1 ? '' : 's'} here ${own.length === 1 ? 'is' : 'are'} not in the bible` : 'Every name here is accounted for'}</h2>
+      <h2 class="side-head">${own.length ? `${own.length} name${own.length === 1 ? '' : 's'} here ${own.length === 1 ? 'is' : 'are'} not in the story notes` : 'Every name here is accounted for'}</h2>
       <p class="muted">Proper names this chapter uses that no entry or dictionary word accounts for. Guesswork, so some of it will be wrong. Add one as a new entry, with its one line if you have it, or as <strong>another name for</strong> somebody already there (Colonel Jack is Jack); <strong>Not a name</strong> puts a false alarm away for the whole story.</p>
       ${own.length ? `<ul class="missing-list">${own.map((n) => missingNameRow(n, storyId, returnTo, entities)).join('')}</ul>` : ''}
       ${glossary.length ? `
@@ -778,12 +778,12 @@ function besidePanel({ chapter = null, story, chapters = [], entities = [], open
     `${c.chapter_number}. ${c.title}`, c.pov || '')).join('')}
           </ul>` : ''}
         ${entities.length ? `
-          <p class="writer-section-label">The bible</p>
-          ${entities.length > 8 ? '<input type="search" class="beside-filter" placeholder="Filter" data-beside-filter aria-label="Filter the bible">' : ''}
+          <p class="writer-section-label">Story notes</p>
+          ${entities.length > 8 ? '<input type="search" class="beside-filter" placeholder="Filter" data-beside-filter aria-label="Filter the story notes">' : ''}
           <ul class="beside-picks" data-beside-list>
             ${entities.map((e) => pick(`/bible/${e.id}`, `/bible/${e.id}/beside`, e.name, e.summary || '')).join('')}
           </ul>` : `
-          <p class="muted">Nothing in <a href="/stories/${story.id}/bible" target="_blank" rel="noopener noreferrer">the bible</a> yet.</p>`}
+          <p class="muted">Nothing in <a href="/stories/${story.id}/bible" target="_blank" rel="noopener noreferrer">the story notes</a> yet.</p>`}
       </div>
     </details>
     <aside class="beside-pane" data-beside-pane hidden aria-live="polite" aria-label="Open beside the editor">
@@ -887,8 +887,8 @@ function besideEntityFragment(entity, {
 // JavaScript drifting away from the first.
 function editorBiblePanel(chapter) {
   return `
-    <aside class="editor-bible" id="editor-bible" data-story-id="${chapter.story_id}" aria-label="Add to the bible">
-      <h2 class="side-head">Bible</h2>
+    <aside class="editor-bible" id="editor-bible" data-story-id="${chapter.story_id}" aria-label="Add to the story notes">
+      <h2 class="side-head">Story notes</h2>
       <p class="muted">Somebody new turned up mid-scene? Write them down here without leaving the chapter.</p>
       <form class="quick-entry" data-quick-entry>
         <input type="text" name="name" placeholder="Name" aria-label="Name" maxlength="${bible.MAX_NAME_LENGTH}" required>
@@ -896,14 +896,14 @@ function editorBiblePanel(chapter) {
           ${bible.KINDS.map((k) => `<option value="${k}">${escapeHtml(bible.KIND_LABELS[k])}</option>`).join('')}
         </select>
         <input type="text" name="summary" placeholder="One line (optional)" aria-label="One line about them (optional)" maxlength="240">
-        <button class="btn ghost small" type="submit">Add to the bible</button>
+        <button class="btn ghost small" type="submit">Add to the story notes</button>
       </form>
       <p class="quick-result" data-quick-result hidden></p>
       <div class="editor-missing">
         <button class="btn ghost small" type="button" data-scan-names>Names in this draft</button>
         <div data-missing-list></div>
       </div>
-      <p class="muted"><a href="/stories/${chapter.story_id}/bible" target="_blank" rel="noopener noreferrer">The whole bible &rarr;</a></p>
+      <p class="muted"><a href="/stories/${chapter.story_id}/bible" target="_blank" rel="noopener noreferrer">All the story notes &rarr;</a></p>
     </aside>`;
 }
 
@@ -920,7 +920,7 @@ function chapterCastBlock(entities, storyId) {
   e.first_chapter != null && e.first_chapter === e.this_chapter ? '<span class="ent-badge first-here">New here</span>' : ''
 }${e.summary ? `<span class="cast-note">${escapeHtml(e.summary)}</span>` : ''}</li>`).join('')}
       </ul>
-      <p class="muted"><a href="/stories/${storyId}/bible">The whole bible &rarr;</a></p>
+      <p class="muted"><a href="/stories/${storyId}/bible">All the story notes &rarr;</a></p>
     </section>`;
 }
 

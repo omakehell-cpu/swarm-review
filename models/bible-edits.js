@@ -27,7 +27,7 @@ const EDITABLE = ['name', 'summary', 'kind', 'role', 'status', 'aliases', 'any_c
  */
 function setEntityField(entityId, field, value, userId) {
   const entity = db.prepare('SELECT * FROM story_entities WHERE id = ?').get(entityId);
-  if (!entity) return { error: 'Not in this bible.' };
+  if (!entity) return { error: 'Not in these story notes.' };
   if (!EDITABLE.includes(field)) return { error: 'That cannot be changed from here.' };
   const aliases = listEntityAliases(entityId);
   const base = {
@@ -47,7 +47,7 @@ function setEntityField(entityId, field, value, userId) {
     const clean = bible.cleanName(value);
     if (!clean) return { error: 'An entry needs a name.' };
     const clash = getStoryEntityByName(entity.story_id, clean);
-    if (clash && clash.id !== entityId) return { error: `${clean} is already in this bible.` };
+    if (clash && clash.id !== entityId) return { error: `${clean} is already in the story notes.` };
     // An alias that is now the name is just the name.
     base.aliases = aliases.filter((a) => a.toLowerCase() !== clean.toLowerCase());
     base.name = clean;

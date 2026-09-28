@@ -706,13 +706,18 @@ test('opening a chapter records that you read it, and the page says so', async (
 test('the help section is readable, and the changelog marks what is new', async () => {
   const index = await (await request('/help')).text();
   assert.match(index, /How to/);
-  assert.match(index, /href="\/help\/story-bible"/);
+  assert.match(index, /href="\/help\/story-notes"/);
   assert.match(index, /href="\/help\/changelog"/);
 
-  const topic = await request('/help/story-bible');
+  // The page's old address still gets there.
+  const moved = await request('/help/story-bible');
+  assert.strictEqual(moved.status, 302);
+  assert.strictEqual(moved.headers.get('location'), '/help/story-notes');
+
+  const topic = await request('/help/story-notes');
   assert.strictEqual(topic.status, 200);
   const html = await topic.text();
-  assert.match(html, /The story bible/);
+  assert.match(html, /Story notes/);
   // Rendered as prose, not printed as markdown source.
   assert.match(html, /<h2[^>]*>/);
   assert.ok(!html.includes('## '), 'the hashes did not survive');

@@ -88,7 +88,7 @@ character; in the narration it is usually just longer.
 
 **Spelling.** A real dictionary. It does not know the names you invented;
 add them to the **story dictionary** from the mark itself or on the story
-page, and names you put in the story bible are added for you.
+page, and names you put in the story notes are added for you.
 
 **Filler words** (craft). *Very*, *really*, *just*, *actually*,
 *basically*, and phrases like *due to the fact that*. Try the sentence

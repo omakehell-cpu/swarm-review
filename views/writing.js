@@ -204,7 +204,7 @@ function newChapterPage({ user, story, chapters = [], castList = [], error, voca
       </div>
       `, sideTabs([
         { id: 'checks', label: 'Checks', html: '', attrs: 'data-checks-slot' },
-        { id: 'bible', label: 'Bible', html: editorBiblePanel({ story_id: story.id }) },
+        { id: 'bible', label: 'Story notes', html: editorBiblePanel({ story_id: story.id }) },
         { id: 'beside', label: 'Beside', html: besidePanel({ story, chapters, entities: castList, open: true }) },
       ]))}
       <script src="/js/nspell.bundle.js"></script>
@@ -350,7 +350,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
   const mainHtml = editorGrid(writerCard, sideTabs([
     { id: 'checks', label: 'Checks', html: '', attrs: 'data-checks-slot' },
     hasComments ? { id: 'notes', label: pendingCount ? `Notes (${pendingCount})` : 'Notes', html: notesPanel } : null,
-    canWrite ? { id: 'bible', label: 'Bible', html: editorBiblePanel(chapter) } : null,
+    canWrite ? { id: 'bible', label: 'Story notes', html: editorBiblePanel(chapter) } : null,
     canWrite ? { id: 'beside', label: 'Beside', html: besidePanel({ chapter, story: { id: chapter.story_id }, chapters: siblings, entities: castList, open: true }) } : null,
   ])) + (hasComments ? `
     <script type="application/json" id="chapter-comments-data">${toScriptJson(commentsData)}</script>` : '');

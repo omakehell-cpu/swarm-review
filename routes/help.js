@@ -2,7 +2,7 @@
 
 /** @typedef {import('../server').RouteContext} RouteContext */
 
-const { sendHtml } = require('../lib/util');
+const { redirect, sendHtml } = require('../lib/util');
 const models = require('../models');
 const views = require('../views');
 const docs = require('../lib/docs');
@@ -26,7 +26,15 @@ async function handleChangelog(req, res, user) {
   sendHtml(res, 200, views.changelogPage({ user: seenUser, releases: docs.listReleases(), unseen }));
 }
 
+// Pages that have been renamed, so an old link -- in a note, a bookmark,
+// last month's changelog -- still lands on the page it meant.
+const MOVED_TOPICS = {
+  'story-bible': 'story-notes',
+  'your-first-cast': 'your-first-characters',
+};
+
 async function handleHelpTopic(req, res, user, slug) {
+  if (MOVED_TOPICS[slug]) return redirect(res, `/help/${MOVED_TOPICS[slug]}`);
   const topic = docs.getHelpTopic(slug);
   if (!topic) return sendError(res, 404, 'No such how-to', user);
   sendHtml(res, 200, views.helpTopicPage({ user, topic, topics: docs.listHelpTopics() }));

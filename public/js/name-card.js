@@ -144,7 +144,7 @@
     card.scrollTop = 0;
     // Where it came from matters to somebody who cannot see which column
     // it landed in: this story's own bible is not the shared glossary.
-    const where = href.indexOf('/bible/') === 0 ? 'from the bible' : 'from the glossary';
+    const where = href.indexOf('/bible/') === 0 ? 'from the story notes' : 'from the glossary';
     say(name
       ? `${name}, ${where}, beside the chapter. Press Escape to go back to the text.`
       : 'Opened beside the chapter. Press Escape to go back to the text.');

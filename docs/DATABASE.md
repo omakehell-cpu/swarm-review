@@ -1,7 +1,7 @@
 # The archive, and the one rule about touching it
 
 `data/swarm-review.sqlite` is the whole app: every chapter, every version,
-every note, the bible and the local copy of the wiki. It is SQLite in WAL
+every note, the story notes and the local copy of the wiki. It is SQLite in WAL
 mode, which means **one writer at a time, and the writer must be on the
 same machine as the file.**
 

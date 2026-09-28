@@ -18,13 +18,13 @@ function bibleGuard(res, user, storyId, { write = false } = {}) {
   const story = models.getStoryById(storyId);
   if (!story) { sendError(res, 404, 'Story not found', user); return null; }
   if (write && !models.canWriteInStory(story, user)) {
-    sendError(res, 403, "Only the story's authors can change its bible.", user);
+    sendError(res, 403, "Only the story's authors can change its story notes.", user);
     return null;
   }
   // A private bible is not a 404 -- pretending it does not exist would be
   // a lie about a button its story page does not show anyway.
   if (!models.canReadBible(story, user)) {
-    sendError(res, 403, "This story's bible is private to the people who write it.", user);
+    sendError(res, 403, "This story's notes are private to the people who write it.", user);
     return null;
   }
   return story;
@@ -34,16 +34,16 @@ function bibleGuard(res, user, storyId, { write = false } = {}) {
 // things every /bible/:id route needs before it can do anything.
 function entityGuard(res, user, entityId, { write = false } = {}) {
   const entity = models.getStoryEntity(entityId);
-  if (!entity) { sendError(res, 404, 'Not in this bible', user); return null; }
+  if (!entity) { sendError(res, 404, 'Not in these story notes', user); return null; }
   const story = models.getStoryById(entity.story_id);
   if (!story) { sendError(res, 404, 'Story not found', user); return null; }
   const canWrite = models.canWriteInStory(story, user);
   if (write && !canWrite) {
-    sendError(res, 403, "Only the story's authors can change its bible.", user);
+    sendError(res, 403, "Only the story's authors can change its story notes.", user);
     return null;
   }
   if (!models.canReadBible(story, user)) {
-    sendError(res, 403, "This story's bible is private to the people who write it.", user);
+    sendError(res, 403, "This story's notes are private to the people who write it.", user);
     return null;
   }
   return { entity, story, canWrite };
@@ -150,7 +150,7 @@ async function handleQuickEntity(req, res, user, storyId) {
   if (sameAs) {
     const target = models.getStoryEntity(Number(sameAs[1]));
     if (!target || target.story_id !== storyId) {
-      return wantsJson ? sendJson(res, 404, { error: 'That entry is not in this bible.' }) : redirect(res, back);
+      return wantsJson ? sendJson(res, 404, { error: 'That entry is not in these story notes.' }) : redirect(res, back);
     }
     models.addEntityAlias(target.id, name, user.id);
     logEvent(user, 'bible-entry-edited', { subject: `${target.name} (${story.title})`, href: `/bible/${target.id}`, storyId });
@@ -249,7 +249,7 @@ async function handleNewEntitySubmit(req, res, user, storyId) {
   if (models.getStoryEntityByName(storyId, fields.name)) {
     return sendHtml(res, 400, views.entityFormPage({
       user, story, ...entityFormExtras(storyId, null),
-      error: `${storyBible.cleanName(fields.name)} is already in this bible.`,
+      error: `${storyBible.cleanName(fields.name)} is already in the story notes.`,
     }));
   }
   const entity = models.createStoryEntity({ ...fields, storyId, createdBy: user.id });
@@ -294,7 +294,7 @@ async function handleEntityImage(req, res, user, imageId) {
   if (!image) return sendError(res, 404, 'No such image', user);
   // A picture is part of the bible it belongs to, and behind the same door.
   if (!models.canReadBible(models.getStoryById(image.entity_story_id), user)) {
-    return sendError(res, 403, "This story's bible is private to the people who write it.", user);
+    return sendError(res, 403, "This story's notes are private to the people who write it.", user);
   }
   const file = entityImages.imagePath(image.filename);
   if (!fs.existsSync(file)) return sendError(res, 404, 'That image is no longer on disk', user);
@@ -375,7 +375,7 @@ async function handleEditEntitySubmit(req, res, user, entityId) {
   if (clash && clash.id !== entity.id) {
     return sendHtml(res, 400, views.entityFormPage({
       user, story, entity, aliases, ...entityFormExtras(story.id, entity),
-      error: `${storyBible.cleanName(fields.name)} is already in this bible.`,
+      error: `${storyBible.cleanName(fields.name)} is already in the story notes.`,
     }));
   }
   const saved = models.updateStoryEntity({ ...fields, entityId, userId: user.id });
@@ -391,7 +391,7 @@ async function handleDeleteEntity(req, res, user, entityId) {
   const { entity, story } = guard;
   models.deleteStoryEntity(entityId);
   logEvent(user, 'bible-entry-deleted', { subject: `${entity.name} (${story.title})`, href: `/stories/${story.id}/bible`, storyId: story.id });
-  redirect(res, `/stories/${story.id}/bible?notice=${encodeURIComponent(`${entity.name} is no longer in the bible.`)}`);
+  redirect(res, `/stories/${story.id}/bible?notice=${encodeURIComponent(`${entity.name} is no longer in the story notes.`)}`);
 }
 
 async function handleAddEntityLink(req, res, user, entityId) {
@@ -406,7 +406,7 @@ async function handleAddEntityLink(req, res, user, entityId) {
     reverseLabel: body.reverse_label,
   });
   if (wantsJson(req)) {
-    if (!linkId) return sendJson(res, 400, { error: 'Pick somebody else in this bible.' });
+    if (!linkId) return sendJson(res, 400, { error: 'Pick somebody else in these story notes.' });
     const other = models.getStoryEntity(Number(body.to), { fresh: false });
     return sendJson(res, 200, { id: linkId, label: String(body.label || '').trim() || 'related to', other: { id: other.id, name: other.name } });
   }
@@ -450,7 +450,7 @@ async function handleBiblePrivacy(req, res, user, storyId) {
   const story = models.getStoryById(storyId);
   if (!story) return sendError(res, 404, 'Story not found', user);
   if (story.author_id !== user.id) {
-    return sendError(res, 403, "Only the story's owner can change who sees its bible.", user);
+    return sendError(res, 403, "Only the story's owner can change who sees its story notes.", user);
   }
   const body = await parseBody(req);
   const isPrivate = body.visibility === 'private';
@@ -459,8 +459,8 @@ async function handleBiblePrivacy(req, res, user, storyId) {
     subject: story.title, href: `/stories/${storyId}/bible`, storyId,
   });
   redirect(res, `/stories/${storyId}/bible?notice=${encodeURIComponent(isPrivate
-    ? 'The bible is now private to the people who write this story.'
-    : 'The bible is now readable by everyone who can read the story.')}`);
+    ? 'The story notes are now private to the people who write this story.'
+    : 'The story notes are now readable by everyone who can read the story.')}`);
 }
 
 async function handleRescanBible(req, res, user, storyId) {
@@ -482,7 +482,7 @@ function handleBesideEntity(req, res, user, entityId, query) {
   const entity = models.getStoryEntity(entityId);
   if (!entity) return sendError(res, 404, 'Entry not found', user);
   const story = models.getStoryById(entity.story_id);
-  if (!story || !models.canReadBible(story, user)) return sendError(res, 403, 'This bible is private.', user);
+  if (!story || !models.canReadBible(story, user)) return sendError(res, 403, 'These story notes are private.', user);
   const canWrite = models.canWriteInStory(story, user);
   // Opened from a chapter: the entry as it stands there. A card opened
   // from chapter 5 does not say what happens in chapter 12.
@@ -611,7 +611,7 @@ async function handleMergeEntity(req, res, user, entityId) {
   const body = await parseBody(req);
   const into = models.getStoryEntity(Number(body.into), { fresh: false });
   if (!into || into.story_id !== guard.story.id || into.id === entityId) {
-    return renderEntity(res, user, entityId, 'Pick another entry in this bible to fold this one into.', 400);
+    return renderEntity(res, user, entityId, 'Pick another entry in these story notes to fold this one into.', 400);
   }
   const merged = models.mergeStoryEntities(entityId, into.id, user.id);
   if (!merged) return renderEntity(res, user, entityId, 'Those two could not be merged.', 400);
