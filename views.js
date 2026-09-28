@@ -26,6 +26,7 @@ const modules = [
   ['chapter', require('./views/chapter')],
   ['split', require('./views/split')],
   ['plan', require('./views/plan')],
+  ['moments', require('./views/moments')],
   ['people', require('./views/people')],
   ['admin', require('./views/admin')],
   ['import', require('./views/import')],

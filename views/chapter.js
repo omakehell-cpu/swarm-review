@@ -541,6 +541,7 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
               ${isChapterAuthor ? `
                 <p class="menu-heading">Chapter</p>
                 <a href="/chapters/${chapter.id}/split">Split or merge</a>
+                <a href="/chapters/${chapter.id}/moments">When things happen in it</a>
                 <form method="post" action="/chapters/${chapter.id}/archive" class="inline-form"
                       data-confirm="Archive this chapter? It stays readable from the story's archived chapters.">
                   <button class="menu-danger" type="submit">Archive chapter</button>

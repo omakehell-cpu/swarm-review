@@ -312,7 +312,7 @@ function timelineChart(timeline) {
     const drawn = items.map((item) => {
       const from = x(item.day);
       const to = item.end !== null && item.end !== undefined ? x(item.end) : from;
-      const label = item.type === 'chapter' ? `${item.order}` : short(item.title);
+      const label = item.type === 'chapter' ? (item.label || `${item.order}`) : short(item.title);
       // The label goes after the mark, unless that runs it off the right
       // edge -- then it goes before, so nothing is ever cut in half.
       const wide = labelShare(label);
@@ -389,7 +389,7 @@ function timelineChart(timeline) {
 // the sum. A row this person may not change is shown, not offered.
 function timelineDatesForm(story, timeline, user, whens) {
   const all = timeline.placed.concat(timeline.undated);
-  const chapters = all.filter((i) => i.type === 'chapter').sort((a, b) => a.order - b.order);
+  const chapters = all.filter((i) => i.type === 'chapter' && i.kind !== 'mark').sort((a, b) => a.order - b.order);
   const entries = all.filter((i) => i.type === 'entry')
     .sort((a, b) => (a.day ?? Infinity) - (b.day ?? Infinity) || String(a.title).localeCompare(String(b.title)));
   if (!chapters.length && !entries.length) return '';
@@ -402,7 +402,7 @@ function timelineDatesForm(story, timeline, user, whens) {
     }
     return `
       <tr>
-        <th scope="row">${name}<input type="hidden" name="key" value="${item.key}">${withEnd ? '' : '<input type="hidden" name="end" value="">'}</th>
+        <th scope="row">${name}<input type="hidden" name="key" value="${item.key}">${withEnd ? '' : `<input type="hidden" name="end" value=""> <a class="tl-pins-link" href="/chapters/${item.id}/moments" aria-label="Pins inside ${name}">pins inside</a>`}</th>
         <td><input type="text" name="when" value="${escapeHtml(item.when || '')}" maxlength="80" list="known-whens" aria-label="When ${name} happens, in the story's words"></td>
         <td><input type="text" name="day" value="${val(item.day)}" inputmode="numeric" size="6" aria-label="Day number for ${name}, or +N from the row above"></td>
         ${withEnd
@@ -421,7 +421,7 @@ function timelineDatesForm(story, timeline, user, whens) {
     <details class="chart chart-wide timeline-edit"${nothingDated ? ' open' : ''}>
       <summary><h2 class="side-head">Put things on the line</h2></summary>
       <form method="post" action="/stories/${story.id}/timeline">
-        <p class="muted chart-note">The words are what the story calls the moment; the day is what puts it in order. Write a day as <strong>+2</strong> for two days after the row above, <strong>+0</strong> for the same day, or <strong>-10</strong> for ten days before -- a flashback. Leave it empty and nothing is assumed.</p>
+        <p class="muted chart-note">The words are what the story calls the moment; the day is what puts it in order. Write a day as <strong>+2</strong> for two days after the row above, <strong>+0</strong> for the same day, or <strong>-10</strong> for ten days before -- a flashback. Leave it empty and nothing is assumed. Where the time moves inside a chapter, <strong>pins inside</strong> drops a pin on the paragraph where it does.</p>
         ${table('Chapters, in the order they are told', chapters, mayChapter, false)}
         ${table('Events and entries in the story notes', entries, () => true, true)}
         ${whens.length ? `<datalist id="known-whens">${whens.map((v) => `<option value="${escapeHtml(v)}"></option>`).join('')}</datalist>` : ''}
@@ -455,6 +455,7 @@ function timelinePage({ user, story, timeline, canWrite = false, whens = [], not
     : `
         <p class="outline-totals">
           <span>${timeline.dated} of ${timeline.chapters} chapter${timeline.chapters === 1 ? '' : 's'} dated</span>
+          ${timeline.moments ? `<span>${timeline.moments} moment${timeline.moments === 1 ? '' : 's'} inside chapters</span>` : ''}
           ${timeline.events ? `<span>${timeline.events} event${timeline.events === 1 ? '' : 's'}</span>` : ''}
           ${timeline.span ? `<span>Day ${escapeHtml(String(timeline.span.from))} to ${escapeHtml(String(timeline.span.to))}</span>` : ''}
           ${timeline.outOfOrder ? `<span class="pending-total">${timeline.outOfOrder} told out of order</span>` : ''}

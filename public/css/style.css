@@ -5479,3 +5479,9 @@ label.adv-check input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18
   .plan-item { flex-direction: column; }
   .plan-arc { padding-left: var(--s-3); }
 }
+.tl-pins-link { margin-left: var(--s-2); font-size: var(--t-xs); font-weight: 400; }
+.moments-table .moment-para { font-family: var(--font-prose); font-weight: 400; }
+.moments-table th[scope="row"] { width: 55%; }
+.moments-table tr.has-mark th[scope="row"] { border-left: 3px solid var(--text); padding-left: var(--s-2); }
+.moments-table thead th:first-child { width: 55%; }
+.moment-lost { list-style: none; padding: 0; }

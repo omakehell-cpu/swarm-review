@@ -114,6 +114,27 @@ A chapter's date is changed by whoever wrote it, or by the story's owner;
 an event's, by anybody who writes in the story. Rows you may not change are
 shown and not offered.
 
+### Pins inside a chapter
+
+A chapter's date is where it starts. When the time moves inside it -- the
+next morning, a week later, three paragraphs of ten years ago -- drop a
+**pin** on the paragraph where it does: **pins inside**, beside the
+chapter in *Put things on the line*, or **More → When things happen in
+it** on the chapter page. Every paragraph is listed with the same two
+fields; fill in the ones where the time moves and leave the rest empty.
+Here too a day can be counted from the row above, the first row counting
+from the chapter's own day.
+
+On the timeline a pin is a moment of its chapter -- *1. The gate, from "By
+morning the walls were manned."* -- drawn in the *Told* lane as *1′*, and
+a pin that goes back in time is marked as told out of order, the same as a
+whole chapter would be.
+
+A pin keeps to its paragraph by the words the paragraph opens with, so it
+follows the chapter through edits. If those words are rewritten, the pin is
+listed at the top of the chapter's page as one whose paragraph has changed,
+until you drop it again or take it off.
+
 ### The drawing
 
 Above the list the same things are drawn on one line, left to right, in

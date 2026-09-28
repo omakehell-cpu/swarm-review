@@ -82,7 +82,7 @@ test.before(async () => {
     `/plan/arcs/${arc.id}/edit`, `/plan/slots/${slot.id}/edit`, `/stories/${story.id}/chapters/new?plan=${slot.id}`,
     `/stories/${story.id}/bible`, `/stories/${story.id}/bible/new`, `/stories/${story.id}/bible/fields`,
     `/stories/${story.id}/chapters/new`, `/stories/${story.id}/download.md`, `/stories/${story.id}/download.txt`,
-    `/chapters/${chapter.id}`, `/chapters/${chapter.id}/edit`, `/chapters/${chapter.id}/beside`, `/chapters/${chapter.id}/split`,
+    `/chapters/${chapter.id}`, `/chapters/${chapter.id}/edit`, `/chapters/${chapter.id}/beside`, `/chapters/${chapter.id}/split`, `/chapters/${chapter.id}/moments`,
     `/chapters/${second.id}/diff`,
     `/bible/${one.id}`, `/bible/${one.id}/edit`, `/bible/${one.id}/beside`,
     `/bible/${two.id}`, `/bible/${two.id}/beside`,

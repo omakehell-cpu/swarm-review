@@ -26,6 +26,7 @@ here is missing on the site, it has not been restarted yet.
 ### The timeline
 
 - **Date the whole story from the timeline.** *Put things on the line*, at the top of the timeline page, lists every chapter and every event with its two fields, and saves them all at once -- no more opening each chapter to give it a day.
+- **Pins inside a chapter.** Where the time moves inside a chapter -- the next morning, a flashback of three paragraphs -- drop a pin on the paragraph where it does (*pins inside*, on the timeline, or *More → When things happen in it* on the chapter). Each pin is a moment on the timeline, and one that goes back is marked as told out of order. A pin follows its paragraph through edits.
 - **A day can be counted from the row above**: *+1* is the next day, *+0* the same day, *-10* ten days back. "The next morning" no longer needs the sum done on day 412.
 
 ### The writing checks

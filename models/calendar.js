@@ -63,6 +63,29 @@ function storyTimeline(storyId) {
     };
     (item.day === null || item.day === undefined ? undated : placed).push(item);
   }
+  // The pins inside chapters: each is a moment of the chapter it is in,
+  // told where it sits in that chapter -- so a flashback halfway through a
+  // chapter is marked as told out of order, the same as a whole chapter.
+  // Required here rather than at the top: moments.js uses resolveDays
+  // from this file.
+  for (const m of require('./moments').storyMoments(storyId)) {
+    const item = {
+      type: 'chapter',
+      kind: 'mark',
+      key: `m${m.mark.id}`,
+      id: m.chapter.id,
+      day: m.mark.story_day,
+      end: null,
+      when: m.mark.story_when,
+      title: `${m.chapter.chapter_number}. ${m.chapter.title}, from \u201c${m.text.length > 50 ? `${m.text.slice(0, 48).trim()}\u2026` : m.text}\u201d`,
+      note: '',
+      url: `/chapters/${m.chapter.id}`,
+      order: m.chapter.chapter_number + m.paragraph / (m.of + 1),
+      label: `${m.chapter.chapter_number}\u2032${m.nth > 1 ? m.nth : ''}`,
+      authorId: m.chapter.author_id,
+    };
+    (item.day === null || item.day === undefined ? undated : placed).push(item);
+  }
   for (const e of entities) {
     const item = {
       type: 'entry', key: `e${e.id}`, id: e.id, day: e.story_day, end: e.story_day_end,
@@ -129,7 +152,7 @@ function storyTimeline(storyId) {
   }
   // Each chapter, the dated entries it names.
   for (const item of placed) {
-    if (item.type !== 'chapter') continue;
+    if (item.type !== 'chapter' || item.kind === 'mark') continue;
     item.names = placed.filter((e) => e.type === 'entry' && e.toldIn.some((c) => c.id === item.id))
       .map((e) => ({ key: e.key, name: e.title, kind: e.kind }));
   }
@@ -140,7 +163,8 @@ function storyTimeline(storyId) {
     undated,
     links,
     chapters: chapters.length,
-    dated: placed.filter((i) => i.type === 'chapter').length,
+    dated: placed.filter((i) => i.type === 'chapter' && i.kind !== 'mark').length,
+    moments: placed.filter((i) => i.kind === 'mark').length,
     events: placed.filter((i) => i.kind === 'event').length,
     span: placed.length ? { from: placed[0].day, to: last } : null,
     outOfOrder: placed.filter((i) => i.outOfOrder).length,

@@ -108,7 +108,19 @@ database by hand.
   reorder. **Analysis** counts the same draft: words per chapter and per
   arc, who the story is told through, which threads carry it, what was
   written week by week, who is in what. **The timeline** puts the chapters
-  on the story's own calendar rather than in the order they are told.
+  on the story's own calendar rather than in the order they are told; the
+  whole story is dated from one form there (a day can be written as "+1"
+  from the row above), and a **pin** on a paragraph marks where the time
+  moves inside a chapter.
+- **The plan** is the scaffold, for the people writing the story: its
+  arcs, nested as deep as it is built, each saying what happens, what is
+  different at the end and why it matters -- and chapters planned but not
+  written, which **Write it** turns into chapters in their planned place,
+  in any order. The top level is still the *Arc* on a chapter.
+- **Split or merge**: a chapter cut in two at a paragraph, or the next one
+  folded in, with the waiting notes going with their words.
+- **Leave dialogue alone**: a switch that stops the writing checks marking
+  anything inside quotation marks except spelling.
 
 ### Reviewing
 
@@ -151,14 +163,15 @@ database by hand.
 - **Your own feed**, as Atom, for a reader that checks on your behalf. It
   is off until you ask for one, and its address is a secret.
 
-### The bible and the glossary
+### Story notes and the glossary
 
-- **The story bible** is who and what is in a story: people, places,
+- **Story notes** (it was called the story bible, and still is in the
+  code, the URLs and the tables) are who and what is in a story: people, places,
   ships, whatever the story needs, with a picture, aliases, custom fields,
   who knows whom, and which chapters each one turns up in -- worked out by
   reading the chapters rather than ticked by hand. A bible can be kept
   private to the people who write the story.
-- Names from the bible are **linked in the prose**, and so are names from
+- Names from the story notes are **linked in the prose**, and so are names from
   the shared wiki. A reader who would rather have plain prose turns them
   off once, in Account.
 - **The glossary** is a full local mirror of the group's wiki
@@ -307,6 +320,7 @@ mounted `./data` folder next to the compose file either way, so
 server.js        entry point: the HTTP server and one routing table
 db.js            the schema, in SQLite (node:sqlite), migrations and all
 db-review.js     the schema for the review loop, applied by db.js
+db-plan.js       the schema for the plan: arcs, planned chapters, pins
 auth.js          password hashing, session cookies, invite codes
 routes/          one file per area; each exports a table of routes
 models/          the queries, one file per area, behind models.js

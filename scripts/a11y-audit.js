@@ -60,7 +60,7 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-prac
       extra.push(story, `${story}/plan`, `${story}/outline`, `${story}/analysis`, `${story}/timeline`, `${story}/bible`);
       const storyHtml = await (await page.goto(BASE + story)).text();
       const chapter = (storyHtml.match(/href="(\/chapters\/\d+)"/) || [])[1];
-      if (chapter) extra.push(chapter, `${chapter}/edit`, `${chapter}/split`);
+      if (chapter) extra.push(chapter, `${chapter}/edit`, `${chapter}/split`, `${chapter}/moments`);
     }
     for (const path of [...PAGES, ...extra]) {
       await page.goto(BASE + path);

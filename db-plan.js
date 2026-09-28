@@ -51,5 +51,27 @@ module.exports = function applyPlanSchema(db) {
     created_at       TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_story_plan_slots_story ON story_plan_slots(story_id);
+
+  -- A pin on the story's calendar, dropped at a paragraph inside a
+  -- chapter: "from here, it is Day 413, evening". A chapter that jumps a
+  -- week halfway through, or flashes back for three paragraphs, is more
+  -- than one moment, and the chapter's own date can only be one of them.
+  --
+  -- The paragraph is found by its opening words (anchor_text), not by its
+  -- number or offset, so the pin stays on it through every edit that does
+  -- not rewrite those words; anchor_offset is only a hint for which of two
+  -- paragraphs opening the same way it meant.
+  CREATE TABLE IF NOT EXISTS story_time_marks (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    story_id      INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+    chapter_id    INTEGER NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    anchor_text   TEXT NOT NULL,
+    anchor_offset INTEGER NOT NULL DEFAULT 0,
+    story_when    TEXT NOT NULL DEFAULT '',
+    story_day     INTEGER,
+    created_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_story_time_marks_chapter ON story_time_marks(chapter_id);
   `);
 };
