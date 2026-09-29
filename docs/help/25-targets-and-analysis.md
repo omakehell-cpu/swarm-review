@@ -89,33 +89,53 @@ editor) and on entries in the glossary (*When this happens*):
   and for the distance between two rows, which is why the gaps are written
   as `+407` rather than as days.
 
-@figure timeline.png | The timeline: chapters and dated entries in the glossary in one line, with the distance between them, and a chapter marked as told out of order.
+@figure timeline.png | The grid, as it happens: the chapters in the order their days come, one row for each point of view, the events across the top and the story's eras over the columns.
 
 Leaving the number empty means **nobody has said**, which is not the same
 as day zero: an undated chapter stays off the line rather than being
-dragged to the front of it. Anything with words but no number is listed
-underneath, waiting for one.
+dragged to the front of it.
 
-### The drawing
+The page has three tabs.
 
-Above the list the same things are drawn on one line, left to right, in
-three lanes: **Told** (the chapters, as numbered squares), **Events** and
-**People, places, things**. It is evenly spaced by moment rather than to
-scale -- to scale, one busy afternoon vanishes next to a ten-year silence
--- so the real distances stay in the list.
+### Grid
 
-An event can last: give it an **until day** as well and it is drawn as a
-bar from its first day to its last. A relation written in the glossary between
-two dated entries (*leads to*, *happens during*, *sister of*) is drawn as a line
-between them. Point at anything, or move to it with Tab, and it keeps what
-it is tied to -- its relations and the chapters that name it -- while the
-rest steps back. Click it to jump to its row in the list, where the same
-ties are written out.
+The chapters as columns, with a row for each **point of view** and one for
+the story's **events** -- the way a writer plans in Plottr or on a wall of
+cards. Each column says its chapter's day, what the story calls it, and:
 
-Every event in the glossary is on this page. One with no day number is listed
-under *Not on the line yet* until it has one.
+- **As it is told**: the book in order. A chapter that goes back in time is
+  marked where it jumps -- *42 days back* -- in red. That is a flashback,
+  which is a decision rather than a mistake, so it is marked and left
+  alone.
+- **As it happens**: the same chapters re-sorted by day, with the time since
+  the column before (*+1*, *+40*), and the eras above them. Chapter numbers
+  out of step are the story jumping.
 
-A chapter marked **told out of order** is one that goes backwards: it
-happens before a chapter the reader has already been through. That is a
-flashback, which is a decision rather than a mistake, so the page marks it
-and leaves it alone.
+An event shows on every day it covers that has a chapter, with *day 2 of
+3* when it lasts. A chapter with no day is at the end, with **Date it**.
+
+### Chronicle
+
+Everything with a day, read downwards, one **moment** at a time: the day,
+what the story calls it, the chapters set then (with their point of view,
+and *Flashback* where one goes back), the events that start then and how
+long they last, and anything else in the glossary with that date. An
+event that lasts is noted on the days after it as *Still going*, and
+between moments the distance is written out: *3 days later*.
+
+It is read in **eras**: name the stretches of the story's time -- *The
+academy years*, *The siege* -- at the foot of the chronicle, each with the
+day it starts on. An era runs until the next one starts. They head the
+chronicle and the grid's *As it happens*.
+
+### Dates
+
+For the people who write the story: the whole of it dated in one table.
+The chapters in the order they are told, then the events and every other
+dated entry in the glossary, each with what the story calls the moment and
+its day (and, for what lasts, until when). A day can be counted from the
+row above -- **+1** the next day, **+0** the same day, **-40** forty days
+back -- and what it comes to is said beside it as you type, with *Flashback*
+where a chapter goes back. **Each row is saved as you leave it**; the
+button saves everything at once. A chapter's day is its writer's, or the
+story owner's, to change.

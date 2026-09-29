@@ -67,4 +67,18 @@ module.exports = function applyPlanSchema(db, ensureColumn) {
   // write the story, beside the editor and on the plan, and is never the
   // summary readers see.
   ensureColumn('chapters', 'plan_notes', "TEXT NOT NULL DEFAULT ''");
+
+  // The story's eras, on its own calendar: named stretches of time -- "The
+  // academy years", "The siege" -- each running from its first day until
+  // the next one starts. The timeline's chronicle is read era by era.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS story_eras (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      story_id   INTEGER NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+      title      TEXT NOT NULL,
+      from_day   INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_story_eras_story ON story_eras(story_id, from_day);
+  `);
 };

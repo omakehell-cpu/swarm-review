@@ -1137,8 +1137,11 @@ test('the timeline reads the story calendar and marks a flashback', async () => 
   assert.strictEqual(timeline.placed.find((i) => i.outOfOrder).order, chapters[1].chapter_number);
 
   const html = await (await request(`/stories/${story.id}/timeline`)).text();
-  assert.match(html, /Told out of order/);
-  assert.match(html, /\+28/);
+  assert.match(html, /28 days back/, 'the grid, as told, marks the jump where it happens');
+  const happens = await (await request(`/stories/${story.id}/timeline?view=grid&order=happens`)).text();
+  assert.match(happens, /\+28/, 'and as it happens, the time between');
+  const chronicle = await (await request(`/stories/${story.id}/timeline?view=chronicle`)).text();
+  assert.match(chronicle, /Flashback &middot; told after chapter/);
   assert.match(html, new RegExp(`href="/stories/${story.id}/timeline"`), 'and it is linked from the switch');
 
   // Nonsense in the number is not a date. It goes back to undated rather

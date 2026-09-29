@@ -32,6 +32,7 @@ const modules = [
   ['chapters', require('./models/chapters')],
   ['split', require('./models/split')],
   ['plan', require('./models/plan')],
+  ['timeline', require('./models/timeline')],
   ['writing', require('./models/writing')],
   ['imports', require('./models/imports')],
   ['storyGlossary', require('./models/story-glossary')],

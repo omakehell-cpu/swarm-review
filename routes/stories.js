@@ -122,20 +122,89 @@ async function handleAnalysis(req, res, user, storyId) {
   }));
 }
 
-// The story's own calendar. A private bible keeps its entries off it, the
-// same way it keeps its cast off the analysis: the chapters are still
-// there, because chapter titles were never the private part.
-async function handleTimeline(req, res, user, storyId) {
-  const story = models.getStoryById(storyId);
-  if (!story) return sendError(res, 404, 'Story not found', user);
-  const timeline = models.storyTimeline(storyId);
+// The story's own calendar. A private glossary keeps its entries off it,
+// the same way it keeps its people off the analysis: the chapters are
+// still there, because chapter titles were never the private part.
+function timelineFor(story, user) {
+  const timeline = models.storyTimeline(story.id);
   if (!models.canReadBible(story, user)) {
     timeline.placed = timeline.placed.filter((item) => item.type !== 'entry');
     timeline.undated = timeline.undated.filter((item) => item.type !== 'entry');
   }
-  sendHtml(res, 200, views.timelinePage({
-    user, story, timeline, canWrite: models.canWriteInStory(story, user),
+  return timeline;
+}
+
+// A chapter's date is its writer's to change, or the owner's, who arranges
+// the story; an entry's is anybody's who writes in the story, as the rest
+// of the glossary is.
+const mayDate = (story, user) => ({
+  chapter: (c) => (c.author_id ?? c.authorId) === user.id || story.author_id === user.id,
+  entry: () => true,
+});
+
+async function handleTimeline(req, res, user, storyId, query, extra = {}) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  const canWrite = models.canWriteInStory(story, user);
+  const may = mayDate(story, user);
+  sendHtml(res, extra.status || 200, views.timelinePage({
+    user, story, timeline: timelineFor(story, user), canWrite,
+    eras: models.storyEras(storyId),
+    view: extra.view || query.get('view') || 'grid',
+    order: query.get('order') === 'happens' ? 'happens' : 'told',
+    whens: canWrite ? models.listStoryWhens(storyId) : [],
+    notice: extra.notice || (query.get('notice') || '').slice(0, 300),
+    error: extra.error || '',
+    mayChapter: may.chapter,
   }));
+}
+
+// The whole story dated from the timeline's Dates table: every row posts
+// its key, its words and its day, and "end" for the ones that can last, so
+// the lists stay in step.
+async function handleTimelineDates(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (!models.canWriteInStory(story, user)) return sendError(res, 403, 'Only the people who write this story can date it.', user);
+  const body = await parseBody(req);
+  // One row, from the table's own script: saved as it is left.
+  if (typeof body.key === 'string' && !Array.isArray(body.key) && (req.headers['content-type'] || '').includes('json')) {
+    const result = models.setTimelineDates(storyId, [{ key: body.key, when: body.when, day: body.day, end: body.end }], mayDate(story, user));
+    return sendJson(res, 200, { day: result.days[body.key] ?? null, saved: body.key in result.days });
+  }
+  const list = (name) => [].concat(body[name] === undefined ? [] : body[name]);
+  const keys = list('key');
+  const whens = list('when');
+  const days = list('day');
+  const ends = list('end');
+  const rows = keys.map((key, i) => ({ key: String(key), when: whens[i], day: days[i], end: ends[i] }));
+  const { changed } = models.setTimelineDates(storyId, rows, mayDate(story, user));
+  redirect(res, `/stories/${storyId}/timeline?view=dates&notice=${encodeURIComponent(changed ? `${changed} ${changed === 1 ? 'date' : 'dates'} saved.` : 'Nothing had changed.')}`);
+}
+
+async function handleAddEra(req, res, user, storyId) {
+  const story = models.getStoryById(storyId);
+  if (!story) return sendError(res, 404, 'Story not found', user);
+  if (!models.canWriteInStory(story, user)) return sendError(res, 403, 'Only the people who write this story can name its eras.', user);
+  const body = await parseBody(req);
+  const result = models.addEra({ storyId, title: body.title, fromDay: body.fromDay });
+  if (result.error) return handleTimeline(req, res, user, storyId, new URLSearchParams(), { status: 400, view: 'chronicle', error: result.error });
+  redirect(res, `/stories/${storyId}/timeline?view=chronicle&notice=${encodeURIComponent('Era added.')}#era-${result.id}`);
+}
+
+async function handleEditEra(req, res, user, eraId, remove = false) {
+  const era = models.getEra(eraId);
+  if (!era) return sendError(res, 404, 'There is no such era.', user);
+  const story = models.getStoryById(era.story_id);
+  if (!models.canWriteInStory(story, user)) return sendError(res, 403, 'Only the people who write this story can change its eras.', user);
+  if (remove) {
+    models.deleteEra(eraId);
+    return redirect(res, `/stories/${story.id}/timeline?view=chronicle&notice=${encodeURIComponent(`${era.title} is not an era any more. Nothing in it has moved.`)}`);
+  }
+  const body = await parseBody(req);
+  const result = models.updateEra({ eraId, title: body.title, fromDay: body.fromDay });
+  if (result.error) return handleTimeline(req, res, user, story.id, new URLSearchParams(), { status: 400, view: 'chronicle', error: result.error });
+  redirect(res, `/stories/${story.id}/timeline?view=chronicle&notice=${encodeURIComponent('Era saved.')}#era-${eraId}`);
 }
 
 // ---------- the outline (Scrivener's outliner, in this app's shape) ----------
@@ -387,7 +456,11 @@ const routes = [
   ['POST', /^\/stories\/(\d+)\/authors\/(\d+)\/remove$/, (c) => handleRemoveCoauthor(c.req, c.res, c.user, Number(c.m[1]), Number(c.m[2]))],
   ['GET', /^\/stories\/(\d+)\/download\.(md|txt|docx|pdf|epub)$/, (c) => handleCompile(c.req, c.res, c.user, Number(c.m[1]), c.m[2], c.url.searchParams)],
   ['GET', /^\/stories\/(\d+)\/analysis$/, (c) => handleAnalysis(c.req, c.res, c.user, Number(c.m[1]))],
-  ['GET', /^\/stories\/(\d+)\/timeline$/, (c) => handleTimeline(c.req, c.res, c.user, Number(c.m[1]))],
+  ['GET', /^\/stories\/(\d+)\/timeline$/, (c) => handleTimeline(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
+  ['POST', /^\/stories\/(\d+)\/timeline$/, (c) => handleTimelineDates(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/stories\/(\d+)\/timeline\/eras$/, (c) => handleAddEra(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/timeline\/eras\/(\d+)$/, (c) => handleEditEra(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/timeline\/eras\/(\d+)\/delete$/, (c) => handleEditEra(c.req, c.res, c.user, Number(c.m[1]), true)],
   ['GET', /^\/stories\/(\d+)\/outline$/, (c) => handleOutline(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['POST', /^\/stories\/(\d+)\/outline\/order$/, (c) => handleOutlineOrder(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/dictionary$/, (c) => handleGetStoryDictionary(c.req, c.res, c.user, Number(c.m[1]))],
@@ -414,6 +487,7 @@ module.exports = {
   handleRemoveStoryDictionaryWord,
   handleStoryPage,
   handleTimeline,
+  handleTimelineDates,
   handleUnarchiveStory,
   routes,
 };

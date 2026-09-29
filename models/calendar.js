@@ -13,7 +13,8 @@ const { auth, db } = require('./shared');
 // gets an empty timeline and a sentence saying so, not an error.
 function storyTimeline(storyId) {
   const chapters = db.prepare(`
-    SELECT id, chapter_number, title, story_when, story_day, arc_title
+    SELECT id, chapter_number, title, story_when, story_day, arc_title, pov, strand, summary, author_id,
+           (SELECT word_count FROM chapter_versions v WHERE v.chapter_id = chapters.id ORDER BY version_number DESC LIMIT 1) AS words
       FROM chapters
      WHERE story_id = ? AND archived_at IS NULL
      ORDER BY chapter_number
@@ -59,6 +60,12 @@ function storyTimeline(storyId) {
       url: `/chapters/${c.id}`,
       order: c.chapter_number,
       kind: 'chapter',
+      name: c.title,
+      pov: c.pov || '',
+      strand: c.strand || '',
+      summary: c.summary || '',
+      words: c.words || 0,
+      authorId: c.author_id,
     };
     (item.day === null || item.day === undefined ? undated : placed).push(item);
   }

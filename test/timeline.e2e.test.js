@@ -56,15 +56,66 @@ test('the timeline knows what ties things together', () => {
 });
 
 test('the page draws it, and an event says where it sits', async () => {
-  const html = await (await ana.request(`/stories/${storyId}/timeline`)).text();
-  assert.match(html, /class="tl-chart"/);
-  assert.match(html, /tl-item tl-item-event is-span/);
-  assert.match(html, /class="tl-line tl-line-relation"/);
-  assert.match(html, /<span class="tl-day">5&ndash;20<\/span>/);
-  assert.match(html, /src="\/js\/timeline-chart\.js"/);
+  const grid = await (await ana.request(`/stories/${storyId}/timeline`)).text();
+  assert.match(grid, /class="tg"/, 'the grid is the first view');
+  assert.match(grid, /class="tg-event"[^>]*>The Blackout/);
+  const chronicle = await (await ana.request(`/stories/${storyId}/timeline?view=chronicle`)).text();
+  assert.match(chronicle, /lasts 16 days, to day 20/);
+  assert.match(chronicle, /<span class="chron-day-num">5<\/span>/);
+  assert.match(chronicle, /Not on the line yet[\s\S]*The Reckoning/);
+  const dates = await (await ana.request(`/stories/${storyId}/timeline?view=dates`)).text();
+  assert.match(dates, /src="\/js\/timeline-dates\.js"/);
   const entry = await (await ana.request(`/bible/${ids.siege}`)).text();
   assert.match(entry, /On the timeline/);
   assert.match(entry, /Day 5&ndash;20/);
   assert.match(entry, new RegExp(`Before it</span> <a href="/bible/${ids.blackout}">`));
   assert.match(entry, /list="relation-words"/);
+});
+
+test('the whole story is dated from one table, counting from the row above', async () => {
+  const res = await ana.request(`/stories/${storyId}/timeline`, {
+    method: 'POST',
+    ...form([['key', `c${ids.chapter}`], ['when', 'The first night'], ['day', '3'], ['end', ''],
+      ['key', `e${ids.blackout}`], ['when', ''], ['day', '3'], ['end', ''],
+      ['key', `e${ids.later}`], ['when', 'Much later'], ['day', '+40'], ['end', '+50']]),
+  });
+  assert.strictEqual(res.status, 302);
+  assert.match(decodeURIComponent(res.headers.get('location')), /3 dates saved\./);
+  assert.strictEqual(models.getChapterById(ids.chapter).story_day, 3);
+  assert.strictEqual(models.getChapterById(ids.chapter).story_when, 'The first night');
+  assert.strictEqual(models.getStoryEntity(ids.later).story_day, 43, '+40 from the row above');
+
+  const one = await ana.request(`/stories/${storyId}/timeline`, {
+    method: 'POST', contentType: 'application/json', body: JSON.stringify({ key: `c${ids.chapter}`, when: 'The first night', day: '1', end: '' }),
+  });
+  assert.deepStrictEqual(await one.json(), { day: 1, saved: true });
+  assert.strictEqual(models.getChapterById(ids.chapter).story_day, 1);
+});
+
+test('eras name stretches of time, and the chronicle is read in them', async () => {
+  const add = await ana.request(`/stories/${storyId}/timeline/eras`, { method: 'POST', ...form([['title', 'The siege'], ['fromDay', '5']]) });
+  assert.strictEqual(add.status, 302);
+  const clash = await ana.request(`/stories/${storyId}/timeline/eras`, { method: 'POST', ...form([['title', 'Again'], ['fromDay', '5']]) });
+  assert.strictEqual(clash.status, 400);
+  const era = models.storyEras(storyId)[0];
+  const page = await (await ana.request(`/stories/${storyId}/timeline?view=chronicle`)).text();
+  assert.match(page, new RegExp(`id="era-${era.id}">The siege <span class="muted">from day 5`));
+  const happens = await (await ana.request(`/stories/${storyId}/timeline?view=grid&order=happens`)).text();
+  assert.match(happens, /class="tg-eras"/);
+  await ana.request(`/timeline/eras/${era.id}`, { method: 'POST', ...form([['title', 'The long siege'], ['fromDay', '4']]) });
+  assert.strictEqual(models.getEra(era.id).title, 'The long siege');
+  await ana.request(`/timeline/eras/${era.id}/delete`, { method: 'POST', ...form([]) });
+  assert.strictEqual(models.getEra(era.id), null);
+});
+
+test('only the people who write the story date it', async () => {
+  const auth = require('../auth');
+  models.createUser({ username: 'reader', displayName: 'Reader', passwordHash: auth.hashPassword(PASSWORD), isAdmin: false });
+  const reader = makeClient(app.base);
+  await reader.login('reader', PASSWORD);
+  const page = await (await reader.request(`/stories/${storyId}/timeline`)).text();
+  assert.ok(!page.includes('view=dates'), 'no Dates tab');
+  const res = await reader.request(`/stories/${storyId}/timeline`, { method: 'POST', ...form([['key', `c${ids.chapter}`], ['day', '99']]) });
+  assert.strictEqual(res.status, 403);
+  assert.notStrictEqual(models.getChapterById(ids.chapter).story_day, 99);
 });

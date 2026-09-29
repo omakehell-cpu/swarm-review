@@ -6,6 +6,14 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-29 — The plan, a glossary for every story, and a character study
 
+### The timeline, rebuilt
+
+- **Three tabs: Grid, Chronicle and Dates**, after looking at how Plottr, Aeon Timeline, Campfire and World Anvil do it.
+- **Grid**: the chapters as columns, a row for each point of view and one for the events. *As it is told* is the book in order, with a flashback marked where it jumps (*42 days back*); *As it happens* re-sorts the columns by day, with the time between them and the story's eras above.
+- **Chronicle**: everything with a day, read downwards a moment at a time, in eras -- the chapters set then, the events that start and how long they last, what is *still going*, and *3 days later* between moments.
+- **Eras**: name the stretches of the story's time, each from the day it starts.
+- **Dates**: the whole story dated in one table. Count from the row above (*+1*, *-40*) and see what it comes to as you type; each row is saved as you leave it.
+
 ### Dividing and joining chapters
 
 - **New chapter**, in the row above the text, starts a new chapter where the cursor is: a line of its own, *=== New chapter: Title ===*, and everything after it is a chapter of its own when you publish -- straight after this one. As many as you like. The editor says which chapters it is about to make before it makes them.

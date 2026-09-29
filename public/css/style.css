@@ -5512,3 +5512,113 @@ label.adv-check input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18
   .plan-item { flex-direction: column; }
   .plan-arc { padding-left: var(--s-3); }
 }
+
+/* ---------- the timeline: grid, chronicle, dates (views/timeline.js) ---------- */
+.tl-views { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin: var(--s-6) 0 var(--s-5); }
+.tl-view {
+  padding: var(--s-3) var(--s-5); color: var(--text-muted); text-decoration: none; font-weight: 600;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tl-view:hover { color: var(--text); }
+.tl-view.is-current { color: var(--text); border-bottom-color: var(--text); }
+.tl-order { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; margin-bottom: var(--s-5); }
+.tl-order-note { font-size: var(--t-sm); flex: 1 1 20rem; }
+
+/* The grid: a real table, chapters across, points of view down. */
+.tg-wrap { overflow-x: auto; border: 1px solid var(--border); position: relative; }
+.tg { border-collapse: separate; border-spacing: 0; min-width: 100%; }
+.tg th, .tg td { vertical-align: top; }
+.tg thead th, .tg .tg-corner { position: sticky; top: 0; background: var(--bg); }
+.tg-corner, .tg tbody th { position: sticky; left: 0; z-index: 1; background: var(--bg); }
+.tg tbody th {
+  min-width: 8.5rem; max-width: 10rem; padding: var(--s-4) var(--s-4); text-align: left;
+  font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking);
+  border-right: 1px solid var(--border-strong); border-top: 1px solid var(--border);
+}
+.tg-head {
+  min-width: 11.5rem; width: 11.5rem; padding: var(--s-3) var(--s-3); text-align: left; font-weight: 400;
+  border-bottom: 1px solid var(--border-strong); border-left: 1px solid var(--border);
+}
+.tg-num { display: block; font-size: var(--t-lg, 1.25rem); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tg-day { display: block; font-size: var(--t-sm); font-weight: 600; }
+.tg-day.is-undated { color: var(--text-muted); font-weight: 400; font-style: italic; }
+.tg-when { display: block; font-size: var(--t-xs); color: var(--text-muted); }
+.tg-gap, .tg-back { display: inline-block; margin-top: var(--s-2); font-size: var(--t-2xs); font-weight: 700; letter-spacing: var(--label-tracking); text-transform: uppercase; }
+.tg-gap { color: var(--text-muted); }
+.tg-back, .tg-head.is-back .tg-num { color: var(--accent); }
+.tg-eras th {
+  padding: var(--s-2) var(--s-3); text-align: left; font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: var(--label-tracking); background: var(--bg-sunken); border-left: 1px solid var(--border-strong);
+}
+.tg tbody td { padding: var(--s-3); border-left: 1px solid var(--border); border-top: 1px solid var(--border); }
+.tg-card {
+  display: block; padding: var(--s-3); border: 1px solid var(--border-strong); background: var(--bg);
+  color: var(--text); text-decoration: none; box-shadow: 2px 2px 0 var(--border);
+}
+.tg-card:hover, .tg-card:focus-visible { box-shadow: 3px 3px 0 var(--text); }
+.tg-card.is-back { border-color: var(--accent); box-shadow: 2px 2px 0 var(--accent); }
+.tg-card.is-undated { border-style: dashed; box-shadow: none; }
+.tg-title { display: block; font-weight: 700; line-height: 1.25; }
+.tg-sum {
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  margin-top: var(--s-1); font-size: var(--t-xs); color: var(--text-muted);
+}
+.tg-meta { display: block; margin-top: var(--s-2); font-size: var(--t-2xs); color: var(--text-muted); }
+.tg-date-it { display: inline-block; margin-top: var(--s-2); font-size: var(--t-xs); }
+.tg-events td { background: var(--bg-sunken); }
+.tg-event {
+  display: block; margin-bottom: var(--s-1); padding: 2px var(--s-2); font-size: var(--t-xs); font-weight: 600;
+  background: var(--text); color: var(--bg); text-decoration: none;
+}
+.tg-event.lasts { background: transparent; color: var(--text); border: 1px solid var(--text); }
+.tg-event-day { display: block; font-weight: 400; font-size: var(--t-2xs); opacity: .8; }
+
+/* The chronicle: read downwards, a moment at a time, era by era. */
+.chron-era + .chron-era, .chron-gap-era + .chron-era { margin-top: var(--s-2); }
+.chron-gap-era { margin: var(--s-6) 0 0; }
+.chron-era-title { font-size: var(--t-xl, 1.5rem); margin: var(--s-6) 0 var(--s-4); padding-bottom: var(--s-2); border-bottom: 2px solid var(--text); }
+.chron-era-title .muted { font-size: var(--t-sm); font-weight: 400; }
+.chron { list-style: none; margin: 0; padding: 0; max-width: 58rem; }
+.chron-moment { display: grid; grid-template-columns: 5.5rem 1fr; gap: var(--s-5); padding: var(--s-4) 0; border-top: 1px solid var(--border); }
+.chron-day { text-align: right; }
+.chron-day-word { display: block; font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); }
+.chron-day-num { display: block; font-size: 1.9rem; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; }
+.chron-when { margin: 0 0 var(--s-2); font-size: var(--t-md); font-family: var(--font-prose); font-style: italic; font-weight: 400; }
+.chron-items { list-style: none; margin: 0; padding: 0; }
+.chron-items > li { margin: 0 0 var(--s-3); }
+.chron-chapter > a { font-weight: 700; }
+.chron-num { font-weight: 400; color: var(--text-muted); margin-right: var(--s-1); }
+.chron-pov, .chron-kind { font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); margin-left: var(--s-2); }
+.chron-kind { margin: 0 var(--s-2) 0 0; }
+.chron-flag { display: inline-block; font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--accent); margin-left: var(--s-2); }
+.chron-chapter.is-back { border-left: 3px solid var(--accent); padding-left: var(--s-3); }
+.chron-sum { margin: var(--s-1) 0 0; font-size: var(--t-sm); color: var(--text-muted); max-width: 70ch; }
+.chron-lasts { font-size: var(--t-sm); color: var(--text-muted); margin-left: var(--s-2); }
+.chron-event { border-left: 3px solid var(--text); padding-left: var(--s-3); }
+.chron-ongoing { font-size: var(--t-sm); color: var(--text-muted); border-left: 3px dotted var(--border-strong); padding-left: var(--s-3); }
+.chron-gap { padding: var(--s-2) 0 var(--s-2) calc(5.5rem + var(--s-5)); font-size: var(--t-xs); color: var(--text-muted); font-style: italic; }
+.chron-undated, .chron-era-edit { margin-top: var(--s-9, 3rem); max-width: 58rem; }
+.era-row { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; margin-bottom: var(--s-3); }
+.era-row label { display: inline-flex; flex-direction: row; align-items: center; margin: 0; gap: var(--s-2); text-transform: none; letter-spacing: 0; font-weight: 400; font-size: var(--t-sm); }
+.era-row .era-day { width: 6rem; }
+.tl-empty { max-width: 60ch; }
+
+/* Dates: the whole story in one table. */
+.tl-dates-wrap { overflow-x: auto; margin-bottom: var(--s-6); position: relative; }
+.tl-dates-table { width: 100%; border-collapse: collapse; }
+.tl-dates-table th, .tl-dates-table td { padding: var(--s-2) var(--s-3); border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+.tl-dates-table thead th { font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); border-bottom: 1px solid var(--text); }
+.tl-dates-table tbody th { font-weight: 600; }
+.tl-dates-table td.num { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.tl-dates-table input[name="when"] { min-width: 14rem; width: 100%; }
+.tl-dates-table .tl-day-input { width: 6.5rem; font-variant-numeric: tabular-nums; }
+.tl-resolved { min-width: 10rem; font-size: var(--t-sm); }
+.tl-dates-table tr.is-locked td { color: var(--text-muted); }
+.error-text { color: var(--accent); }
+@media (max-width: 640px) {
+  .chron-moment { grid-template-columns: 3.5rem 1fr; gap: var(--s-3); }
+  .chron-day-num { font-size: 1.4rem; }
+  .chron-gap { padding-left: calc(3.5rem + var(--s-3)); }
+  .tg-head { min-width: 9.5rem; width: 9.5rem; }
+  .tg tbody th { min-width: 6rem; }
+}
