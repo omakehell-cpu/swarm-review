@@ -14,8 +14,8 @@
 // Nothing here is guessed: it is what has been given a day.
 
 const { layout } = require('../lib/layout');
+const { storyBar } = require('./story-nav');
 const { escapeHtml } = require('../lib/util');
-const { storyViewSwitch } = require('./analysis');
 
 const KIND_WORD = { person: 'Person', place: 'Place', group: 'Group', thing: 'Thing', event: 'Event' };
 const has = (v) => v !== null && v !== undefined;
@@ -322,13 +322,12 @@ function timelinePage({ user, story, timeline, eras = [], canWrite = false, view
     user,
     wide: true,
     body: `
-      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      ${storyBar(story, { current: 'timeline', canWrite, isOwner: story.author_id === user.id })}
       <div class="page-head">
         <div>
           <h1>Timeline</h1>
           <p class="muted">When things happen in <a href="/stories/${story.id}">${escapeHtml(story.title)}</a>, which is not always the order they are told in. Nothing here is guessed: it is what has been given a day.</p>
         </div>
-        ${storyViewSwitch(story, { canWrite, current: 'timeline' })}
       </div>
       ${notice ? `<p class="flash info" role="status">${escapeHtml(notice)}</p>` : ''}
       ${error ? `<p class="error" role="alert">${escapeHtml(error)}</p>` : ''}

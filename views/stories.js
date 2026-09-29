@@ -5,6 +5,7 @@ const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
 const { storyState, STORY_STATES, CHOOSABLE_STORY_STATES } = require('../lib/story-state');
 const { ICONS, bylineWith, emptyState, storyCoverImg, storyStateBadge, tagChips, tagPicker, wordCount } = require('./shared');
+const { storyCover } = require('./story-nav');
 const { ACCEPT_ATTRIBUTE } = require('../lib/entity-images');
 const { SHELVES, SHELF_ORDER } = require('../lib/story-shelves');
 const front = require('./front');
@@ -43,7 +44,7 @@ function storyRow(s, { tags = [], sinceQs = '', hiddenBy = [], coauthors = [] } 
   // still clickable everywhere the chips aren't.
   return `
     <div class="chapter-row story-row" data-find="${escapeHtml(`${s.title} ${s.author_name || ''} ${s.description || ''}`.toLowerCase())}">
-      ${storyCoverImg(s)}
+      ${storyCover(s, 'story-cover')}
       <div class="chapter-row-main">
         <h3><a class="row-link" href="/stories/${s.id}${sinceQs}">${escapeHtml(s.title)}</a> ${s.has_new_chapters ? '<span class="badge new">New</span>' : ''}</h3>
         <p class="story-facts">

@@ -6,7 +6,8 @@ const { escapeHtml } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
 const { groupChaptersIntoArcs } = require('../lib/story-state');
-const { ICONS, bylineWith, chapterStageBadge, emptyState, goalBar, storyCoverImg, storyStateBadge, tagChips, wordCount } = require('./shared');
+const { ICONS, bylineWith, chapterStageBadge, emptyState, goalBar, storyStateBadge, tagChips, wordCount } = require('./shared');
+const { storyCover, storyStyle, storyTabs } = require('./story-nav');
 
 // Two separate forms, because each posts somewhere different, but one
 // control as far as the eye is concerned: a single bordered pair sitting
@@ -256,8 +257,8 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
     title: story.title,
     user,
     body: `
-      <section class="title-page${story.cover_filename ? ' has-cover' : ''}">
-        ${storyCoverImg(story, 'story-page-cover')}
+      <section class="title-page has-cover" style="${storyStyle(story)}">
+        ${storyCover(story, 'story-page-cover')}
         <div class="title-page-text">
           <p class="title-page-kicker">A story ${bylineWith(story.author_name, coauthors, story.author_username)}</p>
           <h1>${escapeHtml(story.title)}</h1>
@@ -270,38 +271,36 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
   ].filter(Boolean).join(' &middot; ')}</p>` : ''}
           ${tagChips(tags)}
           <div class="title-page-actions">
-            ${start ? `<a class="btn" href="/chapters/${start.chapter.id}">${ICONS.book}${escapeHtml(start.label)}</a>` : ''}
+            ${start ? `<a class="btn story-primary" href="/chapters/${start.chapter.id}">${ICONS.book}${escapeHtml(start.label)}</a>` : ''}
             ${canWrite ? `<a class="btn ghost" href="/stories/${story.id}/chapters/new">${ICONS.plus}Add chapter</a>` : ''}
             ${isStoryAuthor ? '' : followButton(story.id, following, { followers })}
           </div>
         </div>
       </section>
-      <nav class="story-tools" aria-label="About this story">
-        ${canWrite ? `<a href="/stories/${story.id}/plan">Plan</a>` : ''}
-        <a href="/stories/${story.id}/outline">Outline</a>
-        <a href="/stories/${story.id}/analysis">Analysis</a>
-        <a href="/stories/${story.id}/timeline">Timeline</a>
-        ${bibleVisible ? `<a href="/stories/${story.id}/bible">Glossary${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
-        ${isStoryAuthor ? `<a href="/stories/${story.id}/edit">Edit details</a>` : ''}
-        ${isStoryAuthor ? `
+      ${storyTabs(story, {
+    current: 'chapters', canWrite, isOwner: isStoryAuthor,
+    counts: { chapters: chapters.length, glossary: bibleVisible ? bibleCount : 0 },
+    more: isStoryAuthor ? `
           <details class="menu story-more">
-            <summary aria-label="More for this story: archiving">More</summary>
+            <summary class="story-tab" aria-label="More for this story: archiving">&middot;&middot;&middot;</summary>
             <div class="menu-panel">
               <form method="post" action="/stories/${story.id}/archive" class="inline-form"
                     data-confirm="Archive this story? It leaves the front page and stays readable from the archived stories.">
                 <button class="menu-danger" type="submit">Archive story</button>
               </form>
             </div>
-          </details>` : ''}
-      </nav>
+          </details>` : '',
+  })}
       <details class="story-numbers">
         <summary>The story in numbers</summary>
         ${storyStatsBlock(stats)}
         ${goalBar(stats ? stats.words : 0, story.word_goal)}
       </details>
       ${synopsisSection(story)}
+      <div class="story-contents" style="${storyStyle(story)}">
       <h2 class="toc-heading">Contents</h2>
       ${named ? `<div class="arc-stack">${rows}</div>` : `<div class="chapter-list toc">${rows}</div>`}
+      </div>
       ${chapters.length ? compileSection(story) : ''}
       <p class="muted archive-link"><a href="/stories/${story.id}/archived-chapters">View archived chapters &rarr;</a></p>
       ${(isStoryAuthor || coauthors.length) ? coauthorsSection({ story, coauthors, addableCoauthors, isStoryAuthor, currentUserId: user.id }) : ''}

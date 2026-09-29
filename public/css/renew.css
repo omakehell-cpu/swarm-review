@@ -1,0 +1,276 @@
+/* public/css/renew.css -- the renovation, 2026-09.
+ *
+ * Loaded after style.css and read as its last word. style.css drew a
+ * square, flat page of ink rules; this softens it into paper and cards:
+ *
+ * - a slightly larger type scale and a narrower, centred column;
+ * - corners (6px on controls, 10px on cards) and a warm "paper" ground
+ *   for the surfaces that hold things;
+ * - every story wears its own colour (--story-base, set inline by
+ *   views/story-nav.js): its generated cover, its tabs, its button;
+ * - one-line notices float as a toast instead of pushing the page down.
+ *
+ * Nothing here changes what a page says or where its controls are.
+ */
+
+@font-face {
+  font-family: 'Fraunces'; src: url('/fonts/fraunces-roman.woff2') format('woff2-variations');
+  font-weight: 100 900; font-style: normal; font-display: swap;
+}
+
+:root {
+  --t-xs: 0.8125rem;   /* 13px */
+  --t-sm: 0.875rem;    /* 14px -- metadata, bylines, chips */
+  --t-md: 1rem;        /* 16px -- the interface's normal size */
+  --t-base: 1.0625rem; /* 17px -- prose */
+  --radius: 6px;
+  --radius-lg: 10px;
+  --paper: #f7f5f0;
+  --card-border: #e6e3dc;
+  --card-shadow: 0 1px 2px rgba(18, 18, 16, 0.04), 0 8px 24px -18px rgba(18, 18, 16, 0.28);
+  --font-cover: 'Fraunces', var(--font-prose);
+  --column: 1240px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #212120;
+    --card-border: #353532;
+    --card-shadow: none;
+  }
+}
+:root[data-theme="dark"], :root[data-theme="dusk"] {
+  --paper: #212120;
+  --card-border: #353532;
+  --card-shadow: none;
+}
+
+/* ---------- the column ---------- */
+.container { max-width: var(--column); padding: var(--s-9) var(--s-8) var(--s-12); }
+.container-wide { max-width: 1600px; }
+.topbar { padding: 0 calc(max(0px, (100% - var(--column)) / 2) + var(--s-8)); min-height: 60px; }
+@media (max-width: 720px) {
+  .container { padding: var(--s-7) var(--s-6) var(--s-11); }
+  .topbar { padding: 0 var(--s-6); }
+}
+
+/* ---------- controls: rounded, same hierarchy ---------- */
+.btn { border-radius: var(--radius); }
+.btn.small, .btn.tiny { border-radius: calc(var(--radius) - 1px); }
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select {
+  border-radius: var(--radius);
+}
+.menu-panel, .user-menu-panel { border-radius: var(--radius-lg); overflow: hidden; }
+
+/* The search is a pill with its advanced search inside it. */
+.topbar-search {
+  align-items: center; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--bg-sunken); padding: 0 var(--s-2) 0 var(--s-5);
+}
+.topbar-search:focus-within { border-color: var(--border-strong); background: var(--bg); }
+.topbar-search input[type="search"],
+.topbar-search input[type="search"]:hover,
+.topbar-search input[type="search"]:focus {
+  border: 0; background: transparent; border-radius: 0; padding-left: 0; outline: none;
+}
+.topbar-search .topbar-icon { border-radius: 999px; }
+.user-avatar { border-radius: 50%; }
+
+/* ---------- notices ---------- */
+/* An error stays in the page, where it cannot be missed. A plain notice
+   ("Saved", "Chapter published") floats at the foot of the window and
+   goes after a few seconds; hovering it holds it. */
+.flash { border-radius: 0; }
+.flash.info {
+  position: fixed; left: 50%; bottom: var(--s-8); z-index: 60;
+  transform: translateX(-50%); max-width: min(560px, calc(100vw - 2 * var(--s-6)));
+  padding: var(--s-5) var(--s-8); border: 0; border-radius: 999px;
+  background: var(--text); color: var(--bg);
+  box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.45);
+  animation: toast-away 0.4s ease 7s forwards;
+}
+.flash.info:hover { animation-play-state: paused; }
+.flash.info a { color: inherit; }
+@keyframes toast-away { to { opacity: 0; visibility: hidden; transform: translate(-50%, 8px); } }
+@media (prefers-reduced-motion: reduce) {
+  @keyframes toast-away { to { opacity: 0; visibility: hidden; } }
+}
+
+/* ---------- a story's colour ---------- */
+/* --story-base is the ink itself (dark enough for white type on it);
+   --story is that ink used as type or a rule on the page, lifted in the
+   dark themes so it still reads on charcoal; --story-soft is a wash. */
+[style*="--story-base"] {
+  --story: var(--story-base);
+  --story-soft: color-mix(in srgb, var(--story-base) 9%, var(--bg));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) [style*="--story-base"] {
+    --story: color-mix(in srgb, var(--story-base) 40%, #fff);
+    --story-soft: color-mix(in srgb, var(--story-base) 28%, var(--bg));
+  }
+}
+:root[data-theme="dark"] [style*="--story-base"],
+:root[data-theme="dusk"] [style*="--story-base"] {
+  --story: color-mix(in srgb, var(--story-base) 40%, #fff);
+  --story-soft: color-mix(in srgb, var(--story-base) 28%, var(--bg));
+}
+
+/* ---------- generated covers ---------- */
+/* A title set on the story's ink, with a mark of its own. Sized by
+   whatever box the page already gives covers; the type scales with it. */
+.gen-cover {
+  position: relative; overflow: hidden; isolation: isolate;
+  display: flex; flex-direction: column; justify-content: space-between;
+  aspect-ratio: 2 / 3; height: auto;
+  background: var(--story-base); color: #fff; border: 0;
+  border-radius: 3px 6px 6px 3px;
+  container-type: inline-size;
+  box-shadow: inset 3px 0 0 rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.1);
+  user-select: none; -webkit-user-select: none;
+}
+.gen-cover::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.14), transparent 45%, rgba(0, 0, 0, 0.2));
+}
+.gen-cover-by, .gen-cover-title { position: relative; padding: 0 10cqi; }
+.gen-cover-by {
+  padding-top: 10cqi; font: 600 6.5cqi/1.2 var(--font-ui);
+  text-transform: uppercase; letter-spacing: 0.12em; opacity: 0.8;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gen-cover-title {
+  margin-top: auto; padding-bottom: 11cqi;
+  font: 600 14.5cqi/1.04 var(--font-cover); letter-spacing: -0.01em;
+  overflow-wrap: anywhere; hyphens: auto;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden;
+}
+@container (max-width: 56px) {
+  .gen-cover-by, .gen-cover-title { display: none; }
+}
+@container (max-width: 90px) {
+  .gen-cover-by { display: none; }
+  .gen-cover-title { font-size: 15cqi; -webkit-line-clamp: 4; }
+}
+/* The marks: one shape per ink, drawn in white at low strength behind
+   the title, top right. */
+.gen-cover::after {
+  content: ""; position: absolute; z-index: -1;
+  top: 16%; right: -14%; width: 64%; aspect-ratio: 1;
+  border: 2px solid rgba(255, 255, 255, 0.28); border-radius: 50%;
+}
+.gen-cover.mark-diamond::after { border-radius: 0; transform: rotate(45deg); width: 50%; right: -8%; }
+.gen-cover.mark-double::after { box-shadow: 0 0 0 9cqi rgba(255, 255, 255, 0.07), inset 0 0 0 7cqi rgba(255, 255, 255, 0.08); }
+.gen-cover.mark-halo::after {
+  border: 0; background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05) 60%, transparent 70%);
+  width: 90%; right: -30%; top: 6%;
+}
+.gen-cover.mark-bar::after {
+  border: 0; border-radius: 0; top: 18%; right: 0; left: 0; width: auto; aspect-ratio: auto; height: 26%;
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0 2px, transparent 2px 9px);
+}
+/* The sizes the existing cover classes give their pictures, kept. */
+.story-cover.gen-cover { height: auto; }
+.story-page-cover.gen-cover { height: auto; }
+
+/* ---------- the story's own pages ---------- */
+.title-page {
+  position: relative; border-bottom: 0; align-items: start;
+  padding: var(--s-9) var(--s-9) var(--s-9);
+  margin: 0 0 var(--s-2);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--story-soft, var(--bg-sunken)), var(--bg) 92%);
+}
+.title-page .story-page-cover { box-shadow: 0 18px 36px -20px rgba(0, 0, 0, 0.5); border-radius: 3px 8px 8px 3px; height: auto; aspect-ratio: 3 / 4; }
+.title-page .story-page-cover.gen-cover { aspect-ratio: 2 / 3; box-shadow: inset 3px 0 0 rgba(0, 0, 0, 0.22), 0 18px 36px -20px rgba(0, 0, 0, 0.5); }
+.title-page h1 { font-size: clamp(2.25rem, 4.6vw, 3.25rem); line-height: 1.04; }
+.title-page-kicker { font-size: var(--t-sm); }
+.btn.story-primary {
+  background: var(--story-base); border-color: var(--story-base); color: #fff;
+}
+.btn.story-primary:hover { background: color-mix(in srgb, var(--story-base) 85%, #000); border-color: color-mix(in srgb, var(--story-base) 85%, #000); color: #fff; }
+@media (max-width: 720px) {
+  .title-page { padding: var(--s-7) var(--s-6); }
+  .title-page .story-page-cover { height: auto; }
+}
+
+/* The tabs every page of a story shares. */
+.story-tabs {
+  position: sticky; top: 0; z-index: 20;
+  margin: 0 0 var(--s-8); background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.story-tabs-row { display: flex; align-items: stretch; gap: var(--s-4); }
+.story-tabs-scroll {
+  display: flex; gap: var(--s-1); min-width: 0; flex: 1 1 auto;
+  overflow-x: auto; scrollbar-width: none; position: relative;
+}
+.story-tabs-scroll::-webkit-scrollbar { display: none; }
+.story-tabs-end { display: flex; align-items: center; gap: var(--s-1); flex: none; }
+.story-tab {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-6) var(--s-5); white-space: nowrap;
+  font-size: var(--t-md); font-weight: 600; color: var(--text-muted);
+  text-decoration: none; cursor: pointer; list-style: none;
+}
+.story-tab::-webkit-details-marker { display: none; }
+.story-tab:hover { color: var(--text); text-decoration: none; }
+.story-tab.is-current { color: var(--story, var(--text)); box-shadow: inset 0 -3px 0 var(--story, var(--text)); }
+.story-tab-count { font-weight: 500; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.story-tabs-end .story-tab { font-size: var(--t-sm); font-weight: 500; }
+.story-tabs .menu-panel { right: 0; left: auto; }
+@media (max-width: 720px) {
+  .story-tabs { margin-left: calc(-1 * var(--s-6)); margin-right: calc(-1 * var(--s-6)); padding: 0 var(--s-4); }
+  .story-tab { padding: var(--s-5) var(--s-4); }
+  .story-tabs-end > a.story-tab { display: none; }
+}
+
+/* The head of every page of a story but its own. */
+.story-bar { margin: calc(-1 * var(--s-4)) 0 var(--s-8); }
+.story-bar .story-tabs { margin-bottom: 0; }
+.story-bar-title {
+  display: inline-flex; align-items: center; gap: var(--s-4);
+  color: var(--text); text-decoration: none; margin-bottom: var(--s-2);
+}
+.story-bar-title:hover .story-bar-name { text-decoration: underline; text-underline-offset: 0.2em; }
+.story-bar-cover {
+  width: 30px; height: auto; aspect-ratio: 2 / 3; object-fit: cover; display: block; flex: none;
+  border-radius: 2px 4px 4px 2px;
+}
+img.story-bar-cover { height: 45px; }
+.story-bar-name { display: block; font-weight: 700; font-size: var(--t-lg); line-height: 1.2; letter-spacing: -0.015em; }
+.story-bar-by { display: block; font-size: var(--t-sm); color: var(--text-muted); }
+
+/* ---------- the contents: one card per chapter ---------- */
+.story-contents .chapter-list { gap: var(--s-4); }
+.story-contents .chapter-row-outer,
+.story-contents .chapter-list > .chapter-row-outer:first-child {
+  border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+  background: var(--bg); padding: 0 var(--s-5) 0 0;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.story-contents .chapter-row-outer:hover { border-color: color-mix(in srgb, var(--story, var(--text)) 45%, var(--card-border)); box-shadow: var(--card-shadow); }
+.story-contents .toc .chapter-row { padding: var(--s-6) 0 var(--s-6) var(--s-5); }
+.story-contents .toc-num {
+  font-family: var(--font-cover); font-size: var(--t-xl); font-weight: 600;
+  color: var(--story, var(--text-muted)); min-width: 1.8em; text-align: center;
+}
+.story-contents .toc .chapter-row-main p,
+.story-contents .toc .chapter-row-meta { padding-left: calc(1.8em * 1.375 + var(--s-3)); }
+.story-contents .toc .chapter-row-main p { font-size: var(--t-md); }
+.story-contents .toc-leader { opacity: 0.25; }
+.story-contents .arc-head { border-top: 0; padding-top: 0; }
+.story-contents .arc-number { color: var(--story, var(--accent)); }
+.story-contents .arc-stack { gap: var(--s-9); }
+.chapter-row-reorder button { min-height: 24px; min-width: 28px; }
+@media (max-width: 720px) {
+  .story-contents .toc .chapter-row { padding: var(--s-5) 0 var(--s-5) var(--s-3); }
+  .story-contents .chapter-row-outer, .story-contents .chapter-list > .chapter-row-outer:first-child { padding-right: var(--s-3); }
+  .story-contents .toc .chapter-row-main p, .story-contents .toc .chapter-row-meta { padding-left: 0; }
+}
+
+/* A phone gets the cover beside the title, not a whole screen of it. */
+@media (max-width: 560px) {
+  .title-page.has-cover { grid-template-columns: 96px minmax(0, 1fr); gap: var(--s-6); }
+  .title-page .story-page-cover { width: 96px; }
+  .title-page-actions { grid-column: 1 / -1; }
+}

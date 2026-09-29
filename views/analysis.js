@@ -1,6 +1,7 @@
 'use strict';
 
 const { layout } = require('../lib/layout');
+const { storyBar } = require('./story-nav');
 const { escapeHtml } = require('../lib/util');
 const { chapterStageBadge, emptyState, goalBar, wordCount } = require('./shared');
 // already had) ----------
@@ -124,13 +125,12 @@ function analysisPage({ user, story, analysis, canWrite = false }) {
     user,
     wide: true,
     body: `
-      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      ${storyBar(story, { current: 'analysis', canWrite, isOwner: story.author_id === user.id })}
       <div class="page-head">
         <div>
           <h1>Analysis</h1>
           <p class="muted">What <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> is made of, counted. Nothing here is set by hand: it is the chapters, the glossary and the reviewers' notes, added up.</p>
         </div>
-        ${storyViewSwitch(story, { canWrite, current: 'analysis' })}
       </div>
       ${goalBar(analysis.words, story.word_goal)}
       <div class="chart-grid">
@@ -206,19 +206,6 @@ function outlineRow(chapter, { cast = [], canOrder = false, index = 0, total = 0
 // The ways of looking at a story: the plan (for the people writing it),
 // the list, the count, and the calendar. One switch, so adding a fourth does not
 // mean finding three copies of it.
-function storyViewSwitch(story, { canWrite = false, current = '' } = {}) {
-  // The page you are on is marked as such, and is not a link to itself.
-  const view = (name, label) => (name === current
-    ? `<a class="btn small" href="/stories/${story.id}/${name}" aria-current="page">${label}</a>`
-    : `<a class="btn ghost small" href="/stories/${story.id}/${name}">${label}</a>`);
-  return `
-    <nav class="page-head-actions" aria-label="Ways to look at the story">
-      ${canWrite ? view('plan', 'Plan') : ''}
-      ${view('outline', 'Outline')}
-      ${view('analysis', 'Analysis')}
-      ${view('timeline', 'Timeline')}
-    </nav>`;
-}
 
 
 function outlinePage({ user, story, chapters = [], castByChapter = new Map(), canOrder = false, canWrite = false, stats = null, notice = '' }) {
@@ -234,13 +221,12 @@ function outlinePage({ user, story, chapters = [], castByChapter = new Map(), ca
     user,
     wide: true,
     body: `
-      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      ${storyBar(story, { current: 'outline', canWrite, isOwner: story.author_id === user.id })}
       <div class="page-head">
         <div>
           <h1>Outline</h1>
           <p class="muted">Every chapter of <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> on one line: what happens, who is in it, how long it is, and what is still waiting on somebody.${canOrder ? ' Drag a row to move a chapter.' : ''}</p>
         </div>
-        ${storyViewSwitch(story, { canWrite, current: 'outline' })}
       </div>
       ${notice ? `<p class="flash info">${escapeHtml(notice)}</p>` : ''}
       <p class="outline-totals">
@@ -289,6 +275,5 @@ module.exports = {
   outlineRow,
   presenceGrid,
   presenceStep,
-  storyViewSwitch,
   weeksFrom,
 };

@@ -1,6 +1,7 @@
 'use strict';
 
 const { layout } = require('../lib/layout');
+const { storyBar } = require('./story-nav');
 const { escapeHtml } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { characterStudyFieldset, characterStudyNudge, characterStudySection } = require('./character-study');
@@ -161,7 +162,7 @@ function bibleIndexPage({
     title: `Glossary &middot; ${story.title}`,
     user,
     body: `
-      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      ${storyBar(story, { current: 'glossary', canWrite, isOwner: story.author_id === user.id })}
       <div class="page-head">
         <div>
           <h1>Glossary</h1>

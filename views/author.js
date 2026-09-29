@@ -7,6 +7,7 @@
 // history: what somebody has read is between them and whoever wrote it.
 
 const { layout } = require('../lib/layout');
+const { storyCover } = require('./story-nav');
 const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
 const { wordCount } = require('./shared');
@@ -30,13 +31,7 @@ const compact = (n) => {
 };
 
 function cover(w, cls) {
-  if (w.cover_filename) {
-    const x = Number.isFinite(Number(w.cover_focus_x)) ? Number(w.cover_focus_x) : 50;
-    const y = Number.isFinite(Number(w.cover_focus_y)) ? Number(w.cover_focus_y) : 50;
-    return `<img class="${cls}" src="/stories/${w.id}/cover?v=${encodeURIComponent(w.cover_filename)}" alt="" loading="lazy" style="object-position:${x}% ${y}%">`;
-  }
-  const letter = (String(w.title || '?').match(/[\p{L}\p{N}]/u) || ['?'])[0].toUpperCase();
-  return `<span class="${cls} cover-letter" aria-hidden="true">${escapeHtml(letter)}</span>`;
+  return storyCover(w, cls, { author: '' });
 }
 
 // ---------- the numbers ----------

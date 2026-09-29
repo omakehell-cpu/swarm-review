@@ -5,9 +5,9 @@
 // It is the scaffold -- laid out first, filled in later, in any order.
 
 const { layout } = require('../lib/layout');
+const { storyBar } = require('./story-nav');
 const { timeHtml } = require('../lib/time');
 const { escapeHtml } = require('../lib/util');
-const { storyViewSwitch } = require('./analysis');
 
 const wordsLabel = (n) => `${Number(n || 0).toLocaleString('en-GB')} word${n === 1 ? '' : 's'}`;
 const itemName = (item) => (item.type === 'chapter' ? `${item.number}. ${item.title}` : `Planned: ${item.title}`);
@@ -215,13 +215,12 @@ function planPage({ user, story, plan, canWrite, notice = '', error = '', values
     user,
     wide: true,
     body: `
-      <p class="breadcrumb"><a href="/stories/${story.id}">&larr; ${escapeHtml(story.title)}</a></p>
+      ${storyBar(story, { current: 'plan', canWrite, isOwner: story.author_id === user.id })}
       <div class="page-head">
         <div>
           <h1>Plan</h1>
           <p class="muted">The shape of <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> before it is all written: the arcs it is built from, and the chapters still to write, in the order they will be read. Write them in any order you like. Only the people who write this story can see this page.</p>
         </div>
-        ${storyViewSwitch(story, { canWrite, current: 'plan' })}
       </div>
       ${notice ? `<p class="flash info" role="status">${escapeHtml(notice)}</p>` : ''}
       ${error ? `<p class="error" role="alert">${escapeHtml(error)}</p>` : ''}

@@ -9,7 +9,8 @@
 const { escapeHtml } = require('../lib/util');
 const { timeHtml } = require('../lib/time');
 const { storyState, STORY_STATES } = require('../lib/story-state');
-const { bylineWith, storyCoverImg } = require('./shared');
+const { bylineWith } = require('./shared');
+const { storyCover } = require('./story-nav');
 const { LENGTHS, SHELVES, SHELF_ORDER } = require('../lib/story-shelves');
 
 // ---------- small words ----------
@@ -45,10 +46,7 @@ function stateLabel(s) {
 // A story with no picture still gets a face: its first letter, set large.
 // Nothing invented about it -- no stock image standing in for the story.
 function coverOrLetter(s, className = 'story-card-cover') {
-  const img = storyCoverImg(s, className);
-  if (img) return img;
-  const letter = (String(s.title || s.story_title || '?').match(/[\p{L}\p{N}]/u) || ['?'])[0].toUpperCase();
-  return `<span class="${className} cover-letter" aria-hidden="true">${escapeHtml(letter)}</span>`;
+  return storyCover(s.story_title && !s.title ? { ...s, title: s.story_title } : s, className);
 }
 
 // ---------- a story, as a row of the catalogue ----------
