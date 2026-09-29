@@ -33,14 +33,14 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #212120;
-    --card-border: #353532;
+    --paper: color-mix(in srgb, var(--bg) 82%, #000);
+    --card-border: color-mix(in srgb, var(--border) 85%, var(--bg));
     --card-shadow: none;
   }
 }
 :root[data-theme="dark"], :root[data-theme="dusk"] {
-  --paper: #212120;
-  --card-border: #353532;
+  --paper: color-mix(in srgb, var(--bg) 82%, #000);
+  --card-border: color-mix(in srgb, var(--border) 85%, var(--bg));
   --card-shadow: none;
 }
 
@@ -273,4 +273,177 @@ img.story-bar-cover { height: 45px; }
   .title-page.has-cover { grid-template-columns: 96px minmax(0, 1fr); gap: var(--s-6); }
   .title-page .story-page-cover { width: 96px; }
   .title-page-actions { grid-column: 1 / -1; }
+}
+
+/* ======================================================================
+   The front page (B2): a greeting, your desk as cards, what is waiting
+   in a column beside it, then what you are reading and the shelves.
+   ====================================================================== */
+.front-head h1 { font-size: clamp(2rem, 4vw, 2.75rem); max-width: none; margin-bottom: var(--s-3); }
+.front-summary { margin: 0; color: var(--text-muted); font-size: var(--t-lg); }
+.bands { grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s-10); margin-top: var(--s-8); }
+.band-title,
+.band-write .band-title {
+  border-bottom: 0; padding-bottom: 0; margin: 0 0 var(--s-6);
+  font-size: var(--t-xl); text-transform: none; letter-spacing: -0.02em; color: var(--text);
+}
+
+.desk-list { grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: var(--s-6); }
+.desk-item {
+  grid-template-columns: 84px 1fr; gap: var(--s-6); padding: var(--s-6);
+  background: var(--bg); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
+}
+.desk-cover, .desk-cover.gen-cover { width: 84px; box-shadow: none; border-radius: 2px 5px 5px 2px; }
+.desk-cover.gen-cover { box-shadow: inset 3px 0 0 rgba(0, 0, 0, 0.22); }
+.desk-title { font-size: var(--t-lg); }
+.desk-goal-bar { border-radius: 2px; overflow: hidden; }
+.desk-actions { margin-top: auto; padding-top: var(--s-4); }
+.desk-empty { border-radius: var(--radius-lg); }
+
+.band-review .review-group {
+  padding: var(--s-6); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+  background: var(--paper);
+}
+.band-review .review-group + .review-group { margin-top: var(--s-5); }
+.review-group h3 { font-size: var(--t-md); margin-bottom: var(--s-4); }
+.inbox-list a { padding: var(--s-3) 0; border-radius: var(--radius); }
+.inbox-list a:hover { box-shadow: none; }
+.inbox-list a:hover .inbox-what { text-decoration: underline; text-underline-offset: 0.2em; }
+.inbox-count { border-radius: 999px; }
+
+.band-read > .band-title { margin-top: var(--s-4); }
+.read-asides {
+  background: transparent; padding: 0; gap: var(--s-6);
+}
+.read-aside {
+  padding: var(--s-6); border: 1px solid var(--card-border); border-radius: var(--radius-lg); background: var(--paper);
+}
+.read-aside h3 { font-size: var(--t-md); }
+.read-list { gap: var(--s-4); }
+.read-list li { flex-wrap: nowrap; align-items: center; gap: var(--s-5); }
+.read-cover { width: 36px; flex: none; aspect-ratio: 2 / 3; height: auto; object-fit: cover; display: block; border-radius: 2px 4px 4px 2px; }
+.read-item { display: flex; flex-direction: column; min-width: 0; }
+.read-item > a { font-family: var(--font-prose); font-weight: 600; text-decoration: none; }
+.read-item > a:hover { text-decoration: underline; }
+.read-list .read-fresh { color: var(--accent); font-weight: 600; }
+
+/* Shelves as pills, the order and the look as one small segmented pair. */
+.shelf-tab { border-radius: 999px; padding: var(--s-3) var(--s-6); }
+.segmented { border-color: var(--border); border-radius: 999px; overflow: hidden; }
+.segmented a + a, .segmented a + span, .segmented span + a { border-left-color: var(--border); }
+.segmented-current { border-radius: 999px; }
+
+/* A story on the shelf is a card. */
+.story-wides { display: grid; gap: var(--s-5); }
+.story-wides > .story-wide:first-child { padding-top: var(--s-7); }
+.story-wide {
+  padding: var(--s-7); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+  background: var(--bg); transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.story-wide:hover { border-color: var(--border-strong); box-shadow: var(--card-shadow); }
+.story-wide-cover { box-shadow: none; border-radius: 2px 5px 5px 2px; }
+img.story-wide-cover { box-shadow: 0 0 0 1px var(--border); }
+.story-wide-facts { border-left-color: var(--card-border); }
+
+@media (max-width: 900px) {
+  .bands { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .desk-item { grid-template-columns: 64px 1fr; padding: var(--s-5); gap: var(--s-5); }
+  .desk-cover, .desk-cover.gen-cover { width: 64px; }
+  .story-wide { padding: var(--s-5); }
+  .story-wides > .story-wide:first-child { padding-top: var(--s-5); }
+}
+
+/* ======================================================================
+   Reading a chapter (B3): the story's colour on its way in, a line that
+   fills as you read, rounder controls, and the next chapter as a card.
+   The column stays where it was in every mode -- see the note on read
+   mode in style.css: nothing slides when you press Read.
+   ====================================================================== */
+.chapter-progress {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 70; pointer-events: none;
+}
+.chapter-progress > span {
+  display: block; height: 100%; background: var(--story); transform: scaleX(0); transform-origin: 0 50%;
+}
+.chapter-topline .breadcrumb { margin-bottom: var(--s-6); }
+.chapter-story { display: inline-flex; align-items: center; gap: var(--s-4); font-weight: 600; color: var(--text) !important; text-decoration: none; }
+.chapter-story:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.chapter-story-arrow { display: none; }
+.chapter-story-cover { width: 22px; height: auto; aspect-ratio: 2 / 3; object-fit: cover; display: block; border-radius: 2px 3px 3px 2px; }
+.chapter-nav.compact { font-size: var(--t-xs); gap: var(--s-2); }
+.chapter-nav.compact .chapter-nav-arrow { padding: var(--s-2) var(--s-5); border: 1px solid var(--border); border-radius: 999px; letter-spacing: 0.06em; }
+.chapter-nav.compact .chapter-nav-arrow:hover { border-color: var(--border-strong); }
+.chapter-nav.compact .chapter-nav-arrow.disabled { display: none; }
+.chapter-header .chapter-kicker { color: var(--story); font-size: var(--t-xs); }
+.chapter-header h1 { font-size: clamp(2rem, 3.8vw, 2.75rem); line-height: 1.06; }
+
+.mode-switch { border-radius: 999px; overflow: hidden; padding: 3px; gap: 2px; border-color: var(--border) !important; }
+.mode-switch button { border-radius: 999px; border: 0 !important; }
+.chapter-header .reading-prefs > summary,
+.chapter-header .version-actions .btn { border-radius: 999px; }
+.reading-prefs-panel, .chapter-header .menu-panel { border-radius: var(--radius-lg); }
+.chapter-float-arrow { border-radius: 999px; width: 44px; height: 44px; }
+
+.chapter-nav.foot .chapter-nav-link {
+  border: 1px solid var(--card-border); border-radius: var(--radius-lg); padding: var(--s-6) var(--s-7);
+}
+.chapter-nav.foot .chapter-nav-link.next:not(.follow-slot) { background: var(--story-soft); border-color: transparent; }
+.chapter-nav.foot .chapter-nav-link.next:not(.follow-slot):hover { background: color-mix(in srgb, var(--story-base) 16%, var(--bg)); }
+.chapter-nav.foot .chapter-nav-here { border-radius: 999px; }
+
+.comments-pane .comment { border-radius: var(--radius-lg); }
+
+/* ======================================================================
+   The editor (B3): a white sheet on paper, a compact toolbar, the side
+   in pill tabs and cards. The check marks in the text are left exactly
+   as they are -- their colours, and the overlay's metrics, untouched.
+   ====================================================================== */
+body:has(.editor-grid) { background: var(--paper); }
+body:has(.editor-grid) .topbar { background: var(--bg); }
+.writer-bar { background: transparent; }
+.writer-card { border-top: 0; }
+.wa-editor-wrap {
+  background: var(--bg); border-color: var(--card-border);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  box-shadow: 0 12px 32px -24px rgba(0, 0, 0, 0.4);
+}
+.wa-editor-wrap:focus-within { border-color: var(--border-strong); box-shadow: 0 12px 32px -24px rgba(0, 0, 0, 0.4); }
+.editor-tools {
+  margin: var(--s-3) 0 0; padding: var(--s-3) var(--s-4); gap: var(--s-2);
+  background: var(--bg); border: 1px solid var(--card-border); border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.editor-tool { border-color: transparent; border-radius: var(--radius); }
+.editor-tool:hover { border-color: transparent; background: var(--bg-sunken); }
+.editor-tool.tool-focus { border-radius: 999px; }
+.tools-menu { border-radius: var(--radius-lg); overflow: hidden; }
+.title-field input { background: transparent; }
+
+.side-tabs {
+  border: 1px solid var(--card-border); border-radius: 999px; padding: 4px; gap: 2px;
+  background: var(--bg);
+}
+.side-tab { flex: 1 1 0; border: 0 !important; border-radius: 999px; text-align: center; }
+.side-tab[aria-selected="true"] { background: var(--text); color: var(--bg); }
+.side-tab[aria-selected="true"] .side-tab-count { color: inherit; }
+.side-panel > section, .side-panel > aside, .editor-side .wa-panel {
+  background: var(--bg); border: 1px solid var(--card-border); border-radius: var(--radius-lg);
+  padding: var(--s-6);
+}
+.side-panel > aside.beside-pane { padding: 0; border: 0; background: transparent; }
+.wa-pcard { border-radius: var(--radius); }
+.wa-pcard-box { border-radius: 3px; }
+/* "Worth a look": the checks that found something keep their colour and
+   their weight; the ones that found nothing step back. */
+.wa-pcard.is-zero { background: transparent; color: var(--text-muted); padding-block: var(--s-2); }
+.wa-pcard.is-zero strong { font-weight: 500; }
+.wa-pcard.is-zero:hover { background: var(--bg-sunken); border-color: transparent; }
+.chapter-nav.foot .chapter-nav-link.next:not(.follow-slot) .chapter-nav-dir { color: var(--text); }
+.wa-panel-option { text-align: left; }
+.side-panel > section, .side-panel > aside, .editor-side .wa-panel { padding: var(--s-5); }
+@media (max-width: 560px) {
+  .title-field input { font-size: var(--t-2xl); }
 }

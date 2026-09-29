@@ -217,6 +217,22 @@ function whatsNewCard(whatsNew) {
     </section>`;
 }
 
+// One sentence under the greeting: what is waiting, most personal first.
+// Nothing waiting says so, rather than leaving a hole under the title.
+function frontSummary(inbox, forYou) {
+  const bits = [];
+  const asked = (inbox && inbox.asked) || [];
+  if (asked.length) bits.push(`${asked.length === 1 ? `${escapeHtml(asked[0].requested_by_name || 'Somebody')} asked you` : `${asked.length} people asked you`} to read`);
+  const notes = ((inbox && inbox.pending) || []).reduce((n, r) => n + (r.pending || 0), 0);
+  if (notes) bits.push(`${notes} note${notes === 1 ? ' is' : 's are'} waiting on your chapters`);
+  const replies = ((inbox && inbox.replies) || []).length;
+  if (replies) bits.push(`${replies} repl${replies === 1 ? 'y' : 'ies'} to you`);
+  const fresh = ((forYou && forYou.following) || []).reduce((n, f) => n + (f.fresh || 0), 0);
+  if (fresh) bits.push(`${fresh} new chapter${fresh === 1 ? '' : 's'} in what you follow`);
+  const text = bits.length ? `${bits.join(', ')}.` : 'Nothing is waiting for you.';
+  return `<p class="front-summary">${text.charAt(0).toUpperCase()}${text.slice(1)}</p>`;
+}
+
 // ---------- the list: where from, shelves, search, and pages ----------
 // (the controls themselves are in views/front.js)
 
@@ -276,7 +292,7 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
     body: `
       <a class="skip-link" href="#library">Skip to the stories</a>
       <div class="page-head front-head">
-        <h1>Stories</h1>
+        ${top ? `<div><h1>Welcome back, ${escapeHtml(String(user.display_name || '').split(/\s+/)[0])}</h1>${frontSummary(inbox, forYou)}</div>` : '<h1>Stories</h1>'}
       </div>
       ${activeTags.length ? '' : whatsNewCard(whatsNew)}
       ${activeTags.length ? '' : welcomeCard(welcome)}

@@ -6,6 +6,15 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-29 — The plan, a glossary for every story, and a character study
 
+### A new look
+
+- **Every story has its own colour.** A story without a cover picture gets one made from its title, on its colour, with a mark of its own -- on the shelves, your desk and the author pages.
+- **A story's pages share one header**: its cover and title, and tabs for *Chapters*, *Plan*, *Outline*, *Glossary*, *Timeline* and *Analysis*. The tabs stay at the top as you scroll.
+- **The front page greets you** and says in one line what is waiting. Your desk, what is waiting and what you are reading are in cards; the stories on the shelf too.
+- **Reading a chapter**: a thin line in the story's colour fills along the top as you read, and the next chapter is a card at the foot.
+- **The editor** is a white sheet on paper, with a lighter row of tools. The checks that found something stand out in the panel; the ones that found nothing step back. The marks in the text are as they were.
+- Rounder corners, slightly larger type, and short notices (*Saved*) float at the foot of the window for a few seconds instead of pushing the page down.
+
 ### The timeline, rebuilt
 
 - **Three tabs: Grid, Chronicle and Dates**, after looking at how Plottr, Aeon Timeline, Campfire and World Anvil do it.

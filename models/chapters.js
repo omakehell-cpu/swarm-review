@@ -60,7 +60,8 @@ function getChapterNeighbours(chapter) {
 const getChapterById = (id) =>
   db.prepare(`
     SELECT c.*, u.display_name AS author_name, u.username AS author_username,
-           s.title AS story_title, s.author_id AS story_author_id
+           s.title AS story_title, s.author_id AS story_author_id,
+           s.cover_filename AS story_cover_filename, s.cover_focus_x AS story_cover_focus_x, s.cover_focus_y AS story_cover_focus_y
     FROM chapters c
     JOIN users u ON u.id = c.author_id
     JOIN stories s ON s.id = c.story_id

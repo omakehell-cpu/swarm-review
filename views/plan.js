@@ -135,7 +135,7 @@ function arcMap(items, all) {
             title="${escapeHtml(itemName(i))}">${i.type === 'chapter' ? i.number : '&middot;'}</span>`).join('');
   return `
     <figure class="arc-map">
-      <div class="arc-map-scroll">
+      <div class="arc-map-scroll" tabindex="0" role="region" aria-label="The arc map, scrolls sideways">
         <div class="arc-map-grid" aria-hidden="true" style="grid-template-columns: repeat(${items.length}, minmax(2rem, 1fr))">${bars}${cells}</div>
       </div>
       <figcaption class="muted chart-note">The arcs over the chapters, in the order they are read. A dotted square is a chapter planned and not written yet. The list below says the same in words.</figcaption>

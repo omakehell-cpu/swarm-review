@@ -6,6 +6,7 @@ const { escapeHtml, toScriptJson } = require('../lib/util');
 const { parseMarkdown, renderHighlighted } = require('../lib/markdown');
 const { timeHtml } = require('../lib/time');
 const { chapterCastBlock, missingNamesBlock } = require('./bible');
+const { storyCover, storyStyle } = require('./story-nav');
 const { ICONS, KIND_LABEL, STATUS_LABEL, emptyState, kindBadge, personLink, readersLine, suggestionDiff, wiki, wordCount } = require('./shared');
 // Above the text, for the author: how the chapter read, added up. The
 // paragraphs are shaded in the text itself (public/js/reactions.js); this
@@ -247,7 +248,7 @@ function chapterNav(chapter, neighbours, { compact = false, canWrite = false, fo
         </div>` : '<span></span>');
   if (total < 2 && !canWrite && following === null) return '';
   return `
-    <nav class="chapter-nav foot" aria-label="Chapters, after the text">
+    <nav class="chapter-nav foot" style="${storyStyle({ id: chapter.story_id })}" aria-label="Chapters, after the text">
       ${prev ? `<a class="chapter-nav-link prev" href="/chapters/${prev.id}" rel="prev">
           <span class="chapter-nav-dir">&larr; Previous</span>
           <span class="chapter-nav-title">${label(prev)}</span>
@@ -455,11 +456,15 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
   const highlighted = renderHighlighted(ast, comments, user.plain_names ? null : (findMatches || wiki.findWikiMatches));
 
   const body = `
-    <div class="chapter-topline">
-      <p class="breadcrumb"><a href="/stories/${chapter.story_id}">&larr; ${escapeHtml(chapter.story_title)}</a></p>
+    <div class="chapter-progress" style="${storyStyle({ id: chapter.story_id })}" aria-hidden="true"><span></span></div>
+    <div class="chapter-topline" style="${storyStyle({ id: chapter.story_id })}">
+      <p class="breadcrumb"><a class="chapter-story" href="/stories/${chapter.story_id}">${storyCover({
+    id: chapter.story_id, title: chapter.story_title, cover_filename: chapter.story_cover_filename,
+    cover_focus_x: chapter.story_cover_focus_x, cover_focus_y: chapter.story_cover_focus_y,
+  }, 'chapter-story-cover', { author: '' })}<span class="chapter-story-arrow" aria-hidden="true">&larr; </span>${escapeHtml(chapter.story_title)}</a></p>
       ${chapterNav(chapter, neighbours, { compact: true })}
     </div>
-    <div class="chapter-header" data-kicker="LOG ${String(chapter.chapter_number).padStart(2, '0')} // ${escapeHtml(chapter.story_title).toUpperCase()} // V${currentVersion.version_number}${currentVersion.word_count ? ` // ${currentVersion.word_count} W` : ''}">
+    <div class="chapter-header" style="${storyStyle({ id: chapter.story_id })}" data-kicker="LOG ${String(chapter.chapter_number).padStart(2, '0')} // ${escapeHtml(chapter.story_title).toUpperCase()} // V${currentVersion.version_number}${currentVersion.word_count ? ` // ${currentVersion.word_count} W` : ''}">
       <h1 id="chapter-title"><span class="chapter-kicker">Chapter ${chapter.chapter_number}${
         neighbours && neighbours.total > 1 ? `<span class="chapter-kicker-of"> of ${neighbours.total}</span>` : ''
       }<span class="sr-only">:</span></span> ${escapeHtml(chapter.title)}</h1>

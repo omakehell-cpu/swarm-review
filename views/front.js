@@ -231,8 +231,8 @@ function followingList(stories) {
       <h3><span aria-hidden="true">&#9733;</span> Following</h3>
       <ul class="read-list">
         ${shown.map((f) => `
-          <li><a href="${f.fresh ? `/chapters/${f.first_fresh_id}` : `/stories/${f.id}`}">${escapeHtml(f.title)}</a>
-            <span class="muted">${f.fresh ? plural(f.fresh, 'new chapter') : 'up to date'}</span></li>`).join('')}
+          <li>${coverOrLetter(f, 'read-cover')}<span class="read-item"><a href="${f.fresh ? `/chapters/${f.first_fresh_id}` : `/stories/${f.id}`}">${escapeHtml(f.title)}</a>
+            <span class="muted${f.fresh ? ' read-fresh' : ''}">${f.fresh ? plural(f.fresh, 'new chapter') : 'up to date'}</span></span></li>`).join('')}
       </ul>
       ${stories.length > shown.length ? `<p class="band-more"><a href="/find?following=1">All ${stories.length} you follow &rarr;</a></p>` : ''}
     </div>`;
@@ -245,9 +245,9 @@ function recentlyList(items) {
       <h3>Recently read</h3>
       <ul class="read-list">
         ${items.map((c) => `
-          <li><a href="${c.finished ? `/stories/${c.story_id}` : `/chapters/${c.chapter_id}`}">${escapeHtml(c.story_title)}</a>
+          <li>${coverOrLetter({ id: c.story_id, title: c.story_title, cover_filename: c.cover_filename, cover_focus_x: c.cover_focus_x, cover_focus_y: c.cover_focus_y }, 'read-cover')}<span class="read-item"><a href="${c.finished ? `/stories/${c.story_id}` : `/chapters/${c.chapter_id}`}">${escapeHtml(c.story_title)}</a>
             <span class="muted">${c.finished ? 'read to the end'
-    : (c.percent ? `chapter ${c.chapter_number} of ${c.chapters}, ${c.percent}% in` : `next: chapter ${c.chapter_number} of ${c.chapters}`)}</span></li>`).join('')}
+    : (c.percent ? `chapter ${c.chapter_number} of ${c.chapters}, ${c.percent}% in` : `next: chapter ${c.chapter_number} of ${c.chapters}`)}</span></span></li>`).join('')}
       </ul>
     </div>`;
 }
