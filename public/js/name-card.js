@@ -85,7 +85,7 @@
   }
 
   /**
-   * `/bible/12` -> `/bible/12/beside`, `/glossary/Akarge` -> the same. A
+   * `/bible/12` -> `/bible/12/beside`, `/wiki/Akarge` -> the same. A
    * bible entry is asked for as it stands in this chapter, and told the
    * word that was clicked, so the card can offer "that word is not them".
    */
@@ -98,7 +98,7 @@
       const tail = qs.toString();
       return `${path}/beside${tail ? `?${tail}` : ''}`;
     }
-    if (/^\/glossary\/[^/]+$/.test(path)) return path + '/beside';
+    if (/^\/wiki\/[^/]+$/.test(path)) return path + '/beside';
     return null;
   }
 
@@ -144,7 +144,7 @@
     card.scrollTop = 0;
     // Where it came from matters to somebody who cannot see which column
     // it landed in: this story's own bible is not the shared glossary.
-    const where = href.indexOf('/bible/') === 0 ? 'from the bible' : 'from the glossary';
+    const where = href.indexOf('/bible/') === 0 ? 'from the glossary' : 'from the wiki';
     say(name
       ? `${name}, ${where}, beside the chapter. Press Escape to go back to the text.`
       : 'Opened beside the chapter. Press Escape to go back to the text.');

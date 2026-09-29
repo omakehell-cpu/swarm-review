@@ -23,7 +23,7 @@ test.before(async () => {
 });
 test.after(() => app && app.stop());
 
-const glossary = async (title) => ana.request(`/glossary/${encodeURIComponent(title)}`);
+const glossary = async (title) => ana.request(`/wiki/${encodeURIComponent(title)}`);
 
 test('a new story has a glossary page: who wrote it, its chapters and who is in it', async () => {
   const res = await ana.request('/stories/new', { method: 'POST', ...form([
@@ -43,7 +43,7 @@ test('a new story has a glossary page: who wrote it, its chapters and who is in 
   assert.match(html, /<a href="\/chapters\/\d+">First Light<\/a>/);
   assert.match(html, /Captain Ruiz<\/a> &mdash; Commands the picket\./);
 
-  const index = await (await ana.request('/glossary?kind=stories')).text();
+  const index = await (await ana.request('/wiki?kind=stories')).text();
   assert.match(index, /The Long Watch/, 'it is listed with the stories');
 });
 

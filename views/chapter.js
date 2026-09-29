@@ -102,7 +102,7 @@ function renderComment(c, { isChapterAuthor, currentUserId, replies, isLatest = 
     : (c.quoted_text ? `<blockquote class="quoted">${escapeHtml(c.quoted_text)}</blockquote>` : '');
 
   const about = c.entity_id && c.entity_name
-    ? `<p class="note-about">About <a href="/bible/${c.entity_id}">${escapeHtml(c.entity_name)}</a> in the bible</p>` : '';
+    ? `<p class="note-about">About <a href="/bible/${c.entity_id}">${escapeHtml(c.entity_name)}</a> in the glossary</p>` : '';
 
   const canApply = isChapterAuthor && hasSuggestion && c.status === 'pending' && isLatest;
 

@@ -40,6 +40,17 @@ on a yellow one rather than a muddy mix of the two.
   say it is hidden. The card keeps counting either way. Hard and very hard
   sentences are two cards, so you can keep the red ones and put away the
   yellow.
+- **Ignore dialogue (text in quotes)**, under the cards: people do not talk in
+  correct prose, and a character's bad grammar is often the point of the
+  line. Beside it, how many marks are inside quotation marks. Tick it and
+  nothing inside quotation marks is marked or counted --
+  no adverbs, no passives, no long sentences. Two things still are:
+  **spelling**, because a typo is a typo wherever it is (put dialect words
+  like *gonna* in the story's dictionary), and **dialogue tags**, which
+  are about the narration around the quote. Off until you tick it.
+
+Which cards are shown, and the dialogue switch, are **saved to your
+account**: they are the same on the next computer you write on.
 - **Writing style checks**, the switch at the top of the panel: **Off**
   takes every mark out of the text while you draft; **On** brings them
   back. A first draft and a second pass are different jobs.
@@ -53,8 +64,8 @@ chapter clean, as a reader will see it.
 On a phone the panel folds into one line above the text -- *Grade 5 · 18
 flagged* -- that opens with a tap.
 
-Nothing is sent anywhere: the checks run in your browser, and none of them
-is AI. They are rules, and a rule does not know what you meant.
+The checks run in your browser: your text is not sent anywhere to be
+checked, and none of them is AI. They are rules, and a rule does not know what you meant.
 
 ## What each check looks for
 
@@ -81,7 +92,7 @@ character; in the narration it is usually just longer.
 
 **Spelling.** A real dictionary. It does not know the names you invented;
 add them to the **story dictionary** from the mark itself or on the story
-page, and names you put in the story bible are added for you.
+page, and names you put in the glossary are added for you.
 
 **Filler words** (craft). *Very*, *really*, *just*, *actually*,
 *basically*, and phrases like *due to the fact that*. Try the sentence

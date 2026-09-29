@@ -86,7 +86,7 @@ function assignForm(a, members) {
 function authorCard(a, { user, members }) {
   const links = [
     a.source_url ? `<a href="${escapeHtml(a.source_url)}" target="_blank" rel="noopener noreferrer">On StoriesOnline</a>` : '',
-    a.wiki ? `<a href="/glossary/${encodeURIComponent(a.wiki)}">In the glossary</a>` : '',
+    a.wiki ? `<a href="/wiki/${encodeURIComponent(a.wiki)}">In the wiki</a>` : '',
   ].filter(Boolean).join(' &middot; ');
   const claimed = Boolean(a.claimed_by);
   return `

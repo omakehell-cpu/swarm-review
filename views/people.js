@@ -28,7 +28,7 @@ const searchTitle = (row, fallback) => (row.titleSnippet ? searchSnippet(row.tit
 function searchPage({ user, results, query }) {
   const box = `
     <form method="get" action="/search" class="search-page-form">
-      <input type="search" name="q" value="${escapeHtml(query || '')}" placeholder="Search stories, chapters and the glossary" autofocus>
+      <input type="search" name="q" value="${escapeHtml(query || '')}" placeholder="Search stories, chapters and the wiki" autofocus>
       <button class="btn" type="submit">Search</button>
       <a class="btn ghost" href="/find${query ? `?q=${encodeURIComponent(query)}` : ''}">Advanced search</a>
     </form>`;
@@ -41,7 +41,7 @@ function searchPage({ user, results, query }) {
       body: `
         <div class="page-head"><h1>Search</h1></div>
         ${box}
-        <p class="muted">${query ? 'Give it at least two characters.' : 'Looks through story titles and blurbs, chapter titles and summaries, the current text of every chapter, and the glossary.'}</p>`,
+        <p class="muted">${query ? 'Give it at least two characters.' : 'Looks through story titles and blurbs, chapter titles and summaries, the current text of every chapter, and the wiki.'}</p>`,
     });
   }
 
@@ -79,13 +79,13 @@ function searchPage({ user, results, query }) {
           <span class="search-result-title">${escapeHtml(p.story_title)} &middot; Chapter ${p.chapter_number}: ${escapeHtml(p.title)}</span>
           <span class="search-result-snippet prose">${searchSnippet(p.snippet)}</span>
         </a>`),
-      section('Bibles', results.bible || [], (e) => `
+      section('Glossary', results.bible || [], (e) => `
         <a class="search-result" href="/bible/${e.id}">
           <span class="search-result-title">${searchTitle(e, e.name)} <span class="muted">&middot; ${escapeHtml(e.story_title)}</span></span>
           <span class="search-result-snippet">${escapeHtml(entityKindLabel(e.kind))}${e.alias_list ? ` &middot; also ${escapeHtml(e.alias_list)}` : ''}${e.snippet ? ` &mdash; ${searchSnippet(e.snippet)}` : ''}</span>
         </a>`),
-      section('Glossary', results.glossary, (g) => `
-        <a class="search-result" href="/glossary/${encodeURIComponent(g.title)}">
+      section('Wiki', results.glossary, (g) => `
+        <a class="search-result" href="/wiki/${encodeURIComponent(g.title)}">
           <span class="search-result-title">${searchTitle(g, g.title)}</span>
           <span class="search-result-snippet">${g.snippet ? searchSnippet(g.snippet) : escapeHtml(g.summary || '')}</span>
         </a>`),
@@ -141,12 +141,12 @@ const EVENT_SENTENCES = {
   'comment-retracted': () => 'retracted a comment',
   'comment-reopened': (s) => `reopened a note on ${s}`,
   'backup-taken': (s) => `took a backup (${s})`,
-  'bible-closed': (s) => `made the bible of ${s} private`,
-  'bible-opened': (s) => `opened the bible of ${s} to readers`,
-  'bible-entry-added': (s) => `added ${s} to the bible`,
+  'bible-closed': (s) => `made the glossary of ${s} private`,
+  'bible-opened': (s) => `opened the glossary of ${s} to readers`,
+  'bible-entry-added': (s) => `added ${s} to the glossary`,
   'bible-image-added': (s) => `added a picture to ${s}`,
-  'bible-entry-edited': (s) => `rewrote ${s} in the bible`,
-  'bible-entry-deleted': (s) => `took ${s} out of the bible`,
+  'bible-entry-edited': (s) => `rewrote ${s} in the glossary`,
+  'bible-entry-deleted': (s) => `took ${s} out of the glossary`,
   'word-added': (s) => `taught the dictionary ${s}`,
   'word-removed': (s) => `took a word out of the dictionary of ${s}`,
   'invite-made': () => 'generated an invite code',
@@ -240,7 +240,7 @@ function accountPage({ user, error, errorIn = 'password', notice, groups = [], h
           <label class="check-line"><input type="checkbox" name="readFirst" value="1"${user.read_first ? ' checked' : ''}>
             <span>Open every chapter in Read mode <span class="muted">&mdash; just the story; switch to Review when you want the notes</span></span></label>
           <label class="check-line"><input type="checkbox" name="plainNames" value="1"${user.plain_names ? ' checked' : ''}>
-            <span>No links in the prose <span class="muted">&mdash; names from the bible and the glossary read as plain words, not as links</span></span></label>
+            <span>No links in the prose <span class="muted">&mdash; names from the glossary and the wiki read as plain words, not as links</span></span></label>
           <button class="btn" type="submit">Save</button>
         </form>
       </div>

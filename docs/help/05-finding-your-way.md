@@ -60,7 +60,7 @@ Being written**, **On hiatus**, **Set aside** -- never a colour alone.
 ### Searching
 
 The **search box in the top bar** looks through everything: stories,
-chapters, the text of every chapter, the glossary and the bibles. The lens
+chapters, the text of every chapter, the wiki and the glossary. The lens
 beside it searches; the lens with two sliders in it opens the **advanced
 search**, which is for stories, with every way of narrowing them at once:
 
@@ -114,10 +114,10 @@ it all.
 
 Under the title page:
 
-- **Outline**, **Analysis**, **Timeline** and **Bible** -- the story's
+- **Outline**, **Analysis**, **Timeline** and **Glossary** -- the story's
   tools, each with its own page of help: [the outline](/help/writing-a-chapter),
   [analysis and the timeline](/help/targets-and-analysis),
-  [the bible](/help/story-bible). The author also sees **Edit details**
+  [the glossary](/help/story-glossary). The author also sees **Edit details**
   and **Archive story** here.
 - **The story in numbers** -- a fold with its counts (words, chapters, notes, when it was last written) and, if there is one, the bar towards its word target.
 - **Contents** -- every chapter in order, grouped into arcs if the story
@@ -146,10 +146,10 @@ All of it is explained in [reading and reviewing](/help/reading-and-reviewing).
 
 ## The top bar
 
-On the left, the three places: **Stories** (the front page), **Glossary**
+On the left, the three places: **Stories** (the front page), **Wiki**
 (the offline copy of the shared-universe wiki) and **Help** (these pages).
 On the right, **Search**, which looks through everything -- stories,
-chapters, the glossary and every bible -- and **+ Write**, which starts a
+chapters, the wiki and every story's glossary -- and **+ Write**, which starts a
 new story. Your name opens a small menu: **Your page**, **Account**,
 **Tags** (the codes stories carry), **Admin** if you are one, and **Log
 out**. The moon switches between light and dark. On a phone all of it is

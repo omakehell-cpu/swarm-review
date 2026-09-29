@@ -266,7 +266,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
           ${story.series || story.source_url || glossary ? `<p class="title-page-source">${[
     story.series ? `Part of <em>${escapeHtml(story.series)}</em>` : '',
     story.source_url ? `<a href="${escapeHtml(story.source_url)}" target="_blank" rel="noopener noreferrer">first published on StoriesOnline</a>` : '',
-    glossary ? `<a href="/glossary/${encodeURIComponent(glossary.title)}">${glossary.fromWiki ? 'its page in the glossary' : 'in the glossary'}</a>` : '',
+    glossary ? `<a href="/wiki/${encodeURIComponent(glossary.title)}">${glossary.fromWiki ? 'its page in the wiki' : 'in the wiki'}</a>` : '',
   ].filter(Boolean).join(' &middot; ')}</p>` : ''}
           ${tagChips(tags)}
           <div class="title-page-actions">
@@ -280,7 +280,7 @@ function storyPage({ user, story, chapters, isStoryAuthor, canWrite = false, dic
         <a href="/stories/${story.id}/outline">Outline</a>
         <a href="/stories/${story.id}/analysis">Analysis</a>
         <a href="/stories/${story.id}/timeline">Timeline</a>
-        ${bibleVisible ? `<a href="/stories/${story.id}/bible">Bible${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
+        ${bibleVisible ? `<a href="/stories/${story.id}/bible">Glossary${bibleCount ? ` <span class="btn-count">${bibleCount}</span>` : ''}${story.bible_private && isStoryAuthor ? ' <span class="btn-count">private</span>' : ''}</a>` : ''}
         ${isStoryAuthor ? `<a href="/stories/${story.id}/edit">Edit details</a>` : ''}
         ${isStoryAuthor ? `
           <details class="menu story-more">

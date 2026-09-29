@@ -70,7 +70,7 @@ test.before(async () => {
 test.after(() => app.stop());
 
 test('a glossary page comes back as a card', async () => {
-  const res = await client.request('/glossary/Tampaad%20reach/beside');
+  const res = await client.request('/wiki/Tampaad%20reach/beside');
   assert.strictEqual(res.status, 200);
   const html = await res.text();
   assert.match(html, /<h3>Tampaad reach<\/h3>/, 'the name is the heading, for the link onwards');
@@ -83,7 +83,7 @@ test('a glossary page comes back as a card', async () => {
 });
 
 test('a name nobody has heard of is a 404, not an empty card', async () => {
-  const res = await client.request('/glossary/Nobody%20At%20All/beside');
+  const res = await client.request('/wiki/Nobody%20At%20All/beside');
   assert.strictEqual(res.status, 404);
 });
 

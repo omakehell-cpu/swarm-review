@@ -123,4 +123,21 @@ function setStoryView(userId, view) {
   db.prepare('UPDATE users SET story_view = ? WHERE id = ?').run(view === 'table' ? 'table' : '', userId);
 }
 
-module.exports = { deskFor, newChaptersByStory, recentlyRead, setStoryView, storiesReadBy, storyViewOf };
+// The editor's writing-check settings (public/js/writing-analyzer.js): a
+// short object of switches, kept as JSON. Only names that look like a
+// switch, and only true or false, are kept -- it is written straight from
+// a page, so it is taken as a list of switches and nothing else.
+const SETTING_NAME = /^[a-z][a-z-]{0,39}$/;
+function setWritingSettings(userId, settings) {
+  const clean = {};
+  if (settings && typeof settings === 'object' && !Array.isArray(settings)) {
+    for (const [name, on] of Object.entries(settings).slice(0, 40)) {
+      if (SETTING_NAME.test(name) && typeof on === 'boolean') clean[name] = on;
+    }
+  }
+  const json = Object.keys(clean).length ? JSON.stringify(clean) : '';
+  db.prepare('UPDATE users SET writing_settings = ? WHERE id = ?').run(json, userId);
+  return clean;
+}
+
+module.exports = { deskFor, newChaptersByStory, recentlyRead, setStoryView, setWritingSettings, storiesReadBy, storyViewOf };

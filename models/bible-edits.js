@@ -27,7 +27,7 @@ const EDITABLE = ['name', 'summary', 'kind', 'role', 'status', 'aliases', 'any_c
  */
 function setEntityField(entityId, field, value, userId) {
   const entity = db.prepare('SELECT * FROM story_entities WHERE id = ?').get(entityId);
-  if (!entity) return { error: 'Not in this bible.' };
+  if (!entity) return { error: 'Not in this glossary.' };
   if (!EDITABLE.includes(field)) return { error: 'That cannot be changed from here.' };
   const aliases = listEntityAliases(entityId);
   const base = {
@@ -47,7 +47,7 @@ function setEntityField(entityId, field, value, userId) {
     const clean = bible.cleanName(value);
     if (!clean) return { error: 'An entry needs a name.' };
     const clash = getStoryEntityByName(entity.story_id, clean);
-    if (clash && clash.id !== entityId) return { error: `${clean} is already in this bible.` };
+    if (clash && clash.id !== entityId) return { error: `${clean} is already in the glossary.` };
     // An alias that is now the name is just the name.
     base.aliases = aliases.filter((a) => a.toLowerCase() !== clean.toLowerCase());
     base.name = clean;
@@ -251,6 +251,9 @@ function mergeStoryEntities(fromId, intoId, userId) {
       into.summary || from.summary, joined(into.description, from.description), joined(into.secret, from.secret),
       into.role || from.role, into.status || from.status, from.story_when || '', from.story_day_end, from.story_day, intoId
     );
+    // The character study: what only the other one answered is added.
+    db.prepare(`INSERT OR IGNORE INTO story_entity_study (entity_id, question, answer)
+                SELECT ?, question, answer FROM story_entity_study WHERE entity_id = ?`).run(intoId, fromId);
     db.prepare('DELETE FROM story_entities WHERE id = ?').run(fromId);
     db.exec('COMMIT');
   } catch (err) {

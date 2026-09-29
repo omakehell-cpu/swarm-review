@@ -19,11 +19,11 @@ test('the how-tos are found, in the order their filenames put them', () => {
   }
   // The numeric prefix orders them and is not part of the slug.
   assert.strictEqual(topics[0].slug, 'finding-your-way');
-  assert.ok(topics.some((t) => t.slug === 'story-bible'));
+  assert.ok(topics.some((t) => t.slug === 'story-glossary'));
 });
 
 test('a slug is matched against the directory, never turned into a path', () => {
-  assert.ok(docs.getHelpTopic('story-bible'));
+  assert.ok(docs.getHelpTopic('story-glossary'));
   for (const bad of ['../CHANGELOG', '../../package', 'Story-Bible', 'story bible', '', 'changelog']) {
     assert.strictEqual(docs.getHelpTopic(bad), null, `${bad} is refused`);
   }

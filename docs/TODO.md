@@ -42,7 +42,7 @@ The outline's drag handles have up/down buttons as the keyboard path --
 make sure they are announced as that, not as decoration.
 
 ### Alt text that says something
-**Cost: two hours.** **Touches: the bible and the help pages.** No risk.
+**Cost: two hours.** **Touches: the story notes and the help pages.** No risk.
 An entry picture falls back to the entry's name, which tells a listener
 nothing they did not already know. The crop control is pure geometry and is
 useless read aloud. The help figures have captions; whether they describe
@@ -99,17 +99,17 @@ one thing the table is bad at. Everything it needs -- summary, POV, strand,
 order -- is already on the chapter.
 
 ## A character interview
-**Cost: a day.** **Touches: the bible only.** Low risk.
+**Cost: a day.** **Touches: the story notes only.** Low risk.
 bibisco's best idea: instead of an empty "notes" box, a list of questions
 for a character -- what do they want, what do they refuse to do, what do
 they lie about -- answered one at a time, with the unanswered ones still
 visible. An empty box asks you to be inspired; a question asks you to
-answer it. The bible already has free text per entry; this is a set of
+answer it. The story notes already have free text per entry; this is a set of
 prompts stored beside it and a page that walks them.
 
 ## Who knows whom, drawn
-**Cost: two or three days.** **Touches: the bible; a new page.**
-The links between bible entries exist and are listed as text. bibisco draws
+**Cost: two or three days.** **Touches: the story notes; a new page.**
+The links between entries in the story notes exist and are listed as text. bibisco draws
 them, and a drawing answers "who has not met whom yet" in a second where a
 list does not. This is the one item here that would want real work in the
 browser -- SVG, positions, dragging -- and the one most likely to look

@@ -19,7 +19,7 @@ Orientations**, **Story Types**, **Science Fiction**, **Paranormal**,
 **Couples**, **Incest**, **BDSM Elements**, **Groups**, **Interracial
 Elements**, **Sexual Activities**, **Fetishes** and **Other** -- so a story
 written here is tagged the way the ones brought in from there already are.
-After them come the group's own: **Swarm**, **Cast**, **Length** and
+After them come the group's own: **Swarm**, **Characters**, **Length** and
 **Review status**. A tag that arrives with an imported story, or is
 approved without a group chosen, goes in the category StoriesOnline files
 it under.
@@ -51,13 +51,13 @@ hidden from anybody: it is your own filter on your own view.
 
 The search box in the top bar looks through **story titles and blurbs,
 chapter titles and summaries, the current text of every chapter, the
-glossary, and every story's bible**.
+wiki, and every story's glossary**.
 
 Only the current text of a chapter is searched, not its history. A phrase
 that appeared in three drafts would otherwise bury one real result under
 three copies of itself.
 
-@figure search-results.png | One search, across stories, chapters, the text itself, the glossary and the bibles.
+@figure search-results.png | One search, across stories, chapters, the text itself, the wiki and the glossary.
 
 ## What is waiting for you
 

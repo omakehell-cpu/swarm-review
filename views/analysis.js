@@ -128,7 +128,7 @@ function analysisPage({ user, story, analysis, canWrite = false }) {
       <div class="page-head">
         <div>
           <h1>Analysis</h1>
-          <p class="muted">What <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> is made of, counted. Nothing here is set by hand: it is the chapters, the bible and the notes, added up.</p>
+          <p class="muted">What <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> is made of, counted. Nothing here is set by hand: it is the chapters, the glossary and the reviewers' notes, added up.</p>
         </div>
         ${storyViewSwitch(story)}
       </div>
@@ -377,7 +377,7 @@ function timelineChart(timeline) {
         <svg class="tl-lines" viewBox="0 0 1000 ${total}" preserveAspectRatio="none" aria-hidden="true">${paths}</svg>
         ${lanes.map((l) => l.drawn.map((d) => itemHtml(d, l.top)).join('')).join('')}
       </div>
-      <figcaption class="muted chart-note">Evenly spaced by moment, not drawn to scale: the gaps are written out in the list below. A bar lasts from its first day to its last. Point at anything to see what it is tied to; the lines are the relations written in the bible, and the chapters that name it.</figcaption>
+      <figcaption class="muted chart-note">Evenly spaced by moment, not drawn to scale: the gaps are written out in the list below. A bar lasts from its first day to its last. Point at anything to see what it is tied to; the lines are the relations written in the glossary, and the chapters that name it.</figcaption>
     </figure>`;
 }
 
@@ -395,12 +395,12 @@ function timelinePage({ user, story, timeline, canWrite = false }) {
       <div class="page-head">
         <div>
           <h1>Timeline</h1>
-          <p class="muted">When things happen in <a href="/stories/${story.id}">${escapeHtml(story.title)}</a>, which is not the order they are told in. Nothing here is guessed: it is what has been given a day, and what the bible ties together.</p>
+          <p class="muted">When things happen in <a href="/stories/${story.id}">${escapeHtml(story.title)}</a>, which is not the order they are told in. Nothing here is guessed: it is what has been given a day, and what the glossary tie together.</p>
         </div>
         ${storyViewSwitch(story)}
       </div>
       ${nothing ? `
-        <p class="muted">Nothing has a date yet. Chapters take one under <strong>Details</strong> in the editor, and bible entries under <strong>When this happens</strong> -- a word for what the story calls the moment, a number to put it in line, and for an event that lasts, the day it ends. Date two things and this page starts working.</p>`
+        <p class="muted">Nothing has a date yet. Chapters take one under <strong>Details</strong> in the editor, and entries in the glossary under <strong>When this happens</strong> -- a word for what the story calls the moment, a number to put it in line, and for an event that lasts, the day it ends. Date two things and this page starts working.</p>`
     : `
         <p class="outline-totals">
           <span>${timeline.dated} of ${timeline.chapters} chapter${timeline.chapters === 1 ? '' : 's'} dated</span>
@@ -458,7 +458,7 @@ function outlinePage({ user, story, chapters = [], castByChapter = new Map(), ca
                 <th scope="col">What happens</th>
                 <th scope="col">POV</th>
                 <th scope="col">Strand</th>
-                <th scope="col">Cast</th>
+                <th scope="col">Who is in it</th>
                 <th scope="col">Words</th>
                 <th scope="col">Notes</th>
                 <th scope="col"><span class="sr-only">Move</span></th>

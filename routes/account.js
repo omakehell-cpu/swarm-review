@@ -2,7 +2,7 @@
 
 /** @typedef {import('../server').RouteContext} RouteContext */
 
-const { parseBody, sendHtml, redirect } = require('../lib/util');
+const { parseBody, sendHtml, sendJson, redirect } = require('../lib/util');
 const auth = require('../auth');
 const models = require('../models');
 const views = require('../views');
@@ -145,6 +145,13 @@ async function handleHiddenTagsSubmit(req, res, user) {
 // The routes this file answers. server.js walks the tables in order
 // and hands the first match a context: the request, the response, who is
 // asking, the parsed URL and the regex groups.
+// The writing checks, switched in the editor: saved to the account so
+// they are the same on the next computer. Sent by the editor's script.
+async function handleWritingSettings(req, res, user) {
+  const body = await parseBody(req);
+  sendJson(res, 200, { settings: models.setWritingSettings(user.id, body) });
+}
+
 /** @type {Array<[string, string|RegExp, (c: RouteContext) => any]>} */
 const routes = [
   ['GET', '/account', (c) => handleAccountPage(c.req, c.res, c.user, c.url.searchParams)],
@@ -154,6 +161,7 @@ const routes = [
   ['POST', '/account/sign-in-name', (c) => handleAccountLoginNameSubmit(c.req, c.res, c.user)],
   ['POST', '/account/reading', (c) => handleAccountReadingSubmit(c.req, c.res, c.user)],
   ['POST', '/account/goal', (c) => handleAccountGoalSubmit(c.req, c.res, c.user)],
+  ['POST', '/account/writing-settings', (c) => handleWritingSettings(c.req, c.res, c.user)],
   ['POST', /^\/account\/feed\/(new|off)$/, (c) => handleAccountFeedSubmit(c.req, c.res, c.user, c.m[1])],
 ];
 

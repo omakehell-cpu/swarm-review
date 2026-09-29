@@ -21,11 +21,11 @@ function glossarySearchForm(q, hidden = {}) {
     .map(([k, v]) => `<input type="hidden" name="${escapeHtml(k)}" value="${escapeHtml(String(v))}">`)
     .join('');
   return `
-    <form method="get" action="/glossary" class="inline-form glossary-search">
-      <input type="search" name="q" id="glossary-filter" placeholder="Search the glossary..." value="${escapeHtml(q || '')}" autocomplete="off">
+    <form method="get" action="/wiki" class="inline-form glossary-search">
+      <input type="search" name="q" id="glossary-filter" placeholder="Search the wiki..." value="${escapeHtml(q || '')}" autocomplete="off">
       ${fields}
       <button class="btn ghost small" type="submit">Search</button>
-      ${q ? '<a class="btn ghost small" href="/glossary">Clear</a>' : ''}
+      ${q ? '<a class="btn ghost small" href="/wiki">Clear</a>' : ''}
     </form>`;
 }
 
@@ -36,24 +36,24 @@ function glossarySearchForm(q, hidden = {}) {
 function glossaryDirectoryPage({ user, totalPages = 0, kinds = { world: 0, stories: 0, authors: 0 }, families = [] }) {
   if (!totalPages) {
     return layout({
-      title: 'Glossary',
+      title: 'Wiki',
       user,
       current: 'glossary',
       body: `
-        <div class="page-head"><h1>Glossary</h1></div>
+        <div class="page-head"><h1>Wiki</h1></div>
         ${emptyState({
     art: 'book',
-    title: 'The glossary is waiting for the wiki',
+    title: 'The wiki has not been copied here yet',
     body: 'This is the shared universe: its people, ships, places and history, brought in from the wiki. Once it is here, names in every chapter link to it, and a card tells you who someone is without leaving the page.',
     action: user.is_admin
       ? '<a class="btn" href="/admin#wiki">Bring the wiki in</a>'
-      : 'An admin brings it in from the admin page. Until then, each story\'s own bible still works.',
+      : 'An admin brings it in from the admin page. Until then, each story\'s own glossary still work.',
   })}`,
     });
   }
 
   const door = (kind) => `
-    <a class="glossary-door" href="/glossary?kind=${kind}">
+    <a class="glossary-door" href="/wiki?kind=${kind}">
       <span class="door-count">${kinds[kind] || 0}</span>
       <h2>${escapeHtml(taxonomy.KIND_LABELS[kind])}</h2>
       <p class="muted">${escapeHtml(taxonomy.KIND_BLURBS[kind])}</p>
@@ -64,16 +64,16 @@ function glossaryDirectoryPage({ user, totalPages = 0, kinds = { world: 0, stori
       <h3 class="family-head">${escapeHtml(family.name)} <span class="family-count">${family.total}</span></h3>
       <ul class="family-list">
         ${family.categories.map((c) => `
-          <li><a href="/glossary?category=${encodeURIComponent(c.category)}">${escapeHtml(c.category)}</a> <span class="family-n">${c.n}</span></li>`).join('')}
+          <li><a href="/wiki?category=${encodeURIComponent(c.category)}">${escapeHtml(c.category)}</a> <span class="family-n">${c.n}</span></li>`).join('')}
       </ul>
     </section>`).join('');
 
   return layout({
-    title: 'Glossary',
+    title: 'Wiki',
     user,
     current: 'glossary',
     body: `
-      <div class="page-head"><h1>Glossary</h1></div>
+      <div class="page-head"><h1>Wiki</h1></div>
       ${glossaryIntro(totalPages)}
       ${glossarySearchForm('')}
       <div class="glossary-doors">
@@ -85,7 +85,7 @@ function glossaryDirectoryPage({ user, totalPages = 0, kinds = { world: 0, stori
           <p class="muted">The wiki's own subject categories, gathered. A page can sit under several.</p>
           <div class="family-grid">${directory}</div>
         </section>` : ''}
-      <p class="directory-foot"><a href="/glossary?view=all">Every page, A to Z (${totalPages})</a></p>`,
+      <p class="directory-foot"><a href="/wiki?view=all">Every page, A to Z (${totalPages})</a></p>`,
   });
 }
 
@@ -95,7 +95,7 @@ function glossaryStatusFilters(counts, active, params) {
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v) qs.set(k, String(v));
     if (status) qs.set('status', status); else qs.delete('status');
-    return `/glossary?${qs.toString()}`;
+    return `/wiki?${qs.toString()}`;
   };
   const chip = (label, n, target, current) => `
     <a class="tag-chip${current ? ' current' : ''}" href="${escapeHtml(href(target))}"${current ? ' aria-current="true"' : ''}>
@@ -122,7 +122,7 @@ function glossaryStatusFilters(counts, active, params) {
 const LETTER_AT_A_TIME_OVER = 150;
 
 function glossaryListPage({
-  user, pages = [], byPage = new Map(), heading = 'Glossary', q = '',
+  user, pages = [], byPage = new Map(), heading = 'Wiki', q = '',
   kind = '', category = '', status = '', view = '', statusCounts = [], totalPages = 0, letter = '',
 }) {
   const allLetters = taxonomy.groupByLetter(pages);
@@ -137,7 +137,7 @@ function glossaryListPage({
     if (category) params.set('category', category);
     if (status) params.set('status', status);
     params.set('letter', l);
-    return `/glossary?${params.toString()}`;
+    return `/wiki?${params.toString()}`;
   };
   const jump = taxonomy.ALPHABET.map((l) => {
     if (!present.has(l)) return `<span data-letter="${l}">${l}</span>`;
@@ -158,7 +158,7 @@ function glossaryListPage({
     const topics = taxonomy.topicalCategories(own);
     const search = `${p.title} ${p.summary || ''}`.toLowerCase();
     return `
-      <a class="chapter-row glossary-row" href="/glossary/${encodeURIComponent(p.title)}" data-search="${escapeHtml(search)}">
+      <a class="chapter-row glossary-row" href="/wiki/${encodeURIComponent(p.title)}" data-search="${escapeHtml(search)}">
         <div class="chapter-row-main">
           <h3>${escapeHtml(p.title)}</h3>
           ${p.summary ? `<p class="muted">${escapeHtml(p.summary)}</p>` : ''}
@@ -186,9 +186,9 @@ function glossaryListPage({
     user,
     current: 'glossary',
     body: `
-      <p class="breadcrumb"><a href="/glossary">&larr; Glossary</a></p>
+      <p class="breadcrumb"><a href="/wiki">&larr; Wiki</a></p>
       <div class="page-head"><h1>${escapeHtml(heading)}</h1></div>
-      <p class="muted"><span id="glossary-count">${count}</span>${describe}${q ? ` matching &ldquo;${escapeHtml(q)}&rdquo;` : ''}${totalPages && pages.length !== totalPages ? ` &middot; <a href="/glossary?view=all">all ${totalPages}</a>` : ''}.</p>
+      <p class="muted"><span id="glossary-count">${count}</span>${describe}${q ? ` matching &ldquo;${escapeHtml(q)}&rdquo;` : ''}${totalPages && pages.length !== totalPages ? ` &middot; <a href="/wiki?view=all">all ${totalPages}</a>` : ''}.</p>
       ${glossarySearchForm(q, { kind, category, status, view })}
       ${glossaryStatusFilters(statusCounts, status, { kind, category, view, q })}
       ${pages.length ? `
@@ -208,7 +208,7 @@ function glossaryListPage({
 // saying the same thing about "Akarge" is not eight times the help.
 function markFirstGlossaryLinks(html) {
   const seen = new Set();
-  const marked = String(html || '').replace(/<a href="\/glossary\/([^"]+)"/g, (whole, encoded) => {
+  const marked = String(html || '').replace(/<a href="\/wiki\/([^"]+)"/g, (whole, encoded) => {
     let title;
     try { title = decodeURIComponent(encoded); } catch (e) { return whole; }
     const key = title.toLowerCase();
@@ -225,7 +225,7 @@ function glossaryPreviewCards(titles, summaries) {
     .filter((c) => c.entry && c.entry.summary)
     .map(({ key, entry }) => `
       <article class="glossary-preview" data-preview-for="${escapeHtml(key)}">
-        <h3><a href="/glossary/${encodeURIComponent(entry.title)}">${escapeHtml(entry.title)}</a></h3>
+        <h3><a href="/wiki/${encodeURIComponent(entry.title)}">${escapeHtml(entry.title)}</a></h3>
         <p>${escapeHtml(entry.summary)}</p>
       </article>`);
   if (!cards.length) return '';
@@ -242,7 +242,7 @@ function entryChips(categories) {
   const states = taxonomy.statusCategories(categories);
   if (!topics.length && !states.length) return '';
   return `<div class="tag-chips entry-chips">
-    ${topics.map((c) => `<a class="tag-chip" href="/glossary?category=${encodeURIComponent(c)}">${escapeHtml(c)}</a>`).join('')}
+    ${topics.map((c) => `<a class="tag-chip" href="/wiki?category=${encodeURIComponent(c)}">${escapeHtml(c)}</a>`).join('')}
     ${states.map((c) => `<span class="tag-chip state-chip">${escapeHtml(c)}</span>`).join('')}
   </div>`;
 }
@@ -275,7 +275,7 @@ function glossaryPage({ user, page, summaries = new Map(), categories = [], inGr
     ? `<div class="glossary-content">${marked.html}</div>`
     : `<div class="glossary-empty">
          <p><strong>This entry hasn't been copied across yet.</strong></p>
-         <p class="muted">The glossary knows this page exists and what it's about, but not its full text -- that arrives with the next wiki sync. ${user.is_admin ? 'You can run one now from the <a href="/admin">admin page</a>.' : 'An admin can run one from the admin page.'}</p>
+         <p class="muted">The wiki knows this page exists and what it's about, but not its full text -- that arrives with the next wiki sync. ${user.is_admin ? 'You can run one now from the <a href="/admin">admin page</a>.' : 'An admin can run one from the admin page.'}</p>
          ${page.summary ? `<blockquote class="quoted">${escapeHtml(page.summary)}</blockquote>` : ''}
        </div>`;
   return layout({
@@ -283,7 +283,7 @@ function glossaryPage({ user, page, summaries = new Map(), categories = [], inGr
     user,
     current: 'glossary',
     body: `
-      <p class="breadcrumb"><a href="/glossary">&larr; Glossary</a></p>
+      <p class="breadcrumb"><a href="/wiki">&larr; Wiki</a></p>
       <div class="page-head">
         <h1>${escapeHtml(page.title)}</h1>
         ${page.story_id
@@ -309,8 +309,8 @@ function glossaryNotFoundPage({ user, title }) {
     title: 'Not found',
     user,
     body: `
-      <p class="breadcrumb"><a href="/glossary">&larr; Glossary</a></p>
-      <h1>Not in the glossary</h1>
+      <p class="breadcrumb"><a href="/wiki">&larr; Wiki</a></p>
+      <h1>Not in the wiki</h1>
       <p class="muted">"${escapeHtml(title)}" hasn't been synced from the wiki (or doesn't exist there). Try <a href="${escapeHtml(wiki.pageUrl(title))}" target="_blank" rel="noopener noreferrer">the wiki itself</a>, or ask an admin to sync from the admin page.</p>`,
   });
 }
@@ -323,7 +323,7 @@ function besideGlossaryFragment(page, { lead = '', categories = [] } = {}) {
   const topics = taxonomy.topicalCategories(categories).slice(0, 4);
   return `
     <h3>${escapeHtml(page.title)}</h3>
-    <p class="muted">${page.story_id ? 'A story in this group' : 'From the glossary'}${topics.length ? ` &middot; ${topics.map((c) => escapeHtml(c)).join(', ')}` : ''}</p>
+    <p class="muted">${page.story_id ? 'A story in this group' : 'From the wiki'}${topics.length ? ` &middot; ${topics.map((c) => escapeHtml(c)).join(', ')}` : ''}</p>
     ${page.summary ? `<p class="summary">${escapeHtml(page.summary)}</p>` : ''}
     ${lead
     ? `<div class="reading-pane beside-reading">${lead}</div>`

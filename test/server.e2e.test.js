@@ -432,24 +432,24 @@ test('search finds a chapter by a word in its prose, in its current version only
 test('the glossary is filed under the wiki\'s own categories', async () => {
   models.replaceWikiPages([
     { title: 'Kestrel Anchorage', summary: 'An anchorage.', categories: ['Colonies', 'Systems'],
-      contentHtml: '<p>Built for <a href="/glossary/Akarge">Akarge</a>, supplied by an <a href="/glossary/A20">A20</a>. The <a href="/glossary/Akarge">Akarge</a> contraction ended it.</p>' },
+      contentHtml: '<p>Built for <a href="/wiki/Akarge">Akarge</a>, supplied by an <a href="/wiki/A20">A20</a>. The <a href="/wiki/Akarge">Akarge</a> contraction ended it.</p>' },
     { title: 'Akarge', summary: 'A trading concern.', categories: ['Economy'], contentHtml: '<p>Akarge.</p>' },
     { title: 'A20', summary: 'An interface craft.', categories: ['Ships', 'Technology'], contentHtml: '<p>The A20.</p>' },
   ]);
 
   // The front page is a directory, not a list: three doors for the three
   // kinds of page, and the wiki's subjects gathered into families.
-  const index = await (await request('/glossary')).text();
+  const index = await (await request('/wiki')).text();
   assert.match(index, /class="glossary-doors"/, 'the three doors are there');
-  assert.match(index, /href="\/glossary\?kind=world"/);
-  assert.match(index, /href="\/glossary\?kind=stories"/);
+  assert.match(index, /href="\/wiki\?kind=world"/);
+  assert.match(index, /href="\/wiki\?kind=stories"/);
   assert.match(index, /class="family-grid"/, 'and the subject directory');
   assert.match(index, /Worlds and places/, 'Colonies is filed under its family');
   assert.match(index, /Fleet and ships/, 'and Ships under its own');
   assert.ok(!index.includes('>All <'), 'the wiki\'s catch-all category is not offered as a filter');
   assert.ok(!index.includes('class="chapter-row"'), 'and no 691-row list on the way in');
 
-  const ships = await (await request('/glossary?category=Ships')).text();
+  const ships = await (await request('/wiki?category=Ships')).text();
   assert.match(ships, /A20/, 'the category holds what it should');
   assert.ok(!ships.includes('>Kestrel Anchorage<'), 'and nothing it should not');
   assert.match(ships, /class="az-bar"/, 'a listing is cut into letters');
@@ -457,12 +457,12 @@ test('the glossary is filed under the wiki\'s own categories', async () => {
 
   // Kind is the axis the old flat list could not express: a story page and
   // a world term look identical in a list sorted by title.
-  const world = await (await request('/glossary?kind=world')).text();
+  const world = await (await request('/wiki?kind=world')).text();
   assert.match(world, />Kestrel Anchorage</);
   assert.match(world, />A20</);
 
   // A category nobody filed anything under is simply empty, not an error.
-  const none = await request('/glossary?category=Does%20Not%20Exist');
+  const none = await request('/wiki?category=Does%20Not%20Exist');
   assert.strictEqual(none.status, 200);
   assert.match(await none.text(), /Nothing here matches/);
 });
@@ -470,7 +470,7 @@ test('the glossary is filed under the wiki\'s own categories', async () => {
 test('the glossary keeps the state of a page off the subject axis', async () => {
   models.replaceWikiPages([
     { title: 'Kestrel Anchorage', summary: 'An anchorage.', categories: ['Colonies', 'Systems', 'Canon'],
-      contentHtml: '<p>Built for <a href="/glossary/Akarge">Akarge</a>, supplied by an <a href="/glossary/A20">A20</a>. The <a href="/glossary/Akarge">Akarge</a> contraction ended it.</p>' },
+      contentHtml: '<p>Built for <a href="/wiki/Akarge">Akarge</a>, supplied by an <a href="/wiki/A20">A20</a>. The <a href="/wiki/Akarge">Akarge</a> contraction ended it.</p>' },
     { title: 'Akarge', summary: 'A trading concern.', categories: ['Economy', 'Stubs'], contentHtml: '<p>Akarge.</p>' },
     { title: 'A20', summary: 'An interface craft.', categories: ['Ships', 'Technology', 'Canon'], contentHtml: '<p>The A20.</p>' },
     { title: 'Housekeeping', summary: 'Bookkeeping.', categories: ['Wiki Maintenance'], contentHtml: '<p>.</p>' },
@@ -478,15 +478,15 @@ test('the glossary keeps the state of a page off the subject axis', async () => 
 
   // Canon/Stubs are how finished a page is, not what it is about, so they
   // get their own row rather than competing with Ships and Colonies.
-  const index = await (await request('/glossary')).text();
-  assert.ok(!index.includes('href="/glossary?category=Canon"'), 'state is not a subject');
+  const index = await (await request('/wiki')).text();
+  assert.ok(!index.includes('href="/wiki?category=Canon"'), 'state is not a subject');
   assert.ok(!index.includes('Wiki Maintenance'), 'and housekeeping is not on the front page');
 
-  const listing = await (await request('/glossary?kind=world')).text();
+  const listing = await (await request('/wiki?kind=world')).text();
   assert.match(listing, /class="glossary-filters"/);
   assert.match(listing, /href="[^"]*status=Canon"/);
 
-  const canon = await (await request('/glossary?kind=world&status=Canon')).text();
+  const canon = await (await request('/wiki?kind=world&status=Canon')).text();
   assert.match(canon, />A20</);
   assert.ok(!canon.includes('>Akarge<'), 'a stub is not canon');
 
@@ -507,23 +507,23 @@ test('a long glossary listing is sent a letter at a time; a search is not', asyn
   }
   models.replaceWikiPages(many);
   const total = models.listWikiPagesForGlossary().length;
-  const first = await (await request('/glossary?view=all')).text();
+  const first = await (await request('/wiki?view=all')).text();
   assert.match(first, /data-paged="1"/);
   assert.match(first, />Alpha 00</);
   assert.ok(!first.includes('>Beta 00<'), 'only the first letter is sent');
-  assert.match(first, /href="\/glossary\?view=all&amp;letter=B"/);
-  const b = await (await request('/glossary?view=all&letter=B')).text();
+  assert.match(first, /href="\/wiki\?view=all&amp;letter=B"/);
+  const b = await (await request('/wiki?view=all&letter=B')).text();
   assert.match(b, />Beta 59</);
   assert.ok(!b.includes('>Alpha 00<'));
   assert.ok(b.includes(`60 of ${total} pages, under B`));
-  const found = await (await request('/glossary?q=Gamma')).text();
+  const found = await (await request('/wiki?q=Gamma')).text();
   assert.ok(!found.includes('data-paged'), 'a search shows everything it found');
   // The tests after this one read the small glossary from the one before.
   models.replaceWikiPages(before);
 });
 
 test('every glossary listing can be filtered without a round trip', async () => {
-  const listing = await (await request('/glossary?view=all')).text();
+  const listing = await (await request('/wiki?view=all')).text();
   // The rows carry what the in-page filter matches against, so the filter
   // never has to ask the server anything.
   assert.match(listing, /data-search="[^"]*kestrel anchorage/);
@@ -532,7 +532,7 @@ test('every glossary listing can be filtered without a round trip', async () => 
 });
 
 test('a glossary entry explains its links once each, in the margin', async () => {
-  const html = await (await request('/glossary/Kestrel%20Anchorage')).text();
+  const html = await (await request('/wiki/Kestrel%20Anchorage')).text();
 
   // Two mentions of Akarge in the text, one card about it.
   assert.strictEqual((html.match(/data-preview="akarge"/g) || []).length, 1, 'only the first mention is marked');
@@ -542,7 +542,7 @@ test('a glossary entry explains its links once each, in the margin', async () =>
   assert.match(html, /An interface craft\./);
 
   // The categories of the entry itself lead back to the filtered index.
-  assert.match(html, /href="\/glossary\?category=Colonies"/);
+  assert.match(html, /href="\/wiki\?category=Colonies"/);
 });
 
 test('a dead link lands on a page, not a blank window', async () => {
@@ -706,13 +706,18 @@ test('opening a chapter records that you read it, and the page says so', async (
 test('the help section is readable, and the changelog marks what is new', async () => {
   const index = await (await request('/help')).text();
   assert.match(index, /How to/);
-  assert.match(index, /href="\/help\/story-bible"/);
+  assert.match(index, /href="\/help\/story-glossary"/);
   assert.match(index, /href="\/help\/changelog"/);
 
-  const topic = await request('/help/story-bible');
+  // The page's old address still gets there.
+  const moved = await request('/help/story-bible');
+  assert.strictEqual(moved.status, 302);
+  assert.strictEqual(moved.headers.get('location'), '/help/story-glossary');
+
+  const topic = await request('/help/story-glossary');
   assert.strictEqual(topic.status, 200);
   const html = await topic.text();
-  assert.match(html, /The story bible/);
+  assert.match(html, /The glossary/);
   // Rendered as prose, not printed as markdown source.
   assert.match(html, /<h2[^>]*>/);
   assert.ok(!html.includes('## '), 'the hashes did not survive');

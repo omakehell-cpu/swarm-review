@@ -84,6 +84,17 @@
     'sentence-yellow': true, 'sentence-red': true,
     echo: true, filter: true, dialogue: true, opening: true,
   };
+  // Switches that are not checks: they change how the checks are shown
+  // rather than adding marks of their own, so they have no card, no colour
+  // and no count, and are off until somebody turns them on.
+  //
+  // quiet-dialogue: people do not talk in correct prose, and a character's
+  // bad grammar is often the point of the line. With it on, anything a
+  // check says about words inside quotation marks is left unmarked --
+  // except spelling, since a typo in a line of dialogue is still a typo
+  // (dialect words go in the story's dictionary), and the dialogue-tag
+  // check, which is about the narration around the quote.
+  const OPTION_DEFAULTS = { 'quiet-dialogue': false };
   const SETTINGS_KEY = 'wa-settings-v2';
   const LEGACY_ENABLED_KEY = 'wa-enabled'; // the old single on/off switch
 
@@ -91,13 +102,24 @@
   // when switched to Revise. All of them, until the author says otherwise.
   const READ_PANEL_KEY = 'wa-read-panel-v1';
 
+  // The editor's settings belong to the account, not the browser: the page
+  // carries what was last saved (lib/layout.js), and a change is sent back
+  // (POST /account/writing-settings). This browser's copy is only the
+  // fallback for a page that has none -- signed out, or never saved.
+  function accountSettings() {
+    const meta = document.querySelector('meta[name="writing-settings"]');
+    const raw = meta ? meta.getAttribute('content') : '';
+    return raw || null;
+  }
+
   function loadSettings(key = SETTINGS_KEY, defaults = DEFAULT_SETTINGS) {
-    const settings = Object.assign({}, defaults);
+    const settings = Object.assign({}, OPTION_DEFAULTS, defaults);
     try {
-      const raw = localStorage.getItem(key);
+      const raw = (key === SETTINGS_KEY && accountSettings()) || localStorage.getItem(key);
       if (raw) {
         const parsed = JSON.parse(raw);
-        CHECK_ORDER.forEach((id) => { if (typeof parsed[id] === 'boolean') settings[id] = parsed[id]; });
+        CHECK_ORDER.concat(Object.keys(OPTION_DEFAULTS))
+          .forEach((id) => { if (typeof parsed[id] === 'boolean') settings[id] = parsed[id]; });
         // Saved when the two kinds of sentence were one switch.
         if (parsed.sentence === false && parsed['sentence-yellow'] === undefined) {
           settings['sentence-yellow'] = false;
@@ -118,6 +140,12 @@
 
   function saveSettings(settings, key = SETTINGS_KEY) {
     try { localStorage.setItem(key, JSON.stringify(settings)); } catch (e) { /* ignore */ }
+    if (key !== SETTINGS_KEY || !document.querySelector('meta[name="writing-settings"]')) return;
+    const meta = document.querySelector('meta[name="writing-settings"]');
+    if (meta) meta.setAttribute('content', JSON.stringify(settings));
+    fetch('/account/writing-settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings),
+    }).catch(() => { /* kept in this browser; saved to the account next time */ });
   }
 
   // There used to be a "show comments" switch; Read and Review decide that
@@ -626,6 +654,44 @@
   const ECHO_MIN_LENGTH = 5;
   const ECHO_WINDOW_WORDS = 50;
 
+  // Where the characters are talking: [start, end) spans of `text` that
+  // sit inside quotation marks, quotes included. Worked out over the whole
+  // text rather than a sentence at a time, because a line of dialogue is
+  // usually more than one sentence ("Stop. Put it down.") and the second
+  // sentence has no quote of its own to say so.
+  //
+  // A quote left open runs to the end of its paragraph, which is how a
+  // speech that goes on into the next paragraph is written. Curly single
+  // quotes count too (British dialogue); a ’ with a letter after it is an
+  // apostrophe ("don’t"), not the end of the line. Straight single quotes
+  // do not count: in plain typing they are apostrophes far more often.
+  function dialogueSpans(text) {
+    const spans = [];
+    let open = null;
+    let single = false;
+    const isWordChar = (ch) => !!ch && /[\p{L}\p{N}]/u.test(ch);
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === '\n') {
+        if (open !== null) spans.push([open, i]);
+        open = null;
+        continue;
+      }
+      if (open === null) {
+        if (ch === '"' || ch === '“') { open = i; single = false; }
+        else if (ch === '‘' && !isWordChar(text[i - 1])) { open = i; single = true; }
+      } else if (!single && (ch === '"' || ch === '”')) {
+        spans.push([open, i + 1]);
+        open = null;
+      } else if (single && ch === '’' && !isWordChar(text[i + 1])) {
+        spans.push([open, i + 1]);
+        open = null;
+      }
+    }
+    if (open !== null) spans.push([open, text.length]);
+    return spans;
+  }
+
   // The same distinctive word twice within a short span. Names are left
   // alone -- a character's name is supposed to repeat -- which is what the
   // story's own dictionary is for.
@@ -1059,6 +1125,13 @@
     let totalWords = 0;
     let totalSyllables = 0;
     let totalSentences = 0;
+    // Every mark that falls wholly inside a line of dialogue says so, and
+    // the "Leave dialogue alone" switch decides whether it is shown (see
+    // shownRanges) -- the same bargain as the other switches: everything is
+    // found, the settings choose what is marked.
+    const talk = dialogueSpans(text);
+    const inTalk = (start, end) => talk.some(([a, b]) => start >= a && end <= b);
+    const talkBlind = (kind) => kind === 'spell' || kind === 'dialogue';
 
     for (const chunk of chunks) {
       // Scored even when the sentence checks are off: the reading grade is
@@ -1078,6 +1151,10 @@
       }
 
       if (sentenceChecksOn && score.severity) {
+        // A sentence is only dialogue's fault if the narration left over
+        // once the quotes are taken out would not be flagged on its own.
+        let narration = '';
+        for (let i = chunk.start; i < chunk.end; i++) narration += inTalk(i, i + 1) ? ' ' : text[i];
         ranges.push({
           start: chunk.start,
           end: chunk.end,
@@ -1085,15 +1162,19 @@
           label: score.severity === 'red'
             ? `Very dense sentence (about ${score.words} words) -- try splitting it into two.`
             : `Long/complex sentence (about ${score.words} words) -- consider shortening or splitting it.`,
+          inDialogue: !scoreSentence({ text: narration }).severity,
         });
       }
       for (const w of wordHighlights) {
+        const start = chunk.start + w.start;
+        const end = chunk.start + w.end;
         ranges.push({
-          start: chunk.start + w.start,
-          end: chunk.start + w.end,
+          start,
+          end,
           kind: w.kind,
           label: w.label,
           suggestion: w.suggestion,
+          inDialogue: !talkBlind(w.kind) && inTalk(start, end),
         });
       }
     }
@@ -1109,6 +1190,7 @@
     const addWholeText = (list, key) => {
       for (const r of list) {
         if (collides(r)) continue;
+        r.inDialogue = inTalk(r.start, r.end);
         ranges.push(r);
         stats[key] += 1;
       }
@@ -1118,10 +1200,40 @@
 
     stats.grade = gradeLevel(totalSentences, totalWords, totalSyllables);
     stats.sentences = totalSentences;
+    // How many of each count are dialogue's, so the panel can take them
+    // off when the switch is on (see quietStats).
+    stats.inDialogue = {};
+    for (const r of ranges) {
+      if (!r.inDialogue) continue;
+      const key = STAT_KEY[r.kind] || r.kind;
+      stats.inDialogue[key] = (stats.inDialogue[key] || 0) + 1;
+    }
 
     ranges.sort((a, b) => a.start - b.start);
     const html = buildOverlayHtml(text, ranges, commentRanges);
     return { html, ranges, stats };
+  }
+
+  const STAT_KEY = { 'sentence-yellow': 'yellow', 'sentence-red': 'red' };
+
+  // What is actually marked: the checks switched on, minus dialogue's
+  // marks when the author has asked for dialogue to be left alone. Shared
+  // by the editor and the chapter page so the two cannot disagree.
+  function shownRanges(ranges, settings) {
+    const quiet = !!(settings && settings['quiet-dialogue']);
+    return ranges.filter((r) => settings[r.kind] !== false && !(quiet && r.inDialogue));
+  }
+
+  // The counts the panel shows. With dialogue left alone its marks are not
+  // counted either: a card saying "12 adverbs" over a text with four
+  // marked would read as a bug.
+  function quietStats(stats, settings) {
+    if (!settings || !settings['quiet-dialogue'] || !stats.inDialogue) return stats;
+    const out = Object.assign({}, stats);
+    for (const [key, n] of Object.entries(stats.inDialogue)) {
+      if (typeof out[key] === 'number') out[key] = Math.max(0, out[key] - n);
+    }
+    return out;
   }
 
   // ---------------------------------------------------------------------
@@ -1280,14 +1392,27 @@
     PANEL_CRAFT.forEach((id) => craft.appendChild(makeCard(id, true)));
     body.appendChild(craft);
 
+    // Not a check but a way of reading all of them, so it is a switch of
+    // its own under the cards rather than one more card.
+    const quiet = document.createElement('button');
+    quiet.type = 'button';
+    quiet.className = 'wa-panel-option';
+    quiet.dataset.waOption = 'quiet-dialogue';
+    quiet.title = 'Characters do not have to speak correct prose. Spelling and dialogue tags are still checked.';
+    quiet.addEventListener('click', () => {
+      onToggle('quiet-dialogue', !getSettings()['quiet-dialogue']);
+    });
+    body.appendChild(quiet);
+
     fold.addEventListener('click', () => {
       const folded = panel.classList.toggle('wa-panel-folded');
       fold.setAttribute('aria-expanded', folded ? 'false' : 'true');
     });
 
     let last = null;
-    function update(stats, text) {
-      last = { stats, text };
+    function update(rawStats, text) {
+      last = { stats: rawStats, text };
+      const stats = quietStats(rawStats, getSettings());
       const words = (String(text || '').replace(/\]\([^)]*\)/g, ']').replace(/[*_~`#>]/g, ' ')
         .match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length;
       const g = stats.grade === null || stats.grade === undefined ? null : Math.round(stats.grade);
@@ -1313,6 +1438,14 @@
         // says whether its marks are shown -- the words never change.
         card.innerHTML = `<span class="wa-pcard-box" aria-hidden="true"></span><strong>${n}</strong>${escapeHtml(rest)}`;
       }
+      const quietOn = !!getSettings()['quiet-dialogue'];
+      quiet.setAttribute('aria-pressed', String(quietOn));
+      quiet.classList.toggle('is-on', quietOn);
+      // How many marks are inside quotation marks: hidden when it is on, and
+      // a reason to try it when it is off.
+      const talk = Object.values(stats.inDialogue || {}).reduce((sum, n) => sum + n, 0);
+      const said = talk ? ` <span class="wa-panel-option-count">${talk} ${plural(talk, 'mark', 'marks')} ${quietOn ? 'hidden' : 'in dialogue'}</span>` : '';
+      quiet.innerHTML = `<span class="wa-pcard-box" aria-hidden="true"></span>Ignore dialogue (text in quotes)${said}`;
     }
 
     function setMode(m, fromUser) {
@@ -1619,7 +1752,7 @@
       // The answer to a question the typist has already moved on from.
       if (token !== renderToken) return;
       const writing = panelApi.mode() === 'write';
-      const shown = writing ? [] : ranges.filter((r) => settings[r.kind] !== false);
+      const shown = writing ? [] : shownRanges(ranges, settings);
       currentRanges = shown;
       paintedComments = commentRanges;
       paint(text);
@@ -2060,7 +2193,7 @@
       clearMarks();
       hidePopover();
       const shown = panelApi.mode() === 'write' ? []
-        : ranges.filter((r) => settings[r.kind] !== false);
+        : shownRanges(ranges, settings);
       applyRangesToDom(container, shown);
       panelApi.update(stats, text);
     }
@@ -2186,6 +2319,9 @@
     findWordHighlights,
     findEchoes,
     findRepeatedOpenings,
+    dialogueSpans,
+    shownRanges,
+    quietStats,
     loadDictionary,
     loadStoryWords,
     CHECK_META,

@@ -28,6 +28,7 @@ const modules = [
   ['coauthors', require('./models/coauthors')],
   ['bible', require('./models/bible')],
   ['bibleEdits', require('./models/bible-edits')],
+  ['characterStudy', require('./models/character-study')],
   ['chapters', require('./models/chapters')],
   ['writing', require('./models/writing')],
   ['imports', require('./models/imports')],

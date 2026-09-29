@@ -2,7 +2,7 @@
 
 /** @typedef {import('../server').RouteContext} RouteContext */
 
-const { sendHtml } = require('../lib/util');
+const { redirect, sendHtml } = require('../lib/util');
 const { sendFragment } = require('./shared');
 const wiki = require('../lib/wiki');
 const models = require('../models');
@@ -52,9 +52,9 @@ async function handleGlossaryPage(req, res, user, title) {
   // The summaries of everything this page links to, for the previews in
   // its margin. Read from the same local copy as the page itself -- the
   // glossary never reaches out to the wiki to render anything.
-  const linked = (String(page.content_html || '').match(/<a href="\/glossary\/([^"]+)"/g) || [])
+  const linked = (String(page.content_html || '').match(/<a href="\/wiki\/([^"]+)"/g) || [])
     .map((tag) => {
-      const m = tag.match(/\/glossary\/([^"]+)/);
+      const m = tag.match(/\/wiki\/([^"]+)/);
       try { return m ? decodeURIComponent(m[1]) : null; } catch (e) { return null; }
     })
     .filter(Boolean);
@@ -87,9 +87,12 @@ function handleGlossaryBeside(req, res, user, title) {
 // asking, the parsed URL and the regex groups.
 /** @type {Array<[string, string|RegExp, (c: RouteContext) => any]>} */
 const routes = [
-  ['GET', '/glossary', (c) => handleGlossaryIndex(c.req, c.res, c.user, c.url.searchParams)],
-  ['GET', /^\/glossary\/([^/]+)\/beside$/, (c) => handleGlossaryBeside(c.req, c.res, c.user, c.m[1])],
-  ['GET', /^\/glossary\/([^/]+)$/, (c) => handleGlossaryPage(c.req, c.res, c.user, c.m[1])],
+  // The wiki was called the Glossary, at /glossary: old links and bookmarks
+  // still land on the same page.
+  ['GET', /^\/glossary(\/.*)?$/, (c) => redirect(c.res, `/wiki${c.m[1] || ''}${c.url.search}`)],
+  ['GET', '/wiki', (c) => handleGlossaryIndex(c.req, c.res, c.user, c.url.searchParams)],
+  ['GET', /^\/wiki\/([^/]+)\/beside$/, (c) => handleGlossaryBeside(c.req, c.res, c.user, c.m[1])],
+  ['GET', /^\/wiki\/([^/]+)$/, (c) => handleGlossaryPage(c.req, c.res, c.user, c.m[1])],
 ];
 
 module.exports = {

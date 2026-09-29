@@ -1,15 +1,15 @@
-# The glossary
+# The wiki
 
 A complete, offline copy of the shared-universe wiki, kept inside this app.
 
 ## What it is, and what it is not
 
-The glossary mirrors the wiki. It is **read-only here**: it is written on the
-wiki, and every sync wipes and rewrites this copy. It knows nothing about
+**Wiki** is a copy of the shared-universe wiki. It is **read-only here**: it is written on the
+wiki itself, and every sync wipes and rewrites this copy. It knows nothing about
 anybody's chapters.
 
-Your own account of your own cast belongs in that story's
-[bible](/help/story-bible) instead, which is the opposite on all three
+Your own account of your own characters belongs in that story's
+[glossary](/help/story-glossary) instead, which is the opposite on all three
 counts. A name can honestly live in both — the wiki's public account of a
 ship, and what you privately know about it.
 
@@ -22,12 +22,12 @@ or not.
 There is one exception to *read-only*: every story in this group has a
 page of its own, under **Stories** and filed as *In this group*. Nobody
 writes it. It is made from the story -- who wrote it, where it stands, its
-chapters, and the people in its bible, unless the bible is private -- and
+chapters, and the people in its glossary, unless they are private -- and
 follows it: a new story gets its page straight away, a renamed one moves,
 an archived one leaves. **Open the story** at the top goes back to it.
 
 A sync leaves these pages alone. If the wiki has a page for the same
-story, the wiki's is the one the glossary shows -- and "the same" means the
+story, the wiki's is the one shown here -- and "the same" means the
 same letters and numbers, so *A Perfect 10 Part 1* on the wiki is *A
 Perfect 10, Part 1* here, and *Albion (story)* is *Albion*. That page then
 says, at the top, that the story is here, with the way to read it; and the
@@ -45,7 +45,7 @@ alphabetical run.
 Under them, the wiki's own subject categories gathered into families: fleet
 and ships, military, factions, worlds, society, technology.
 
-@figure glossary-directory.png | The glossary front page: three doors, then the wiki's subjects gathered into families.
+@figure glossary-directory.png | The Wiki front page: three doors, then the wiki's subjects gathered into families.
 
 Every listing is cut into **A–Z sections** with a jump bar down the top, and
 the search box **narrows the list as you type** without reloading anything.
@@ -57,7 +57,7 @@ kept off the subject row where it was only ever competing for attention.
 
 ## Inside an entry
 
-A glossary page links to other glossary pages the way it does on the wiki.
+A page here links to the other pages here the way it does on the wiki.
 The first mention of each linked term gets a **preview card in the margin**,
 level with the line that mentions it, so you can find out who somebody is
 without leaving the page. Later mentions of the same term are left alone.

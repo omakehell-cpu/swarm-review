@@ -11,8 +11,15 @@
   // the other kind's fields along with their own.
   const kindSelect = /** @type {HTMLSelectElement|null} */ (form.querySelector('select[name="kind"]'));
   const blocks = Array.from(form.querySelectorAll('.template-fields'));
-  if (kindSelect && blocks.length) {
+  // Parts of the form that only one kind has, such as a person's
+  // character study: shown for that kind, and simply hidden otherwise
+  // (the server keeps them for that kind only).
+  const onlyFor = Array.from(form.querySelectorAll('[data-for-kind]'));
+  if (kindSelect && (blocks.length || onlyFor.length)) {
     kindSelect.addEventListener('change', () => {
+      for (const part of onlyFor) {
+        /** @type {HTMLElement} */ (part).hidden = part.getAttribute('data-for-kind') !== kindSelect.value;
+      }
       for (const block of blocks) {
         const mine = block.getAttribute('data-kind') === kindSelect.value;
         /** @type {HTMLElement} */ (block).hidden = !mine;

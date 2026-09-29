@@ -235,6 +235,10 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
   // An entry can last: a siege from day 12 to day 40. The start is
   // story_day; this is the last day, and empty for a single moment.
   ensureColumn('story_entities', 'story_day_end', 'INTEGER');
+  // The editor's writing checks, as somebody last set them -- which are
+  // on, and whether dialogue is left alone -- so they follow the account
+  // from one computer to the next. JSON; empty until first changed.
+  ensureColumn('users', 'writing_settings', "TEXT NOT NULL DEFAULT ''");
 
   // The groups tags are filed under, in the order they are shown: the
   // fourteen categories StoriesOnline uses, then this group's own (see
@@ -244,6 +248,16 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
     CREATE TABLE IF NOT EXISTS tag_groups (
       name     TEXT PRIMARY KEY,
       position INTEGER NOT NULL DEFAULT 0
+    );
+
+    -- A person's character study (lib/character-study.js): one row per
+    -- question answered. The writers' own notes, never shown to readers.
+    CREATE TABLE IF NOT EXISTS story_entity_study (
+      entity_id  INTEGER NOT NULL REFERENCES story_entities(id) ON DELETE CASCADE,
+      question   TEXT NOT NULL,
+      answer     TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (entity_id, question)
     );
   `);
 };

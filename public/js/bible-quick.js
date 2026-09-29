@@ -41,7 +41,7 @@
         const made = await post(`/stories/${storyId}/bible/quick`, {
           name, kind: fields.get('kind'), summary: fields.get('summary'),
         });
-        say(made.already ? `${made.name} was already in the bible.` : `${made.name} is in the bible.`, false);
+        say(made.already ? `${made.name} was already in the glossary.` : `${made.name} is in the glossary.`, false);
         /** @type {HTMLFormElement} */ (quick).reset();
       } catch (err) {
         say(err.message, true);
@@ -87,7 +87,7 @@
           if (candidate.inGlossary) {
             const tag = document.createElement('span');
             tag.className = 'missing-tag';
-            tag.textContent = 'in the glossary';
+            tag.textContent = 'in the wiki';
             label.appendChild(document.createTextNode(' '));
             label.appendChild(tag);
           }
@@ -135,7 +135,7 @@
             try {
               await post(`/stories/${storyId}/bible/not-names`, { name: candidate.name });
               li.remove();
-              say(`${candidate.name} will not be offered again. Bring it back from the bible's list of words that are not names.`, false);
+              say(`${candidate.name} will not be offered again. Bring it back from the glossary's list of words that are not names.`, false);
             } catch (err) {
               dismiss.disabled = false;
               say(err.message, true);

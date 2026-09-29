@@ -29,8 +29,8 @@ chapter opened in Read, whatever it has on it, that is a setting on your
 - **Type size** -- S, M, L or XL.
 - **Line length** -- narrow, normal or wide.
 - **Line spacing** -- tight, normal or loose.
-- **Names** -- *Linked* underlines the names the story's bible and the
-  glossary know about, so you can click them (see below); *Plain* leaves
+- **Names** -- *Linked* underlines the names the story's glossary and the
+  wiki know about, so you can click them (see below); *Plain* leaves
   them as words.
 
 All of that is yours alone: it follows you round the site and changes
@@ -51,15 +51,15 @@ it is forgotten once you reach the end.
 
 ## A name you do not remember
 
-Characters and places from the story's bible, and names from the shared
-glossary, are underlined in the text. **Click one and a card opens beside
+Characters and places from the story's glossary, and names from the shared
+wiki, are underlined in the text. **Click one and a card opens beside
 the chapter**: what it is, the line of summary, and as much of the entry
 as fits. You have not gone anywhere, and nothing on the page moves -- the
 card floats over the margin, and the chapter is still there, at the
 paragraph you were on.
 
 If the entry has a **picture**, it is on the card, cropped where whoever
-wrote the entry cropped it. Half of what a bible is for is recognising
+wrote the entry cropped it. Half of what a glossary is for is recognising
 somebody, and a face does that faster than a line of summary.
 
 This works in **Read** as well as in **Review**.
@@ -87,7 +87,7 @@ is nothing in this app that can only be done by pointing at it.
 
 **Say what kind of note it is**, if you like, with the row of words above
 the box: *Typo*, *Pacing*, *Continuity*, *Question* -- or *Note*, which is
-what most notes are. A continuity note can also name the bible entry it is
+what most notes are. A continuity note can also name the entry in the glossary it is
 about. None of it changes what happens to the note; it tells the author at a
 glance which ones are a two-second fix and which ones need an evening.
 

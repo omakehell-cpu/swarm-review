@@ -34,7 +34,7 @@ A short (very short) pick up story. No sex.
   assert.ok(h.includes('<h3>') && h.includes('<h4>'));
   assert.ok(h.includes('<hr>'));
   assert.ok(h.includes('<b>Bold bit</b>'));
-  assert.ok(h.includes('<a href="/glossary/Akarge">Akarge</a>'), 'internal link resolved');
+  assert.ok(h.includes('<a href="/wiki/Akarge">Akarge</a>'), 'internal link resolved');
   assert.ok(h.includes('storiesonline.net'), 'external link kept');
   assert.ok(!/<p>\s*<h3>/.test(h), 'a heading must not be wrapped in a paragraph');
 });
@@ -86,7 +86,7 @@ test('wikitext tables become real tables', () => {
   assert.ok(h.includes('<table'));
   assert.ok(h.includes('<th>ACRONYM</th>'), 'header cell without its attributes');
   assert.ok(h.includes('<td>Main battle tank</td>'));
-  assert.ok(h.includes('<a href="/glossary/M1%20Abrams">M1 Abrams</a>'), 'links work inside cells');
+  assert.ok(h.includes('<a href="/wiki/M1%20Abrams">M1 Abrams</a>'), 'links work inside cells');
   assert.ok(!h.includes('{|') && !h.includes('|-') && !h.includes('scope='), 'no raw markup left');
   assert.ok(!/<p>[^<]*<table/.test(h), 'table not wrapped in a paragraph');
 });
@@ -100,7 +100,7 @@ Some '''bold''' and ''italic'' text with [[Kestrel Anchorage]].
   assert.ok(h.includes('<h2>A heading</h2>'));
   assert.ok(h.includes('<strong>bold</strong>') && h.includes('<em>italic</em>'));
   assert.ok(h.includes('<ul><li>one</li><li>two</li></ul>'));
-  assert.ok(h.includes('/glossary/Kestrel%20Anchorage'));
+  assert.ok(h.includes('/wiki/Kestrel%20Anchorage'));
 });
 
 test('templates, files and categories are dropped', () => {

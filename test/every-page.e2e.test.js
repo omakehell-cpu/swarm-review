@@ -66,11 +66,11 @@ test.before(async () => {
 
   const wiki = models.listWikiPages()[0];
   pages = [
-    '/', '/tags', '/glossary', '/glossary?view=all', '/glossary?kind=person',
-    `/glossary/${encodeURIComponent(wiki.title)}`,
-    `/glossary/${encodeURIComponent(wiki.title)}/beside`,
+    '/', '/tags', '/wiki', '/wiki?view=all', '/wiki?kind=person',
+    `/wiki/${encodeURIComponent(wiki.title)}`,
+    `/wiki/${encodeURIComponent(wiki.title)}/beside`,
     '/help', '/help/changelog', '/help/reading-and-reviewing', '/help/writing-a-chapter',
-    '/help/targets-and-analysis', '/help/story-bible', '/help/glossary',
+    '/help/targets-and-analysis', '/help/story-glossary', '/help/your-first-characters', '/help/wiki',
     '/help/tags-and-search', '/help/your-account', '/help/finding-your-way',
     '/help/writing-checks', '/help/screen-readers', '/help/keys', '/help/questions',
     '/account', '/admin', '/search?q=kessler', '/search?q=%22service+spine%22',

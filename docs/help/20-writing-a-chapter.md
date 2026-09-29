@@ -55,9 +55,9 @@ counting what you have written this session. On the right, tabs:
   into the text, accept or turn them down -- and **Alt+J** / **Alt+K** step
   from one to the next. Replies are on the chapter page. See [what the
   author does with a note](/help/reading-and-reviewing).
-- **Bible** -- write somebody down without leaving the chapter, and find
-  the names in the draft the bible has never heard of.
-- **Beside** -- the chapter before, or a bible entry, to read while you
+- **Glossary** -- write somebody down without leaving the chapter, and find
+  the names in the draft the glossary has never heard of.
+- **Beside** -- the chapter before, or an entry in the glossary, to read while you
   write.
 
 @figure chapter-editor.png | The editor: the text on the left, the writing checks and the notes on the right.
@@ -169,7 +169,7 @@ top.
 ## Writing with something open beside it
 
 **Beside**, in the tabs next to the text, opens the chapter before this one,
-or whichever bible entry you keep having to check, right there in the
+or whichever entry in the glossary you keep having to check, right there in the
 column. It is read-only, and it does not touch what you
 are writing.
 

@@ -100,7 +100,7 @@ test('an entry is changed where it stands, and a new name keeps the old one', as
   const page = await (await owner.request(`/bible/${annaId}`)).text();
   assert.match(page, /data-inline-edit="summary"/);
   assert.match(page, /Found in the text as/);
-  assert.match(page, /data-confirm="Delete Anna Kessler-Prado from the bible\?/);
+  assert.match(page, /data-confirm="Delete Anna Kessler-Prado from the glossary\?/);
   const theirs = await (await reader.request(`/bible/${annaId}`)).text();
   assert.ok(!/data-inline-edit/.test(theirs), 'a reader gets plain text');
 });

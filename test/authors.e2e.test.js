@@ -116,12 +116,12 @@ test('the wiki pages for a story and its writer are the ones linked, not doubled
   assert.ok(own.includes('Farther Out'), 'a story the wiki lacks still gets its own');
 
   const far = models.listStories().find((s) => s.title === 'Far Out');
-  assert.match(await (await luis.request(`/stories/${far.id}`)).text(), /href="\/glossary\/Far%20Out%20\(story\)">its page in the glossary/);
-  const page = await (await luis.request('/glossary/Far%20Out%20(story)')).text();
+  assert.match(await (await luis.request(`/stories/${far.id}`)).text(), /href="\/wiki\/Far%20Out%20\(story\)">its page in the wiki/);
+  const page = await (await luis.request('/wiki/Far%20Out%20(story)')).text();
   assert.match(page, new RegExp(`This story is here.*href="/stories/${far.id}"`, 's'));
-  const writer = await (await luis.request('/glossary/Thinking%20Horndog')).text();
+  const writer = await (await luis.request('/wiki/Thinking%20Horndog')).text();
   assert.match(writer, /Their stories are here[\s\S]*3 stories by Thinking Horndog[\s\S]*who is <a href="\/users\/thinker55">Thinker/);
-  assert.match(await (await admin.request('/authors')).text(), /id="a-sol-thinking-horndog"[\s\S]*href="\/glossary\/Thinking%20Horndog">In the glossary/);
+  assert.match(await (await admin.request('/authors')).text(), /id="a-sol-thinking-horndog"[\s\S]*href="\/wiki\/Thinking%20Horndog">In the wiki/);
 });
 
 test('a file that does not say where it came from is still not imported twice', async () => {

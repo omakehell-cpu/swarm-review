@@ -4,6 +4,27 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
+## 2026-09-29 — A glossary for every story, a character study, and dialogue left alone
+
+### The glossary
+
+- **Each story's bible is now its *glossary*.** It was never a bible: it is where you keep who and what is in a story -- people, places, ships, events. Everything in it is where it was; only the name has changed, on the buttons, the tabs, the pages and the help.
+- **The shared-universe copy is now called the *Wiki***, in the top bar, since that is what it is. Its old addresses still get there.
+- The tag group *Cast* is called **Characters**. Its tags are the same ones.
+- The help pages moved with it: *The glossary*, *The wiki* and *Your first characters, step by step*. The old links still get there.
+
+### A character study
+
+- **Every person in a glossary has a character study**: five questions under *Character study* on the entry form -- what they want, what they need, what they fear, how they talk, how they change. Answer the ones you know; the entry page says which are still open.
+- **Only the people who write the story see it**, even when the glossary is open to readers.
+- The glossary names the main characters nobody has started a study for yet. Merging two people keeps whatever only one of them answered.
+
+### The writing checks
+
+- **The writing checks can ignore dialogue.** Tick *Ignore dialogue (text in quotes)* under the cards in the checks panel and nothing inside quotation marks is marked or counted: people do not speak correct prose, and a character's grammar is often the point of the line. Spelling and dialogue tags are still checked. Beside it, how many marks are in dialogue. Off until you tick it.
+- A line of dialogue is now recognised across its sentences (*"Stop. Put it down."*), in curly quotes, and in British single quotes.
+- **Which checks you show, and the dialogue switch, are saved to your account**, so they are the same on the next computer you write on.
+
 ## 2026-09-27 — The name you sign in with is your own business
 
 - **You can change the name you log in with**, under *Account → The name you sign in with*, with your password beside it.

@@ -4047,7 +4047,23 @@ mark.wa-sentence, mark.wa-word { border-radius: 0; }
 .wa-pcard-craft .wa-pcard-box { width: 12px; height: 12px; }
 .wa-pcard-craft .wa-pcard-box::after { left: 2.5px; top: 0; width: 3.5px; height: 7px; }
 .wa-panel-writenote { display: none; margin: 0; color: var(--text-muted); }
-.wa-panel-writing .wa-panel-cards, .wa-panel-writing .wa-panel-craft { display: none; }
+.wa-panel-writing .wa-panel-cards, .wa-panel-writing .wa-panel-craft, .wa-panel-writing .wa-panel-option { display: none; }
+/* A way of reading the checks rather than one of them: no colour of its
+   own, the same tick in a box, and unticked until somebody asks. */
+.wa-panel-option {
+  display: flex; align-items: center; gap: var(--s-3); align-self: flex-start; cursor: pointer;
+  padding: var(--s-1) 0; border: 0; background: none; font: inherit; font-size: var(--t-xs); color: var(--text-muted);
+  min-height: 24px;
+}
+.wa-panel-option:hover { color: var(--text); }
+.wa-panel-option .wa-pcard-box { width: 12px; height: 12px; background: transparent; border-color: var(--text-muted); }
+.wa-panel-option .wa-pcard-box::after { content: none; left: 2.5px; top: 0; width: 3.5px; height: 7px; }
+.wa-panel-option.is-on { color: var(--text); }
+.wa-panel-option.is-on .wa-pcard-box { background: var(--text); border-color: var(--text); }
+.wa-panel-option.is-on .wa-pcard-box::after { content: ""; }
+.wa-panel-option:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.wa-panel-option-count { color: var(--text-muted); font-size: var(--t-2xs); margin-left: var(--s-2); }
+.wa-panel-option-count::before { content: "\00b7" / ""; margin-right: var(--s-2); }
 .wa-panel-writing .wa-panel-writenote { display: block; }
 
 /* Folded above the text, on a phone: one line that opens. */
@@ -5396,3 +5412,29 @@ label.adv-check input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18
 }
 /* The names under a story are links of their own, above the row's link. */
 .story-wide-by a, .story-table-by a { position: relative; z-index: 1; }
+
+/* ---------- a person's character study (views/character-study.js) ---------- */
+.character-study-form {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--s-4) var(--s-5) var(--s-5);
+  margin: var(--s-5) 0;
+}
+.character-study-form > legend {
+  font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: var(--label-tracking); color: var(--text-muted); padding: 0 var(--s-2);
+}
+.character-study-form .hint + label { margin-top: var(--s-4); }
+.character-study { margin-top: var(--s-8); max-width: 60ch; }
+.character-study .side-head .muted { font-weight: 400; text-transform: none; letter-spacing: 0; }
+.study-answers { margin: 0; }
+.study-answers dt { font-weight: 600; margin-top: var(--s-4); }
+.study-answers dt:first-child { margin-top: 0; }
+.study-answers dd { margin: var(--s-1) 0 0; }
+.study-answers dd p { margin: 0 0 var(--s-2); }
+.study-nudge {
+  border-left: 3px solid var(--accent);
+  padding: var(--s-2) var(--s-4);
+  margin: var(--s-4) 0;
+}
+.study-nudge .muted { display: block; font-size: var(--t-sm); }

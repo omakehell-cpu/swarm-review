@@ -88,7 +88,7 @@ function findPage({ user, stories, list, tagsByStory, coauthorsByStory = new Map
       <p class="breadcrumb"><a href="/">&larr; Stories</a></p>
       <div class="page-head"><div>
         <h1>Advanced search</h1>
-        <p class="muted">Every way of narrowing the stories at once. For chapters, notes and the glossary as well, use the search in the bar at the top.</p>
+        <p class="muted">Every way of narrowing the stories at once. For chapters, notes and the wiki as well, use the search in the bar at the top.</p>
       </div></div>
       ${findForm(state, allGroups)}
       <section class="find-results" id="results" aria-labelledby="shelf-heading" tabindex="-1">

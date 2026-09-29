@@ -702,7 +702,7 @@ const SEED_TAGS = [
     ['Extraction', 'Covers an extraction.'],
     ['Earthbound', 'Stays on Earth.'],
   ]],
-  ['Cast', [
+  ['Characters', [
     ['Ensemble', ''], ['Single POV', ''], ['Multiple POV', ''],
     ['Original characters', ''], ['Established characters', 'Uses characters from the shared canon.'],
   ]],
@@ -813,6 +813,11 @@ if (tagSeedVersion < 3) {
     add.run(g.tag_group, TAG_GROUPS.length + 1);
   }
   setMeta('tag_seed_version', 3);
+}
+if (tagSeedVersion < 4) { // "Cast" is called "Characters" now (lib/sol-tags.js)
+  db.exec(`UPDATE tags SET tag_group = 'Characters' WHERE tag_group = 'Cast'; UPDATE tag_groups SET name = 'Characters' WHERE name = 'Cast' AND NOT EXISTS (SELECT 1 FROM tag_groups WHERE name = 'Characters');
+    DELETE FROM tag_groups WHERE name = 'Cast';`);
+  setMeta('tag_seed_version', 4);
 }
 
 // A permanent placeholder account that "deleted" users' authored content

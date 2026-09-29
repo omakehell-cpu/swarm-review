@@ -137,7 +137,7 @@ async function handleAdminRevokeResetLink(req, res, user, tokenId) {
 async function handleAdminSyncWiki(req, res, user) {
   try {
     const { pageCount } = await wiki.syncWikiIndex();
-    logEvent(user, 'wiki-synced', { subject: `${pageCount} pages`, href: '/glossary' });
+    logEvent(user, 'wiki-synced', { subject: `${pageCount} pages`, href: '/wiki' });
     redirect(res, `/admin?notice=Wiki index synced: ${pageCount} pages.`);
   } catch (err) {
     redirect(res, `/admin?notice=Wiki sync failed: ${encodeURIComponent(err.message)}`);

@@ -24,6 +24,7 @@ const modules = [
   ['analysis', require('./views/analysis')],
   ['writing', require('./views/writing')],
   ['chapter', require('./views/chapter')],
+  ['characterStudy', require('./views/character-study')],
   ['people', require('./views/people')],
   ['admin', require('./views/admin')],
   ['import', require('./views/import')],

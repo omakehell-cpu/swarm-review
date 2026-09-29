@@ -18,7 +18,7 @@ test('a code goes where StoriesOnline files it', () => {
   assert.strictEqual(categoryFor('Romance'), 'Story Types', 'a genre is a story type');
   assert.strictEqual(categoryFor('Something unheard of'), 'Other');
   assert.strictEqual(SOL_CATEGORIES.length, 14);
-  assert.deepStrictEqual(TAG_GROUPS.slice(-4), ['Swarm', 'Cast', 'Length', 'Review status']);
+  assert.deepStrictEqual(TAG_GROUPS.slice(-4), ['Swarm', 'Characters', 'Length', 'Review status']);
 });
 
 test('the vocabulary follows the categories, and the old groups are folded in', async () => {
