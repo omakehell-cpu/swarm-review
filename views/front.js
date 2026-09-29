@@ -291,7 +291,7 @@ function shelfTabs(state) {
     const n = state.counts[key] || 0;
     // Set aside is not a shelf of its own on the front page: those are in All.
     if (key === 'dropped' && !current && (state.base !== '/find' || !n)) return '';
-    return `<a class="tag-chip shelf-tab${current ? ' current' : ''}${n ? '' : ' is-empty'}" href="${listHref(state, { shelf: key === state.defaultShelf ? '' : key })}"${current ? ' aria-current="page"' : ''}>${escapeHtml(SHELVES[key].label)}<span class="tag-chip-count">${n}</span></a>`;
+    return `<a class="tag-chip shelf-tab${current ? ' current' : ''}${n ? '' : ' is-empty'}" href="${listHref(state, { shelf: key === state.defaultShelf ? '' : key, ...(state.base === '/' ? { author: '' } : {}) })}"${current ? ' aria-current="page"' : ''}>${escapeHtml(SHELVES[key].label)}<span class="tag-chip-count">${n}</span></a>`;
   };
   return `<nav class="shelf-tabs" aria-label="Which stories">${order.map(tab).join('')}</nav>`;
 }
@@ -309,11 +309,36 @@ function viewControls(state) {
   ])}`;
 }
 
+/**
+ * Whose finished stories: a list of the authors on the shelf, each with
+ * how many. A plain GET form, so it works without a script; the script
+ * (shelf-author.js) only sends it as soon as a name is picked.
+ */
+function authorFilter(state) {
+  const authors = state.shelfAuthors || [];
+  if (state.base !== '/' || state.shelf !== 'complete' || (authors.length < 2 && !state.author)) return '';
+  const hidden = [['shelf', state.shelf === state.defaultShelf ? '' : state.shelf], ['sort', state.sort], ['q', state.q]]
+    .filter(([, v]) => v).map(([k, v]) => `<input type="hidden" name="${k}" value="${escapeHtml(String(v))}">`)
+    .concat((state.activeTags || []).map((t) => `<input type="hidden" name="tag" value="${escapeHtml(t.slug)}">`));
+  const chosen = String(state.author || '').toLowerCase();
+  return `
+      <form class="shelf-author" method="get" action="/#library" data-shelf-author>
+        ${hidden.join('')}
+        <label for="shelf-author">By</label>
+        <select id="shelf-author" name="author">
+          <option value="">Every author</option>
+          ${authors.map((a) => `<option value="${escapeHtml(a.name)}"${a.name.toLowerCase() === chosen ? ' selected' : ''}>${escapeHtml(a.name)} (${a.n})</option>`).join('')}
+        </select>
+        <button class="btn ghost small shelf-author-go" type="submit">Show</button>
+      </form>`;
+}
+
 /** Shelves, then the order and the look: one row, nothing else. */
 function listControls(state) {
   return `
     <div class="library-controls">
       ${shelfTabs(state)}
+      ${authorFilter(state)}
       <div class="library-view">${viewControls(state)}</div>
     </div>`;
 }
@@ -346,6 +371,7 @@ function seeAll(state) {
   if (state.shelf !== 'all') params.push(`shelf=${encodeURIComponent(state.shelf)}`);
   if (state.sort) params.push(`sort=${encodeURIComponent(state.sort)}`);
   if (state.q) params.push(`q=${encodeURIComponent(state.q)}`);
+  if (state.author) params.push(`author=${encodeURIComponent(state.author)}`);
   for (const t of state.activeTags || []) params.push(`tag=${encodeURIComponent(t.slug)}`);
   return `
     <p class="see-all"><a class="btn ghost" href="/find${params.length ? `?${params.join('&amp;')}` : ''}#results">See all ${state.total} ${escapeHtml(SHELVES[state.shelf].label.toLowerCase())} &rarr;</a></p>`;

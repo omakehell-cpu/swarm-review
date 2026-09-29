@@ -315,7 +315,9 @@ function storiesPage({ user, stories, folded = [], since, tagsByStory, coauthors
 function storyResults(stories, listState, { sinceQs = '', tagsFor, coauthorsFor, totalStories = 0, level = 3 }) {
   const state = listState;
   const searching = state.q || state.author || state.text || state.length || state.following;
-  const heading = searching ? `${SHELVES[state.shelf].label}, matching your search`
+  const byAuthorOnly = state.author && !state.q && !state.text && !state.length && !state.following;
+  const heading = byAuthorOnly ? `${SHELVES[state.shelf].label}, by ${state.author}`
+    : searching ? `${SHELVES[state.shelf].label}, matching your search`
     : (state.activeTags.length ? `${SHELVES[state.shelf].label}, with those tags`
       : (state.sort === 'mine' ? `${SHELVES[state.shelf].label}, that you write in` : SHELVES[state.shelf].label));
   const rows = stories.length

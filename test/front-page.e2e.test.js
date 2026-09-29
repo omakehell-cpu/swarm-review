@@ -134,3 +134,25 @@ test('an author\'s page: the numbers, the latest work, and the rest from the fir
   assert.match(imported, /Latest work[\s\S]*Far Out[\s\S]*Oct 2010|Latest work[\s\S]*Far Out/);
   assert.match(imported, /Imported from StoriesOnline/);
 });
+
+test('the finished stories can be narrowed to one author', async () => {
+  const other = models.findOrCreateImportedAuthor({ name: 'Marta Ruiz', authorSlug: 'marta-ruiz' });
+  models.importStory({
+    title: 'Salt in the Vents', description: 'Hers.', status: 'complete', storyUrl: 'https://storiesonline.net/s/2/salt', solId: '2',
+    published: '2011-01-01', chapters: [{ title: 'Chapter 1', markdown: 'Vents.' }],
+  }, { authorId: other.id });
+  const shelf = await (await ana.request('/?shelf=complete')).text();
+  assert.match(shelf, /<select id="shelf-author" name="author">/);
+  assert.match(shelf, /<option value="Akarge">Akarge \(1\)<\/option>/);
+  assert.match(shelf, /<option value="Marta Ruiz">Marta Ruiz \(1\)<\/option>/);
+  const writing = await (await ana.request('/')).text();
+  assert.doesNotMatch(writing, /id="shelf-author"/, 'only over the finished stories');
+
+  const hers = await (await ana.request('/?shelf=complete&author=Marta+Ruiz')).text();
+  const list = hers.split('id="library"')[1];
+  assert.match(list, /Salt in the Vents/);
+  assert.doesNotMatch(list, /Far Out/);
+  assert.match(hers, /<option value="Marta Ruiz" selected>/);
+  assert.match(hers, /id="shelf-heading">Finished, by Marta Ruiz </);
+  assert.match(hers, /class="active-filter" href="[^"]*">Author: Marta Ruiz/);
+});

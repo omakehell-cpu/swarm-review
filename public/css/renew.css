@@ -447,3 +447,10 @@ body:has(.editor-grid) .topbar { background: var(--bg); }
 @media (max-width: 560px) {
   .title-field input { font-size: var(--t-2xl); }
 }
+
+/* The author filter over the finished stories. */
+.shelf-author { display: inline-flex; align-items: center; gap: var(--s-3); font-size: var(--t-sm); }
+.shelf-author label { color: var(--text-muted); }
+.shelf-author select { padding: var(--s-2) var(--s-8) var(--s-2) var(--s-5); font-size: var(--t-sm); border-radius: 999px; max-width: 16rem; }
+.shelf-author.is-live .shelf-author-go { display: none; }
+.active-filter, .active-filter-clear { border-radius: 999px; }

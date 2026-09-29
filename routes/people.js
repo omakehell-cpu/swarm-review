@@ -106,10 +106,18 @@ function storyList(user, query, { since = null, defaultShelf = 'writing', pageSi
   const view = asked && asked in WAS ? WAS[asked] : models.storyViewOf(user.id);
   const foldedHere = shelves.shelve(folded, { ...shelfOptions, page: 1 });
   const authors = [...new Set(visible.map((s2) => s2.author_name).filter(Boolean))].sort((x, y) => x.localeCompare(y));
+  // Who wrote what is on this shelf, with how many: the choices for the
+  // author filter over a shelf (the finished stories, on the front page).
+  const onShelf = new Map();
+  for (const s2 of visible) {
+    if (list.shelf !== 'all' && shelves.shelfOf(s2) !== list.shelf) continue;
+    if (s2.author_name) onShelf.set(s2.author_name, (onShelf.get(s2.author_name) || 0) + 1);
+  }
+  const shelfAuthors = Array.from(onShelf, ([name, n]) => ({ name, n })).sort((x, y) => x.name.localeCompare(y.name, 'en', { sensitivity: 'base' }));
   return {
     stories, visible, writesIn, followed, tagsByStory, coauthorsByStory, activeTags, sort,
     folded: folded.filter((s2) => foldedHere.stories.some((f) => f.id === s2.id)),
-    list: { ...list, view, text, following: onlyFollowing, authors },
+    list: { ...list, view, text, following: onlyFollowing, authors, shelfAuthors },
   };
 }
 

@@ -6,6 +6,10 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-29 — The plan, a glossary for every story, and a character study
 
+### Finished stories, by author
+
+- On the front page, the **Finished** shelf has a **By** list: pick an author and see only their finished stories, with how many each has. The filter shows above the list, with an × to take it off.
+
 ### A new look
 
 - **Every story has its own colour.** A story without a cover picture gets one made from its title, on its colour, with a mark of its own -- on the shelves, your desk and the author pages.
