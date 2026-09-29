@@ -6,6 +6,7 @@ const { parseMarkdown, renderPlainText, renderHighlighted, flattenText } = requi
 const { markdownToDocxBuffer } = require('../lib/docx');
 const { noteAsWordText, readWordComments } = require('../lib/word-comments');
 const { parseBody, parseMultipartBody, sendHtml, sendJson, redirect } = require('../lib/util');
+const chapterBreaks = require('../lib/chapter-breaks');
 const models = require('../models');
 const views = require('../views');
 const wiki = require('../lib/wiki');
@@ -138,6 +139,9 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   // (including the default "end" option, or a tampered/stale value that no
   // longer matches a real chapter) falls back to appending at the end,
   // exactly like before this feature existed.
+  const breaks = chapterBreaks.parseBreaks(content);
+  if (breaks.error) return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: breaks.error, values, vocabulary: storyVocabulary(storyId) }));
+  content = breaks.text;
   // A planned chapter goes where the plan has it now, which may have moved
   // since the editor was opened.
   const position = fromPlan ? models.planSlotPosition(fromPlan.id) : body.position;
@@ -150,6 +154,10 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
     : models.createChapter({ storyId, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand, storyWhen, storyDay });
   // Written from the plan: the planned chapter is this one now.
   if (fromPlan) models.planSlotWritten(fromPlan.id, chapter);
+  if (breaks.cuts.length) {
+    logEvent(user, 'chapter-added', { subject: `${title} (${story.title})`, href: `/chapters/${chapter.id}`, storyId, chapterId: chapter.id });
+    return finishDividing(res, user, chapter.id, breaks.cuts, title);
+  }
   if (arcTitle) {
     logEvent(user, 'arc-started', { subject: arcTitle, href: `/stories/${storyId}`, storyId, chapterId: chapter.id });
   }
@@ -157,6 +165,43 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
     subject: `${title} (${story.title})`, href: `/chapters/${chapter.id}`, storyId, chapterId: chapter.id,
   });
   redirect(res, `/chapters/${chapter.id}`);
+}
+
+// After a publish with chapter breaks in it: the chapter is cut where they
+// were, and the writer lands on the first of the new chapters, told what
+// happened. Each new one is by the same author, straight after the last.
+function finishDividing(res, user, chapterId, cuts, title) {
+  const chapter = models.getChapterById(chapterId);
+  const { error, chapters } = models.divideChapter(chapterId, cuts, title);
+  for (const c of chapters) {
+    logEvent(user, 'chapter-split', { subject: `${title} / ${c.title}`, href: `/chapters/${c.id}`, storyId: chapter.story_id, chapterId: c.id });
+  }
+  const names = chapters.map((c) => `${c.chapter_number}. ${c.title}`).join(', ');
+  const notice = chapters.length
+    ? `Published, and divided: ${names} ${chapters.length === 1 ? 'is a chapter' : 'are chapters'} of ${chapters.length === 1 ? 'its' : 'their'} own now, straight after this one.${error ? ` One break could not be made: ${error}` : ''}`
+    : `Published, but not divided: ${error}`;
+  redirect(res, `/chapters/${chapterId}?notice=${encodeURIComponent(notice)}`);
+}
+
+// Joining a chapter and the one after it: the other half of a chapter
+// break. Both have to be the writer's own, and neither may have writing
+// waiting in the editor that the join would be made against the wrong
+// text of. The one after is archived, not deleted.
+async function handleJoinNext(req, res, user, chapterId) {
+  const chapter = models.getChapterById(chapterId);
+  if (!chapter || chapter.archived_at) return sendError(res, 404, 'Chapter not found', user);
+  if (chapter.author_id !== user.id) return sendError(res, 403, 'Only the chapter author can join it to the next one.', user);
+  const next = models.nextChapterOf(chapter);
+  if (!next) return redirect(res, `/chapters/${chapterId}?notice=${encodeURIComponent('This is the last chapter: there is nothing after it to join.')}`);
+  if (next.author_id !== user.id) return sendError(res, 403, 'The next chapter was written by somebody else, so it cannot be joined to yours.', user);
+  if (models.getDraft(chapterId, user.id) || models.getDraft(next.id, user.id)) {
+    return redirect(res, `/chapters/${chapterId}?notice=${encodeURIComponent('There is unpublished writing in the editor for one of these chapters. Publish it or throw it away first, then join them.')}`);
+  }
+  const result = models.mergeWithNext({ chapterId });
+  if (result.error) return redirect(res, `/chapters/${chapterId}?notice=${encodeURIComponent(result.error)}`);
+  logEvent(user, 'chapter-merged', { subject: `${result.merged.title} into ${result.chapter.title}`, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId });
+  const notice = `Joined: ${result.merged.title} is the end of this chapter now${result.moved ? `, with its ${result.moved} waiting note${result.moved === 1 ? '' : 's'}` : ''}. It is in the story's archived chapters if you want it back.`;
+  redirect(res, `/chapters/${chapterId}?notice=${encodeURIComponent(notice)}`);
 }
 
 // Notes from a Word file: a reader who read the chapter in Word (perhaps
@@ -295,6 +340,9 @@ async function handleChapterPage(req, res, user, chapterId, query) {
     // Which arcs of the plan this chapter is in, for the people who write
     // it: the plan is theirs, and a smaller arc's name can be a spoiler.
     arcs: models.canWriteInStory(story, user) ? models.arcsOfChapter(chapter) : [],
+    // The next chapter, when it too is this writer's: the one "Join with
+    // the next chapter" would fold in.
+    joinNext: chapter.author_id === user.id ? (() => { const n = models.nextChapterOf(chapter); return n && n.author_id === user.id ? n : null; })() : null,
     entities: bibleVisible ? models.listStoryEntities(chapter.story_id) : [],
     leftBehind: models.notesLeftBehind(chapterId),
     appliedFrom: appliedNote && appliedNote.suggestion != null ? appliedNote.author_name : null,
@@ -495,9 +543,14 @@ async function handleEditChapterSubmit(req, res, user, chapterId) {
     }));
   }
 
-  const { version } = models.editChapter({ chapterId, title, summary, content, changelog, stage, arcTitle, pov, strand, storyWhen, storyDay });
+  // Chapter breaks in the text (lib/chapter-breaks.js): published as one
+  // text without them, then cut where they were.
+  const breaks = chapterBreaks.parseBreaks(content);
+  if (breaks.error) return sameAgain(breaks.error);
+  const { version } = models.editChapter({ chapterId, title, summary, content: breaks.text, changelog, stage, arcTitle, pov, strand, storyWhen, storyDay });
   // Published: whatever draft there was is now the chapter.
   models.discardDraft(chapterId, user.id);
+  if (breaks.cuts.length) return finishDividing(res, user, chapterId, breaks.cuts, title);
   if (stage && stage !== chapter.stage) {
     logEvent(user, 'stage-changed', { subject: `${title}: ${stage}`, href: `/chapters/${chapterId}`, storyId: chapter.story_id, chapterId });
   }
@@ -615,6 +668,7 @@ const routes = [
   ['POST', /^\/chapters\/(\d+)\/notes-from-word$/, (c) => handleNotesFromWord(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/react$/, (c) => handleReaction(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/place$/, (c) => handleReadingPlace(c.req, c.res, c.user, Number(c.m[1]))],
+  ['POST', /^\/chapters\/(\d+)\/join-next$/, (c) => handleJoinNext(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/summary$/, (c) => handleChapterSummary(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterPage(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['POST', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterSubmit(c.req, c.res, c.user, Number(c.m[1]))],

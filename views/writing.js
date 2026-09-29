@@ -124,9 +124,9 @@ function publishSheet(inner, { heading, button }) {
 
 // The text, with the line under it that says how it stands: the words
 // this session, the day's goal, and where the draft is kept.
-function mainField({ content, placeholder, storyId = null, label = 'Chapter text' }) {
+function mainField({ content, placeholder, storyId = null, label = 'Chapter text', breaks = false }) {
   return `
-    <div class="main-field"><label for="chapter-content" class="sr-only">${escapeHtml(label)}</label><textarea id="chapter-content" name="content" rows="24" placeholder="${escapeHtml(placeholder)}"${storyId ? ` data-story-id="${storyId}"` : ''} data-editor-tools>${escapeHtml(content)}</textarea>
+    <div class="main-field"><label for="chapter-content" class="sr-only">${escapeHtml(label)}</label><textarea id="chapter-content" name="content" rows="24" placeholder="${escapeHtml(placeholder)}"${storyId ? ` data-story-id="${storyId}"` : ''}${breaks ? ' data-chapter-breaks' : ''} data-editor-tools>${escapeHtml(content)}</textarea>
       <p class="writer-status" data-writer-status></p>
     </div>
     <template id="markdown-help"><p class="hint">${MARKDOWN_HELP}</p></template>`;
@@ -213,7 +213,7 @@ function newChapterPage({ user, story, chapters = [], castList = [], error, noti
           <p class="plan-writing-note muted">Writing this from the plan${values.plan && values.plan.draftSavedAt ? `, from the draft you saved ${timeHtml(values.plan.draftSavedAt)}` : ''}.
             <em>Save draft</em> keeps it for you alone; <em>Publish chapter</em> puts it where the plan has it. What the plan says is beside the text.</p>` : notice ? `<p class="flash info" role="status">${escapeHtml(notice)}</p>` : ''}
           <label class="title-field"><span class="sr-only">Chapter title</span><input type="text" name="title" value="${escapeHtml(values.title || '')}" required placeholder="Chapter title" autofocus></label>
-          ${mainField({ content: values.content || '', placeholder: 'Write the chapter here...', storyId: story.id })}
+          ${mainField({ content: values.content || '', placeholder: 'Write the chapter here...', storyId: story.id, breaks: true })}
           ${detailsDrawer(`
             <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary || '')}</textarea></label>
             ${positionField(chapters, values.position)}
@@ -342,7 +342,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
         ${desk ? `<script type="application/json" id="desk-data">${toScriptJson(desk)}</script>` : ''}
         <input type="hidden" name="baseVersion" value="${conflict ? conflict.version : (latestVersionNumber || '')}">
         <label class="title-field"><span class="sr-only">Chapter title</span><input type="text" name="title" value="${escapeHtml(values.title ?? chapter.title)}" required placeholder="Chapter title"></label>
-        ${mainField({ content: values.content ?? latestContent, placeholder: 'Write the chapter here...', storyId: chapter.story_id })}
+        ${mainField({ content: values.content ?? latestContent, placeholder: 'Write the chapter here...', storyId: chapter.story_id, breaks: true })}
         ${detailsDrawer(`
           <label>Chapter summary<textarea name="summary" rows="2">${escapeHtml(values.summary ?? chapter.summary ?? '')}</textarea></label>
           ${stageField(values.stage ?? chapter.stage)}

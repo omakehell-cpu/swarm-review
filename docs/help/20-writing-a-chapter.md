@@ -117,6 +117,39 @@ Opening the editor with a draft waiting opens the draft, and says so, with
 went up since you started the draft -- a suggested rewrite you applied, say
 -- the editor tells you, and publishing asks before it goes on top.
 
+## Dividing a chapter, and joining two
+
+A chapter that has grown into two does not need copying and deleting.
+Put the cursor where the new chapter should start and press **New
+chapter** in the row above the text. It puts in a line of its own,
+
+```
+=== New chapter: Title ===
+```
+
+with *Title* selected, ready to type over. Everything after that line
+becomes a chapter of its own **when you publish** -- straight after this
+one, by you, with the same point of view, strand, stage and date. Put in
+as many as you like: each one starts another chapter, in order. Before it
+publishes, the editor says which chapters it is about to make.
+
+Nothing is lost doing it. The notes waiting on the text that moved go with
+it, to the new chapter, on the same words; anybody who had read the
+chapter has read the new one too; and the whole chapter as it was is still
+in its version history. A break with no text before or after it is
+refused, and nothing is published. **Save draft** keeps the break lines as
+they are, so a division can wait for a second pass. *Divide it into
+chapters*, under **More** on the chapter page, opens the editor at the
+button.
+
+The other way round, **Join with the next chapter**, under **More**,
+puts the next chapter on the end of this one when you wrote both. Its
+waiting notes come with its text, and the chapter it was goes to the
+story's archived chapters, not away.
+
+Any arc or planned chapter that went after the chapter goes after the
+last part of it.
+
 ## Bringing in a file
 
 **More → Bring in text from a file** takes a `.md`, `.txt` or `.docx` and

@@ -30,6 +30,7 @@ const modules = [
   ['bibleEdits', require('./models/bible-edits')],
   ['characterStudy', require('./models/character-study')],
   ['chapters', require('./models/chapters')],
+  ['split', require('./models/split')],
   ['plan', require('./models/plan')],
   ['writing', require('./models/writing')],
   ['imports', require('./models/imports')],

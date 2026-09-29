@@ -411,7 +411,7 @@ function reviewBlock({ chapter, isChapterAuthor, requests = [], mine = null, peo
     </section>`;
 }
 
-function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '', place = null, mentionable = [], reactions = null, notice = '', following = null, arcs = [] }) {
+function chapterPage({ user, chapter, versions, currentVersion, comments, isChapterAuthor, canWrite = false, neighbours = null, readers = [], cast = [], findMatches = null, missingNames = [], entities = [], leftBehind = [], appliedFrom = null, reviewHtml = '', place = null, mentionable = [], reactions = null, notice = '', following = null, arcs = [], joinNext = null }) {
   const topLevel = comments.filter((c) => c.parent_id == null);
   const repliesByParent = {};
   comments.filter((c) => c.parent_id != null).forEach((c) => {
@@ -540,6 +540,11 @@ function chapterPage({ user, chapter, versions, currentVersion, comments, isChap
               <a href="/chapters/${chapter.id}/download.txt?v=${currentVersion.version_number}">Plain text (.txt)</a>
               ${isChapterAuthor ? `
                 <p class="menu-heading">Chapter</p>
+                <a href="/chapters/${chapter.id}/edit#chapter-breaks">Divide it into chapters</a>
+                ${joinNext ? `<form method="post" action="/chapters/${chapter.id}/join-next" class="inline-form"
+                      data-confirm="${escapeHtml(`Join chapter ${joinNext.chapter_number}, ${joinNext.title}, onto the end of this one? It goes to the story's archived chapters, not away, and its waiting notes come with its text.`)}">
+                  <button class="menu-item" type="submit">Join with the next chapter</button>
+                </form>` : ''}
                 <form method="post" action="/chapters/${chapter.id}/archive" class="inline-form"
                       data-confirm="Archive this chapter? It stays readable from the story's archived chapters.">
                   <button class="menu-danger" type="submit">Archive chapter</button>

@@ -1958,7 +1958,7 @@ mark.search-hit {
   letter-spacing: var(--label-tracking);
   color: var(--text-muted);
 }
-.menu-panel a, .menu-danger {
+.menu-panel a, .menu-danger, .menu-item {
   display: block;
   width: 100%;
   padding: var(--s-3) var(--s-4);
@@ -1972,7 +1972,7 @@ mark.search-hit {
   text-decoration: none;
   cursor: pointer;
 }
-.menu-panel a:hover, .menu-danger:hover { background: var(--bg-sunken); }
+.menu-panel a:hover, .menu-danger:hover, .menu-item:hover { background: var(--bg-sunken); }
 .menu-danger { color: var(--rejected); }
 @media (max-width: 720px) {
   /* No room to hang a panel off the edge of a phone. */
@@ -3337,6 +3337,10 @@ details.writer-section[open] > summary { margin-bottom: var(--s-2); }
 .editor-tool.tool-bold { font-weight: 800; }
 .editor-tool.tool-italic { font-style: italic; }
 .editor-tool.tool-break { font-size: var(--t-xs); letter-spacing: 0.2em; }
+.editor-tool.tool-chapter { font-size: var(--t-xs); white-space: nowrap; }
+.chapter-breaks-hint { margin: var(--s-2) 0; }
+@media (max-width: 600px) { .editor-tool.tool-chapter { display: none; } }
+@media (min-width: 601px) { .tools-menu-item.tool-chapter-menu { display: none; } }
 .editor-tool.tool-focus {
   font-family: var(--font-ui); font-size: var(--t-2xs); font-weight: 700;
   text-transform: uppercase; letter-spacing: var(--label-tracking);

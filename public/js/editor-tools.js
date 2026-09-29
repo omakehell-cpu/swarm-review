@@ -96,6 +96,17 @@
     insert(text, text.length);
   }
 
+  // A chapter break: a line of its own that, on publish, starts a new
+  // chapter from the line after it (lib/chapter-breaks.js). The title is
+  // selected, ready to be typed over.
+  const BREAK_MARKER = /^[ \t]*={3,}[ \t]*new chapter\b[ \t]*:?[ \t]*(.*?)[ \t]*=*[ \t]*$/i;
+  function chapterBreakText() {
+    const before = textarea.value.slice(0, textarea.selectionStart);
+    const lead = before === '' || before.endsWith('\n\n') ? '' : (before.endsWith('\n') ? '\n' : '\n\n');
+    const head = `${lead}=== New chapter: `;
+    insert(`${head}Title ===\n\n`, head.length, head.length + 'Title'.length);
+  }
+
   // ---------------------------------------------------------------- preview
 
   const preview = document.createElement('div');
@@ -158,7 +169,7 @@
     }
     previewBtn.setAttribute('aria-pressed', String(mode === 'preview'));
     document.body.classList.toggle('editor-previewing', mode === 'preview');
-    for (const b of Array.from(bar.querySelectorAll('[data-format], .tool-break'))) {
+    for (const b of Array.from(bar.querySelectorAll('[data-format], .tool-break, .tool-chapter'))) {
       /** @type {HTMLButtonElement} */ (b).disabled = mode === 'preview';
     }
     if (!quiet) announce(mode === 'preview'
@@ -207,11 +218,16 @@
     { id: 'heading', label: 'H', title: 'Heading', md: () => prefixLines('## ') },
     { id: 'break', label: '* * *', title: 'Scene break (Ctrl+Enter)', md: sceneBreakText },
   ];
+  if (textarea.hasAttribute('data-chapter-breaks')) {
+    ACTIONS.push({ id: 'chapter', label: 'New chapter', title: 'Start a new chapter here: everything after this line becomes a chapter of its own when you publish', md: chapterBreakText });
+  }
   const SAID = { bold: 'Bold', italic: 'Italic', quote: 'Quote', heading: 'Heading' };
   function run(action) {
     if (mode !== 'markdown') return;
     action.md();
-    announce(action.id === 'break' ? 'Scene break inserted.' : `${SAID[action.id]} marks added around the selection.`);
+    announce(action.id === 'break' ? 'Scene break inserted.'
+      : action.id === 'chapter' ? 'Chapter break inserted. Type the new chapter\'s title; it is made when you publish.'
+        : `${SAID[action.id]} marks added around the selection.`);
   }
 
   const bar = document.createElement('div');
@@ -230,7 +246,8 @@
   for (const action of ACTIONS) {
     const b = button(`tool-${action.id}`, action.label, action.title);
     b.setAttribute('aria-label', action.title);
-    if (action.id !== 'break') b.dataset.format = action.id;
+    if (action.id !== 'break' && action.id !== 'chapter') b.dataset.format = action.id;
+    if (action.id === 'chapter') b.id = 'chapter-breaks';
     b.addEventListener('click', () => run(action));
     bar.appendChild(b);
   }
@@ -441,6 +458,9 @@
   help.className = 'markdown-help';
   help.hidden = true;
   if (helpTemplate) help.appendChild(helpTemplate.content.cloneNode(true));
+  // On a phone the row has no room for it, so it is in the menu as well.
+  const chapterAction = ACTIONS.find((x) => x.id === 'chapter');
+  if (chapterAction) menuItem('tool-chapter-menu', 'New chapter here', chapterAction.title, () => run(chapterAction));
   menuItem('tool-help', 'What Markdown does', 'Bold, italic, headings, scene breaks: how to write them', () => {
     help.hidden = !help.hidden;
     if (!help.hidden) announce(help.textContent || '');
@@ -634,4 +654,33 @@
     },
   };
   document.dispatchEvent(new CustomEvent('swarm-editor-ready'));
+
+  // Publishing with chapter breaks in the text makes chapters: said once,
+  // before it happens, with their titles. Saving a draft keeps the breaks
+  // as they are, so it is not asked.
+  if (textarea.form && textarea.hasAttribute('data-chapter-breaks')) {
+    textarea.form.addEventListener('submit', (ev) => {
+      const submitter = /** @type {any} */ (ev).submitter;
+      if (submitter && submitter.value === 'draft') return;
+      const titles = textarea.value.split('\n').map((l) => BREAK_MARKER.exec(l)).filter(Boolean).map((m) => (m && m[1]) || 'Untitled');
+      if (!titles.length) return;
+      const list = titles.map((t) => `\u2022 ${t}`).join('\n');
+      const ok = window.confirm(`Publishing will make ${titles.length === 1 ? 'a new chapter' : `${titles.length} new chapters`} from the chapter breaks in the text, straight after this one:\n\n${list}\n\nThe notes on their text go with them.`);
+      if (!ok) ev.preventDefault();
+    });
+  }
+  // Arrived from "Divide it into chapters": straight to the button, and
+  // what it does.
+  if (location.hash === '#chapter-breaks') {
+    const b = document.getElementById('chapter-breaks');
+    if (b) {
+      const say = 'Put the cursor where the new chapter should start and press New chapter -- on a phone, under More. It is made when you publish.';
+      const hint = document.createElement('p');
+      hint.className = 'hint chapter-breaks-hint';
+      hint.textContent = say;
+      bar.after(hint);
+      b.focus();
+      announce(say);
+    }
+  }
 }());

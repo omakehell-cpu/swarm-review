@@ -6,6 +6,12 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-29 — The plan, a glossary for every story, and a character study
 
+### Dividing and joining chapters
+
+- **New chapter**, in the row above the text, starts a new chapter where the cursor is: a line of its own, *=== New chapter: Title ===*, and everything after it is a chapter of its own when you publish -- straight after this one. As many as you like. The editor says which chapters it is about to make before it makes them.
+- The notes waiting on the text that moves go with it, on the same words; whoever had read the chapter has read the new one too; and the chapter as it was stays in its history.
+- **Join with the next chapter**, under *More* on a chapter you wrote, puts the next one (if it is yours too) on the end of it. The one joined goes to the archived chapters, not away.
+
 ### The plan
 
 - **Plan**, beside *Outline* on a story, is its scaffold, for the people who write it: the arcs it is built from and the chapters still to write, in the order they will be read. Readers never see any of it. See [The plan](/help/the-plan).
