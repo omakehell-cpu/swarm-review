@@ -4,7 +4,18 @@ What changed, one day at a time, newest first, in plain language. The dates
 are when the work landed, not when the server picked it up -- if something
 here is missing on the site, it has not been restarted yet.
 
-## 2026-09-29 — A glossary for every story, a character study, and dialogue left alone
+## 2026-09-29 — The plan, a glossary for every story, and a character study
+
+### The plan
+
+- **Plan**, beside *Outline* on a story, is its scaffold, for the people who write it: the arcs it is built from and the chapters still to write, in the order they will be read. Readers never see any of it. See [The plan](/help/the-plan).
+- **Plan a chapter** takes a working title and what happens in it. **Plan several at once** takes a whole outline pasted in -- one chapter a line, its notes on the lines under it that start with a dash.
+- **Write it** opens the editor with the plan's notes and the arcs the chapter is in in a **Plan** tab beside the text. They are not the chapter's summary, and they stay with the chapter afterwards, for its writers.
+- **Write in any order, and save a draft.** A planned chapter's draft is yours alone until you publish it; the others who write the story see that you are writing it, not what. Publishing puts it where the plan has it at that moment.
+- **Arcs nest**, and each asks what happens in it, what is different at the end, and why it matters. A top-level arc is not asked where it ends -- it runs to the next one. A long arc with nothing inside it asks whether there is a turn in it.
+- **The arcs over the chapters**, at the top of the plan: a bar for each arc across the chapters it covers, a row for each level.
+- The page you are on is marked among *Plan*, *Outline*, *Analysis* and *Timeline*.
+
 
 ### The glossary
 

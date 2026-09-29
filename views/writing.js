@@ -73,7 +73,7 @@ function writerBar({ back, backLabel, cancelHref, publishLabel, draft = false, d
 // The column beside the text, as tabs. Each panel is written out whole,
 // so with no script they are simply one under the other; the tab row is
 // hidden until writing-desk-frame.js has something to switch.
-/** @param {Array<{ id: string, label: string, html: string, attrs?: string }>} panels */
+/** @param {Array<{ id: string, label: string, html: string, attrs?: string }|null>} panels */
 function sideTabs(panels) {
   const shown = panels.filter(Boolean);
   return `
@@ -175,21 +175,43 @@ function newStoryPage({ user, error, values = /** @type {FormValues} */ ({}), gr
 // ---------- add another chapter to an existing story ----------
 
 
-/** @param {{ user: Row, story: Row, chapters?: Row[], castList?: Row[], error?: string|null, vocabulary?: any, values?: FormValues }} props */
-function newChapterPage({ user, story, chapters = [], castList = [], error, vocabulary = {}, values = /** @type {FormValues} */ ({}) }) {
-  const next = chapters.length + 1;
+// Beside a chapter written from the plan: what the plan says about it, and
+// the arcs it is in, with what each is for. The scaffold, kept in view.
+function planPanel(plan, story) {
+  const paras = (text) => String(text || '').split(/\n{2,}|\n(?=[-*•])/).map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`).join('');
+  return `
+    <h2 class="side-head">From the plan</h2>
+    ${plan.notes ? `<div class="plan-panel-notes">${paras(plan.notes)}</div>` : '<p class="muted">The plan has no notes for this chapter.</p>'}
+    ${(plan.arcs || []).map((a) => `
+      <div class="plan-panel-arc">
+        <p class="plan-arc-kicker">${escapeHtml(a.label)}</p>
+        <p class="plan-panel-arc-title">${escapeHtml(a.title)}</p>
+        ${a.summary ? `<p class="muted">${escapeHtml(a.summary)}</p>` : ''}
+        ${a.change ? `<p class="muted"><strong>By the end:</strong> ${escapeHtml(a.change)}</p>` : ''}
+      </div>`).join('')}
+    <p class="muted"><a href="/stories/${story.id}/plan" target="_blank" rel="noopener noreferrer">The whole plan &#8599;</a></p>`;
+}
+
+/** @param {{ user: Row, story: Row, chapters?: Row[], castList?: Row[], error?: string|null, notice?: string, vocabulary?: any, values?: FormValues }} props */
+function newChapterPage({ user, story, chapters = [], castList = [], error, notice = '', vocabulary = {}, values = /** @type {FormValues} */ ({}) }) {
+  // Where it will go: the planned place when there is one, otherwise the end.
+  const next = values.position && values.position !== 'end' ? Number(values.position) : chapters.length + 1;
   return layout({
     title: `New chapter - ${story.title}`,
     user,
     wide: true,
     body: `
-      ${writerBar({ back: `/stories/${story.id}`, backLabel: story.title, cancelHref: `/stories/${story.id}`, publishLabel: 'Publish chapter', sheet: false })}
+      ${writerBar({ back: values.planSlot ? `/stories/${story.id}/plan` : `/stories/${story.id}`, backLabel: values.planSlot ? 'The plan' : story.title, cancelHref: values.planSlot ? `/stories/${story.id}/plan` : `/stories/${story.id}`, publishLabel: 'Publish chapter', sheet: false, draft: !!values.planSlot })}
       ${editorGrid(`
       <div class="writer-card">
         <h1 class="sr-only">Add a chapter to &ldquo;${escapeHtml(story.title)}&rdquo;</h1>
         <p class="writer-kicker">${escapeHtml(story.title)} &middot; chapter ${next}</p>
         ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
         <form method="post" action="/stories/${story.id}/chapters/new" class="chapter-form" id="${FORM_ID}" enctype="multipart/form-data">
+          ${values.planSlot ? `<input type="hidden" name="planSlot" value="${escapeHtml(String(values.planSlot))}">
+          ${notice ? `<p class="flash info" role="status">${escapeHtml(notice)}</p>` : ''}
+          <p class="plan-writing-note muted">Writing this from the plan${values.plan && values.plan.draftSavedAt ? `, from the draft you saved ${timeHtml(values.plan.draftSavedAt)}` : ''}.
+            <em>Save draft</em> keeps it for you alone; <em>Publish chapter</em> puts it where the plan has it. What the plan says is beside the text.</p>` : notice ? `<p class="flash info" role="status">${escapeHtml(notice)}</p>` : ''}
           <label class="title-field"><span class="sr-only">Chapter title</span><input type="text" name="title" value="${escapeHtml(values.title || '')}" required placeholder="Chapter title" autofocus></label>
           ${mainField({ content: values.content || '', placeholder: 'Write the chapter here...', storyId: story.id })}
           ${detailsDrawer(`
@@ -203,6 +225,7 @@ function newChapterPage({ user, story, chapters = [], castList = [], error, voca
         </form>
       </div>
       `, sideTabs([
+        values.plan ? { id: 'plan', label: 'Plan', html: planPanel(values.plan, story) } : null,
         { id: 'checks', label: 'Checks', html: '', attrs: 'data-checks-slot' },
         { id: 'bible', label: 'Glossary', html: editorBiblePanel({ story_id: story.id }) },
         { id: 'beside', label: 'Beside', html: besidePanel({ story, chapters, entities: castList, open: true }) },
@@ -352,6 +375,7 @@ function editChapterPage({ user, chapter, latestContent, comments = [], error, c
     hasComments ? { id: 'notes', label: pendingCount ? `Notes (${pendingCount})` : 'Notes', html: notesPanel } : null,
     canWrite ? { id: 'bible', label: 'Glossary', html: editorBiblePanel(chapter) } : null,
     canWrite ? { id: 'beside', label: 'Beside', html: besidePanel({ chapter, story: { id: chapter.story_id }, chapters: siblings, entities: castList, open: true }) } : null,
+    canWrite && chapter.plan_notes ? { id: 'plan', label: 'Plan', html: planPanel({ notes: chapter.plan_notes, arcs: [] }, { id: chapter.story_id }) } : null,
   ])) + (hasComments ? `
     <script type="application/json" id="chapter-comments-data">${toScriptJson(commentsData)}</script>` : '');
 

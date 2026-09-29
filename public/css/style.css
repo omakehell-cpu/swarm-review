@@ -5438,3 +5438,73 @@ label.adv-check input[type="checkbox"] { width: 18px; height: 18px; flex: 0 0 18
   margin: var(--s-4) 0;
 }
 .study-nudge .muted { display: block; font-size: var(--t-sm); }
+
+/* The plan: arcs as nested boxes, each opening with its name and the
+   three things it answers, the chapters inside it in reading order, and
+   the planned ones marked as not written yet. */
+.plan-list { list-style: none; margin: 0; padding: 0; }
+.plan-root { margin-top: var(--s-6); }
+.plan-item { display: flex; gap: var(--s-4); justify-content: space-between; align-items: flex-start; padding: var(--s-3) 0; border-bottom: 1px solid var(--border); }
+.plan-item-main { min-width: 0; flex: 1; }
+.plan-item-title { font-weight: 600; }
+.plan-item-meta { margin-left: var(--s-3); font-size: var(--t-sm); }
+.plan-item-notes { margin: var(--s-1) 0 0; color: var(--text-muted); font-size: var(--t-sm); }
+.plan-item-notes p { margin: 0 0 var(--s-2); }
+.plan-item.is-planned { border-bottom-style: dashed; }
+.plan-item.is-planned .plan-item-title { font-style: italic; }
+.plan-badge { display: inline-block; margin-right: var(--s-2); padding: 0 var(--s-2); border: 1px dashed var(--border-strong); font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); }
+.plan-item-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; flex: none; }
+.plan-item-actions .inline-form { margin: 0; }
+.plan-arc { margin: var(--s-4) 0; padding: var(--s-4) 0 var(--s-2) var(--s-5); border-left: 3px solid var(--text); }
+.plan-arc.depth-1 { border-left-width: 2px; }
+.plan-arc.depth-2, .plan-arc.depth-3 { border-left: 1px solid var(--border-strong); }
+.plan-arc-head { position: relative; padding-right: 5em; }
+.plan-arc-edit { position: absolute; top: 0; right: 0; }
+.plan-arc-kicker { margin: 0; font-size: var(--t-2xs); font-weight: 700; text-transform: uppercase; letter-spacing: var(--label-tracking); color: var(--text-muted); }
+.plan-arc-title { margin: var(--s-1) 0; }
+.plan-arc-meta { margin: 0 0 var(--s-3); font-size: var(--t-sm); }
+.plan-arc-answer { margin: 0 0 var(--s-3); max-width: 70ch; }
+.plan-arc-answer p { margin: 0 0 var(--s-2); }
+.plan-arc-q { font-size: var(--t-xs); font-weight: 700; color: var(--text-muted); margin-bottom: var(--s-1) !important; }
+.plan-arc-nudge { font-size: var(--t-sm); color: var(--text-muted); font-style: italic; }
+.plan-problems { margin: 0 0 var(--s-3); padding-left: var(--s-5); color: var(--text); font-size: var(--t-sm); font-style: italic; }
+.plan-forms { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--s-6); margin-top: var(--s-8); }
+.plan-form textarea { width: 100%; }
+.chapter-arcs { margin: var(--s-1) 0 0; font-size: var(--t-sm); }
+.plan-form > label, .plan-form > .entity-form-row { margin-bottom: var(--s-5); }
+.plan-form .hint { display: block; margin-top: var(--s-1); }
+.plan-form [data-arc-end][hidden] { display: none; }
+.plan-badge.is-draft { border-style: solid; border-color: var(--text); }
+.plan-item.has-draft .plan-item-title { font-style: normal; }
+.plan-item-draft { margin: var(--s-2) 0 0; font-size: var(--t-sm); }
+.plan-item-scaffold { margin-top: var(--s-2); font-size: var(--t-sm); }
+.plan-item-scaffold > summary { cursor: pointer; color: var(--text-muted); }
+.plan-outline { margin-top: var(--s-6); border-top: 1px solid var(--border); padding-top: var(--s-4); }
+.plan-outline > summary { cursor: pointer; font-weight: 600; }
+.plan-outline textarea { font-family: var(--font-mono, monospace); }
+/* The arcs over the chapters: a bar per arc across the chapters it
+   covers, a row per level of nesting, and the chapters underneath. */
+.arc-map { margin: var(--s-6) 0 var(--s-4); }
+.arc-map-scroll { overflow-x: auto; }
+.arc-map-grid { display: grid; gap: 3px; min-width: min-content; }
+.arc-bar {
+  display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  padding: 2px var(--s-2); font-size: var(--t-2xs); font-weight: 600; line-height: 1.6;
+  background: var(--text); color: var(--bg);
+}
+.arc-bar.depth-1 { background: var(--bg-sunken); color: var(--text); border: 1px solid var(--border-strong); }
+.arc-bar.depth-2, .arc-bar.depth-3 { background: transparent; color: var(--text-muted); border: 1px dashed var(--border-strong); font-weight: 400; }
+.arc-cell {
+  display: block; text-align: center; font-size: var(--t-2xs); line-height: 1.8;
+  border: 1px solid var(--border-strong); color: var(--text); font-variant-numeric: tabular-nums;
+}
+.arc-cell.is-planned { border-style: dotted; color: var(--text-muted); }
+.plan-panel-notes p { margin: 0 0 var(--s-2); }
+.plan-writing-note { font-size: var(--t-sm); margin: var(--s-2) 0 var(--s-4); max-width: 70ch; }
+.plan-panel-arc { margin-top: var(--s-5); padding-top: var(--s-3); border-top: 1px solid var(--border); }
+.plan-panel-arc p { margin: 0 0 var(--s-2); }
+.plan-panel-arc-title { font-weight: 600; }
+@media (max-width: 720px) {
+  .plan-item { flex-direction: column; }
+  .plan-arc { padding-left: var(--s-3); }
+}

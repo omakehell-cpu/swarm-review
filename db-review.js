@@ -260,4 +260,7 @@ module.exports = function applyReviewSchema(db, ensureColumn) {
       PRIMARY KEY (entity_id, question)
     );
   `);
+
+  // The plan: nested arcs, and chapters planned before they are written.
+  require('./db-plan')(db, ensureColumn);
 };

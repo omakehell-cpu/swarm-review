@@ -130,7 +130,7 @@ function analysisPage({ user, story, analysis, canWrite = false }) {
           <h1>Analysis</h1>
           <p class="muted">What <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> is made of, counted. Nothing here is set by hand: it is the chapters, the glossary and the reviewers' notes, added up.</p>
         </div>
-        ${storyViewSwitch(story)}
+        ${storyViewSwitch(story, { canWrite, current: 'analysis' })}
       </div>
       ${goalBar(analysis.words, story.word_goal)}
       <div class="chart-grid">
@@ -203,16 +203,21 @@ function outlineRow(chapter, { cast = [], canOrder = false, index = 0, total = 0
 }
 
 
-// The three ways of looking at a story that is already written: the list,
-// the count, and the calendar. One switch, so adding a fourth does not
+// The ways of looking at a story: the plan (for the people writing it),
+// the list, the count, and the calendar. One switch, so adding a fourth does not
 // mean finding three copies of it.
-function storyViewSwitch(story) {
+function storyViewSwitch(story, { canWrite = false, current = '' } = {}) {
+  // The page you are on is marked as such, and is not a link to itself.
+  const view = (name, label) => (name === current
+    ? `<a class="btn small" href="/stories/${story.id}/${name}" aria-current="page">${label}</a>`
+    : `<a class="btn ghost small" href="/stories/${story.id}/${name}">${label}</a>`);
   return `
-    <div class="page-head-actions">
-      <a class="btn ghost small" href="/stories/${story.id}/outline">Outline</a>
-      <a class="btn ghost small" href="/stories/${story.id}/analysis">Analysis</a>
-      <a class="btn ghost small" href="/stories/${story.id}/timeline">Timeline</a>
-    </div>`;
+    <nav class="page-head-actions" aria-label="Ways to look at the story">
+      ${canWrite ? view('plan', 'Plan') : ''}
+      ${view('outline', 'Outline')}
+      ${view('analysis', 'Analysis')}
+      ${view('timeline', 'Timeline')}
+    </nav>`;
 }
 
 
@@ -397,7 +402,7 @@ function timelinePage({ user, story, timeline, canWrite = false }) {
           <h1>Timeline</h1>
           <p class="muted">When things happen in <a href="/stories/${story.id}">${escapeHtml(story.title)}</a>, which is not the order they are told in. Nothing here is guessed: it is what has been given a day, and what the glossary tie together.</p>
         </div>
-        ${storyViewSwitch(story)}
+        ${storyViewSwitch(story, { canWrite, current: 'timeline' })}
       </div>
       ${nothing ? `
         <p class="muted">Nothing has a date yet. Chapters take one under <strong>Details</strong> in the editor, and entries in the glossary under <strong>When this happens</strong> -- a word for what the story calls the moment, a number to put it in line, and for an event that lasts, the day it ends. Date two things and this page starts working.</p>`
@@ -419,7 +424,7 @@ function timelinePage({ user, story, timeline, canWrite = false }) {
   });
 }
 
-function outlinePage({ user, story, chapters = [], castByChapter = new Map(), canOrder = false, stats = null, notice = '' }) {
+function outlinePage({ user, story, chapters = [], castByChapter = new Map(), canOrder = false, canWrite = false, stats = null, notice = '' }) {
   const rows = chapters.map((c, i) => outlineRow(c, {
     cast: castByChapter.get(c.id) || [], canOrder, index: i, total: chapters.length,
   })).join('');
@@ -438,7 +443,7 @@ function outlinePage({ user, story, chapters = [], castByChapter = new Map(), ca
           <h1>Outline</h1>
           <p class="muted">Every chapter of <a href="/stories/${story.id}">${escapeHtml(story.title)}</a> on one line: what happens, who is in it, how long it is, and what is still waiting on somebody.${canOrder ? ' Drag a row to move a chapter.' : ''}</p>
         </div>
-        ${storyViewSwitch(story)}
+        ${storyViewSwitch(story, { canWrite, current: 'outline' })}
       </div>
       ${notice ? `<p class="flash info">${escapeHtml(notice)}</p>` : ''}
       <p class="outline-totals">

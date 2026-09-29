@@ -70,15 +70,32 @@ async function handleDeleteChapter(req, res, user, chapterId) {
   redirect(res, `/stories/${storyId}/archived-chapters`);
 }
 
-async function handleNewChapterPage(req, res, user, storyId) {
+async function handleNewChapterPage(req, res, user, storyId, query) {
   const story = models.getStoryById(storyId);
   if (!story) return sendError(res, 404, 'Story not found', user);
   if (!models.canWriteInStory(story, user)) return sendError(res, 403, "Only the story's authors can add chapters.", user);
   const chapters = models.listChaptersForStory(storyId);
+  const slot = query && query.get('plan') ? models.getPlanSlot(Number(query.get('plan'))) : null;
+  if (slot && slot.story_id === storyId && slot.draft_by && slot.draft_by !== user.id) {
+    return sendError(res, 409, `${models.getUserById(slot.draft_by).display_name} is already writing this planned chapter. Their draft is theirs until they publish it.`, user);
+  }
   sendHtml(res, 200, views.newChapterPage({
-    user, story, chapters, values: {}, vocabulary: storyVocabulary(storyId),
-    castList: besideCast(story, user),
+    user, story, chapters, values: slot && slot.story_id === storyId ? planValues(slot) : {}, vocabulary: storyVocabulary(storyId),
+    castList: besideCast(story, user), notice: query ? (query.get('notice') || '').slice(0, 200) : '',
   }));
+}
+
+// Writing a chapter from the plan: its working title, and whatever draft
+// its writer has saved so far, with the plan's notes and the arcs it is in
+// beside the text -- the notes are the scaffold, not the chapter's summary.
+function planValues(slot) {
+  return {
+    planSlot: slot.id,
+    title: slot.title,
+    content: slot.draft_content || '',
+    position: models.planSlotPosition(slot.id),
+    plan: { notes: slot.notes, arcs: models.arcsOfPlanSlot(slot), draftSavedAt: slot.draft_content ? slot.draft_updated_at : null },
+  };
 }
 
 async function handleNewChapterSubmit(req, res, user, storyId) {
@@ -97,7 +114,9 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   const storyWhen = (body.storyWhen || '').trim();
   const storyDay = body.storyDay;
   let content = (body.content || '').replace(/\r\n/g, '\n');
-  const values = { title, summary, content, position: body.position, stage, arcTitle, pov, strand, storyWhen, storyDay };
+  const slot = body.planSlot ? models.getPlanSlot(Number(body.planSlot)) : null;
+  const fromPlan = slot && slot.story_id === storyId && (!slot.draft_by || slot.draft_by === user.id) ? slot : null;
+  const values = { title, summary, content, position: body.position, stage, arcTitle, pov, strand, storyWhen, storyDay, ...(fromPlan ? { planSlot: fromPlan.id, plan: planValues(fromPlan).plan } : {}) };
 
   try {
     const uploaded = await extractUploadedText(files.file);
@@ -107,19 +126,30 @@ async function handleNewChapterSubmit(req, res, user, storyId) {
   }
 
   if (!title) return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: 'Missing title.', values, vocabulary: storyVocabulary(storyId) }));
+  // "Save draft" on a planned chapter: kept on the plan, private to whoever
+  // is writing it, and not a chapter until it is published.
+  if (fromPlan && body.intent === 'draft') {
+    models.savePlanDraft(fromPlan.id, { userId: user.id, title, content });
+    return redirect(res, `/stories/${storyId}/chapters/new?plan=${fromPlan.id}&notice=${encodeURIComponent('Draft saved. Only you can see it until you publish it.')}`);
+  }
   if (!content.trim()) return sendHtml(res, 400, views.newChapterPage({ user, story, chapters: existingChapters, error: 'The chapter is empty. Paste some text or upload a .md/.txt/.docx file.', values, vocabulary: storyVocabulary(storyId) }));
 
   // "position" picks an existing chapter to insert *before*; anything else
   // (including the default "end" option, or a tampered/stale value that no
   // longer matches a real chapter) falls back to appending at the end,
   // exactly like before this feature existed.
-  const insertBeforeNumber = existingChapters.some((c) => String(c.chapter_number) === body.position)
-    ? Number(body.position)
+  // A planned chapter goes where the plan has it now, which may have moved
+  // since the editor was opened.
+  const position = fromPlan ? models.planSlotPosition(fromPlan.id) : body.position;
+  const insertBeforeNumber = existingChapters.some((c) => String(c.chapter_number) === position)
+    ? Number(position)
     : null;
 
   const chapter = insertBeforeNumber !== null
     ? models.insertChapterAt({ storyId, position: insertBeforeNumber, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand, storyWhen, storyDay })
     : models.createChapter({ storyId, title, summary, authorId: user.id, content, stage, arcTitle, pov, strand, storyWhen, storyDay });
+  // Written from the plan: the planned chapter is this one now.
+  if (fromPlan) models.planSlotWritten(fromPlan.id, chapter);
   if (arcTitle) {
     logEvent(user, 'arc-started', { subject: arcTitle, href: `/stories/${storyId}`, storyId, chapterId: chapter.id });
   }
@@ -262,6 +292,9 @@ async function handleChapterPage(req, res, user, chapterId, query) {
       ? castLinks.combinedMatcher(chapter.story_id, wiki.findWikiMatches, models.listChapterExclusions(chapterId))
       : wiki.findWikiMatches,
     missingNames: models.canWriteInStory(story, user) ? models.missingNamesInChapter(chapterId) : [],
+    // Which arcs of the plan this chapter is in, for the people who write
+    // it: the plan is theirs, and a smaller arc's name can be a spoiler.
+    arcs: models.canWriteInStory(story, user) ? models.arcsOfChapter(chapter) : [],
     entities: bibleVisible ? models.listStoryEntities(chapter.story_id) : [],
     leftBehind: models.notesLeftBehind(chapterId),
     appliedFrom: appliedNote && appliedNote.suggestion != null ? appliedNote.author_name : null,
@@ -583,7 +616,7 @@ const routes = [
   ['POST', /^\/chapters\/(\d+)\/react$/, (c) => handleReaction(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/place$/, (c) => handleReadingPlace(c.req, c.res, c.user, Number(c.m[1]))],
   ['POST', /^\/chapters\/(\d+)\/summary$/, (c) => handleChapterSummary(c.req, c.res, c.user, Number(c.m[1]))],
-  ['GET', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterPage(c.req, c.res, c.user, Number(c.m[1]))],
+  ['GET', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterPage(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['POST', /^\/stories\/(\d+)\/chapters\/new$/, (c) => handleNewChapterSubmit(c.req, c.res, c.user, Number(c.m[1]))],
   ['GET', /^\/chapters\/(\d+)$/, (c) => handleChapterPage(c.req, c.res, c.user, Number(c.m[1]), c.url.searchParams)],
   ['GET', /^\/chapters\/(\d+)\/versions\/new$/, (c) => redirect(c.res, `/chapters/${c.m[1]}/edit`)],

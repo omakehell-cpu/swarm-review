@@ -54,6 +54,7 @@ const ROUTES = [
   require('./routes/covers'),
   require('./routes/desk'),
   require('./routes/bible'),
+  require('./routes/plan'),
   require('./routes/chapters'),
   require('./routes/stories'),
   require('./routes/people'),
