@@ -18,19 +18,55 @@
     }
   }
 
-  // ...and when two notes start on the same words, the second one's link
-  // still finds them.
+  // ---- a note leads to its words ----
+  //
+  // Clicking a note (anywhere on it but its own buttons, links and fields)
+  // or its "Go to the passage" link scrolls the words it is about to the
+  // middle of the window, and marks them: they blink twice so the eye finds
+  // them, then stay marked until another note is chosen. Every stretch the
+  // note covers is marked, not just the first, and the second of two notes
+  // on the same words still finds them.
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const spansOf = (id) => /** @type {HTMLElement[]} */ (Array.from(textEl.querySelectorAll('.hl[data-comment-ids]'))
+    .filter((el) => (/** @type {HTMLElement} */ (el).dataset.commentIds || '').split(',').includes(id)));
+  function showPassage(id, note) {
+    const spans = spansOf(id);
+    if (!spans.length) return false;
+    for (const old of Array.from(textEl.querySelectorAll('.hl-chosen'))) old.classList.remove('hl-chosen', 'hl-blink');
+    for (const old of Array.from(document.querySelectorAll('.comment.is-chosen'))) old.classList.remove('is-chosen');
+    for (const span of spans) {
+      span.classList.add('hl-chosen');
+      if (!reduceMotion.matches) {
+        span.classList.remove('hl-blink');
+        void span.offsetWidth; // restart the blink when the same note is clicked again
+        span.classList.add('hl-blink');
+      }
+    }
+    if (note) note.classList.add('is-chosen');
+    const first = spans[0];
+    first.setAttribute('tabindex', '-1');
+    first.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'center' });
+    first.focus({ preventScroll: true });
+    return true;
+  }
   document.addEventListener('click', (ev) => {
-    const link = /** @type {HTMLAnchorElement|null} */ (/** @type {Element} */ (ev.target).closest('a.note-goto'));
-    if (!link) return;
-    const id = (link.getAttribute('href') || '').replace('#passage-', '');
-    const span = Array.from(textEl.querySelectorAll('.hl[data-comment-ids]'))
-      .find((el) => (/** @type {HTMLElement} */ (el).dataset.commentIds || '').split(',').includes(id));
-    if (!span) return;
-    ev.preventDefault();
-    span.setAttribute('tabindex', '-1');
-    /** @type {HTMLElement} */ (span).focus({ preventScroll: true });
-    span.scrollIntoView({ block: 'center' });
+    const target = /** @type {Element} */ (ev.target);
+    const link = /** @type {HTMLAnchorElement|null} */ (target.closest('a.note-goto'));
+    if (link) {
+      const id = (link.getAttribute('href') || '').replace('#passage-', '');
+      if (showPassage(id, link.closest('.comment'))) ev.preventDefault();
+      return;
+    }
+    const note = /** @type {HTMLElement|null} */ (target.closest('#comment-list .comment[data-comment-id]'));
+    if (!note || note.classList.contains('as-sheet')) return;
+    // Its own controls do their own thing; so does selecting its text.
+    if (target.closest('a, button, input, textarea, select, label, summary, form, details.edit-comment')) return;
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && note.contains(selection.anchorNode)) return;
+    showPassage(String(note.dataset.commentId), note);
+  });
+  textEl.addEventListener('animationend', (ev) => {
+    /** @type {Element} */ (ev.target).classList.remove('hl-blink');
   });
 
   const metaEl = document.getElementById('chapter-meta');

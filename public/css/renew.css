@@ -454,3 +454,24 @@ body:has(.editor-grid) .topbar { background: var(--bg); }
 .shelf-author select { padding: var(--s-2) var(--s-8) var(--s-2) var(--s-5); font-size: var(--t-sm); border-radius: 999px; max-width: 16rem; }
 .shelf-author.is-live .shelf-author-go { display: none; }
 .active-filter, .active-filter-clear { border-radius: 999px; }
+
+/* The words of the note just chosen: marked, after blinking twice so the
+   eye finds them (public/js/app.js showPassage). */
+#chapter-text .hl.hl-chosen {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow: inset 0 -2px 0 var(--accent);
+  border-radius: 2px;
+}
+#chapter-text .hl.hl-chosen.hl-blink { animation: hl-blink 1.1s ease-in-out 1; }
+@keyframes hl-blink {
+  0%, 40%, 80% { background: color-mix(in srgb, var(--accent) 38%, transparent); }
+  20%, 60% { background: transparent; }
+  100% { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+}
+#chapter-text .hl.hl-chosen:focus { outline: none; }
+#comment-list .comment[data-comment-id] { cursor: pointer; }
+#comment-list .comment[data-comment-id] :is(textarea, input, select) { cursor: auto; }
+#comment-list .comment.is-chosen { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+@media (forced-colors: active) {
+  #chapter-text .hl.hl-chosen { outline: 2px solid Highlight; }
+}

@@ -6,6 +6,10 @@ here is missing on the site, it has not been restarted yet.
 
 ## 2026-09-29 — The plan, a glossary for every story, and a character study
 
+### A note takes you to its words
+
+- **Click a note** -- anywhere on it but its buttons and links -- or its *Go to the passage*, and the page scrolls to the words it is about, which blink twice and stay marked until you choose another note. The note stays tinted too, so you can see which one you are on.
+
 ### Finished stories, by author
 
 - On the front page, the **Finished** shelf has a **By** list: pick an author and see only their finished stories, with how many each has. The filter shows above the list, with an × to take it off.
